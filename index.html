@@ -191,6 +191,11 @@
   .gobtn:disabled { opacity: 0.55; cursor: default; }
   .gateerr { font-family: 'JetBrains Mono', monospace; font-size: 10px; line-height: 1.6;
     color: var(--red); margin-top: 12px; }
+  .gateerr.ok { color: var(--green-soft); }
+  .linkbtn { display: block; width: 100%; margin-top: 14px; background: none; border: none;
+    font-family: 'JetBrains Mono', monospace; font-size: 9px; letter-spacing: 0.14em;
+    text-transform: uppercase; color: var(--text-dim); cursor: pointer; min-height: 44px; }
+  .linkbtn:hover { color: var(--accent-soft); }
   .gatefoot { font-family: 'JetBrains Mono', monospace; font-size: 9px; color: var(--text-dim);
     letter-spacing: 0.08em; line-height: 1.7; margin-top: 20px; padding-top: 14px;
     border-top: 1px solid var(--line); }
@@ -237,8 +242,26 @@
       </div>
       <button class="gobtn" id="gobtn" type="submit">Sign in</button>
       <div class="gateerr" id="gateerr"></div>
+      <button type="button" class="linkbtn" id="forgot">Forgot password?</button>
     </form>
-    <div class="gatefoot">
+
+    <!-- Shown only when the page is opened from a recovery link. -->
+    <form id="resetform" autocomplete="on" style="display:none">
+      <div class="card-sub" style="margin-bottom:14px">Choose a new password for <b id="whofor">your account</b>.</div>
+      <div class="field">
+        <label for="np">New password</label>
+        <input id="np" type="password" autocomplete="new-password" minlength="8" required />
+      </div>
+      <div class="field">
+        <label for="np2">Confirm new password</label>
+        <input id="np2" type="password" autocomplete="new-password" minlength="8" required />
+      </div>
+      <button class="gobtn" id="setbtn" type="submit">Set password &amp; sign in</button>
+      <div class="gateerr" id="reseterr"></div>
+      <button type="button" class="linkbtn" id="backtologin">Back to sign in</button>
+    </form>
+
+    <div class="gatefoot" id="gatefoot">
       Every figure is read live from the database under your own login.
       Nothing is stored in this page.
     </div>
@@ -756,6 +779,85 @@ async function refresh(){
 }
 function signOut(){ sess.clear(); location.reload(); }
 
+/* ── PASSWORD RECOVERY ──────────────────────────────────────────────────────
+   A recovery link can land here in either of two shapes, so both are handled:
+
+     · implicit  — #access_token=…&refresh_token=…&type=recovery
+                   (what {{ .ConfirmationURL }} produces once Supabase has
+                   verified the token and redirected here)
+     · token_hash — ?token_hash=…&type=recovery
+                   (the newer verify-on-arrival flow)
+
+   In both cases the token is stripped from the address bar immediately: a
+   recovery token is a credential, and leaving it in the URL means it lands in
+   history and in anything the user pastes. ── */
+function readRecovery(){
+  const hash = new URLSearchParams((location.hash || '').replace(/^#/, ''));
+  const query = new URLSearchParams(location.search || '');
+  const clean = () => history.replaceState(null, '', location.pathname);
+  if (hash.get('type') === 'recovery' && hash.get('access_token'))
+    return { kind:'implicit', access_token:hash.get('access_token'),
+             refresh_token:hash.get('refresh_token'), clean };
+  if (query.get('type') === 'recovery' && query.get('token_hash'))
+    return { kind:'token_hash', token_hash:query.get('token_hash'), clean };
+  // An expired or already-used link comes back as an error, not a token.
+  const err = hash.get('error_description') || query.get('error_description');
+  if (err) return { kind:'error', message: decodeURIComponent(err.replace(/\+/g,' ')), clean };
+  return null;
+}
+
+async function exchangeTokenHash(token_hash){
+  const r = await fetch(`${SB_URL}/auth/v1/verify`, {
+    method:'POST', headers:{ apikey: SB_KEY, 'Content-Type':'application/json' },
+    body: JSON.stringify({ type:'recovery', token_hash }),
+  });
+  const j = await r.json();
+  if (!r.ok) throw new Error(j.error_description || j.msg || j.message || 'recovery link is invalid or expired');
+  return j;
+}
+
+function showReset(email){
+  gate.style.display = 'flex'; appEl.style.display = 'none';
+  document.getElementById('loginform').style.display = 'none';
+  document.getElementById('resetform').style.display = '';
+  document.getElementById('gatefoot').textContent =
+    'Setting a new password signs you in on this device.';
+  if (email) document.getElementById('whofor').textContent = email;
+}
+
+/* The recovery token IS a session — a short-lived one that authorises exactly
+   one thing: setting a new password. */
+async function updatePassword(password){
+  const s = sess.get();
+  const r = await fetch(`${SB_URL}/auth/v1/user`, {
+    method:'PUT', headers:{ apikey: SB_KEY, Authorization:'Bearer '+s.access_token,
+                            'Content-Type':'application/json' },
+    body: JSON.stringify({ password }),
+  });
+  const j = await r.json();
+  if (!r.ok) {
+    const raw = j.error_description || j.msg || j.message || '';
+    // Supabase answers an expired or reused recovery link with a JWT parse
+    // error. That is true and useless to the person holding the link, so it is
+    // translated into the thing they can actually do about it.
+    if (/jwt|token|expired|malformed|signature/i.test(raw))
+      throw new Error('That reset link has expired or was already used. Request a new one below.');
+    if (/weak|password/i.test(raw) && /short|least|characters/i.test(raw))
+      throw new Error(raw);
+    throw new Error(raw || 'could not set password');
+  }
+  return j;
+}
+
+async function sendReset(email){
+  const r = await fetch(`${SB_URL}/auth/v1/recover`, {
+    method:'POST', headers:{ apikey: SB_KEY, 'Content-Type':'application/json' },
+    body: JSON.stringify({ email, redirect_to: location.origin + location.pathname }),
+  });
+  if (!r.ok) { const j = await r.json().catch(()=>({}));
+    throw new Error(j.error_description || j.msg || j.message || `could not send reset (${r.status})`); }
+}
+
 /* Paged read under the user's JWT. PostgREST caps at 1000 rows and says nothing
    about it, so always page. One transparent retry after a token refresh. */
 async function q(path, { retry = true } = {}){
@@ -1000,7 +1102,80 @@ document.getElementById('loginform').addEventListener('submit', async ev => {
   } finally { btn.disabled = false; btn.textContent = 'Sign in'; }
 });
 
+/* forgot password */
+document.getElementById('forgot').addEventListener('click', async () => {
+  const el = document.getElementById('gateerr');
+  const email = document.getElementById('em').value.trim();
+  if (!email) { el.className = 'gateerr'; el.textContent = 'Enter your email above first, then tap Forgot password.'; return; }
+  el.className = 'gateerr'; el.textContent = 'Sending…';
+  try {
+    await sendReset(email);
+    el.className = 'gateerr ok';
+    // Deliberately not "we sent it to that address" — that would confirm which
+    // addresses have accounts to anyone who can reach this page.
+    el.textContent = 'If that address has an account, a reset link is on its way. The link opens this page.';
+  } catch(e){ el.className = 'gateerr'; el.textContent = e.message; }
+});
+
+/* leaving the reset form drops the recovery session — it authorises a password
+   change, so it should not outlive the attempt to use it */
+document.getElementById('backtologin').addEventListener('click', () => {
+  sess.clear();
+  document.getElementById('resetform').style.display = 'none';
+  document.getElementById('loginform').style.display = '';
+  document.getElementById('gatefoot').textContent =
+    'Every figure is read live from the database under your own login. Nothing is stored in this page.';
+  document.getElementById('reseterr').textContent = '';
+});
+
+/* set-new-password */
+document.getElementById('resetform').addEventListener('submit', async ev => {
+  ev.preventDefault();
+  const err = document.getElementById('reseterr'), btn = document.getElementById('setbtn');
+  const a = document.getElementById('np').value, b = document.getElementById('np2').value;
+  err.className = 'gateerr';
+  if (a !== b) { err.textContent = 'Those two do not match.'; return; }
+  if (a.length < 8) { err.textContent = 'Use at least 8 characters.'; return; }
+  btn.disabled = true; btn.textContent = 'Setting…';
+  try {
+    await updatePassword(a);
+    document.getElementById('resetform').style.display = 'none';
+    await loadAll();                       // recovery session is a real session
+  } catch(e){
+    err.textContent = e.message;
+    btn.disabled = false; btn.textContent = 'Set password & sign in';
+  }
+});
+
 (async () => {
+  // Recovery is checked BEFORE any stored session, or arriving on a reset link
+  // while already signed in would silently skip the reset.
+  const rec = readRecovery();
+  if (rec) {
+    rec.clean();
+    if (rec.kind === 'error') { showGate(rec.message + ' — request a new link below.'); return; }
+    try {
+      let email = null;
+      if (rec.kind === 'implicit') {
+        sess.set({ access_token: rec.access_token, refresh_token: rec.refresh_token, email: null });
+      } else {
+        const j = await exchangeTokenHash(rec.token_hash);
+        sess.set({ access_token: j.access_token, refresh_token: j.refresh_token, email: j.user?.email || null });
+        email = j.user?.email || null;
+      }
+      if (!email) {
+        // Read the address back so the form can say whose account this is.
+        try {
+          const u = await (await fetch(`${SB_URL}/auth/v1/user`, { headers:{ apikey: SB_KEY,
+            Authorization:'Bearer '+sess.get().access_token } })).json();
+          email = u.email || null;
+          if (email) sess.set({ ...sess.get(), email });
+        } catch(e){}
+      }
+      showReset(email);
+    } catch(e){ sess.clear(); showGate(e.message + ' — request a new link below.'); }
+    return;
+  }
   if (!sess.get()) { showGate(); return; }
   try { await loadAll(); }
   catch(e){
