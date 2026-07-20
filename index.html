@@ -139,6 +139,43 @@
   body { padding: calc(16px + env(safe-area-inset-top)) calc(16px + env(safe-area-inset-right)) calc(28px + env(safe-area-inset-bottom)) calc(16px + env(safe-area-inset-left)); }
 
   /* window toggle — his mono pill idiom, thumb-sized */
+  /* ── SNAPSHOT strip. Four windows, each one a door into itself. ── */
+  .snapgrid { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; }
+  @media (min-width: 700px) { .snapgrid { grid-template-columns: repeat(4, 1fr); } }
+  .snap { text-align: left; background: var(--bg-card); border: 1px solid var(--line);
+    border-radius: 13px; padding: 13px 13px 12px; cursor: pointer; min-height: 96px;
+    color: var(--text); font-family: inherit; transition: border-color .15s, background .15s;
+    display: flex; flex-direction: column; gap: 2px; }
+  .snap:active { background: var(--bg-card-hi); transform: scale(.985); }
+  .snap:hover { border-color: rgba(240,131,74,0.35); }
+  .snap-k { font-family: 'JetBrains Mono', monospace; font-size: 9px; letter-spacing: 0.16em;
+    text-transform: uppercase; color: var(--text-dim); }
+  .snap-v { font-family: 'Fraunces', serif; font-size: 27px; font-weight: 500;
+    letter-spacing: -0.02em; line-height: 1.05; margin-top: 3px; }
+  @media (min-width: 700px) { .snap-v { font-size: 30px; } }
+  .snap-s { font-family: 'JetBrains Mono', monospace; font-size: 9px; color: var(--text-dim); margin-top: 3px; }
+  .snap-d { font-family: 'JetBrains Mono', monospace; font-size: 9px; margin-top: 5px; letter-spacing: 0.02em; }
+  .snap-d.up { color: var(--green-soft); } .snap-d.down { color: #d8997f; } .snap-d.flat { color: var(--text-dim); }
+  .snaphint { font-family: 'JetBrains Mono', monospace; font-size: 9px; letter-spacing: 0.1em;
+    text-transform: uppercase; color: var(--text-dim); text-align: center; margin-top: 12px; }
+
+  /* ── per-window deep dive ── */
+  .backbar { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
+  .backbtn { background: var(--bg-card); border: 1px solid var(--line); border-radius: 10px;
+    color: var(--accent-soft); font-family: 'JetBrains Mono', monospace; font-size: 10px;
+    letter-spacing: 0.14em; text-transform: uppercase; padding: 12px 15px; min-height: 44px; cursor: pointer; }
+  .backbtn:active { background: var(--bg-card-hi); }
+  .dive-h { font-family: 'Fraunces', serif; font-weight: 400; font-size: 26px;
+    letter-spacing: -0.02em; line-height: 1.05; }
+  .dive-h em { font-style: italic; color: var(--accent-soft); font-weight: 300; }
+  .dive-hero { display: flex; align-items: flex-end; justify-content: space-between;
+    gap: 14px; margin-bottom: 4px; }
+  .dive-hero .big { font-family: 'Fraunces', serif; font-size: 40px; font-weight: 500;
+    letter-spacing: -0.02em; line-height: 1; }
+  .dive-hero .side { font-family: 'JetBrains Mono', monospace; font-size: 10px;
+    color: var(--text-dim); text-align: right; line-height: 1.6; }
+  .dive-hero .side b { color: var(--green-soft); font-weight: 600; }
+
   /* scoreboard window toggle — scoped to the effort card, not the whole page */
   .seg { display: flex; gap: 4px; background: rgba(0,0,0,0.22); border: 1px solid var(--line);
     border-radius: 10px; padding: 3px; margin: 2px 0 14px; }
@@ -292,6 +329,8 @@ let D = null;
 // Card-scoped windows. The page as a whole stays MTD per the model; only the
 // scoreboard and the lead-source table carry their own range.
 let EFFWIN = 'month', LEADWIN = 'month';
+// null = the snapshot home; 'day'|'week'|'month'|'ytd' = that window, full screen
+let DIVE = null;
 /* v1 follows the model's own windows: the month card set is monthly, the
    week-over-week card is weekly. No window toggle — that is a later iteration.
    build-console.mjs nests window totals under .company while `prev` arrives
@@ -305,27 +344,41 @@ const qbw = () => qbOK() ? D.qb.windows.month : null;
 const charts = [];
 
 /* ── header ───────────────────────────────────────────────────────────────── */
+/* Full span of each window, for projecting a pace. */
+function spanOf(k){
+  const n = new Date();
+  if (k === 'day')  return 1;
+  if (k === 'week') return 7;
+  if (k === 'month') return new Date(n.getFullYear(), n.getMonth()+1, 0).getDate();
+  const eoy = new Date(n.getFullYear(), 11, 31);
+  return Math.round((eoy - new Date(n.getFullYear(),0,1)) / 86400000) + 1;
+}
+function paceOf(k){
+  const W = flat(k), full = spanOf(k), el = W.prevSpanDays || 1;
+  return el >= full ? W.rev : W.rev / el * full;
+}
+
+/* ── SNAPSHOT: four windows at a glance, each one a door. ── */
 function hdr(){
-  const W = w(), pv = W.prev, delta = pv.rev ? Math.round((W.rev - pv.rev)/pv.rev*100) : null;
-  const now = new Date();
-  const dim = new Date(now.getFullYear(), now.getMonth()+1, 0).getDate();
-  const elapsed = W.prevSpanDays;
-  const proj = elapsed ? W.rev / elapsed * dim : W.rev;
+  const tiles = [['day','Today'],['week','This week'],['month','MTD'],['ytd','YTD']].map(([k,label]) => {
+    const W = flat(k), pv = W.prev;
+    const d = pv.rev ? Math.round((W.rev - pv.rev)/pv.rev*100) : null;
+    const pace = paceOf(k), full = spanOf(k), el = W.prevSpanDays || 1;
+    const sub = el >= full
+      ? `${W.jobs} signed`
+      : `pace ${short(pace)}`;
+    return `<button class="snap" onclick="openWindow('${k}')">
+      <div class="snap-k">${esc(label)}</div>
+      <div class="snap-v">${short(W.rev)}</div>
+      <div class="snap-s">${sub}</div>
+      <div class="snap-d ${d===null?'flat':d>=0?'up':'down'}">${d===null?'—':(d>=0?'▲':'▼')+' '+Math.abs(d)+'% vs '+esc(W.prevLabel)}</div>
+    </button>`;
+  }).join('');
   return `<div class="hdr">
     <div class="eyebrow">Liberty · three companies</div>
     <h1>Liberty <em>Command</em> Console</h1>
-    <div class="nw-block">
-      <div>
-        <div class="nw-label">Signed MTD</div>
-        <div class="nw">${short(W.rev)}</div>
-        <div class="nw-sub">${W.jobs} contracts · ${W.appts} appts · ${W.completed} completed</div>
-      </div>
-      <div class="nw-delta">
-        Pace → EOM <b>${short(proj)}</b>
-        ${delta===null?'' : `<br/>${delta>=0?'▲':'▼'} ${Math.abs(delta)}% vs ${esc(W.prevLabel)}`}
-        <br/><span style="color:var(--text-dim)">${short(pv.rev)} then · day ${elapsed} of ${dim}</span>
-      </div>
-    </div>
+    <div class="snapgrid">${tiles}</div>
+    <div class="snaphint">Signed contract value · tap any figure to open it</div>
   </div>`;
 }
 
@@ -569,13 +622,14 @@ function cardEffort(){
       naming. ─────────────────────────────────────────────────────────────── */
 function cardLeads(){
   const L = D.leadSources;
-  const rows = (L.windows[LEADWIN] || []).slice(0, 10);
+  const rows = (L.windows[LEADWIN] || []).slice(0, 12);
   const label = { day:'today', week:'this week', month:'this month', ytd:'year to date' }[LEADWIN];
   const tot = rows.reduce((n,r) => n + r.rev, 0);
   const mx = Math.max(1, ...rows.map(r => r.rev));
+  const unmappedRev = rows.filter(r=>!r.name).reduce((n,r)=>n+r.rev,0);
   return `<div class="card full">
-    <div class="card-title">Lead sources · marketing<span class="feed-tag cc">live · cc</span><span class="feed-tag none">ids, not names</span></div>
-    <div class="card-sub">Signed value by the lead source each job came from, ${esc(label)}. Conversion is contracts signed against every job that source produced, all time.</div>
+    <div class="card-title">Leads by source<span class="feed-tag cc">live · cc</span></div>
+    <div class="card-sub">Signed value by where the lead came from, ${esc(label)}. Close rate is that source's contracts against every lead it has ever produced.</div>
 
     <div class="seg">
       ${[['day','Day'],['week','Week'],['month','Month'],['ytd','YTD']]
@@ -585,20 +639,45 @@ function cardLeads(){
     ${rows.length ? rows.map(r => {
       const all = L.allTime.find(a => a.id === r.id);
       const conv = all && all.jobs ? Math.round(all.signed / all.jobs * 100) : null;
-      const nm = L.namedIds[r.id];
       return `<div class="rep-row">
         <div class="rep-head">
-          <div class="nm"><span class="lead-id">${r.id === 'none' ? 'No source id' : '#' + esc(r.id)}</span>${nm?'':'<span class="unnamed">unnamed</span>'}</div>
+          <div class="nm">${r.name ? esc(r.name) : (r.id==='none'?'No source on the job':'#'+esc(r.id))}
+            ${r.name ? (r.category?`<span class="brand">${esc(r.category)}${r.inferred?' ·inferred':''}</span>`:'')
+                     : '<span class="brand">unmapped</span>'}</div>
           <div class="amt">${short(r.rev)} <span>· ${r.signed} signed</span></div>
         </div>
-        <div class="meter"><div class="meter-fill" style="width:${Math.round(r.rev/mx*100)}%;background:${r.rev===mx?'#f0834a':'#6ba8c9'}"></div></div>
-        <div class="tgt-cap"><span>${pct(r.rev,tot)}% of signed value ${esc(label)}</span>
-          <span>${conv===null?'':conv+'% of its leads convert'}</span></div>
-        ${nm?`<div class="tgt-cap" style="color:var(--gold)"><span>${esc(nm)}</span></div>`:''}
+        <div class="meter"><div class="meter-fill" style="width:${Math.round(r.rev/mx*100)}%;background:${r.name?(r.rev===mx?'#f0834a':'#6ba8c9'):'#8aa094'}"></div></div>
+        <div class="tgt-cap">
+          <span>${pct(r.rev,tot)}% of signed value ${esc(label)}${all?` · ${all.jobs.toLocaleString()} leads all time`:''}</span>
+          <span class="${conv===null?'':conv>=50?'hit':''}">${conv===null?'':conv+'% close'}</span>
+        </div>
       </div>`}).join('') : `<div class="card-sub" style="margin:0">Nothing signed ${esc(label)} to attribute.</div>`}
 
-    <div class="withheld"><div class="wt">Ids are complete — names are not</div><div class="wx">${esc(L.note)}</div></div>
-    <div class="note">Every one of <b>${L.total.toLocaleString()}</b> jobs carries a lead source id — <b>${pct(L.coverage,L.total)}% coverage</b> across <b>${L.distinct}</b> distinct sources — so this attribution is complete, not a sample. Only <b>${L.namedCount}</b> ids have a label. Naming the top few in <b>cc_enum_map</b> is what turns these numbers into "Angi vs referral vs Google"; until then the id stands rather than a guess.</div>
+    ${unmappedRev>0?`<div class="withheld"><div class="wt">Not every source is named</div><div class="wx">
+      <b>${short(unmappedRev)}</b> of the value shown ${esc(label)} sits on ids with no entry in the source map. Those rows keep their place with the raw id rather than being folded into an "other" bucket, because a source you cannot name is still a source you are paying for.</div></div>`:''}
+
+    <div class="note">The source map holds <b>${L.mapSize}</b> names covering <b>${L.jobsNamed.toLocaleString()} of ${L.total.toLocaleString()}</b> jobs (<b>${L.namedRevShare}%</b> of all signed value) across <b>${L.distinct}</b> distinct ids in use. <b>${L.inferredCount}</b> of the ${L.mapSize} categories were inferred rather than set by hand — those carry <b>·inferred</b> next to the category so a guess never reads as a decision.</div>
+  </div>`;
+}
+
+/* Channel view — the question "which kind of marketing earns" rather than
+   "which individual source". Categories come from the same map. */
+function cardLeadCategories(){
+  const cats = D.leadSources.categories.filter(c=>c.rev>0);
+  if (!cats.length) return '';
+  const tot = cats.reduce((n,c)=>n+c.rev,0);
+  return `<div class="card">
+    <div class="card-title">By channel · all time<span class="feed-tag cc">live · cc</span></div>
+    <div class="card-sub">Signed value grouped by the kind of source it came from.</div>
+    ${cats.map(c=>`<div class="rep-row">
+      <div class="rep-head">
+        <div class="nm">${esc(c.category)}<span class="brand">${c.sources} source${c.sources===1?'':'s'}</span></div>
+        <div class="amt">${short(c.rev)} <span>· ${c.signed} signed</span></div>
+      </div>
+      <div class="meter"><div class="meter-fill" style="width:${pct(c.rev,tot)}%;background:${c.category==='Unmapped'?'#8aa094':'#f0834a'}"></div></div>
+      <div class="tgt-cap"><span>${pct(c.rev,tot)}% of signed value</span>
+        <span>${c.jobs?Math.round(c.signed/c.jobs*100):0}% close</span></div>
+    </div>`).join('')}
   </div>`;
 }
 
@@ -621,12 +700,136 @@ function cardFlags(){
   </div>`;
 }
 
+/* ═══ PER-WINDOW DEEP DIVE ══════════════════════════════════════════════════
+   One window, examined properly: its total and pace, its own trend at its own
+   resolution, the brand split, the like-for-like comparison, and who signed it.
+   ═════════════════════════════════════════════════════════════════════════ */
+const DIVE_TITLE = { day:'Today', week:'This week', month:'This month', ytd:'Year to date' };
+const DIVE_SERIES = { day:'daily', week:'daily', month:'weeks', ytd:'monthly' };
+const DIVE_SERIES_LABEL = { day:'Last 14 days', week:'Last 14 days', month:'Last 3 weeks', ytd:'Last 13 months' };
+
+function diveView(k){
+  const W = flat(k), pv = W.prev;
+  const d = pv.rev ? Math.round((W.rev - pv.rev)/pv.rev*100) : null;
+  const full = spanOf(k), el = W.prevSpanDays || 1, pace = paceOf(k);
+  const complete = el >= full;
+  const tot = W.brands.reduce((n,b)=>n+b.rev,0);
+  const reps = W.reps, mx = Math.max(1, ...reps.map(r=>r.rev));
+  const L = (D.leadSources.windows[k] || []).slice(0, 6);
+  const lTot = L.reduce((n,r)=>n+r.rev,0);
+  return `
+  <div class="backbar">
+    <button class="backbtn" onclick="closeWindow()">‹ Back</button>
+    <div class="dive-h">${esc(DIVE_TITLE[k])}</div>
+  </div>
+
+  <div class="card full" style="margin-bottom:12px">
+    <div class="card-title">Signed · ${esc(DIVE_TITLE[k].toLowerCase())}<span class="feed-tag cc">live · cc</span></div>
+    <div class="dive-hero">
+      <div class="big">${short(W.rev)}</div>
+      <div class="side">
+        ${complete ? `${W.jobs} contracts` : `pace <b>${short(pace)}</b><br/>day ${el} of ${full}`}
+        ${d===null?'' : `<br/>${d>=0?'▲':'▼'} ${Math.abs(d)}% vs ${esc(W.prevLabel)}`}
+      </div>
+    </div>
+    <div class="card-sub" style="margin:10px 0 0">${W.jobs} contracts · ${W.appts} appointments · ${W.completed} completed${W.close===null?'':' · '+W.close+'% close'}</div>
+  </div>
+
+  <div class="stack">
+    <div class="card chart-card full">
+      <div class="card-title">${esc(DIVE_SERIES_LABEL[k])}<span class="feed-tag cc">live · cc</span></div>
+      <div class="card-sub">Signed value, so this window sits in its own recent history.</div>
+      <div class="chart-wrap"><canvas id="cDive"></canvas></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">${esc(DIVE_TITLE[k])} vs ${esc(W.prevLabel)}<span class="feed-tag cc">live · cc</span></div>
+      <div class="card-sub">Like for like — ${el} day${el===1?'':'s'} against the same ${el}.</div>
+      <div class="wow-hero">
+        <div class="wow-col"><div class="k">${esc(W.prevLabel)}</div><div class="v">${short(pv.rev)}</div></div>
+        <div class="wow-arrow"><div class="d" style="${d!==null&&d<0?'color:#d8997f':''}">${d===null?'—':(d>=0?'▲':'▼')+Math.abs(d)+'%'}</div><div class="c">${pv.jobs}→${W.jobs}</div></div>
+        <div class="wow-col now"><div class="k">${esc(DIVE_TITLE[k])}</div><div class="v">${short(W.rev)}</div></div>
+      </div>
+      ${(()=>{ const cur=Object.fromEntries(W.brands.map(b=>[b.id,b.rev]));
+        const prv=Object.fromEntries((pv.brands||[]).map(b=>[b.id,b.rev]));
+        const ids=[...new Set([...Object.keys(cur),...Object.keys(prv)])].sort((a,b)=>(cur[b]||0)-(cur[a]||0));
+        return ids.length? ids.map(id=>{const m=brandOf(id),a=prv[id]||0,b=cur[id]||0;
+          const ch=a?Math.round((b-a)/a*100):(b?null:0);
+          return `<div class="wow-row"><div class="nm">${esc(m.s)}</div>
+            <div class="nums">${short(a)} → ${short(b)}</div>
+            <div class="chg ${ch===null?'':ch>=0?'up':'down'}">${ch===null?'new':(ch>=0?'+':'')+ch+'%'}</div></div>`}).join('')
+          : '<div class="card-sub" style="margin:0">Nothing signed in either window.</div>'; })()}
+    </div>
+
+    <div class="card">
+      <div class="card-title">Brand mix<span class="feed-tag cc">live · cc</span></div>
+      <div class="card-sub">${tot?'Share of signed value.':'Nothing signed in this window.'}</div>
+      ${[...W.brands].sort((a,b)=>b.rev-a.rev).map(b=>{const m=brandOf(b.id);
+        return `<div class="rep-row">
+          <div class="rep-head"><div class="nm">${esc(m.n)}</div>
+            <div class="amt">${short(b.rev)} <span>· ${b.jobs} job${b.jobs===1?'':'s'}</span></div></div>
+          <div class="meter"><div class="meter-fill" style="width:${pct(b.rev,tot)}%;background:${m.c}"></div></div>
+          <div class="tgt-cap"><span>${pct(b.rev,tot)}% of the window</span></div>
+        </div>`}).join('') || ''}
+    </div>
+
+    <div class="card">
+      <div class="card-title">Who signed it<span class="feed-tag cc">live · cc</span></div>
+      <div class="card-sub">${reps.length?'Ranked by signed value in this window.':'No rep activity in this window.'}</div>
+      ${reps.slice(0,12).map((r,i)=>`<div class="rep-row">
+        <div class="rep-head">
+          <div class="nm"><span class="rk ${i===0?'top':''}">${i+1}</span>${esc(r.name)}${r.role&&r.role!=='sales'?`<span class="brand">${esc(r.role)}</span>`:''}</div>
+          <div class="amt">${short(r.rev)} <span>· ${r.jobs} job${r.jobs===1?'':'s'}</span></div>
+        </div>
+        <div class="meter"><div class="meter-fill" style="width:${Math.round(r.rev/mx*100)}%;background:${r.rev===mx?'#6cc28b':'#6ba8c9'}"></div></div>
+      </div>`).join('')}
+    </div>
+
+    <div class="card">
+      <div class="card-title">Where it came from<span class="feed-tag cc">live · cc</span></div>
+      <div class="card-sub">${L.length?'Top lead sources for this window.':'Nothing signed in this window to attribute.'}</div>
+      ${L.map(r=>`<div class="rep-row">
+        <div class="rep-head">
+          <div class="nm">${r.name?esc(r.name):'#'+esc(r.id)}${r.name?'':'<span class="brand">unmapped</span>'}</div>
+          <div class="amt">${short(r.rev)} <span>· ${r.signed}</span></div>
+        </div>
+        <div class="meter"><div class="meter-fill" style="width:${pct(r.rev,lTot)}%;background:${r.name?'#f0834a':'#8aa094'}"></div></div>
+      </div>`).join('')}
+    </div>
+  </div>`;
+}
+
+/* The phone's own back gesture must close the dive, not leave the console. Each
+   dive pushes one history entry; popping it returns to the snapshot. */
+function openWindow(k){
+  DIVE = k;
+  try { history.pushState({ dive:k }, '', location.pathname + '#' + k); } catch(e){}
+  render(); window.scrollTo({ top:0 });
+}
+function closeWindow(){
+  // Prefer going back, so the history entry is consumed rather than stranded.
+  if (history.state && history.state.dive) { history.back(); return; }
+  DIVE = null; render(); window.scrollTo({ top:0 });
+}
+addEventListener('popstate', () => {
+  const k = history.state && history.state.dive;
+  DIVE = (k && DIVE_TITLE[k]) ? k : null;
+  if (D) { render(); window.scrollTo({ top:0 }); }
+});
+
 /* ── render ───────────────────────────────────────────────────────────────── */
 function render(){
+  if (DIVE) {
+    document.getElementById('app').innerHTML = diveView(DIVE) +
+      `<div class="foot">Trust the instrument, not the retelling</div>`;
+    drawCharts();
+    return;
+  }
   document.getElementById('app').innerHTML =
     hdr() + '<div class="stack">' + [
       cardWeeks(), cardWow(), cardStats(), cardTrending(), cardMix(),
-      cardReps(), cardEffort(), cardLeads(), cardCadence(), cardMoney(), cardFlags(),
+      cardReps(), cardEffort(), cardLeads(), cardLeadCategories(), cardCadence(),
+      cardMoney(), cardFlags(),
     ].join('') + '</div>' +
     `<div class="foot">Trust the instrument, not the retelling<br/>
       Read ${new Date(D.generatedAt).toLocaleString('en-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'})} ·
@@ -662,6 +865,26 @@ function drawCharts(){
   const MONO = "'JetBrains Mono', monospace";
   const TIP = { backgroundColor:'#1c3528', borderColor:'rgba(255,255,255,0.1)', borderWidth:1, padding:8,
                 titleFont:{family:MONO,size:10}, bodyFont:{family:MONO,size:10} };
+
+  // per-window drill-in trend
+  const dv = document.getElementById('cDive');
+  if (dv && DIVE) {
+    const series = D[DIVE_SERIES[DIVE]] || [];
+    charts.push(new Chart(dv.getContext('2d'), {
+      type:'bar',
+      data:{ labels: series.map(s=>s.label),
+        datasets:[{ label:'Signed', borderRadius:3,
+          backgroundColor: series.map(s=>s.current?'#f0834a':'#6cc28b'),
+          data: series.map(s=>s.rev) }] },
+      options:{ responsive:true, maintainAspectRatio:false,
+        plugins:{ legend:{display:false},
+          tooltip:{...TIP, callbacks:{ label:c=>' '+short(c.parsed.y),
+            afterLabel:c=>series[c.dataIndex].jobs+' signed'+(series[c.dataIndex].current?' · in progress':'') }}},
+        scales:{ x:{grid:{display:false},ticks:{font:{family:MONO,size:9},maxRotation:0,autoSkip:true,maxTicksLimit:8}},
+          y:{beginAtZero:true,grid:{color:'rgba(255,255,255,0.04)'},
+             ticks:{font:{family:MONO,size:9},maxTicksLimit:5,callback:v=>short(v)}} } }
+    }));
+  }
 
   const wk = document.getElementById('cWeeks');
   if (wk) {
@@ -950,6 +1173,25 @@ function buildData(raw){
       rev: js.reduce((n,j)=>n+Number(j.fin_sold_amount||0),0),
       brands: Object.entries(br).map(([id,v])=>({id,...v})) });
   }
+  /* Trend series for the per-window drill-ins. Each window gets a shape that
+     actually says something at its own resolution: a day reads against the last
+     two weeks of days, a year against its months. */
+  const daily = [];
+  for (let i = 13; i >= 0; i--) {
+    const a = addD(sod(NOW), -i), b = addD(a, 1);
+    const js = jobs.filter(j => inR(j.contract_signed_at, a, b));
+    daily.push({ label: `${a.getMonth()+1}/${a.getDate()}`, current: i === 0,
+      jobs: js.length, rev: js.reduce((n,j)=>n+Number(j.fin_sold_amount||0),0) });
+  }
+  const monthly = [];
+  for (let i = 12; i >= 0; i--) {
+    const a = addM(som(NOW), -i), b = addM(a, 1);
+    const js = jobs.filter(j => inR(j.contract_signed_at, a, b));
+    monthly.push({ label: ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][a.getMonth()],
+      current: i === 0, jobs: js.length,
+      rev: js.reduce((n,j)=>n+Number(j.fin_sold_amount||0),0) });
+  }
+
   const cadence = (() => {
     const a = sow(NOW), names = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
     return names.map((label,n) => { const d0 = addD(a,n), d1 = addD(d0,1);
@@ -1009,18 +1251,40 @@ function buildData(raw){
       rows };
   })();
 
+  /* Lead sources, now with real names. The map covers most jobs but not all, and
+     the gap is money rather than a rounding error — unmapped ids keep their row
+     and are labelled as unmapped instead of being folded into "other". */
   const leadSources = (() => {
-    const named = Object.fromEntries(leadNames.map(e=>[String(e.cc_id), e.meaning]));
+    const map = Object.fromEntries(leadNames.map(e => [String(e.cc_lead_id), e]));
     const agg = (pred) => { const a = {};
-      for (const j of jobs){ const k = j.cc_lead_source_id || 'none';
-        (a[k] ??= {id:k,jobs:0,signed:0,rev:0}); a[k].jobs++;
+      for (const j of jobs){ const k = String(j.cc_lead_source_id || 'none');
+        (a[k] ??= { id:k, jobs:0, signed:0, rev:0,
+                    name: map[k]?.name || null,
+                    category: map[k]?.category || null,
+                    inferred: map[k]?.category_from === 'inferred' });
+        a[k].jobs++;
         if (pred(j)) { a[k].signed++; a[k].rev += Number(j.fin_sold_amount||0); } }
       return Object.values(a); };
     const allTime = agg(j=>!!j.contract_signed_at).sort((x,y)=>y.rev-x.rev);
-    return { coverage: jobs.filter(j=>j.cc_lead_source_id).length, total: jobs.length,
+    const namedRev = allTime.filter(r=>r.name).reduce((n,r)=>n+r.rev,0);
+    const totalRev = allTime.reduce((n,r)=>n+r.rev,0);
+    // by category, all-time — the question "which channel earns" as opposed to
+    // "which individual source"
+    const byCat = {};
+    for (const r of allTime) {
+      const c = r.category || 'Unmapped';
+      (byCat[c] ??= { category:c, jobs:0, signed:0, rev:0, sources:0 });
+      byCat[c].jobs += r.jobs; byCat[c].signed += r.signed; byCat[c].rev += r.rev; byCat[c].sources++;
+    }
+    return {
+      total: jobs.length,
       distinct: new Set(jobs.map(j=>j.cc_lead_source_id).filter(Boolean)).size,
-      namedIds: named, namedCount: Object.keys(named).length,
-      note:'Every job carries a lead source id, but CC will not return the names — /lead-sources 404s. The three ids that do have labels are integration channels (how the lead arrived), not marketing sources. Naming the top ids in cc_enum_map turns this card from numbers into names.',
+      mapped: allTime.filter(r=>r.name).length,
+      mapSize: leadNames.length,
+      jobsNamed: jobs.filter(j=>map[String(j.cc_lead_source_id)]).length,
+      namedRevShare: totalRev ? Math.round(namedRev/totalRev*100) : 0,
+      inferredCount: leadNames.filter(e=>e.category_from==='inferred').length,
+      categories: Object.values(byCat).sort((a,b)=>b.rev-a.rev),
       allTime,
       windows: Object.fromEntries(Object.entries(WINS).map(([k,wv]) =>
         [k, agg(j=>inR(j.contract_signed_at,wv.from,wv.to)).filter(r=>r.signed>0).sort((x,y)=>y.rev-x.rev)])) };
@@ -1055,7 +1319,7 @@ function buildData(raw){
       apptsWithRep: appts.filter(a=>a.rep_id).length, touches: touches.length,
       // Coverage of the field every dollar on this page is actually built from.
       jobsWithSold: jobs.filter(j=>Number(j.fin_sold_amount)>0).length },
-    weeks, cadence, targets, effort, leadSources, qb,
+    weeks, daily, monthly, cadence, targets, effort, leadSources, qb,
     windows: Object.fromEntries(Object.entries(WINS).map(([k,wv]) => [k, {
       label: wv.label, prevLabel: wv.pLabel, prevSpanDays: elapsedDays(wv),
       ...slice(wv.from, wv.to),
@@ -1076,7 +1340,9 @@ async function loadAll(){
     q('touches?select=rep_id,play,occurred_at'),
     q('rep_targets?select=rep_id,daily_touch_goal,goal_source'),
     q('score_components?select=key,title,weight&kind=eq.touch&order=ordinal'),
-    q('cc_enum_map?select=cc_id,meaning&domain=eq.lead_source'),
+    // The real lead-source name map: 22 rows, name + category + whether the
+    // category came from Kevin or was inferred.
+    q('lead_sources?select=cc_lead_id,name,category,category_from'),
   ]);
   let qbInv = [], qbError = null;
   try { qbInv = await q('qb_invoices?select=cc_company_id,txn_date,total_amt,balance,reporting_excluded'); }
