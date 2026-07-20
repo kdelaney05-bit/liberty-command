@@ -1,0 +1,4 @@
+{
+  "build": "2026-07-20T23:40Z-oasis-billdu",
+  "note": "Bumped on every deploy. The page compares this against its embedded BUILD and reloads once if they differ, because a home-screen PWA has no other way to learn a new build exists."
+}

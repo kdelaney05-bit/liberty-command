@@ -202,6 +202,10 @@
 
   /* SEED badge — a typed number must never wear the same badge as a measured one */
   .feed-tag.seed { color: var(--violet); border-color: rgba(169,143,213,0.35); }
+  /* Billdu is a third feed alongside CC and QB and gets its own colour, so a
+     Billdu figure can never be mistaken for a Contractors Cloud one. */
+  .feed-tag.billdu { color: var(--accent-soft); border-color: rgba(240,131,74,0.45);
+    background: rgba(240,131,74,0.08); }
   .feed-tag.none { color: var(--text-dim); border-color: rgba(255,255,255,0.12); }
 
   /* withheld / honest-absence block */
@@ -523,6 +527,63 @@ function oasisNote(k){
     ${wv.docs ? `Billdu shows <b>${wv.docs}</b> document${wv.docs===1?'':'s'} worth <b>${short(wv.value)}</b> in this window${wv.accepted?`, <b>${wv.accepted}</b> accepted (${short(wv.acceptedValue)})`:', none accepted yet'}.` : ''}
     ${f.not_in_cc_yet ? ` Across the whole feed <b>${Number(f.not_in_cc_yet).toLocaleString()}</b> Billdu documents still have no Contractors Cloud counterpart${f.minutes_since_newest!=null?`; the newest is ${Math.round(f.minutes_since_newest)} minutes old`:''}.` : ''}
   </div></div>`;
+}
+
+/* ── OASIS · LIVE FROM BILLDU ───────────────────────────────────────────────
+   Oasis does not sign in Contractors Cloud; it signs in Billdu, and CC imports
+   it later. Reading Oasis out of CC therefore shows a zero that is true of the
+   feed and false of the business. This card reads the signature where it
+   actually happens, and is kept strictly apart from every CC figure on the page:
+   the two are never added. ─────────────────────────────────────────────────── */
+function cardOasis(){
+  const L = D.oasisLag;
+  if (!L || !L.signings) return '';
+  const m = brandOf('1560');
+  const day = L.signings.day, week = L.signings.week, month = L.signings.month;
+  const pv = L.signingsPrev.month || { value:0 };
+  const d = pv.value ? Math.round((month.value - pv.value)/pv.value*100) : null;
+  const f = L.freshness || {};
+  const cc = flat('day').brands.find(b=>String(b.id)==='1560');
+  const ccToday = cc ? cc.rev : 0;
+  const feedToday = (L.feed||[]).filter(r => r.date === (()=>{const n=new Date();
+    return `${n.getFullYear()}-${String(n.getMonth()+1).padStart(2,'0')}-${String(n.getDate()).padStart(2,'0')}`;})());
+  const show = feedToday.length ? feedToday : (L.feed||[]).slice(0,6);
+  return `<div class="card full">
+    <div class="card-title">Oasis · signed today<span class="feed-tag billdu">live · billdu</span></div>
+    <div class="card-sub">Oasis signs in Billdu, not Contractors Cloud. An accepted estimate is the signature, so this is where an Oasis sale actually appears first.</div>
+
+    <div class="stat-grid" style="margin-bottom:14px">
+      <div class="stat-tile"><div class="lbl">Today</div>
+        <div class="val ${day.value?'green':''}">${short(day.value)}</div>
+        <div class="sub">${day.acceptances} accepted</div></div>
+      <div class="stat-tile"><div class="lbl">This week</div>
+        <div class="val ${week.value?'green':''}">${short(week.value)}</div>
+        <div class="sub">${week.acceptances} accepted</div></div>
+      <div class="stat-tile"><div class="lbl">Month to date</div>
+        <div class="val gold">${short(month.value)}</div>
+        <div class="sub">${month.acceptances} accepted</div>
+        ${d===null?'':`<div class="delta ${d>=0?'up':'down'}">${d>=0?'▲':'▼'} ${Math.abs(d)}% vs last month</div>`}</div>
+      <div class="stat-tile"><div class="lbl">In CC today</div>
+        <div class="val ${ccToday?'':'orange'}">${short(ccToday)}</div>
+        <div class="sub">${ccToday?'imported':'not imported yet'}</div>
+        <div class="delta flat">CC lags Billdu</div></div>
+    </div>
+
+    ${show.length ? `<div class="card-title" style="margin-bottom:8px">${feedToday.length?'Accepted today':'Most recent acceptances'}</div>
+    ${show.slice(0,8).map(r=>`<div class="rep-row">
+      <div class="rep-head">
+        <div class="nm">${esc(r.name||'—')}${r.city?`<span class="brand">${esc(String(r.city).trim())}</span>`:''}</div>
+        <div class="amt">${short(r.value)} <span>· ${esc((r.rep||'').split(' ')[0])}</span></div>
+      </div>
+      <div class="tgt-cap"><span>${esc(r.date)}</span>
+        <span class="${r.inCc?'hit':'miss'}">${r.inCc?'in CC':'not in CC yet'}</span></div>
+    </div>`).join('')}` : ''}
+
+    <div class="withheld"><div class="wt">Why this is separate</div><div class="wx">
+      These are Billdu acceptances and are <b>never added</b> to the Contractors Cloud figures elsewhere on this page — they measure the same sale in two systems, and summing them would double it.
+      ${f.not_in_cc_yet?`Across the feed <b>${Number(f.not_in_cc_yet).toLocaleString()}</b> Billdu documents still have no CC counterpart${f.minutes_since_newest!=null?`; the newest is ${Math.round(f.minutes_since_newest)} minutes old`:''}.`:''}
+      Until the import catches up, Oasis will read higher here than in the CC cards above.</div></div>
+  </div>`;
 }
 
 function cardMix(){
@@ -892,13 +953,14 @@ function render(){
   }
   document.getElementById('app').innerHTML =
     hdr() + '<div class="stack">' + [
-      cardWeeks(), cardWow(), cardStats(), cardTrending(), cardMix(),
+      cardOasis(), cardWeeks(), cardWow(), cardStats(), cardTrending(), cardMix(),
       cardReps(), cardEffort(), cardLeads(), cardLeadCategories(), cardCadence(),
       cardMoney(), cardFlags(),
     ].join('') + '</div>' +
     `<div class="foot">Trust the instrument, not the retelling<br/>
       Read ${new Date(D.generatedAt).toLocaleString('en-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'})} ·
       ${D.coverage.jobs.toLocaleString()} jobs · ${D.coverage.appts.toLocaleString()} appts${qbOK()?` · ${D.qb.total.toLocaleString()} invoices`:''}
+      <br/>build ${esc(BUILD)}
       <br/><button class="signout" style="margin-top:12px" onclick="signOut()">Sign out</button></div>`;
   drawCharts();
 }
@@ -1024,6 +1086,12 @@ addEventListener('resize', () => {
    visitor holding this key gets 401 on the console views and zero rows
    everywhere else, which is why this file is safe in a public repo.
    ═══════════════════════════════════════════════════════════════════════════ */
+/* BUILD STAMP. Added to the Home Screen, this page is cached by the phone and
+   there is no service worker to invalidate it — so a deploy could sit on the
+   server for hours while Kevin looked at yesterday's build and reported the bug
+   as unfixed. That happened. The page now checks version.json on every load and
+   reloads itself once if the deployed build is newer than the one running. */
+const BUILD = '2026-07-20T23:40Z-oasis-billdu';
 const SB_URL = 'https://lzegjjbkfuecrhdvlvay.supabase.co';
 const SB_KEY = 'sb_publishable_kToiGqET7XzO2It9evStJw_kYzvjSF8';
 const SKEY = 'lcc.session';
@@ -1437,9 +1505,39 @@ function buildData(raw){
                value: rows.reduce((n,x)=>n+Number(x.total_price||0),0),
                notInCc: rows.filter(x=>!x.job_id).length };
     };
+    /* Oasis signings as Billdu itself records them. An accepted estimate is the
+       signature — that is the moment the customer said yes, whatever CC has
+       imported. Dates come from the view already resolved to Eastern, so they
+       are compared as plain date strings rather than re-parsed into a timezone. */
+    const sign = (billdu.signings || []).map(r => ({
+      date: String(r.signed_date_et).slice(0,10),
+      acceptances: Number(r.acceptances||0),
+      value: Number(r.accepted_value||0),
+      linked: Number(r.linked_to_cc||0),
+      notInCc: Number(r.not_in_cc_yet||0),
+    }));
+    const ymd = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+    const sumBetween = (fromD, toD) => {
+      const a = ymd(fromD), b = ymd(toD);
+      const rows = sign.filter(r => r.date >= a && r.date < b);
+      return { acceptances: rows.reduce((n,r)=>n+r.acceptances,0),
+               value: rows.reduce((n,r)=>n+r.value,0),
+               notInCc: rows.reduce((n,r)=>n+r.notInCc,0),
+               days: rows.length };
+    };
     return {
       freshness: billdu.fresh || null,
       windows: Object.fromEntries(Object.entries(WINS).map(([k,wv]) => [k, win(wv.from, wv.to)])),
+      // signings, by the same windows the rest of the console uses
+      signings: Object.fromEntries(Object.entries(WINS).map(([k,wv]) => [k, sumBetween(wv.from, wv.to)])),
+      signingsPrev: Object.fromEntries(Object.entries(WINS).map(([k,wv]) => [k, sumBetween(...prevRange(wv))])),
+      daily: sign.sort((a,b)=>a.date<b.date?1:-1).slice(0,14),
+      feed: (billdu.feed || []).map(r => ({
+        name: r.client_name, city: r.client_city, rep: r.rep,
+        value: Number(r.accepted_value||0), at: r.accepted_at,
+        date: String(r.signed_date_et).slice(0,10),
+        matched: r.match_status === 'linked', inCc: !!r.job_id,
+      })),
     };
   })();
 
@@ -1483,11 +1581,14 @@ async function loadAll(){
   // if the feed is not readable the console simply does not make the claim.
   let billdu = null;
   try {
-    const [fresh, docs] = await Promise.all([
+    const [fresh, docs, signings, feed] = await Promise.all([
       q('console_billdu_freshness?select=*'),
       q('billdu_documents?select=doc_type,is_accepted,total_price,issue_date,job_id'),
+      // Oasis's real signings: an accepted Billdu estimate IS the signature.
+      q('console_oasis_signings_live?select=*'),
+      q('console_oasis_signings_feed?select=*&order=accepted_at.desc&limit=40'),
     ]);
-    billdu = { fresh: fresh[0] || null, docs };
+    billdu = { fresh: fresh[0] || null, docs, signings, feed };
   } catch(e){ billdu = null; }
   let qbInv = [], qbError = null;
   try { qbInv = await q('qb_invoices?select=cc_company_id,txn_date,total_amt,balance,reporting_excluded'); }
@@ -1499,7 +1600,22 @@ async function loadAll(){
   render();
 }
 
+/* Reload once if the server has a newer build than the one running. Guarded by a
+   sessionStorage flag so a version.json that never matches cannot loop. */
+async function checkBuild(){
+  try {
+    const r = await fetch('version.json?cb=' + Date.now(), { cache:'no-store' });
+    if (!r.ok) return;
+    const j = await r.json();
+    if (j.build && j.build !== BUILD && !sessionStorage.getItem('lcc.reloaded')) {
+      sessionStorage.setItem('lcc.reloaded', j.build);
+      location.reload();
+    }
+  } catch(e){}
+}
+
 /* ── boot ─────────────────────────────────────────────────────────────────── */
+checkBuild();
 document.getElementById('loginform').addEventListener('submit', async ev => {
   ev.preventDefault();
   const btn = document.getElementById('gobtn');
