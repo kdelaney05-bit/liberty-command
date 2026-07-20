@@ -1,0 +1,1021 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<!-- Kevin's model says maximum-scale=1, user-scalable=no. Pinch-zoom is left ON
+     here deliberately: this is a numbers instrument and being unable to zoom a
+     chart on a phone is a real loss. Say the word and it goes back. -->
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
+<title>Liberty Command Console</title>
+<link rel="manifest" href="manifest.json"/>
+<meta name="theme-color" content="#0d1f17"/>
+<meta name="color-scheme" content="dark"/>
+<link rel="apple-touch-icon" href="apple-touch-icon.png"/>
+<link rel="icon" type="image/png" href="icon-1024.png"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+<meta name="apple-mobile-web-app-title" content="Command"/>
+<meta name="format-detection" content="telephone=no"/>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,400;9..144,500;9..144,600&family=JetBrains+Mono:wght@400;500;600&family=Inter+Tight:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+/* ═══════════════════════════════════════════════════════════════════════════
+   Kevin's Liberty Command Console model, wired live.
+   Everything down to the ── EXTENSIONS ── rule is his CSS verbatim.
+   ═══════════════════════════════════════════════════════════════════════════ */
+  :root {
+    --bg-deep: #0d1f17; --bg-card: #15291f; --bg-card-hi: #1c3528;
+    --line: rgba(255,255,255,0.06); --text: #e8efe9; --text-dim: #8aa094;
+    --accent: #f0834a; --accent-soft: #f4a37a; --green: #6cc28b; --green-soft: #8fd5a8;
+    --red: #d96a5e; --gold: #d4b15a; --blue: #6ba8c9; --violet: #a98fd5;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  html, body { width: 100%; overflow-x: hidden; }
+  body { font-family: 'Inter Tight', sans-serif; background: radial-gradient(ellipse at top, #1a3326 0%, #0d1f17 60%); background-attachment: fixed; color: var(--text); min-height: 100vh; padding: 16px; -webkit-font-smoothing: antialiased; }
+  .shell { width: 100%; max-width: 480px; margin: 0 auto; }
+  .hdr { margin-bottom: 20px; padding-bottom: 16px; border-bottom: 1px solid var(--line); }
+  .eyebrow { font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--accent); margin-bottom: 6px; }
+  .hdr h1 { font-family: 'Fraunces', serif; font-weight: 400; font-size: 28px; letter-spacing: -0.02em; line-height: 1.05; margin-bottom: 18px; }
+  .hdr h1 em { font-style: italic; color: var(--accent-soft); font-weight: 300; }
+  .nw-block { display: flex; justify-content: space-between; align-items: flex-end; }
+  .nw-block .nw-label { font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--text-dim); margin-bottom: 4px; }
+  .nw-block .nw { font-family: 'Fraunces', serif; font-size: 30px; font-weight: 500; letter-spacing: -0.01em; line-height: 1; }
+  .nw-block .nw-sub { font-family: 'JetBrains Mono', monospace; font-size: 9px; color: var(--text-dim); margin-top: 5px; letter-spacing: 0.04em; }
+  .nw-block .nw-delta { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--green); text-align: right; line-height: 1.5; }
+  .nw-block .nw-delta b { color: var(--green-soft); font-weight: 600; }
+  .stack { display: flex; flex-direction: column; gap: 12px; }
+  .card { background: var(--bg-card); border: 1px solid var(--line); border-radius: 14px; padding: 16px; }
+  .card-title { font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--text-dim); margin-bottom: 4px; }
+  .card-sub { font-size: 12px; color: var(--text-dim); margin-bottom: 12px; }
+  .feed-tag { display: inline-block; margin-left: 6px; font-family: 'JetBrains Mono', monospace; font-size: 8px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--green); border: 1px solid rgba(108,194,139,0.3); border-radius: 100px; padding: 1px 6px; vertical-align: middle; }
+  .feed-tag.cc { color: var(--blue); border-color: rgba(107,168,201,0.3); }
+  .feed-tag.qb { color: var(--gold); border-color: rgba(212,177,90,0.3); }
+  .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .stat-tile { background: var(--bg-card); border: 1px solid var(--line); border-radius: 12px; padding: 14px; }
+  .stat-tile .lbl { font-family: 'JetBrains Mono', monospace; font-size: 9px; letter-spacing: 0.15em; text-transform: uppercase; color: var(--text-dim); margin-bottom: 6px; }
+  .stat-tile .val { font-family: 'Fraunces', serif; font-size: 22px; font-weight: 500; letter-spacing: -0.01em; line-height: 1; }
+  .stat-tile .sub { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--text-dim); margin-top: 6px; }
+  .stat-tile .val.orange { color: var(--accent-soft); } .stat-tile .val.gold { color: var(--gold); } .stat-tile .val.blue { color: var(--blue); } .stat-tile .val.green { color: var(--green-soft); }
+  .stat-tile .delta { font-family: 'JetBrains Mono', monospace; font-size: 9px; margin-top: 6px; letter-spacing: 0.02em; }
+  .stat-tile .delta.up { color: var(--green-soft); } .stat-tile .delta.down { color: #d8997f; } .stat-tile .delta.flat { color: var(--text-dim); }
+  .wow-hero { display: flex; align-items: stretch; gap: 8px; margin: 10px 0 12px; }
+  .wow-col { flex: 1; background: var(--bg-card-hi); border: 1px solid var(--line); border-radius: 10px; padding: 11px 12px; }
+  .wow-col .k { font-family: 'JetBrains Mono', monospace; font-size: 8px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-dim); }
+  .wow-col .v { font-family: 'Fraunces', serif; font-size: 21px; font-weight: 500; margin-top: 4px; line-height: 1; }
+  .wow-col.now { border-color: rgba(108,194,139,0.4); } .wow-col.now .v { color: var(--green-soft); }
+  .wow-arrow { display: flex; flex-direction: column; align-items: center; justify-content: center; font-family: 'JetBrains Mono', monospace; }
+  .wow-arrow .d { font-size: 13px; color: var(--green-soft); font-weight: 600; }
+  .wow-arrow .c { font-size: 8px; color: var(--text-dim); margin-top: 2px; }
+  .wow-row { display: flex; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--line); font-family: 'JetBrains Mono', monospace; font-size: 11px; }
+  .wow-row:last-child { border-bottom: none; }
+  .wow-row .nm { flex: 1; color: var(--text); }
+  .wow-row .nums { color: var(--text-dim); width: 118px; text-align: right; }
+  .wow-row .chg { width: 56px; text-align: right; font-weight: 600; }
+  .wow-row .chg.up { color: var(--green-soft); } .wow-row .chg.down { color: #d8997f; }
+  .pace-proj { position: absolute; left: 0; top: 0; height: 100%; border-radius: 100px; opacity: 0.32; }
+  .pace-solid { position: absolute; left: 0; top: 0; height: 100%; border-radius: 100px; }
+  .tgt-cap { display: flex; justify-content: space-between; font-family: 'JetBrains Mono', monospace; font-size: 8px; color: var(--text-dim); margin-top: 5px; letter-spacing: 0.04em; }
+  .tgt-cap b { color: var(--text); font-weight: 600; }
+  .tgt-cap .hit { color: var(--green-soft); } .tgt-cap .miss { color: #d4b15a; }
+  .chart-card { padding: 16px 12px 12px; }
+  .chart-card .card-title, .chart-card .card-sub { padding: 0 4px; }
+  .chart-wrap { height: 190px; margin-top: 8px; } .chart-wrap.tall { height: 200px; }
+  .alloc-chart { width: 140px; height: 140px; margin: 4px auto 14px; position: relative; }
+  .alloc-center { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; pointer-events: none; }
+  .alloc-center .big { font-family: 'Fraunces', serif; font-size: 18px; font-weight: 500; }
+  .alloc-center .lbl { font-family: 'JetBrains Mono', monospace; font-size: 8px; letter-spacing: 0.15em; color: var(--text-dim); text-transform: uppercase; }
+  .alloc-legend { display: flex; flex-direction: column; gap: 9px; }
+  .alloc-row { display: flex; align-items: center; gap: 10px; font-size: 13px; }
+  .alloc-dot { width: 10px; height: 10px; border-radius: 3px; flex-shrink: 0; }
+  .alloc-row .name { flex: 1; } .alloc-row .val { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--text-dim); }
+  .rep-row { margin-bottom: 12px; } .rep-row:last-child { margin-bottom: 0; }
+  .rep-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 5px; }
+  .rep-head .nm { font-size: 13px; font-weight: 500; }
+  .rep-head .nm .brand { font-family: 'JetBrains Mono', monospace; font-size: 8px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-dim); margin-left: 6px; }
+  .rep-head .amt { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--text); }
+  .rep-head .amt span { color: var(--text-dim); font-size: 10px; }
+  .meter { height: 7px; background: rgba(255,255,255,0.05); border-radius: 100px; overflow: hidden; }
+  .meter-fill { height: 100%; border-radius: 100px; }
+  .brand-tile { background: var(--bg-card-hi); border: 1px solid var(--line); border-radius: 12px; padding: 14px; margin-bottom: 10px; }
+  .brand-tile:last-child { margin-bottom: 0; }
+  .brand-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; }
+  .brand-top .nm { font-family: 'Fraunces', serif; font-size: 17px; font-weight: 500; }
+  .brand-top .nm .tag { font-family: 'JetBrains Mono', monospace; font-size: 8px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-dim); display: block; margin-top: 2px; }
+  .brand-top .mtd { text-align: right; }
+  .brand-top .mtd .v { font-family: 'Fraunces', serif; font-size: 20px; font-weight: 500; }
+  .brand-top .mtd .u { font-family: 'JetBrains Mono', monospace; font-size: 9px; color: var(--text-dim); margin-top: 2px; }
+  .pace-bar { height: 8px; background: rgba(255,255,255,0.05); border-radius: 100px; position: relative; overflow: hidden; margin-bottom: 6px; }
+  .pace-fill { height: 100%; border-radius: 100px; }
+  .pace-foot { display: flex; justify-content: space-between; font-family: 'JetBrains Mono', monospace; font-size: 9px; color: var(--text-dim); }
+  .pace-foot b { color: var(--green-soft); font-weight: 600; }
+  .money-row { display: flex; align-items: center; padding: 11px 0; border-bottom: 1px solid var(--line); }
+  .money-row:last-child { border-bottom: none; }
+  .money-row .nm { flex: 1; font-size: 14px; font-weight: 500; }
+  .money-row .col { font-family: 'JetBrains Mono', monospace; font-size: 12px; width: 92px; text-align: right; }
+  .money-row .col.inv { color: var(--green-soft); } .money-row .col.ar { color: var(--accent-soft); }
+  .money-head { display: flex; padding-bottom: 8px; border-bottom: 1px solid rgba(255,255,255,0.08); }
+  .money-head .nm { flex: 1; }
+  .money-head .col { font-family: 'JetBrains Mono', monospace; font-size: 8px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-dim); width: 92px; text-align: right; }
+  .money-totals { display: flex; margin-top: 10px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,0.08); font-family: 'JetBrains Mono', monospace; font-size: 11px; }
+  .money-totals .nm { flex: 1; color: var(--text-dim); }
+  .money-totals .col { width: 92px; text-align: right; }
+  .money-totals .col.inv { color: var(--green-soft); font-weight: 600; }
+  .money-totals .col.ar { color: var(--accent-soft); font-weight: 600; }
+  .flag-row { display: flex; gap: 10px; padding: 9px 0; border-bottom: 1px solid var(--line); }
+  .flag-row:last-child { border-bottom: none; }
+  .flag-dot { width: 7px; height: 7px; border-radius: 50%; margin-top: 5px; flex-shrink: 0; }
+  .flag-row .ft { font-size: 12px; line-height: 1.5; color: var(--text-dim); }
+  .flag-row .ft b { color: var(--text); font-weight: 500; }
+  .foot { margin-top: 20px; padding-top: 14px; border-top: 1px solid var(--line); font-family: 'JetBrains Mono', monospace; font-size: 9px; color: var(--text-dim); letter-spacing: 0.1em; text-transform: uppercase; text-align: center; line-height: 1.7; }
+
+/* ═══════════════════ EXTENSIONS ═══════════════════════════════════════════
+   Everything below is added to carry the model into live data, desktop, and
+   the sections beyond his ten cards. Nothing above this line was changed.
+   ═════════════════════════════════════════════════════════════════════════ */
+
+  body { padding: calc(16px + env(safe-area-inset-top)) calc(16px + env(safe-area-inset-right)) calc(28px + env(safe-area-inset-bottom)) calc(16px + env(safe-area-inset-left)); }
+
+  /* window toggle — his mono pill idiom, thumb-sized */
+  /* scoreboard window toggle — scoped to the effort card, not the whole page */
+  .seg { display: flex; gap: 4px; background: rgba(0,0,0,0.22); border: 1px solid var(--line);
+    border-radius: 10px; padding: 3px; margin: 2px 0 14px; }
+  .seg button { flex: 1; font-family: 'JetBrains Mono', monospace; font-size: 9px; letter-spacing: 0.12em;
+    text-transform: uppercase; font-weight: 600; color: var(--text-dim); background: none; border: none;
+    border-radius: 8px; padding: 11px 4px; min-height: 44px; cursor: pointer; transition: background .15s, color .15s; }
+  .seg button.on { background: var(--accent); color: #17110c; }
+  .seg button:active { transform: scale(.97); }
+
+  /* rank chip on a scoreboard row */
+  .rk { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--text-dim);
+    margin-right: 7px; font-weight: 600; }
+  .rk.top { color: var(--accent); }
+  .lead-id { font-family: 'JetBrains Mono', monospace; font-size: 13px; font-weight: 500; }
+  .lead-id .unnamed { font-size: 8px; letter-spacing: 0.1em; text-transform: uppercase;
+    color: var(--text-dim); margin-left: 6px; }
+
+  /* SEED badge — a typed number must never wear the same badge as a measured one */
+  .feed-tag.seed { color: var(--violet); border-color: rgba(169,143,213,0.35); }
+  .feed-tag.none { color: var(--text-dim); border-color: rgba(255,255,255,0.12); }
+
+  /* withheld / honest-absence block */
+  .withheld { background: rgba(212,177,90,0.05); border: 1px solid rgba(212,177,90,0.22);
+    border-radius: 10px; padding: 12px; margin-top: 10px; }
+  .withheld .wt { font-family: 'JetBrains Mono', monospace; font-size: 9px; letter-spacing: 0.14em;
+    text-transform: uppercase; color: var(--gold); margin-bottom: 6px; }
+  .withheld .wx { font-size: 12px; line-height: 1.6; color: var(--text-dim); }
+  .note { font-family: 'JetBrains Mono', monospace; font-size: 9px; color: var(--text-dim);
+    line-height: 1.7; margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--line); }
+  .note b { color: var(--text); font-weight: 600; }
+
+  /* ── login. The only thing a logged-out visitor ever sees. Carries no
+        business data of any kind — no names, no numbers, no brands. ── */
+  .gate { min-height: 100vh; display: flex; align-items: center; justify-content: center;
+    padding: 24px calc(20px + env(safe-area-inset-left)) calc(24px + env(safe-area-inset-bottom)); }
+  .gatebox { width: 100%; max-width: 380px; }
+  .gatebox h1 { font-family: 'Fraunces', serif; font-weight: 400; font-size: 30px;
+    letter-spacing: -0.02em; line-height: 1.05; margin: 6px 0 22px; }
+  .gatebox h1 em { font-style: italic; color: var(--accent-soft); font-weight: 300; }
+  .field { margin-bottom: 12px; }
+  .field label { display: block; font-family: 'JetBrains Mono', monospace; font-size: 9px;
+    letter-spacing: 0.16em; text-transform: uppercase; color: var(--text-dim); margin-bottom: 6px; }
+  .field input { width: 100%; background: var(--bg-card); border: 1px solid var(--line);
+    border-radius: 11px; padding: 14px; color: var(--text); font-family: 'Inter Tight', sans-serif;
+    font-size: 16px; min-height: 50px; }
+  .field input:focus { outline: none; border-color: rgba(240,131,74,0.5); }
+  .gobtn { width: 100%; min-height: 50px; margin-top: 6px; border: none; border-radius: 11px;
+    background: var(--accent); color: #17110c; font-family: 'JetBrains Mono', monospace;
+    font-size: 11px; letter-spacing: 0.16em; text-transform: uppercase; font-weight: 700; cursor: pointer; }
+  .gobtn:disabled { opacity: 0.55; cursor: default; }
+  .gateerr { font-family: 'JetBrains Mono', monospace; font-size: 10px; line-height: 1.6;
+    color: var(--red); margin-top: 12px; }
+  .gatefoot { font-family: 'JetBrains Mono', monospace; font-size: 9px; color: var(--text-dim);
+    letter-spacing: 0.08em; line-height: 1.7; margin-top: 20px; padding-top: 14px;
+    border-top: 1px solid var(--line); }
+  .loading { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--text-dim);
+    letter-spacing: 0.14em; text-transform: uppercase; text-align: center; padding: 60px 20px; line-height: 2; }
+  .signout { font-family: 'JetBrains Mono', monospace; font-size: 9px; letter-spacing: 0.12em;
+    text-transform: uppercase; background: transparent; color: var(--text-dim);
+    border: 1px solid var(--line); border-radius: 8px; padding: 9px 12px; cursor: pointer; min-height: 40px; }
+
+  /* chart fallback — a chart that fails must SAY so, never leave a silent gap */
+  .chartfail { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--gold);
+    line-height: 1.6; padding: 22px 6px; text-align: center; }
+
+  /* ── DESKTOP: the same cards, flowing wider. Not a squished phone. ── */
+  @media (min-width: 900px) {
+    body { padding: 26px 26px 40px; }
+    .shell { max-width: 1180px; }
+    .hdr h1 { font-size: 36px; }
+    .nw-block .nw { font-size: 38px; }
+    .stack { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; align-items: start; }
+    .stack > .full { grid-column: 1 / -1; }
+  }
+  @media (min-width: 1360px) {
+    .shell { max-width: 1500px; }
+    .stack { grid-template-columns: repeat(3, 1fr); }
+  }
+</style>
+</head>
+<body>
+<!-- The gate. Static markup, no business data — this is the whole of what an
+     unauthenticated visitor can ever see. -->
+<div class="gate" id="gate" style="display:none">
+  <div class="gatebox">
+    <div class="eyebrow">Liberty · owner access</div>
+    <h1>Liberty <em>Command</em> Console</h1>
+    <form id="loginform" autocomplete="on">
+      <div class="field">
+        <label for="em">Email</label>
+        <input id="em" type="email" inputmode="email" autocomplete="username" required />
+      </div>
+      <div class="field">
+        <label for="pw">Password</label>
+        <input id="pw" type="password" autocomplete="current-password" required />
+      </div>
+      <button class="gobtn" id="gobtn" type="submit">Sign in</button>
+      <div class="gateerr" id="gateerr"></div>
+    </form>
+    <div class="gatefoot">
+      Every figure is read live from the database under your own login.
+      Nothing is stored in this page.
+    </div>
+  </div>
+</div>
+
+<div class="shell" id="app" style="display:none"></div>
+
+<script>
+/* ── formatting ───────────────────────────────────────────────────────────── */
+const money = n => '$' + Math.round(n).toLocaleString('en-US');
+const short = n => { const a = Math.abs(n);
+  return a >= 1e6 ? '$' + (n/1e6).toFixed(2) + 'M' : a >= 1e3 ? '$' + Math.round(n/1e3) + 'K' : '$' + Math.round(n); };
+const pct = (a,b) => b ? Math.round(a/b*100) : 0;
+const esc = s => String(s??'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+/* Brand colours per Kevin's model: Fencing green, Oasis blue, Pro-Tec gold. */
+const BRANDS = {
+  '1461': { n:'Liberty Fencing',   s:'Fencing', c:'#6cc28b' },
+  '1560': { n:'Oasis Landscapes',  s:'Oasis',   c:'#6ba8c9' },
+  '1563': { n:'Pro-Tec Roofing',   s:'Pro-Tec', c:'#d4b15a' },
+  '1537': { n:'Liberty Roofing',   s:'Roofing', c:'#a98fd5' },
+};
+/* An unmapped company id must still show its money, labelled — never dropped. */
+const brandOf = id => BRANDS[id] || { n:'Unmapped '+id, s:'?'+id, c:'#8aa094', unmapped:true };
+
+let D = null;
+// Card-scoped windows. The page as a whole stays MTD per the model; only the
+// scoreboard and the lead-source table carry their own range.
+let EFFWIN = 'month', LEADWIN = 'month';
+/* v1 follows the model's own windows: the month card set is monthly, the
+   week-over-week card is weekly. No window toggle — that is a later iteration.
+   build-console.mjs nests window totals under .company while `prev` arrives
+   already flattened, so flatten here and both sides of every comparison read
+   the same way. */
+const flat = k => ({ ...D.windows[k], ...D.windows[k].company });
+const w  = () => flat('month');
+const wk = () => flat('week');
+const qbOK = () => D.qb && !D.qb.unavailable;
+const qbw = () => qbOK() ? D.qb.windows.month : null;
+const charts = [];
+
+/* ── header ───────────────────────────────────────────────────────────────── */
+function hdr(){
+  const W = w(), pv = W.prev, delta = pv.rev ? Math.round((W.rev - pv.rev)/pv.rev*100) : null;
+  const now = new Date();
+  const dim = new Date(now.getFullYear(), now.getMonth()+1, 0).getDate();
+  const elapsed = W.prevSpanDays;
+  const proj = elapsed ? W.rev / elapsed * dim : W.rev;
+  return `<div class="hdr">
+    <div class="eyebrow">Liberty · three companies</div>
+    <h1>Liberty <em>Command</em> Console</h1>
+    <div class="nw-block">
+      <div>
+        <div class="nw-label">Signed MTD</div>
+        <div class="nw">${short(W.rev)}</div>
+        <div class="nw-sub">${W.jobs} contracts · ${W.appts} appts · ${W.completed} completed</div>
+      </div>
+      <div class="nw-delta">
+        Pace → EOM <b>${short(proj)}</b>
+        ${delta===null?'' : `<br/>${delta>=0?'▲':'▼'} ${Math.abs(delta)}% vs ${esc(W.prevLabel)}`}
+        <br/><span style="color:var(--text-dim)">${short(pv.rev)} then · day ${elapsed} of ${dim}</span>
+      </div>
+    </div>
+  </div>`;
+}
+
+/* ── 1. three-week closing trend, stacked by brand ────────────────────────── */
+function cardWeeks(){
+  const ids = [...new Set(D.weeks.flatMap(x => x.brands.map(b => b.id)))];
+  return `<div class="card chart-card full">
+    <div class="card-title">Three-week closing trend<span class="feed-tag cc">live · cc</span></div>
+    <div class="card-sub">Signed contract value by week, stacked by brand. Weeks start Monday. This card is always weekly — the window toggle does not move it.</div>
+    <div class="chart-wrap tall"><canvas id="cWeeks"></canvas></div>
+    <div class="note">Rightmost bar is the week in progress, so it is short by construction rather than by performance. Brands with nothing signed in a week are absent from that stack, not drawn as zero.</div>
+  </div>`;
+}
+
+/* ── 2. this window vs last, per brand ────────────────────────────────────── */
+function cardWow(){
+  const W = wk(), pv = W.prev;
+  const d = pv.rev ? Math.round((W.rev - pv.rev)/pv.rev*100) : null;
+  const cur = Object.fromEntries(W.brands.map(b => [b.id, b.rev]));
+  const prv = Object.fromEntries((pv.brands||[]).map(b => [b.id, b.rev]));
+  const ids = [...new Set([...Object.keys(cur), ...Object.keys(prv)])]
+    .sort((a,b) => (cur[b]||0) - (cur[a]||0));
+  return `<div class="card">
+    <div class="card-title">${esc(W.label)} vs ${esc(W.prevLabel)}<span class="feed-tag cc">live · cc</span></div>
+    <div class="card-sub">Like for like — ${W.prevSpanDays} day${W.prevSpanDays===1?'':'s'} against the same ${W.prevSpanDays} day${W.prevSpanDays===1?'':'s'} of ${esc(W.prevLabel)}.</div>
+    <div class="wow-hero">
+      <div class="wow-col"><div class="k">${esc(W.prevLabel)}</div><div class="v">${short(pv.rev)}</div></div>
+      <div class="wow-arrow"><div class="d" style="${d!==null&&d<0?'color:#d8997f':''}">${d===null?'—':(d>=0?'▲':'▼')+Math.abs(d)+'%'}</div><div class="c">${pv.jobs}→${W.jobs}</div></div>
+      <div class="wow-col now"><div class="k">${esc(W.label)}</div><div class="v">${short(W.rev)}</div></div>
+    </div>
+    ${ids.length ? ids.map(id => {
+      const m = brandOf(id), a = prv[id]||0, b = cur[id]||0;
+      const ch = a ? Math.round((b-a)/a*100) : (b ? null : 0);
+      return `<div class="wow-row">
+        <div class="nm">${esc(m.s)}</div>
+        <div class="nums">${short(a)} → ${short(b)}</div>
+        <div class="chg ${ch===null?'':ch>=0?'up':'down'}">${ch===null?'new':(ch>=0?'+':'')+ch+'%'}</div>
+      </div>`}).join('') : '<div class="note" style="border:none;padding:0;margin:0">Nothing signed in either window.</div>'}
+  </div>`;
+}
+
+/* ── 3. 2x2 stat grid. CC signed and QB invoiced sit side by side and are
+      NEVER added: they measure different events in different systems. ─────── */
+function cardStats(){
+  const W = w(), pv = W.prev, q = qbw();
+  const dl = (a,b) => { if (!b) return `<div class="delta flat">no prior baseline</div>`;
+    const p = Math.round((a-b)/b*100);
+    return `<div class="delta ${p>0?'up':p<0?'down':'flat'}">${p>0?'▲':p<0?'▼':'▬'} ${Math.abs(p)}% vs ${esc(W.prevLabel)}</div>`; };
+  return `<div class="stat-grid">
+    <div class="stat-tile"><div class="lbl">Signed MTD</div>
+      <div class="val green">${short(W.rev)}</div><div class="sub">${W.jobs} contracts · cc</div>${dl(W.rev,pv.rev)}</div>
+    <div class="stat-tile"><div class="lbl">Appts scheduled</div>
+      <div class="val blue">${W.appts}</div><div class="sub">${W.close===null?'no close rate':W.close+'% closed'}</div>${dl(W.appts,pv.appts)}</div>
+    <div class="stat-tile"><div class="lbl">New invoiced</div>
+      ${q ? `<div class="val gold">${short(q.invoiced)}</div><div class="sub">${q.count} invoices · qb</div>${dl(q.invoiced,q.prev.invoiced)}`
+          : `<div class="val" style="color:var(--text-dim)">—</div><div class="sub">not readable</div><div class="delta flat">see note below</div>`}</div>
+    <div class="stat-tile"><div class="lbl">Open A/R</div>
+      ${qbOK() ? `<div class="val orange">${short(D.qb.arTotal)}</div><div class="sub">${D.qb.ar.reduce((n,a)=>n+a.count,0)} open · as of now</div>
+      <div class="delta flat">position, not a window</div>`
+      : `<div class="val" style="color:var(--text-dim)">—</div><div class="sub">not readable</div><div class="delta flat">see note below</div>`}</div>
+  </div>
+  <div class="card full">
+    <div class="note" style="margin:0;padding:0;border:none">
+      <b>Signed</b> is Contractors Cloud contract value. <b>Invoiced</b> is QuickBooks face value. They count different events in different systems and are never added together on this page.
+      ${qbOK() ? `<b>${D.qb.dropped}</b> of ${D.qb.total.toLocaleString()} QuickBooks invoices are flagged <b>reporting_excluded</b> and are left out of every figure here.`
+               : `QuickBooks figures are <b>withheld, not zero</b> — ${esc(D.qb.reason)}`}
+    </div>
+  </div>`;
+}
+
+/* ── 4. trending to finish — booked, projected, seeded target ─────────────── */
+function cardTrending(){
+  const W = w();
+  const now = new Date();
+  const days = new Date(now.getFullYear(), now.getMonth()+1, 0).getDate();
+  const elapsed = W.prevSpanDays;
+  const rows = [...W.brands].sort((a,b) => b.rev - a.rev);
+  return `<div class="card">
+    <div class="card-title">Trending to finish<span class="feed-tag cc">live · cc</span><span class="feed-tag seed">targets seeded</span></div>
+    <div class="card-sub">Solid is booked. The faded run-on is where this month lands if the current daily rate holds.</div>
+    ${rows.length ? rows.map(b => {
+      const m = brandOf(b.id);
+      const proj = elapsed ? b.rev / elapsed * days : b.rev;
+      const tgt = D.targets.monthly[b.id] || 0;
+      const mx = Math.max(proj, tgt, b.rev, 1);
+      const hit = tgt && proj >= tgt;
+      return `<div class="brand-tile">
+        <div class="brand-top">
+          <div class="nm">${esc(m.n)}<span class="tag">${b.jobs} signed${m.unmapped?' · unmapped id':''}</span></div>
+          <div class="mtd"><div class="v">${short(b.rev)}</div><div class="u">booked</div></div>
+        </div>
+        <div class="pace-bar">
+          <div class="pace-proj" style="width:${Math.round(proj/mx*100)}%;background:${m.c}"></div>
+          <div class="pace-solid" style="width:${Math.round(b.rev/mx*100)}%;background:${m.c}"></div>
+        </div>
+        <div class="tgt-cap">
+          <span>proj <b>${short(proj)}</b></span>
+          ${tgt ? `<span class="${hit?'hit':'miss'}">${hit?'clears':'short of'} seed ${short(tgt)}</span>` : `<span>no seed</span>`}
+        </div>
+      </div>`}).join('') : '<div class="card-sub" style="margin:0">Nothing signed in this window.</div>'}
+    <div class="note"><b>Targets are seeded, not set.</b> ${esc(D.targets.note)}</div>
+  </div>`;
+}
+
+/* ── 5. signed mix donut ──────────────────────────────────────────────────── */
+function cardMix(){
+  const W = w(), tot = W.brands.reduce((n,b)=>n+b.rev,0);
+  const rows = [...W.brands].sort((a,b)=>b.rev-a.rev);
+  return `<div class="card chart-card">
+    <div class="card-title">Signed mix · ${esc(W.label)}<span class="feed-tag cc">live · cc</span></div>
+    <div class="card-sub">Share of signed value by brand.</div>
+    ${tot ? `<div class="alloc-chart"><canvas id="cMix"></canvas>
+      <div class="alloc-center"><div class="big">${short(tot)}</div><div class="lbl">signed</div></div></div>
+    <div class="alloc-legend">${rows.map(b=>{const m=brandOf(b.id);
+      return `<div class="alloc-row"><div class="alloc-dot" style="background:${m.c}"></div>
+        <div class="name">${esc(m.n)}</div><div class="val">${short(b.rev)} · ${pct(b.rev,tot)}%</div></div>`}).join('')}</div>`
+    : '<div class="card-sub" style="margin:0">Nothing signed in this window to split.</div>'}
+  </div>`;
+}
+
+/* ── 6. sales by rep ──────────────────────────────────────────────────────── */
+function cardReps(){
+  const reps = w().reps, mx = Math.max(1, ...reps.map(r=>r.rev));
+  return `<div class="card">
+    <div class="card-title">Sales by rep · MTD<span class="feed-tag cc">live · cc</span></div>
+    <div class="card-sub">${reps.length? 'Ranked by signed contract value this month.' : 'No rep activity this month.'}</div>
+    ${reps.map(r=>`<div class="rep-row">
+      <div class="rep-head">
+        <div class="nm">${esc(r.name)}${r.role&&r.role!=='sales'?`<span class="brand">${esc(r.role)}</span>`:''}</div>
+        <div class="amt">${short(r.rev)} <span>· ${r.jobs} job${r.jobs===1?'':'s'}</span></div>
+      </div>
+      <div class="meter"><div class="meter-fill" style="width:${Math.round(r.rev/mx*100)}%;background:${r.rev===mx?'#6cc28b':'#6ba8c9'}"></div></div>
+    </div>`).join('')}
+    ${reps.length?`<div class="note">Rep is read from the job's own <b>rep_id</b>. <b>${D.coverage.apptsWithRep.toLocaleString()} of ${D.coverage.appts.toLocaleString()}</b> appointments carry a rep, so close rates below that coverage are unknown rather than assumed.</div>`:''}
+  </div>`;
+}
+
+/* ── 7. weekly cadence ────────────────────────────────────────────────────── */
+function cardCadence(){
+  return `<div class="card chart-card">
+    <div class="card-title">Weekly cadence<span class="feed-tag cc">live · cc</span></div>
+    <div class="card-sub">Appointments run against contracts signed, by weekday, this week. Always the current week.</div>
+    <div class="chart-wrap"><canvas id="cCad"></canvas></div>
+    <div class="note">Days still ahead of today are drawn faded — they are unrun, not empty.</div>
+  </div>`;
+}
+
+/* ── 8. money by brand — QuickBooks ───────────────────────────────────────── */
+function cardMoney(){
+  if (!qbOK()) return `<div class="card full">
+    <div class="card-title">Money by brand<span class="feed-tag none">not readable</span></div>
+    <div class="card-sub">Invoiced and open A/R, from QuickBooks.</div>
+    <div class="withheld"><div class="wt">Withheld, not zero</div><div class="wx">${esc(D.qb.reason)}</div></div>
+    <div class="note">An empty table here would say "no money". That is not what the database said — it said <b>403 permission denied</b>, which is a different fact and a much smaller problem.</div>
+  </div>`;
+  const q = qbw();
+  const ar = Object.fromEntries(D.qb.ar.map(a=>[a.id,a]));
+  const ids = [...new Set([...Object.keys(q.byBrand), ...Object.keys(ar)])]
+    .sort((a,b)=>((q.byBrand[b]?.invoiced)||0)-((q.byBrand[a]?.invoiced)||0));
+  const missing = Object.keys(BRANDS).filter(id => !D.qb.brandsWithInvoices.includes(id));
+  return `<div class="card full">
+    <div class="card-title">Money by brand<span class="feed-tag qb">live · qb</span></div>
+    <div class="card-sub">Invoiced in ${esc(w().label.toLowerCase())} against total open A/R as of now.</div>
+    <div class="money-head"><div class="nm"></div><div class="col">Invoiced</div><div class="col">Open A/R</div></div>
+    ${ids.map(id=>{const m=brandOf(id), inv=q.byBrand[id]?.invoiced||0, a=ar[id]?.ar||0;
+      return `<div class="money-row"><div class="nm">${esc(m.n)}</div>
+        <div class="col inv">${inv?short(inv):'—'}</div><div class="col ar">${a?short(a):'—'}</div></div>`}).join('')}
+    <div class="money-totals"><div class="nm">Total</div>
+      <div class="col inv">${short(q.invoiced)}</div><div class="col ar">${short(D.qb.arTotal)}</div></div>
+    ${missing.length?`<div class="withheld"><div class="wt">Absent, not zero</div><div class="wx">
+      ${missing.map(id=>esc(BRANDS[id].n)).join(' and ')} ${missing.length>1?'have':'has'} no QuickBooks invoices at all — not $0 of invoicing, but no invoice records in the feed. Shown as a dash rather than a zero so an empty row is never read as a result.</div></div>`:''}
+    <div class="note">QuickBooks face value, never recomputed from lines and never reconciled against Contractors Cloud. <b>${D.qb.dropped}</b> excluded invoices are omitted. A/R is every open balance as of now and is deliberately not window-sliced.</div>
+  </div>`;
+}
+
+/* ── 9. EFFORT · TOUCHES — the one new card in v1. Same meter-row language as
+      Sales by Rep. Goal comes from rep_targets.daily_touch_goal (a real row per
+      rep); points come from each play's own score_components.weight. Nothing
+      here is inferred from sales outcomes: effort is what a rep did, not what
+      happened to close. ─────────────────────────────────────────────────────── */
+function cardEffort(){
+  const E = D.effort;
+  const K = EFFWIN, span = E.spans[K] || 1;
+  const label = { day:'today', week:'this week', month:'this month', year:'this year' }[K];
+  const live = E.rows.some(r => r[K].t > 0);
+  // Ranked by touches in the window, points breaking ties. Reps who logged
+  // nothing still appear — a scoreboard that hides its zeros is not a scoreboard.
+  const ranked = [...E.rows].sort((a,b) => b[K].t - a[K].t || b[K].p - a[K].p || a.name.localeCompare(b.name));
+  const logged = ranked.filter(r => r[K].t > 0);
+  const silent = ranked.length - logged.length;
+  const teamT = ranked.reduce((n,r) => n + r[K].t, 0);
+  const teamP = ranked.reduce((n,r) => n + r[K].p, 0);
+  const goalEach = (E.defaultGoal||0) * span;
+  return `<div class="card full">
+    <div class="card-title">Effort · scoreboard<span class="feed-tag ${live?'':'none'}">${live?'live · app':'awaiting logging'}</span></div>
+    <div class="card-sub">Touches logged in the field app, ranked. Meter is each rep against their own goal for ${label} — ${span} working day${span===1?'':'s'} at ${E.defaultGoal}/day.</div>
+
+    <div class="seg">
+      ${[['day','Day'],['week','Week'],['month','Month'],['year','Year']]
+        .map(([k,l])=>`<button class="${k===K?'on':''}" onclick="setEff('${k}')">${l}</button>`).join('')}
+    </div>
+
+    <div class="stat-grid" style="margin-bottom:14px">
+      <div class="stat-tile"><div class="lbl">Touches ${esc(label)}</div>
+        <div class="val ${teamT?'green':''}">${teamT}</div>
+        <div class="sub">team goal ${goalEach*E.activeReps}</div></div>
+      <div class="stat-tile"><div class="lbl">Production points</div>
+        <div class="val ${teamP?'gold':''}">${teamP}</div>
+        <div class="sub">${E.plays[0]?.weight||25} per play</div></div>
+      <div class="stat-tile"><div class="lbl">Reps on the board</div>
+        <div class="val ${logged.length?'blue':''}">${logged.length}<span style="font-size:14px;color:var(--text-dim)"> / ${E.activeReps}</span></div>
+        <div class="sub">logged ${esc(label)}</div></div>
+      <div class="stat-tile"><div class="lbl">Team goal hit</div>
+        <div class="val ${goalEach&&teamT>=goalEach*E.activeReps?'green':''}">${goalEach?Math.round(teamT/(goalEach*E.activeReps)*100):0}%</div>
+        <div class="sub">of ${goalEach*E.activeReps} expected</div></div>
+    </div>
+
+    ${logged.map((r,i) => {
+      const goal = (r.goal||0) * span;
+      const p = goal ? Math.min(100, Math.round(r[K].t / goal * 100)) : 0;
+      return `<div class="rep-row">
+        <div class="rep-head">
+          <div class="nm"><span class="rk ${i===0?'top':''}">${i+1}</span>${esc(r.name)}${r.role&&r.role!=='sales'?`<span class="brand">${esc(r.role)}</span>`:''}</div>
+          <div class="amt">${r[K].t} <span>· ${r[K].p} pts</span></div>
+        </div>
+        <div class="meter"><div class="meter-fill" style="width:${p}%;background:${p>=100?'#6cc28b':'#6ba8c9'}"></div></div>
+        <div class="tgt-cap"><span>${r[K].t} of ${goal} goal</span>
+          <span class="${p>=100?'hit':'miss'}">${p}%</span></div>
+      </div>`}).join('')}
+
+    ${silent ? `<div class="withheld"><div class="wt">${logged.length?'Not on the board':'Honest zero'}</div><div class="wx">
+      ${silent} of ${E.activeReps} active rep${silent===1?' has':'s have'} logged nothing ${esc(label)}${logged.length?'':' — and nobody has'}. Touch logging begins when reps go live: <b>zeros are real</b>, not a broken feed. Nothing is back-filled from sales activity, so a rep who closed work but logged no touches ranks at zero, because that is what the effort data says.</div></div>` : ''}
+
+    <div class="note">Goal is <b>rep_targets.daily_touch_goal</b>, a real row per rep — all ${E.activeReps} currently sit at the company default of <b>${E.defaultGoal}/day</b>${E.goalsAllDefault?', none set their own yet':''}. Points are each play's own weight in <b>score_components</b> (${E.plays.map(p=>esc(p.title)).join(', ')} — ${E.plays[0]?.weight} each); Until Yes repeats, so its repeats count again. Goals are scaled by working days, not calendar days, or a Monday would read as a whole week missed.</div>
+  </div>`;
+}
+
+/* ── LEAD SOURCES · MARKETING. The ids are complete on every job; the names are
+      what CC will not return. Shown by id rather than withheld, because which
+      ids carry the revenue is exactly what decides which ones are worth
+      naming. ─────────────────────────────────────────────────────────────── */
+function cardLeads(){
+  const L = D.leadSources;
+  const rows = (L.windows[LEADWIN] || []).slice(0, 10);
+  const label = { day:'today', week:'this week', month:'this month', ytd:'year to date' }[LEADWIN];
+  const tot = rows.reduce((n,r) => n + r.rev, 0);
+  const mx = Math.max(1, ...rows.map(r => r.rev));
+  return `<div class="card full">
+    <div class="card-title">Lead sources · marketing<span class="feed-tag cc">live · cc</span><span class="feed-tag none">ids, not names</span></div>
+    <div class="card-sub">Signed value by the lead source each job came from, ${esc(label)}. Conversion is contracts signed against every job that source produced, all time.</div>
+
+    <div class="seg">
+      ${[['day','Day'],['week','Week'],['month','Month'],['ytd','YTD']]
+        .map(([k,l])=>`<button class="${k===LEADWIN?'on':''}" onclick="setLead('${k}')">${l}</button>`).join('')}
+    </div>
+
+    ${rows.length ? rows.map(r => {
+      const all = L.allTime.find(a => a.id === r.id);
+      const conv = all && all.jobs ? Math.round(all.signed / all.jobs * 100) : null;
+      const nm = L.namedIds[r.id];
+      return `<div class="rep-row">
+        <div class="rep-head">
+          <div class="nm"><span class="lead-id">${r.id === 'none' ? 'No source id' : '#' + esc(r.id)}</span>${nm?'':'<span class="unnamed">unnamed</span>'}</div>
+          <div class="amt">${short(r.rev)} <span>· ${r.signed} signed</span></div>
+        </div>
+        <div class="meter"><div class="meter-fill" style="width:${Math.round(r.rev/mx*100)}%;background:${r.rev===mx?'#f0834a':'#6ba8c9'}"></div></div>
+        <div class="tgt-cap"><span>${pct(r.rev,tot)}% of signed value ${esc(label)}</span>
+          <span>${conv===null?'':conv+'% of its leads convert'}</span></div>
+        ${nm?`<div class="tgt-cap" style="color:var(--gold)"><span>${esc(nm)}</span></div>`:''}
+      </div>`}).join('') : `<div class="card-sub" style="margin:0">Nothing signed ${esc(label)} to attribute.</div>`}
+
+    <div class="withheld"><div class="wt">Ids are complete — names are not</div><div class="wx">${esc(L.note)}</div></div>
+    <div class="note">Every one of <b>${L.total.toLocaleString()}</b> jobs carries a lead source id — <b>${pct(L.coverage,L.total)}% coverage</b> across <b>${L.distinct}</b> distinct sources — so this attribution is complete, not a sample. Only <b>${L.namedCount}</b> ids have a label. Naming the top few in <b>cc_enum_map</b> is what turns these numbers into "Angi vs referral vs Google"; until then the id stands rather than a guess.</div>
+  </div>`;
+}
+
+/* ── 10. flags ────────────────────────────────────────────────────────────── */
+function cardFlags(){
+  const W = w(), f = [];
+  const cov = pct(D.coverage.jobsWithSold, D.coverage.jobs);
+  f.push(['#d4b15a', `<b>${cov}% of jobs carry a contract value.</b> ${D.coverage.jobsWithSold.toLocaleString()} of ${D.coverage.jobs.toLocaleString()} have a sold amount on them. Every dollar on this page is a floor, not a full count.`]);
+  if (!qbOK()) f.push(['#d96a5e', `<b>QuickBooks is unreadable to your login.</b> ${esc(D.qb.reason)} Every QB figure on this page is withheld rather than shown as zero.`]);
+  if (qbOK() && D.qb.dropped) f.push(['#d4b15a', `<b>${D.qb.dropped} QuickBooks invoices excluded.</b> Flagged reporting_excluded and kept out of invoiced and A/R alike.`]);
+  const missing = qbOK() ? Object.keys(BRANDS).filter(id => !D.qb.brandsWithInvoices.includes(id)) : [];
+  if (missing.length) f.push(['#d96a5e', `<b>${missing.map(id=>BRANDS[id].n).join(' and ')} ${missing.length>1?'have':'has'} no QuickBooks feed.</b> Signed value is tracked in Contractors Cloud; invoicing is not visible here at all.`]);
+  if (D.effort.total < 50) f.push(['#8aa094', `<b>Effort is unlogged.</b> ${D.effort.total} touches exist. The effort card is a real zero, not a broken feed.`]);
+  f.push(['#a98fd5', `<b>Targets are seeded.</b> ${esc(D.targets.basis)} — nobody has set a goal yet, so "clears" and "short of" measure against recent form, not a commitment.`]);
+  if (W.close === null) f.push(['#8aa094', `<b>No close rate for ${esc(W.label.toLowerCase())}.</b> No appointments in the window to divide by.`]);
+  return `<div class="card full">
+    <div class="card-title">Flags · read before trusting</div>
+    <div class="card-sub">What would mislead you if nobody said it.</div>
+    ${f.map(([c,t])=>`<div class="flag-row"><div class="flag-dot" style="background:${c}"></div><div class="ft">${t}</div></div>`).join('')}
+  </div>`;
+}
+
+/* ── render ───────────────────────────────────────────────────────────────── */
+function render(){
+  document.getElementById('app').innerHTML =
+    hdr() + '<div class="stack">' + [
+      cardWeeks(), cardWow(), cardStats(), cardTrending(), cardMix(),
+      cardReps(), cardEffort(), cardLeads(), cardCadence(), cardMoney(), cardFlags(),
+    ].join('') + '</div>' +
+    `<div class="foot">Trust the instrument, not the retelling<br/>
+      Read ${new Date(D.generatedAt).toLocaleString('en-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'})} ·
+      ${D.coverage.jobs.toLocaleString()} jobs · ${D.coverage.appts.toLocaleString()} appts${qbOK()?` · ${D.qb.total.toLocaleString()} invoices`:''}
+      <br/><button class="signout" style="margin-top:12px" onclick="signOut()">Sign out</button></div>`;
+  drawCharts();
+}
+
+/* These toggles sit mid-page, so a full re-render must not throw the reader back
+   to the top. Hold the scroll position across the redraw. */
+function keepScroll(fn){
+  const y = window.scrollY;
+  fn(); render();
+  window.scrollTo({ top: y });
+}
+function setEff(k){ keepScroll(() => { EFFWIN = k; }); }
+function setLead(k){ keepScroll(() => { LEADWIN = k; }); }
+
+/* ── charts. Kevin's Chart.js idiom: mono ticks, #1c3528 tooltips. ─────────
+      If the CDN is blocked or offline, every chart says so out loud instead of
+      leaving a confident-looking empty box. ─────────────────────────────────── */
+function drawCharts(){
+  while (charts.length) { try { charts.pop().destroy(); } catch(e){} }
+  if (typeof Chart === 'undefined') {
+    document.querySelectorAll('.chart-wrap, .alloc-chart').forEach(el => {
+      el.innerHTML = '<div class="chartfail">Chart library did not load.<br/>The numbers on this page are unaffected — only the drawing is missing.</div>';
+      el.style.height = 'auto';
+    });
+    return;
+  }
+  Chart.defaults.color = '#8aa094';
+  Chart.defaults.borderColor = 'rgba(255,255,255,0.05)';
+  const MONO = "'JetBrains Mono', monospace";
+  const TIP = { backgroundColor:'#1c3528', borderColor:'rgba(255,255,255,0.1)', borderWidth:1, padding:8,
+                titleFont:{family:MONO,size:10}, bodyFont:{family:MONO,size:10} };
+
+  const wk = document.getElementById('cWeeks');
+  if (wk) {
+    const ids = [...new Set(D.weeks.flatMap(x=>x.brands.map(b=>b.id)))];
+    charts.push(new Chart(wk.getContext('2d'), {
+      type:'bar',
+      data:{ labels: D.weeks.map(x=>x.label+(x.current?' ·':'')),
+        datasets: ids.map(id=>{ const m=brandOf(id);
+          return { label:m.s, stack:'s', borderRadius:3, backgroundColor:m.c,
+                   data: D.weeks.map(x=>(x.brands.find(b=>b.id===id)?.rev)||0) }; }) },
+      options:{ responsive:true, maintainAspectRatio:false,
+        plugins:{ legend:{position:'bottom',labels:{boxWidth:9,boxHeight:9,padding:12,font:{family:MONO,size:9}}},
+          tooltip:{...TIP, callbacks:{ label:c=>' '+c.dataset.label+': '+short(c.parsed.y),
+            footer:it=>'Σ '+short(it.reduce((a,b)=>a+b.parsed.y,0)) }}},
+        scales:{ x:{stacked:true,grid:{display:false},ticks:{font:{family:MONO,size:10}}},
+          y:{stacked:true,beginAtZero:true,grid:{color:'rgba(255,255,255,0.04)'},
+             ticks:{font:{family:MONO,size:9},maxTicksLimit:5,callback:v=>short(v)}} } }
+    }));
+  }
+
+  const mix = document.getElementById('cMix');
+  if (mix) {
+    const rows = [...w().brands].sort((a,b)=>b.rev-a.rev);
+    charts.push(new Chart(mix.getContext('2d'), {
+      type:'doughnut',
+      data:{ labels: rows.map(b=>brandOf(b.id).s),
+        datasets:[{ data: rows.map(b=>b.rev), backgroundColor: rows.map(b=>brandOf(b.id).c), borderWidth:0, hoverOffset:6 }] },
+      options:{ responsive:true, maintainAspectRatio:false, cutout:'70%',
+        plugins:{ legend:{display:false}, tooltip:{...TIP, callbacks:{ label:c=>' '+short(c.parsed) }} } }
+    }));
+  }
+
+  const cad = document.getElementById('cCad');
+  if (cad) {
+    charts.push(new Chart(cad.getContext('2d'), {
+      type:'bar',
+      data:{ labels: D.cadence.map(c=>c.label),
+        datasets:[
+          { label:'Appts run', backgroundColor: D.cadence.map(c=>c.future?'rgba(107,168,201,0.25)':'#6ba8c9'),
+            borderRadius:3, data: D.cadence.map(c=>c.appts) },
+          { label:'Signed',    backgroundColor: D.cadence.map(c=>c.future?'rgba(108,194,139,0.25)':'#6cc28b'),
+            borderRadius:3, data: D.cadence.map(c=>c.signed) } ] },
+      options:{ responsive:true, maintainAspectRatio:false,
+        plugins:{ legend:{position:'bottom',labels:{boxWidth:9,boxHeight:9,padding:12,font:{family:MONO,size:9}}},
+          tooltip:{...TIP, callbacks:{ label:c=>' '+c.dataset.label+': '+c.parsed.y+(D.cadence[c.dataIndex].future?' (ahead of today)':'') }}},
+        scales:{ x:{grid:{display:false},ticks:{font:{family:MONO,size:10}}},
+          y:{beginAtZero:true,grid:{color:'rgba(255,255,255,0.04)'},ticks:{font:{family:MONO,size:9},precision:0,maxTicksLimit:5}} } }
+    }));
+  }
+}
+
+/* Rotating the phone, or crossing the 900px breakpoint where .stack flips from
+   one column to two, changes every card's width. Chart.js does not reliably
+   catch that on its own, so redraw on resize — debounced, and only when the
+   width actually changed (iOS fires resize on scroll as the URL bar hides). */
+let rw = innerWidth, rt;
+addEventListener('resize', () => {
+  if (innerWidth === rw) return;
+  rw = innerWidth;
+  clearTimeout(rt);
+  rt = setTimeout(() => { if (D) render(); }, 180);
+});
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   AUTH + LIVE DATA.
+
+   This page ships with NO business data in it. The publishable key below is
+   designed to be public — it identifies the project, it does not authorise
+   anything. Every row is fetched under the signed-in user's own JWT, and the
+   database's row-level security decides what that user may see. A logged-out
+   visitor holding this key gets 401 on the console views and zero rows
+   everywhere else, which is why this file is safe in a public repo.
+   ═══════════════════════════════════════════════════════════════════════════ */
+const SB_URL = 'https://lzegjjbkfuecrhdvlvay.supabase.co';
+const SB_KEY = 'sb_publishable_kToiGqET7XzO2It9evStJw_kYzvjSF8';
+const SKEY = 'lcc.session';
+
+const gate = document.getElementById('gate');
+const appEl = document.getElementById('app');
+const sess = {
+  get(){ try { return JSON.parse(localStorage.getItem(SKEY) || 'null'); } catch(e){ return null; } },
+  set(s){ try { localStorage.setItem(SKEY, JSON.stringify(s)); } catch(e){} },
+  clear(){ try { localStorage.removeItem(SKEY); } catch(e){} },
+};
+
+function showGate(msg){
+  gate.style.display = 'flex'; appEl.style.display = 'none';
+  document.getElementById('gateerr').textContent = msg || '';
+  const s = sess.get();
+  if (s && s.email) document.getElementById('em').value = s.email;
+}
+function showApp(){ gate.style.display = 'none'; appEl.style.display = ''; }
+
+async function signIn(email, password){
+  const r = await fetch(`${SB_URL}/auth/v1/token?grant_type=password`, {
+    method:'POST', headers:{ apikey: SB_KEY, 'Content-Type':'application/json' },
+    body: JSON.stringify({ email, password }),
+  });
+  const j = await r.json();
+  if (!r.ok) throw new Error(j.error_description || j.msg || j.message || `sign-in failed (${r.status})`);
+  sess.set({ access_token:j.access_token, refresh_token:j.refresh_token, email });
+  return j;
+}
+async function refresh(){
+  const s = sess.get();
+  if (!s || !s.refresh_token) return false;
+  const r = await fetch(`${SB_URL}/auth/v1/token?grant_type=refresh_token`, {
+    method:'POST', headers:{ apikey: SB_KEY, 'Content-Type':'application/json' },
+    body: JSON.stringify({ refresh_token: s.refresh_token }),
+  });
+  if (!r.ok) return false;
+  const j = await r.json();
+  sess.set({ access_token:j.access_token, refresh_token:j.refresh_token, email:s.email });
+  return true;
+}
+function signOut(){ sess.clear(); location.reload(); }
+
+/* Paged read under the user's JWT. PostgREST caps at 1000 rows and says nothing
+   about it, so always page. One transparent retry after a token refresh. */
+async function q(path, { retry = true } = {}){
+  const s = sess.get();
+  if (!s) throw new Error('not signed in');
+  const rows = []; const PAGE = 1000;
+  for (let from = 0; ; from += PAGE) {
+    const r = await fetch(`${SB_URL}/rest/v1/${path}`, {
+      headers: { apikey: SB_KEY, Authorization: 'Bearer ' + s.access_token,
+                 Range: `${from}-${from + PAGE - 1}` },
+    });
+    if (r.status === 401 && retry) {
+      if (await refresh()) return q(path, { retry:false });
+      throw new Error('session expired');
+    }
+    if (!r.ok) { const e = new Error(`${path.split('?')[0]} → ${r.status}`); e.status = r.status; throw e; }
+    const p = await r.json();
+    rows.push(...p);
+    if (p.length < PAGE) return rows;
+    if (from > 400000) throw new Error('runaway paging');
+  }
+}
+
+/* ── aggregation. Mirrors console/build-console.mjs so the figures on the
+      phone are the same figures, computed the same way, just client-side. ── */
+function buildData(raw){
+  const { jobs, appts, reps, touches, repTargets, playComponents, leadNames, qbInv, qbError } = raw;
+  const D_ = 86400000, NOW = new Date();
+  const sod = d => new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  const sow = d => { const x = sod(d); x.setDate(x.getDate() - ((x.getDay()+6)%7)); return x; };
+  const som = d => new Date(d.getFullYear(), d.getMonth(), 1);
+  const soy = d => new Date(d.getFullYear(), 0, 1);
+  const addD = (d,n) => { const x = new Date(d); x.setDate(x.getDate()+n); return x; };
+  const addM = (d,n) => { const x = new Date(d); x.setMonth(x.getMonth()+n); return x; };
+  const inR = (iso,a,b) => { if(!iso) return false; const t = new Date(iso).getTime();
+    return t >= a.getTime() && t < b.getTime(); };
+  const inRDate = (s,a,b) => { if(!s) return false;
+    const [y,m,d] = s.slice(0,10).split('-').map(Number);
+    const t = new Date(y, m-1, d).getTime(); return t >= a.getTime() && t < b.getTime(); };
+
+  const WINS = {
+    day:  { label:'Today',        from:sod(NOW), to:addD(sod(NOW),1), pFrom:addD(sod(NOW),-1), pTo:sod(NOW), pLabel:'yesterday' },
+    week: { label:'This week',    from:sow(NOW), to:addD(sow(NOW),7), pFrom:addD(sow(NOW),-7), pTo:sow(NOW), pLabel:'last week' },
+    month:{ label:'This month',   from:som(NOW), to:addM(som(NOW),1), pFrom:addM(som(NOW),-1), pTo:som(NOW), pLabel:'last month' },
+    ytd:  { label:'Year to date', from:soy(NOW), to:addD(sod(NOW),1), pFrom:soy(addM(soy(NOW),-1)), pTo:addM(sod(NOW),-12), pLabel:'same point last year' },
+  };
+  const elapsedDays = w => Math.max(1, Math.ceil((Math.min(NOW.getTime(), w.to.getTime()) - w.from.getTime()) / D_));
+  const prevRange = w => [w.pFrom, new Date(Math.min(w.pFrom.getTime() + elapsedDays(w)*D_, w.pTo.getTime()))];
+  const repById = Object.fromEntries(reps.map(r => [r.id, r]));
+
+  function slice(a,b){
+    const js = jobs.filter(j => inR(j.contract_signed_at,a,b));
+    const as = appts.filter(x => inR(x.starts_at,a,b));
+    const done = jobs.filter(j => inR(j.completed_at,a,b));
+    const rev = js.reduce((n,j)=>n+Number(j.fin_sold_amount||0),0);
+    const brands = {}, byRep = {};
+    for (const j of js) {
+      const b2 = j.cc_company_id || 'unknown';
+      (brands[b2] ??= { jobs:0, rev:0 }); brands[b2].jobs++; brands[b2].rev += Number(j.fin_sold_amount||0);
+      if (j.rep_id) { (byRep[j.rep_id] ??= { jobs:0, rev:0, appts:0 });
+        byRep[j.rep_id].jobs++; byRep[j.rep_id].rev += Number(j.fin_sold_amount||0); }
+    }
+    for (const x of as) if (x.rep_id) { (byRep[x.rep_id] ??= { jobs:0, rev:0, appts:0 }); byRep[x.rep_id].appts++; }
+    return {
+      company:{ jobs:js.length, rev, appts:as.length, completed:done.length,
+                close: as.length ? Math.round(js.length/as.length*100) : null,
+                avgJob: js.length ? Math.round(rev/js.length) : 0 },
+      brands: Object.entries(brands).map(([id,v])=>({id,...v})),
+      reps: Object.entries(byRep).map(([id,v])=>({
+        name: repById[id]?.name ?? 'Unknown', role: repById[id]?.role ?? 'sales', ...v,
+        close: v.appts ? Math.round(v.jobs/v.appts*100) : null,
+      })).filter(r=>r.rev>0||r.appts>0).sort((x,y)=>y.rev-x.rev),
+    };
+  }
+
+  // Brands that exist at all, for seeding targets. The per-brand collected/open
+  // balances this used to compute are not rendered anywhere since the builds and
+  // markets cards went, so their columns are no longer fetched — that is ~1MB of
+  // phone payload saved rather than downloaded and discarded.
+  const brandIds = [...new Set(jobs.map(j => j.cc_company_id || 'unknown'))];
+
+  const weeks = [];
+  for (let i=2;i>=0;i--){
+    const a = addD(sow(NOW), -7*i), b = addD(a,7);
+    const js = jobs.filter(j=>inR(j.contract_signed_at,a,b));
+    const br = {};
+    for (const j of js){ const k = j.cc_company_id||'unknown';
+      (br[k] ??= {rev:0,jobs:0}); br[k].rev += Number(j.fin_sold_amount||0); br[k].jobs++; }
+    weeks.push({ label:`${a.getMonth()+1}/${a.getDate()}`, current:i===0, jobs:js.length,
+      rev: js.reduce((n,j)=>n+Number(j.fin_sold_amount||0),0),
+      brands: Object.entries(br).map(([id,v])=>({id,...v})) });
+  }
+  const cadence = (() => {
+    const a = sow(NOW), names = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+    return names.map((label,n) => { const d0 = addD(a,n), d1 = addD(d0,1);
+      return { label, appts: appts.filter(x=>inR(x.starts_at,d0,d1)).length,
+               signed: jobs.filter(j=>inR(j.contract_signed_at,d0,d1)).length,
+               future: d0.getTime() > NOW.getTime() }; });
+  })();
+  const targets = (() => {
+    const monthly = {};
+    for (const b2 of brandIds) {
+      let sum = 0;
+      for (let i=3;i>=1;i--){ const a = addM(som(NOW),-i), z = addM(a,1);
+        sum += jobs.filter(j=>j.cc_company_id===b2 && inR(j.contract_signed_at,a,z))
+                   .reduce((n,j)=>n+Number(j.fin_sold_amount||0),0); }
+      monthly[b2] = Math.round(sum/3);
+    }
+    return { source:'seeded', basis:'trailing 3 full months, per brand',
+      note:'Targets are seeded, not yet set. Nothing in Contractors Cloud or QuickBooks carries a goal, so these are each brand’s own recent average — a baseline to beat, not a number anybody committed to.',
+      monthly };
+  })();
+
+  const effort = (() => {
+    const wt = Object.fromEntries(playComponents.map(p=>[p.key,p.weight]));
+    const goals = Object.fromEntries(repTargets.map(t=>[t.rep_id,t]));
+    const todayA = sod(NOW), todayB = addD(todayA,1);
+    const weekA = sow(NOW), weekB = addD(weekA,7);
+    const monthA = som(NOW), monthB = addM(monthA,1);
+    const yearA = soy(NOW), yearB = addD(sod(NOW),1);
+    const blank = () => ({ day:{t:0,p:0}, week:{t:0,p:0}, month:{t:0,p:0}, year:{t:0,p:0}, all:0, plays:{} });
+    const byRep = {};
+    for (const t of touches){
+      const k = t.rep_id || 'unknown';
+      const r = (byRep[k] ??= blank()); const pts = wt[t.play]||0;
+      r.all++; r.plays[t.play] = (r.plays[t.play]||0)+1;
+      const bump = b2 => { b2.t++; b2.p += pts; };
+      if (inR(t.occurred_at,yearA,yearB)) bump(r.year);
+      if (inR(t.occurred_at,monthA,monthB)) bump(r.month);
+      if (inR(t.occurred_at,weekA,weekB)) bump(r.week);
+      if (inR(t.occurred_at,todayA,todayB)) bump(r.day);
+    }
+    const active = reps.filter(r=>r.active);
+    const rows = active.map(r => { const v = byRep[r.id]||blank(); const g = goals[r.id];
+      return { name:r.name, initials:r.initials, role:r.role,
+        goal: g?.daily_touch_goal ?? null, goalSource: g?.goal_source ?? null,
+        today:v.day.t, week:v.week.t, month:v.month.t, points:v.month.p, ...v }; })
+      .sort((a,b2)=>b2.month.t-a.month.t || b2.all-a.all || a.name.localeCompare(b2.name));
+    const bizDays = (a,b2) => { let n=0;
+      for (let d=new Date(a); d<b2 && d<=NOW; d=addD(d,1)) if (d.getDay()>=1&&d.getDay()<=5) n++;
+      return Math.max(1,n); };
+    return { total:touches.length, activeReps:active.length,
+      repsEverLogged: rows.filter(r=>r.all>0).length,
+      goalsAllDefault: repTargets.length>0 && repTargets.every(t=>!t.goal_source),
+      defaultGoal: repTargets[0]?.daily_touch_goal ?? 10,
+      plays: playComponents.map(p=>({key:p.key,title:p.title,weight:p.weight})),
+      spans: { day: NOW.getDay()>=1&&NOW.getDay()<=5 ? 1 : 0,
+               week: bizDays(weekA,weekB), month: bizDays(monthA,monthB), year: bizDays(yearA,yearB) },
+      rows };
+  })();
+
+  const leadSources = (() => {
+    const named = Object.fromEntries(leadNames.map(e=>[String(e.cc_id), e.meaning]));
+    const agg = (pred) => { const a = {};
+      for (const j of jobs){ const k = j.cc_lead_source_id || 'none';
+        (a[k] ??= {id:k,jobs:0,signed:0,rev:0}); a[k].jobs++;
+        if (pred(j)) { a[k].signed++; a[k].rev += Number(j.fin_sold_amount||0); } }
+      return Object.values(a); };
+    const allTime = agg(j=>!!j.contract_signed_at).sort((x,y)=>y.rev-x.rev);
+    return { coverage: jobs.filter(j=>j.cc_lead_source_id).length, total: jobs.length,
+      distinct: new Set(jobs.map(j=>j.cc_lead_source_id).filter(Boolean)).size,
+      namedIds: named, namedCount: Object.keys(named).length,
+      note:'Every job carries a lead source id, but CC will not return the names — /lead-sources 404s. The three ids that do have labels are integration channels (how the lead arrived), not marketing sources. Naming the top ids in cc_enum_map turns this card from numbers into names.',
+      allTime,
+      windows: Object.fromEntries(Object.entries(WINS).map(([k,wv]) =>
+        [k, agg(j=>inR(j.contract_signed_at,wv.from,wv.to)).filter(r=>r.signed>0).sort((x,y)=>y.rev-x.rev)])) };
+  })();
+
+  /* QuickBooks. qb_invoices currently has RLS policies but no GRANT to the
+     authenticated role, so this 403s for every logged-in user. Reported as
+     unreadable rather than drawn as zero — a missing grant and no money are
+     very different facts. */
+  const qb = qbError ? { unavailable:true, reason:qbError } : (() => {
+    const live = qbInv.filter(i=>!i.reporting_excluded);
+    const qbWin = (a,b2) => { const rows = live.filter(i=>inRDate(i.txn_date,a,b2));
+      const byBrand = {};
+      for (const i of rows){ const k = i.cc_company_id||'unclassified';
+        (byBrand[k] ??= {invoiced:0,count:0}); byBrand[k].invoiced += Number(i.total_amt||0); byBrand[k].count++; }
+      return { invoiced: rows.reduce((n,i)=>n+Number(i.total_amt||0),0), count:rows.length, byBrand }; };
+    const arByBrand = {};
+    for (const i of live){ const bal = Number(i.balance||0); if (bal<=0) continue;
+      const k = i.cc_company_id||'unclassified';
+      (arByBrand[k] ??= {ar:0,count:0}); arByBrand[k].ar += bal; arByBrand[k].count++; }
+    return { unavailable:false, dropped: qbInv.length-live.length, total: qbInv.length,
+      brandsWithInvoices: [...new Set(live.map(i=>i.cc_company_id).filter(Boolean))],
+      ar: Object.entries(arByBrand).map(([id,v])=>({id,...v})),
+      arTotal: Object.values(arByBrand).reduce((n,v)=>n+v.ar,0),
+      windows: Object.fromEntries(Object.entries(WINS).map(([k,wv]) =>
+        [k, { ...qbWin(wv.from,wv.to), prev: qbWin(...prevRange(wv)) }])) };
+  })();
+
+  return {
+    generatedAt: new Date().toISOString(),
+    coverage: { jobs: jobs.length, appts: appts.length,
+      apptsWithRep: appts.filter(a=>a.rep_id).length, touches: touches.length,
+      // Coverage of the field every dollar on this page is actually built from.
+      jobsWithSold: jobs.filter(j=>Number(j.fin_sold_amount)>0).length },
+    weeks, cadence, targets, effort, leadSources, qb,
+    windows: Object.fromEntries(Object.entries(WINS).map(([k,wv]) => [k, {
+      label: wv.label, prevLabel: wv.pLabel, prevSpanDays: elapsedDays(wv),
+      ...slice(wv.from, wv.to),
+      prev: (p => ({ ...p.company, brands:p.brands }))(slice(...prevRange(wv))),
+    }])),
+  };
+}
+
+async function loadAll(){
+  appEl.innerHTML = `<div class="loading">Reading live<br/>Contractors Cloud · QuickBooks</div>`;
+  showApp();
+  // Only the columns something on the page actually renders. Every extra field
+  // here is weight a phone carries on every open.
+  const [jobs, appts, reps, touches, repTargets, playComponents, leadNames] = await Promise.all([
+    q('jobs?select=cc_company_id,rep_id,contract_signed_at,completed_at,cc_lead_source_id,fin_sold_amount&source=eq.cc'),
+    q('cc_appointments?select=rep_id,starts_at'),
+    q('reps?select=id,name,initials,role,active'),
+    q('touches?select=rep_id,play,occurred_at'),
+    q('rep_targets?select=rep_id,daily_touch_goal,goal_source'),
+    q('score_components?select=key,title,weight&kind=eq.touch&order=ordinal'),
+    q('cc_enum_map?select=cc_id,meaning&domain=eq.lead_source'),
+  ]);
+  let qbInv = [], qbError = null;
+  try { qbInv = await q('qb_invoices?select=cc_company_id,txn_date,total_amt,balance,reporting_excluded'); }
+  catch(e){ qbError = e.status === 403
+    ? 'qb_invoices is not readable by your login. The table has row-level security policies but no SELECT grant to the authenticated role, so it returns 403 rather than rows. This is a one-line backend grant, not missing money.'
+    : e.message; }
+  D = buildData({ jobs, appts, reps, touches, repTargets, playComponents,
+    leadNames, qbInv, qbError });
+  render();
+}
+
+/* ── boot ─────────────────────────────────────────────────────────────────── */
+document.getElementById('loginform').addEventListener('submit', async ev => {
+  ev.preventDefault();
+  const btn = document.getElementById('gobtn');
+  btn.disabled = true; btn.textContent = 'Signing in…';
+  document.getElementById('gateerr').textContent = '';
+  try {
+    await signIn(document.getElementById('em').value.trim(), document.getElementById('pw').value);
+    await loadAll();
+  } catch(e){
+    showGate(e.message);
+  } finally { btn.disabled = false; btn.textContent = 'Sign in'; }
+});
+
+(async () => {
+  if (!sess.get()) { showGate(); return; }
+  try { await loadAll(); }
+  catch(e){
+    if (/expired|not signed in|401/i.test(e.message)) { sess.clear(); showGate('Session expired — sign in again.'); }
+    else {
+      appEl.innerHTML = `<div class="hdr"><div class="eyebrow">Liberty · owner access</div>
+        <h1>Liberty <em>Command</em> Console</h1></div>
+        <div class="card"><div class="card-title">Could not load</div>
+        <div class="card-sub">${esc(e.message)}</div>
+        <div class="note">Nothing is shown rather than something stale.
+        <button class="signout" style="margin-top:10px" onclick="signOut()">Sign out</button></div></div>`;
+      showApp();
+    }
+  }
+})();
+</script>
+</body>
+</html>

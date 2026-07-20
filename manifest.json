@@ -1,0 +1,26 @@
+{
+  "name": "Liberty Command",
+  "short_name": "Command",
+  "description": "Three companies, one instrument. Markets, sales, appointments, leads, builds and effort for Liberty Fencing, Liberty Roofing, Oasis Landscapes and Pro-Tec Roofing.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#080D1A",
+  "theme_color": "#080D1A",
+  "categories": ["business", "productivity"],
+  "icons": [
+    {
+      "src": "./icon-1024.png",
+      "sizes": "1024x1024",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "./icon-1024.png",
+      "sizes": "1024x1024",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}
