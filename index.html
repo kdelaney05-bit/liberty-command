@@ -316,14 +316,32 @@ const pct = (a,b) => b ? Math.round(a/b*100) : 0;
 const esc = s => String(s??'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
 /* Brand colours per Kevin's model: Fencing green, Oasis blue, Pro-Tec gold. */
+/* Contractors Cloud carries Pro-Tec (1563) and Liberty Roofing (1537) as two
+   companies. They are one business — Liberty Roofing is the DBA — so they roll
+   up to a single displayed brand everywhere. The raw ids stay in the data and
+   stay queryable; only the display is merged. */
+const ROLLUP = { '1537': '1563' };
+const rollup = id => ROLLUP[String(id)] || String(id);
+
 const BRANDS = {
   '1461': { n:'Liberty Fencing',   s:'Fencing', c:'#6cc28b' },
   '1560': { n:'Oasis Landscapes',  s:'Oasis',   c:'#6ba8c9' },
-  '1563': { n:'Pro-Tec Roofing',   s:'Pro-Tec', c:'#d4b15a' },
-  '1537': { n:'Liberty Roofing',   s:'Roofing', c:'#a98fd5' },
+  '1563': { n:'Pro-Tec Roofing',   s:'Pro-Tec', c:'#d4b15a', rolls:['1563','1537'] },
 };
-/* An unmapped company id must still show its money, labelled — never dropped. */
-const brandOf = id => BRANDS[id] || { n:'Unmapped '+id, s:'?'+id, c:'#8aa094', unmapped:true };
+/* Display order, and the guarantee that every brand appears. A brand missing
+   from a mix reads as "the console is broken" rather than "they signed nothing",
+   so every one of these is rendered even at zero. */
+const BRAND_ORDER = ['1461','1560','1563'];
+const brandOf = id => BRANDS[rollup(id)] || { n:'Unmapped '+id, s:'?'+id, c:'#8aa094', unmapped:true };
+
+/* Fill a brand list so every known brand is present, zeros included, in a
+   stable order with any unmapped ids kept on the end rather than dropped. */
+function allBrands(rows){
+  const by = Object.fromEntries((rows||[]).map(r => [String(r.id), r]));
+  const known = BRAND_ORDER.map(id => by[id] || { id, jobs:0, rev:0, zero:true });
+  const extra = (rows||[]).filter(r => !BRANDS[String(r.id)]);
+  return [...known, ...extra];
+}
 
 let D = null;
 // Card-scoped windows. The page as a whole stays MTD per the model; only the
@@ -397,9 +415,10 @@ function cardWeeks(){
 function cardWow(){
   const W = wk(), pv = W.prev;
   const d = pv.rev ? Math.round((W.rev - pv.rev)/pv.rev*100) : null;
-  const cur = Object.fromEntries(W.brands.map(b => [b.id, b.rev]));
-  const prv = Object.fromEntries((pv.brands||[]).map(b => [b.id, b.rev]));
-  const ids = [...new Set([...Object.keys(cur), ...Object.keys(prv)])]
+  const cur = Object.fromEntries(W.brands.map(b => [String(b.id), b.rev]));
+  const prv = Object.fromEntries((pv.brands||[]).map(b => [String(b.id), b.rev]));
+  // every known brand appears, plus anything unmapped that showed up
+  const ids = [...new Set([...BRAND_ORDER, ...Object.keys(cur), ...Object.keys(prv)])]
     .sort((a,b) => (cur[b]||0) - (cur[a]||0));
   return `<div class="card">
     <div class="card-title">${esc(W.label)} vs ${esc(W.prevLabel)}<span class="feed-tag cc">live · cc</span></div>
@@ -455,7 +474,7 @@ function cardTrending(){
   const now = new Date();
   const days = new Date(now.getFullYear(), now.getMonth()+1, 0).getDate();
   const elapsed = W.prevSpanDays;
-  const rows = [...W.brands].sort((a,b) => b.rev - a.rev);
+  const rows = allBrands(W.brands).sort((a,b) => b.rev - a.rev);
   return `<div class="card">
     <div class="card-title">Trending to finish<span class="feed-tag cc">live · cc</span><span class="feed-tag seed">targets seeded</span></div>
     <div class="card-sub">Solid is booked. The faded run-on is where this month lands if the current daily rate holds.</div>
@@ -484,18 +503,37 @@ function cardTrending(){
 }
 
 /* ── 5. signed mix donut ──────────────────────────────────────────────────── */
+/* A brand at zero is a fact. A brand missing from the list is a bug the owner
+   has to diagnose from the outside, so every brand is listed either way. */
+function oasisNote(k){
+  const lag = D.oasisLag; if (!lag) return '';
+  const wv = lag.windows[k] || {};
+  const f = lag.freshness || {};
+  if (!wv.docs && !f.not_in_cc_yet) return '';
+  return `<div class="withheld"><div class="wt">Oasis may lag</div><div class="wx">
+    Oasis sells through <b>Billdu</b> and Contractors Cloud imports it late, so an Oasis zero here means
+    "nothing has reached CC yet", not "nothing was sold".
+    ${wv.docs ? `Billdu shows <b>${wv.docs}</b> document${wv.docs===1?'':'s'} worth <b>${short(wv.value)}</b> in this window${wv.accepted?`, <b>${wv.accepted}</b> accepted (${short(wv.acceptedValue)})`:', none accepted yet'}.` : ''}
+    ${f.not_in_cc_yet ? ` Across the whole feed <b>${Number(f.not_in_cc_yet).toLocaleString()}</b> Billdu documents still have no Contractors Cloud counterpart${f.minutes_since_newest!=null?`; the newest is ${Math.round(f.minutes_since_newest)} minutes old`:''}.` : ''}
+  </div></div>`;
+}
+
 function cardMix(){
   const W = w(), tot = W.brands.reduce((n,b)=>n+b.rev,0);
-  const rows = [...W.brands].sort((a,b)=>b.rev-a.rev);
+  const rows = allBrands(W.brands).sort((a,b)=>b.rev-a.rev);
+  const oasisZero = !(W.brands.find(b=>String(b.id)==='1560')?.rev);
   return `<div class="card chart-card">
     <div class="card-title">Signed mix · ${esc(W.label)}<span class="feed-tag cc">live · cc</span></div>
-    <div class="card-sub">Share of signed value by brand.</div>
+    <div class="card-sub">Share of signed value by brand. Every brand is listed, including any at zero.</div>
     ${tot ? `<div class="alloc-chart"><canvas id="cMix"></canvas>
-      <div class="alloc-center"><div class="big">${short(tot)}</div><div class="lbl">signed</div></div></div>
+      <div class="alloc-center"><div class="big">${short(tot)}</div><div class="lbl">signed</div></div></div>` : ''}
     <div class="alloc-legend">${rows.map(b=>{const m=brandOf(b.id);
-      return `<div class="alloc-row"><div class="alloc-dot" style="background:${m.c}"></div>
-        <div class="name">${esc(m.n)}</div><div class="val">${short(b.rev)} · ${pct(b.rev,tot)}%</div></div>`}).join('')}</div>`
-    : '<div class="card-sub" style="margin:0">Nothing signed in this window to split.</div>'}
+      return `<div class="alloc-row" ${b.rev?'':'style="opacity:.55"'}>
+        <div class="alloc-dot" style="background:${m.c}"></div>
+        <div class="name">${esc(m.n)}</div>
+        <div class="val">${b.rev?`${short(b.rev)} · ${pct(b.rev,tot)}%`:`$0 · 0 jobs`}</div></div>`}).join('')}</div>
+    ${tot?'':'<div class="card-sub" style="margin:12px 0 0">Nothing signed in this window.</div>'}
+    ${oasisZero ? oasisNote('month') : ''}
   </div>`;
 }
 
@@ -536,7 +574,7 @@ function cardMoney(){
   </div>`;
   const q = qbw();
   const ar = Object.fromEntries(D.qb.ar.map(a=>[a.id,a]));
-  const ids = [...new Set([...Object.keys(q.byBrand), ...Object.keys(ar)])]
+  const ids = [...new Set([...BRAND_ORDER, ...Object.keys(q.byBrand), ...Object.keys(ar)])]
     .sort((a,b)=>((q.byBrand[b]?.invoiced)||0)-((q.byBrand[a]?.invoiced)||0));
   const missing = Object.keys(BRANDS).filter(id => !D.qb.brandsWithInvoices.includes(id));
   return `<div class="card full">
@@ -750,27 +788,28 @@ function diveView(k){
         <div class="wow-arrow"><div class="d" style="${d!==null&&d<0?'color:#d8997f':''}">${d===null?'—':(d>=0?'▲':'▼')+Math.abs(d)+'%'}</div><div class="c">${pv.jobs}→${W.jobs}</div></div>
         <div class="wow-col now"><div class="k">${esc(DIVE_TITLE[k])}</div><div class="v">${short(W.rev)}</div></div>
       </div>
-      ${(()=>{ const cur=Object.fromEntries(W.brands.map(b=>[b.id,b.rev]));
-        const prv=Object.fromEntries((pv.brands||[]).map(b=>[b.id,b.rev]));
-        const ids=[...new Set([...Object.keys(cur),...Object.keys(prv)])].sort((a,b)=>(cur[b]||0)-(cur[a]||0));
-        return ids.length? ids.map(id=>{const m=brandOf(id),a=prv[id]||0,b=cur[id]||0;
+      ${(()=>{ const cur=Object.fromEntries(W.brands.map(b=>[String(b.id),b.rev]));
+        const prv=Object.fromEntries((pv.brands||[]).map(b=>[String(b.id),b.rev]));
+        const ids=[...new Set([...BRAND_ORDER,...Object.keys(cur),...Object.keys(prv)])]
+          .sort((a,b)=>(cur[b]||0)-(cur[a]||0));
+        return ids.map(id=>{const m=brandOf(id),a=prv[id]||0,b=cur[id]||0;
           const ch=a?Math.round((b-a)/a*100):(b?null:0);
-          return `<div class="wow-row"><div class="nm">${esc(m.s)}</div>
+          return `<div class="wow-row" ${(a||b)?'':'style="opacity:.6"'}><div class="nm">${esc(m.s)}</div>
             <div class="nums">${short(a)} → ${short(b)}</div>
-            <div class="chg ${ch===null?'':ch>=0?'up':'down'}">${ch===null?'new':(ch>=0?'+':'')+ch+'%'}</div></div>`}).join('')
-          : '<div class="card-sub" style="margin:0">Nothing signed in either window.</div>'; })()}
+            <div class="chg ${ch===null?'':ch>=0?'up':'down'}">${ch===null?'new':(ch>=0?'+':'')+ch+'%'}</div></div>`}).join(''); })()}
     </div>
 
     <div class="card">
       <div class="card-title">Brand mix<span class="feed-tag cc">live · cc</span></div>
-      <div class="card-sub">${tot?'Share of signed value.':'Nothing signed in this window.'}</div>
-      ${[...W.brands].sort((a,b)=>b.rev-a.rev).map(b=>{const m=brandOf(b.id);
-        return `<div class="rep-row">
+      <div class="card-sub">Every brand, including any that signed nothing.</div>
+      ${allBrands(W.brands).sort((a,b)=>b.rev-a.rev).map(b=>{const m=brandOf(b.id);
+        return `<div class="rep-row" ${b.rev?'':'style="opacity:.6"'}>
           <div class="rep-head"><div class="nm">${esc(m.n)}</div>
-            <div class="amt">${short(b.rev)} <span>· ${b.jobs} job${b.jobs===1?'':'s'}</span></div></div>
+            <div class="amt">${b.rev?short(b.rev):'$0'} <span>· ${b.jobs} job${b.jobs===1?'':'s'}</span></div></div>
           <div class="meter"><div class="meter-fill" style="width:${pct(b.rev,tot)}%;background:${m.c}"></div></div>
-          <div class="tgt-cap"><span>${pct(b.rev,tot)}% of the window</span></div>
-        </div>`}).join('') || ''}
+          <div class="tgt-cap"><span>${b.rev?pct(b.rev,tot)+'% of the window':'nothing signed in this window'}</span></div>
+        </div>`}).join('')}
+      ${(W.brands.find(b=>String(b.id)==='1560')?.rev) ? '' : oasisNote(k)}
     </div>
 
     <div class="card">
@@ -1107,7 +1146,7 @@ async function q(path, { retry = true } = {}){
 /* ── aggregation. Mirrors console/build-console.mjs so the figures on the
       phone are the same figures, computed the same way, just client-side. ── */
 function buildData(raw){
-  const { jobs, appts, reps, touches, repTargets, playComponents, leadNames, qbInv, qbError } = raw;
+  const { jobs, appts, reps, touches, repTargets, playComponents, leadNames, qbInv, qbError, billdu } = raw;
   const D_ = 86400000, NOW = new Date();
   const sod = d => new Date(d.getFullYear(), d.getMonth(), d.getDate());
   const sow = d => { const x = sod(d); x.setDate(x.getDate() - ((x.getDay()+6)%7)); return x; };
@@ -1138,7 +1177,7 @@ function buildData(raw){
     const rev = js.reduce((n,j)=>n+Number(j.fin_sold_amount||0),0);
     const brands = {}, byRep = {};
     for (const j of js) {
-      const b2 = j.cc_company_id || 'unknown';
+      const b2 = rollup(j.cc_company_id || 'unknown');
       (brands[b2] ??= { jobs:0, rev:0 }); brands[b2].jobs++; brands[b2].rev += Number(j.fin_sold_amount||0);
       if (j.rep_id) { (byRep[j.rep_id] ??= { jobs:0, rev:0, appts:0 });
         byRep[j.rep_id].jobs++; byRep[j.rep_id].rev += Number(j.fin_sold_amount||0); }
@@ -1160,14 +1199,14 @@ function buildData(raw){
   // balances this used to compute are not rendered anywhere since the builds and
   // markets cards went, so their columns are no longer fetched — that is ~1MB of
   // phone payload saved rather than downloaded and discarded.
-  const brandIds = [...new Set(jobs.map(j => j.cc_company_id || 'unknown'))];
+  const brandIds = [...new Set(jobs.map(j => rollup(j.cc_company_id || 'unknown')))];
 
   const weeks = [];
   for (let i=2;i>=0;i--){
     const a = addD(sow(NOW), -7*i), b = addD(a,7);
     const js = jobs.filter(j=>inR(j.contract_signed_at,a,b));
     const br = {};
-    for (const j of js){ const k = j.cc_company_id||'unknown';
+    for (const j of js){ const k = rollup(j.cc_company_id||'unknown');
       (br[k] ??= {rev:0,jobs:0}); br[k].rev += Number(j.fin_sold_amount||0); br[k].jobs++; }
     weeks.push({ label:`${a.getMonth()+1}/${a.getDate()}`, current:i===0, jobs:js.length,
       rev: js.reduce((n,j)=>n+Number(j.fin_sold_amount||0),0),
@@ -1204,7 +1243,7 @@ function buildData(raw){
     for (const b2 of brandIds) {
       let sum = 0;
       for (let i=3;i>=1;i--){ const a = addM(som(NOW),-i), z = addM(a,1);
-        sum += jobs.filter(j=>j.cc_company_id===b2 && inR(j.contract_signed_at,a,z))
+        sum += jobs.filter(j=>rollup(j.cc_company_id)===b2 && inR(j.contract_signed_at,a,z))
                    .reduce((n,j)=>n+Number(j.fin_sold_amount||0),0); }
       monthly[b2] = Math.round(sum/3);
     }
@@ -1298,23 +1337,46 @@ function buildData(raw){
     const live = qbInv.filter(i=>!i.reporting_excluded);
     const qbWin = (a,b2) => { const rows = live.filter(i=>inRDate(i.txn_date,a,b2));
       const byBrand = {};
-      for (const i of rows){ const k = i.cc_company_id||'unclassified';
+      for (const i of rows){ const k = i.cc_company_id ? rollup(i.cc_company_id) : 'unclassified';
         (byBrand[k] ??= {invoiced:0,count:0}); byBrand[k].invoiced += Number(i.total_amt||0); byBrand[k].count++; }
       return { invoiced: rows.reduce((n,i)=>n+Number(i.total_amt||0),0), count:rows.length, byBrand }; };
     const arByBrand = {};
     for (const i of live){ const bal = Number(i.balance||0); if (bal<=0) continue;
-      const k = i.cc_company_id||'unclassified';
+      const k = i.cc_company_id ? rollup(i.cc_company_id) : 'unclassified';
       (arByBrand[k] ??= {ar:0,count:0}); arByBrand[k].ar += bal; arByBrand[k].count++; }
     return { unavailable:false, dropped: qbInv.length-live.length, total: qbInv.length,
-      brandsWithInvoices: [...new Set(live.map(i=>i.cc_company_id).filter(Boolean))],
+      brandsWithInvoices: [...new Set(live.map(i=>i.cc_company_id).filter(Boolean).map(rollup))],
       ar: Object.entries(arByBrand).map(([id,v])=>({id,...v})),
       arTotal: Object.values(arByBrand).reduce((n,v)=>n+v.ar,0),
       windows: Object.fromEntries(Object.entries(WINS).map(([k,wv]) =>
         [k, { ...qbWin(wv.from,wv.to), prev: qbWin(...prevRange(wv)) }])) };
   })();
 
+  /* Billdu is Oasis's real point of sale. Contractors Cloud imports it late, so
+     "Oasis signed nothing" in CC can be true and still be the wrong picture.
+     This carries what Billdu itself saw in each window so the zero can be
+     qualified rather than presented as the whole story. */
+  const oasisLag = (() => {
+    if (!billdu || !billdu.docs) return null;
+    const live = billdu.docs.filter(x => Number(x.total_price) > 0);
+    const win = (a,b) => {
+      const rows = live.filter(x => inR(x.issue_date, a, b));
+      const acc = rows.filter(x => x.is_accepted);
+      return { docs: rows.length,
+               accepted: acc.length,
+               acceptedValue: acc.reduce((n,x)=>n+Number(x.total_price||0),0),
+               value: rows.reduce((n,x)=>n+Number(x.total_price||0),0),
+               notInCc: rows.filter(x=>!x.job_id).length };
+    };
+    return {
+      freshness: billdu.fresh || null,
+      windows: Object.fromEntries(Object.entries(WINS).map(([k,wv]) => [k, win(wv.from, wv.to)])),
+    };
+  })();
+
   return {
     generatedAt: new Date().toISOString(),
+    oasisLag,
     coverage: { jobs: jobs.length, appts: appts.length,
       apptsWithRep: appts.filter(a=>a.rep_id).length, touches: touches.length,
       // Coverage of the field every dollar on this page is actually built from.
@@ -1344,13 +1406,24 @@ async function loadAll(){
     // category came from Kevin or was inferred.
     q('lead_sources?select=cc_lead_id,name,category,category_from'),
   ]);
+  // Oasis sells through Billdu and Contractors Cloud imports it late, so a CC
+  // zero for Oasis is not the same claim as "Oasis sold nothing". Optional:
+  // if the feed is not readable the console simply does not make the claim.
+  let billdu = null;
+  try {
+    const [fresh, docs] = await Promise.all([
+      q('console_billdu_freshness?select=*'),
+      q('billdu_documents?select=doc_type,is_accepted,total_price,issue_date,job_id'),
+    ]);
+    billdu = { fresh: fresh[0] || null, docs };
+  } catch(e){ billdu = null; }
   let qbInv = [], qbError = null;
   try { qbInv = await q('qb_invoices?select=cc_company_id,txn_date,total_amt,balance,reporting_excluded'); }
   catch(e){ qbError = e.status === 403
     ? 'qb_invoices is not readable by your login. The table has row-level security policies but no SELECT grant to the authenticated role, so it returns 403 rather than rows. This is a one-line backend grant, not missing money.'
     : e.message; }
   D = buildData({ jobs, appts, reps, touches, repTargets, playComponents,
-    leadNames, qbInv, qbError });
+    leadNames, qbInv, qbError, billdu });
   render();
 }
 
