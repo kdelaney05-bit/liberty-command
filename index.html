@@ -189,6 +189,13 @@
   .rk { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--text-dim);
     margin-right: 7px; font-weight: 600; }
   .rk.top { color: var(--accent); }
+  /* trade heading inside the lead card */
+  .tradehead { display: flex; align-items: center; gap: 8px; font-family: 'Fraunces', serif;
+    font-size: 16px; font-weight: 500; margin: 2px 0 12px; flex-wrap: wrap; }
+  .tdot { width: 9px; height: 9px; border-radius: 3px; flex-shrink: 0; }
+  .tmeta { font-family: 'JetBrains Mono', monospace; font-size: 9px; letter-spacing: 0.08em;
+    text-transform: uppercase; color: var(--text-dim); margin-left: auto; }
+
   .lead-id { font-family: 'JetBrains Mono', monospace; font-size: 13px; font-weight: 500; }
   .lead-id .unnamed { font-size: 8px; letter-spacing: 0.1em; text-transform: uppercase;
     color: var(--text-dim); margin-left: 6px; }
@@ -346,7 +353,7 @@ function allBrands(rows){
 let D = null;
 // Card-scoped windows. The page as a whole stays MTD per the model; only the
 // scoreboard and the lead-source table carry their own range.
-let EFFWIN = 'month', LEADWIN = 'month';
+let EFFWIN = 'month', LEADWIN = 'month', LEADTRADE = '1461';
 // null = the snapshot home; 'day'|'week'|'month'|'ytd' = that window, full screen
 let DIVE = null;
 /* v1 follows the model's own windows: the month card set is monthly, the
@@ -658,24 +665,39 @@ function cardEffort(){
       what CC will not return. Shown by id rather than withheld, because which
       ids carry the revenue is exactly what decides which ones are worth
       naming. ─────────────────────────────────────────────────────────────── */
+/* Kevin: "Make sure we seperate lead sources by trade. Fencing and roofing are
+   different animals." One trade at a time, never a blended company-wide list. */
 function cardLeads(){
   const L = D.leadSources;
-  const rows = (L.windows[LEADWIN] || []).slice(0, 12);
+  const T = L.byTrade[LEADTRADE] || { allTime:[], windows:{}, distinct:0, namedIds:0, namedRevShare:0, jobs:0 };
+  const m = brandOf(LEADTRADE);
+  const rows = (T.windows[LEADWIN] || []).slice(0, 12);
   const label = { day:'today', week:'this week', month:'this month', ytd:'year to date' }[LEADWIN];
   const tot = rows.reduce((n,r) => n + r.rev, 0);
   const mx = Math.max(1, ...rows.map(r => r.rev));
   const unmappedRev = rows.filter(r=>!r.name).reduce((n,r)=>n+r.rev,0);
+  // "Barely mapped" matters as much as "not mapped at all": Pro-Tec has one
+  // named source out of seventeen, which is 1% of its value and reads as noise.
+  const barelyNamed = T.distinct > 0 && T.namedRevShare < 25;
   return `<div class="card full">
     <div class="card-title">Leads by source<span class="feed-tag cc">live · cc</span></div>
-    <div class="card-sub">Signed value by where the lead came from, ${esc(label)}. Close rate is that source's contracts against every lead it has ever produced.</div>
+    <div class="card-sub">Fencing and roofing buy leads in different markets, so this is one trade at a time — never a blended list. Close rate is that source's contracts against every lead it has produced.</div>
 
+    <div class="seg">
+      ${BRAND_ORDER.map(b=>`<button class="${b===LEADTRADE?'on':''}" onclick="setTrade('${b}')">${esc(brandOf(b).s)}</button>`).join('')}
+    </div>
     <div class="seg">
       ${[['day','Day'],['week','Week'],['month','Month'],['ytd','YTD']]
         .map(([k,l])=>`<button class="${k===LEADWIN?'on':''}" onclick="setLead('${k}')">${l}</button>`).join('')}
     </div>
 
+    <div class="tradehead">
+      <span class="tdot" style="background:${m.c}"></span>${esc(m.n)}
+      <span class="tmeta">${T.jobs.toLocaleString()} leads · ${T.distinct} sources · ${T.namedIds} named</span>
+    </div>
+
     ${rows.length ? rows.map(r => {
-      const all = L.allTime.find(a => a.id === r.id);
+      const all = T.allTime.find(a => a.id === r.id);
       const conv = all && all.jobs ? Math.round(all.signed / all.jobs * 100) : null;
       return `<div class="rep-row">
         <div class="rep-head">
@@ -684,17 +706,19 @@ function cardLeads(){
                      : '<span class="brand">unmapped</span>'}</div>
           <div class="amt">${short(r.rev)} <span>· ${r.signed} signed</span></div>
         </div>
-        <div class="meter"><div class="meter-fill" style="width:${Math.round(r.rev/mx*100)}%;background:${r.name?(r.rev===mx?'#f0834a':'#6ba8c9'):'#8aa094'}"></div></div>
+        <div class="meter"><div class="meter-fill" style="width:${Math.round(r.rev/mx*100)}%;background:${r.name?(r.rev===mx?m.c:'#6ba8c9'):'#8aa094'}"></div></div>
         <div class="tgt-cap">
-          <span>${pct(r.rev,tot)}% of signed value ${esc(label)}${all?` · ${all.jobs.toLocaleString()} leads all time`:''}</span>
+          <span>${pct(r.rev,tot)}% of ${esc(m.s)} signed ${esc(label)}${all?` · ${all.jobs.toLocaleString()} leads all time`:''}</span>
           <span class="${conv===null?'':conv>=50?'hit':''}">${conv===null?'':conv+'% close'}</span>
         </div>
-      </div>`}).join('') : `<div class="card-sub" style="margin:0">Nothing signed ${esc(label)} to attribute.</div>`}
+      </div>`}).join('') : `<div class="card-sub" style="margin:0">${esc(m.n)} signed nothing ${esc(label)} to attribute.</div>`}
 
-    ${unmappedRev>0?`<div class="withheld"><div class="wt">Not every source is named</div><div class="wx">
-      <b>${short(unmappedRev)}</b> of the value shown ${esc(label)} sits on ids with no entry in the source map. Those rows keep their place with the raw id rather than being folded into an "other" bucket, because a source you cannot name is still a source you are paying for.</div></div>`:''}
+    ${barelyNamed ? `<div class="withheld"><div class="wt">${T.namedIds?'This trade is barely mapped':'This trade has no named sources'}</div><div class="wx">
+      The source-name map covers <b>Liberty Fencing only</b> — all ${L.mapSize} entries belong to it. ${esc(m.n)} has <b>${T.namedIds} of its ${T.distinct}</b> sources named, so <b>${short(T.allTime.filter(r=>!r.name).reduce((n,r)=>n+r.rev,0))}</b> of its signed value reads as a bare id. Its biggest unnamed source is <b>#${esc((T.allTime.find(r=>!r.name)||{}).id||'—')}</b> at <b>${short((T.allTime.find(r=>!r.name)||{}).rev||0)}</b>. Naming these is the same one-row-per-source job already done for Fencing.</div></div>`
+    : unmappedRev>0?`<div class="withheld"><div class="wt">Not every source is named</div><div class="wx">
+      <b>${short(unmappedRev)}</b> of what is shown ${esc(label)} sits on ids with no entry in the map. Those keep their raw id rather than being folded into "other" — a source you cannot name is still one you are paying for.</div></div>`:''}
 
-    <div class="note">The source map holds <b>${L.mapSize}</b> names covering <b>${L.jobsNamed.toLocaleString()} of ${L.total.toLocaleString()}</b> jobs (<b>${L.namedRevShare}%</b> of all signed value) across <b>${L.distinct}</b> distinct ids in use. <b>${L.inferredCount}</b> of the ${L.mapSize} categories were inferred rather than set by hand — those carry <b>·inferred</b> next to the category so a guess never reads as a decision.</div>
+    <div class="note">${esc(m.n)}: <b>${T.namedIds} of ${T.distinct}</b> sources named, covering <b>${T.namedRevShare}%</b> of its signed value. Across all trades the map holds <b>${L.mapSize}</b> names. Categories marked <b>·inferred</b> were guessed rather than set by hand, so a guess never reads as a decision.</div>
   </div>`;
 }
 
@@ -722,6 +746,8 @@ function cardLeadCategories(){
 /* ── 10. flags ────────────────────────────────────────────────────────────── */
 function cardFlags(){
   const W = w(), f = [];
+  const X = D.exclusions;
+  if (X && X.jobs) f.push(['#a98fd5', `<b>${X.jobs} jobs held out of every figure.</b> ${X.signed} of them signed, worth <b>${short(X.value)}</b> — the batch-entry anomaly Liberty's own reports already exclude${X.brands.length===1?` (all on ${esc(brandOf(X.brands[0]).n)})`:''}. Flagged, not deleted: they are real jobs, excluded from reporting so this console agrees with the reports you already trust.`]);
   const cov = pct(D.coverage.jobsWithSold, D.coverage.jobs);
   f.push(['#d4b15a', `<b>${cov}% of jobs carry a contract value.</b> ${D.coverage.jobsWithSold.toLocaleString()} of ${D.coverage.jobs.toLocaleString()} have a sold amount on them. Every dollar on this page is a floor, not a full count.`]);
   if (!qbOK()) f.push(['#d96a5e', `<b>QuickBooks is unreadable to your login.</b> ${esc(D.qb.reason)} Every QB figure on this page is withheld rather than shown as zero.`]);
@@ -886,6 +912,7 @@ function keepScroll(fn){
 }
 function setEff(k){ keepScroll(() => { EFFWIN = k; }); }
 function setLead(k){ keepScroll(() => { LEADWIN = k; }); }
+function setTrade(b){ keepScroll(() => { LEADTRADE = b; }); }
 
 /* ── charts. Kevin's Chart.js idiom: mono ticks, #1c3528 tooltips. ─────────
       If the CDN is blocked or offline, every chart says so out loud instead of
@@ -1146,7 +1173,23 @@ async function q(path, { retry = true } = {}){
 /* ── aggregation. Mirrors console/build-console.mjs so the figures on the
       phone are the same figures, computed the same way, just client-side. ── */
 function buildData(raw){
-  const { jobs, appts, reps, touches, repTargets, playComponents, leadNames, qbInv, qbError, billdu } = raw;
+  const { jobs: allJobs, appts, reps, touches, repTargets, playComponents, leadNames, qbInv, qbError, billdu } = raw;
+
+  /* EXCLUSIONS. Twelve jobs carry reporting_excluded — a batch-entry anomaly
+     Liberty's own reports already leave out (migration 012). Counting them made
+     this console disagree with the numbers Kevin already trusts, which is the
+     fastest way for a dashboard to be written off as broken. They are dropped
+     from every figure here and the amount dropped is stated on the page. */
+  const excluded = allJobs.filter(j => j.reporting_excluded);
+  const jobs = allJobs.filter(j => !j.reporting_excluded);
+  const exclusions = {
+    jobs: excluded.length,
+    signed: excluded.filter(j => j.contract_signed_at).length,
+    value: excluded.filter(j => j.contract_signed_at)
+                   .reduce((n,j) => n + Number(j.fin_sold_amount||0), 0),
+    reasons: [...new Set(excluded.map(j => j.reporting_exclusion_reason).filter(Boolean))],
+    brands: [...new Set(excluded.map(j => rollup(j.cc_company_id)))],
+  };
   const D_ = 86400000, NOW = new Date();
   const sod = d => new Date(d.getFullYear(), d.getMonth(), d.getDate());
   const sow = d => { const x = sod(d); x.setDate(x.getDate() - ((x.getDay()+6)%7)); return x; };
@@ -1326,7 +1369,33 @@ function buildData(raw){
       categories: Object.values(byCat).sort((a,b)=>b.rev-a.rev),
       allTime,
       windows: Object.fromEntries(Object.entries(WINS).map(([k,wv]) =>
-        [k, agg(j=>inR(j.contract_signed_at,wv.from,wv.to)).filter(r=>r.signed>0).sort((x,y)=>y.rev-x.rev)])) };
+        [k, agg(j=>inR(j.contract_signed_at,wv.from,wv.to)).filter(r=>r.signed>0).sort((x,y)=>y.rev-x.rev)])),
+      /* Per trade. Fencing and roofing buy leads in different markets at
+         different prices, so a blended company-wide list averages away the only
+         comparison that matters. Keyed by the ROLLED-UP brand, so Pro-Tec and
+         Liberty Roofing are one trade here as everywhere else. */
+      byTrade: Object.fromEntries(BRAND_ORDER.map(bid => {
+        const mine = jobs.filter(j => rollup(j.cc_company_id) === bid);
+        const aggT = (pred) => { const a = {};
+          for (const j of mine){ const k = String(j.cc_lead_source_id || 'none');
+            (a[k] ??= { id:k, jobs:0, signed:0, rev:0,
+                        name: map[k]?.name || null, category: map[k]?.category || null,
+                        inferred: map[k]?.category_from === 'inferred' });
+            a[k].jobs++;
+            if (pred(j)) { a[k].signed++; a[k].rev += Number(j.fin_sold_amount||0); } }
+          return Object.values(a); };
+        const allT = aggT(j=>!!j.contract_signed_at).sort((x,y)=>y.rev-x.rev);
+        const revT = allT.reduce((n,r)=>n+r.rev,0);
+        return [bid, {
+          jobs: mine.length,
+          distinct: new Set(mine.map(j=>j.cc_lead_source_id).filter(Boolean)).size,
+          namedIds: allT.filter(r=>r.name).length,
+          namedRevShare: revT ? Math.round(allT.filter(r=>r.name).reduce((n,r)=>n+r.rev,0)/revT*100) : 0,
+          allTime: allT,
+          windows: Object.fromEntries(Object.entries(WINS).map(([k,wv]) =>
+            [k, aggT(j=>inR(j.contract_signed_at,wv.from,wv.to)).filter(r=>r.signed>0).sort((x,y)=>y.rev-x.rev)])),
+        }];
+      })) };
   })();
 
   /* QuickBooks. qb_invoices currently has RLS policies but no GRANT to the
@@ -1376,7 +1445,7 @@ function buildData(raw){
 
   return {
     generatedAt: new Date().toISOString(),
-    oasisLag,
+    oasisLag, exclusions,
     coverage: { jobs: jobs.length, appts: appts.length,
       apptsWithRep: appts.filter(a=>a.rep_id).length, touches: touches.length,
       // Coverage of the field every dollar on this page is actually built from.
@@ -1396,7 +1465,10 @@ async function loadAll(){
   // Only the columns something on the page actually renders. Every extra field
   // here is weight a phone carries on every open.
   const [jobs, appts, reps, touches, repTargets, playComponents, leadNames] = await Promise.all([
-    q('jobs?select=cc_company_id,rep_id,contract_signed_at,completed_at,cc_lead_source_id,fin_sold_amount&source=eq.cc'),
+    // reporting_excluded comes down WITH the rows rather than being filtered in
+    // the query, so the console can say how much it left out instead of silently
+    // showing a smaller number than last time.
+    q('jobs?select=cc_company_id,rep_id,contract_signed_at,completed_at,cc_lead_source_id,fin_sold_amount,reporting_excluded,reporting_exclusion_reason&source=eq.cc'),
     q('cc_appointments?select=rep_id,starts_at'),
     q('reps?select=id,name,initials,role,active'),
     q('touches?select=rep_id,play,occurred_at'),
