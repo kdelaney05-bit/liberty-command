@@ -1570,8 +1570,13 @@ addEventListener('resize', () => {
    server for hours while Kevin looked at yesterday's build and reported the bug
    as unfixed. That happened. The page now checks version.json on every load and
    reloads itself once if the deployed build is newer than the one running. */
-const BUILD = '2026-07-21T12:00Z-week-reset-context';
+const BUILD = '2026-07-21T14:10Z-reset-redirect-hardening';
 const SB_URL = 'https://lzegjjbkfuecrhdvlvay.supabase.co';
+/* The one page that can finish a password reset. Hard-coded rather than derived,
+   because every derivation of it so far has been a source of bugs: a bare origin
+   404s (there is no user-root Pages site), and a path-derived value sends resets
+   requested from invite.html back to invite.html. */
+const CONSOLE_HOME = 'https://kdelaney05-bit.github.io/liberty-command/';
 const SB_KEY = 'sb_publishable_kToiGqET7XzO2It9evStJw_kYzvjSF8';
 const SKEY = 'lcc.session';
 
@@ -1688,7 +1693,12 @@ async function updatePassword(password){
 async function sendReset(email){
   const r = await fetch(`${SB_URL}/auth/v1/recover`, {
     method:'POST', headers:{ apikey: SB_KEY, 'Content-Type':'application/json' },
-    body: JSON.stringify({ email, redirect_to: location.origin + location.pathname }),
+    /* Explicit and absolute, never location.pathname. Derived from the current
+       path, a reset requested from invite.html would send the user BACK to
+       invite.html, which understands invite tokens and not recovery sessions —
+       a dead end that looks like a broken link. This always lands on the console
+       root, which is the page that knows how to finish a reset. */
+    body: JSON.stringify({ email, redirect_to: CONSOLE_HOME }),
   });
   if (!r.ok) { const j = await r.json().catch(()=>({}));
     throw new Error(j.error_description || j.msg || j.message || `could not send reset (${r.status})`); }

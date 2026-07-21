@@ -101,6 +101,20 @@ var SB_URL = 'https://lzegjjbkfuecrhdvlvay.supabase.co';
         server and would be spent by any crawler that fetched this URL. */
   var raw = (window.location.hash || '').replace(/^#/, '');
   var p = new URLSearchParams(raw);
+  /* RESCUE: a spent recovery session that landed on the wrong page.
+     If the fragment carries access_token, verify has ALREADY run — this is a
+     live session, not an unspent token, and it belongs on the console root which
+     knows how to finish a reset. Forwarding it is safe and does not weaken the
+     no-auto-navigation rule: that rule exists so a preview crawler cannot spend a
+     token, and a crawler can never hold an access_token, because fragments are
+     never sent to a server. Without this, anyone holding an older reset link
+     aimed at this page hits a dead end. */
+  if (p.get('access_token')) {
+    var home = location.pathname.replace(/invite\.html$/, '');
+    window.location.replace(location.origin + home + '#' + raw);
+    return;
+  }
+
   var token = p.get('token') || p.get('token_hash') || '';
 
   /* Default to recovery, not invite. Onboarding a rep from an existing shell

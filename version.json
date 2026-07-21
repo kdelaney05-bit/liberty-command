@@ -1,4 +1,4 @@
 {
-  "build": "2026-07-21T12:00Z-week-reset-context",
+  "build": "2026-07-21T14:10Z-reset-redirect-hardening",
   "note": "Bumped on every deploy. The page compares this against its embedded BUILD on load AND on resume, then reloads once if they differ."
 }
