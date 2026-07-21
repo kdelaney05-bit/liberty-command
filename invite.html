@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
+<title>Liberty Command · Set your password</title>
+
+<!-- ═══════════════════════════════════════════════════════════════════════════
+     THE TAP GATE — why this page exists.
+
+     A Supabase verify link is SINGLE USE. When one is sent through iMessage,
+     WhatsApp or Slack, the messenger fetches it to build a preview card, and
+     that fetch spends the token. The recipient then taps a link that has already
+     been used. That is how Gio's two invites died before he ever touched them.
+
+     This page stands between the messenger and the token:
+
+     · The token rides in the URL FRAGMENT. A fragment is never sent to a server,
+       so a preview crawler fetching this URL gets a static page and no token.
+     · Nothing navigates on its own. No meta refresh, no redirect, no prefetch or
+       preconnect hint toward the auth host, no fetch on load. A bot that renders
+       this page still does not spend the token, because only a real click does.
+     · The verify URL is assembled in the click handler and nowhere else. It does
+       not exist in the markup for a crawler to find and follow.
+
+     Keep those three properties if you touch this file. Everything else here is
+     presentation.
+     ═══════════════════════════════════════════════════════════════════════════ -->
+
+<meta name="robots" content="noindex, nofollow, noarchive"/>
+<meta name="referrer" content="no-referrer"/>
+<meta name="theme-color" content="#0d1f17"/>
+<meta name="color-scheme" content="dark"/>
+<!-- deliberately NO Open Graph / Twitter card tags: giving a messenger something
+     nice to render is what invites the preview fetch in the first place -->
+<link rel="apple-touch-icon" href="apple-touch-icon.png"/>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,400;9..144,500&family=JetBrains+Mono:wght@400;500;600&family=Inter+Tight:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg-deep:#0d1f17; --bg-card:#15291f; --bg-card-hi:#1c3528;
+    --line:rgba(255,255,255,0.06); --text:#e8efe9; --text-dim:#8aa094;
+    --accent:#f0834a; --accent-soft:#f4a37a; --green:#6cc28b; --green-soft:#8fd5a8; --red:#d96a5e;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+  html,body{width:100%;overflow-x:hidden}
+  body{font-family:'Inter Tight',sans-serif;
+    background:radial-gradient(ellipse at top,#1a3326 0%,#0d1f17 60%);
+    background-attachment:fixed;color:var(--text);min-height:100vh;
+    -webkit-font-smoothing:antialiased;display:flex;align-items:center;justify-content:center;
+    padding:calc(24px + env(safe-area-inset-top)) calc(20px + env(safe-area-inset-right))
+            calc(24px + env(safe-area-inset-bottom)) calc(20px + env(safe-area-inset-left))}
+  .box{width:100%;max-width:400px}
+  .eyebrow{font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.18em;
+    text-transform:uppercase;color:var(--accent);margin-bottom:8px}
+  h1{font-family:'Fraunces',serif;font-weight:400;font-size:30px;letter-spacing:-.02em;
+    line-height:1.08;margin-bottom:14px}
+  h1 em{font-style:italic;color:var(--accent-soft);font-weight:300}
+  .lead{font-size:14.5px;line-height:1.6;color:var(--text-dim);margin-bottom:24px}
+  .go{display:block;width:100%;min-height:58px;border:none;border-radius:13px;
+    background:var(--accent);color:#17110c;font-family:'JetBrains Mono',monospace;
+    font-size:13px;letter-spacing:.14em;text-transform:uppercase;font-weight:700;
+    cursor:pointer;padding:19px 16px;text-align:center}
+  .go:active{transform:scale(.985)}
+  .go[disabled]{opacity:.5;cursor:default}
+  .foot{font-family:'JetBrains Mono',monospace;font-size:9.5px;color:var(--text-dim);
+    letter-spacing:.06em;line-height:1.75;margin-top:22px;padding-top:16px;
+    border-top:1px solid var(--line)}
+  .err{background:rgba(217,106,94,.07);border:1px solid rgba(217,106,94,.3);
+    border-radius:12px;padding:16px}
+  .err .t{font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.14em;
+    text-transform:uppercase;color:var(--red);margin-bottom:8px}
+  .err .m{font-size:13.5px;line-height:1.6;color:var(--text-dim)}
+  .ok{display:flex;align-items:center;gap:8px;font-family:'JetBrains Mono',monospace;
+    font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--green-soft);
+    margin-bottom:18px}
+  .dot{width:6px;height:6px;border-radius:50%;background:var(--green);flex-shrink:0}
+</style>
+</head>
+<body>
+<div class="box" id="box">
+  <div class="eyebrow">Liberty · Command Console</div>
+  <h1>Set your <em>password</em></h1>
+  <div class="lead" id="lead">Checking your link…</div>
+  <div id="slot"></div>
+  <div class="foot">
+    This link is for you alone and works once. If it has already been used, ask
+    Kevin to send a fresh one — it takes him a few seconds.
+  </div>
+</div>
+
+<script>
+/* The project this console belongs to. The publishable key is not needed here:
+   the verify endpoint takes the token in the URL and nothing else. */
+var SB_URL = 'https://lzegjjbkfuecrhdvlvay.supabase.co';
+
+(function () {
+  var lead = document.getElementById('lead');
+  var slot = document.getElementById('slot');
+
+  /* 1. READ THE FRAGMENT. Never location.search — a query string is sent to the
+        server and would be spent by any crawler that fetched this URL. */
+  var raw = (window.location.hash || '').replace(/^#/, '');
+  var p = new URLSearchParams(raw);
+  var token = p.get('token') || p.get('token_hash') || '';
+  var type = p.get('type') || 'invite';
+
+  /* 2. STRIP IT IMMEDIATELY. Once read, the token should not survive in the
+        address bar, in history, or in anything the recipient might paste back
+        to someone. Held in a closure for the click handler only. */
+  try { history.replaceState(null, '', location.pathname); } catch (e) {}
+
+  if (!token) {
+    lead.textContent = 'This link is missing its one-time code.';
+    slot.innerHTML =
+      '<div class="err"><div class="t">Nothing to verify</div><div class="m">' +
+      'That usually means the link was shortened, forwarded, or copied without the part after the # — ' +
+      'or it was opened from a preview rather than tapped directly. Ask Kevin to send you a fresh link ' +
+      'and open it straight from the message.' +
+      '</div></div>';
+    return;
+  }
+
+  /* 3. READY, BUT DO NOT MOVE. No redirect, no timer, no prefetch. The token is
+        spent only when a person taps. */
+  lead.textContent = 'Your link is ready. Tap below and you can choose a password ' +
+                     'for the Liberty Command Console.';
+  slot.innerHTML =
+    '<div class="ok"><span class="dot"></span>Link verified as unused</div>' +
+    '<button class="go" id="go" type="button">Set my password</button>';
+
+  document.getElementById('go').addEventListener('click', function () {
+    var btn = this;
+    btn.disabled = true;
+    btn.textContent = 'Opening…';
+
+    /* 4. BUILD THE VERIFY URL HERE, IN THE HANDLER. It never appears in the
+          markup, so there is no href for a crawler to follow. redirect_to is
+          this site's own root, which the project's allow-list already permits;
+          Supabase sends the recovery session there and the console picks it up
+          and shows the set-password form. */
+    var back = location.origin + location.pathname.replace(/invite\.html$/, '');
+    var url = SB_URL + '/auth/v1/verify'
+            + '?token=' + encodeURIComponent(token)
+            + '&type=' + encodeURIComponent(type)
+            + '&redirect_to=' + encodeURIComponent(back);
+
+    window.location.assign(url);
+  });
+})();
+</script>
+</body>
+</html>
