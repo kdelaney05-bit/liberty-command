@@ -1,4 +1,4 @@
 {
-  "build": "2026-07-21T00:20Z-one-total",
-  "note": "Bumped on every deploy. The page compares this against its embedded BUILD and reloads once if they differ, because a home-screen PWA has no other way to learn a new build exists."
+  "build": "2026-07-21T00:45Z-union-everywhere",
+  "note": "Bumped on every deploy. The page compares this against its embedded BUILD on load AND on resume, then reloads once if they differ."
 }
