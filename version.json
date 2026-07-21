@@ -1,4 +1,4 @@
 {
-  "build": "2026-07-21T03:20Z-notice-do",
+  "build": "2026-07-21T12:00Z-week-reset-context",
   "note": "Bumped on every deploy. The page compares this against its embedded BUILD on load AND on resume, then reloads once if they differ."
 }

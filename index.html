@@ -169,6 +169,16 @@
 
   /* ── appointments: the card he opens this for ── */
   .appt { border-color: rgba(240,131,74,0.22); }
+  /* a calendar reset explaining itself, so an empty early week is never read as
+     missing data */
+  .weeknote { display: flex; flex-direction: column; gap: 4px; margin: 10px 0 2px;
+    padding: 10px 12px; border-radius: 10px; background: rgba(107,168,201,0.06);
+    border-left: 3px solid var(--blue); }
+  .wn-k { font-family: 'JetBrains Mono', monospace; font-size: 9px; letter-spacing: 0.15em;
+    text-transform: uppercase; color: var(--blue); }
+  .wn-t { font-size: 12.5px; line-height: 1.55; color: var(--text-dim); }
+  .wn-t b { color: var(--text); font-weight: 600; }
+
   /* ── NOTICE → DO ── every signal states what is off and what to do about it */
   .acts.hasfire { border-color: rgba(217,106,94,0.35); }
   .acts.haswatch { border-color: rgba(212,177,90,0.3); }
@@ -448,6 +458,49 @@ const qbw = () => qbOK() ? D.qb.windows.month : null;
 const charts = [];
 
 /* ── header ───────────────────────────────────────────────────────────────── */
+/* ── THE CALENDAR RESET, EXPLAINED ──────────────────────────────────────────
+   Kevin, Monday morning: "Tim and Matt show no sales for the week however we
+   know oasis had sales yesterday."
+
+   Nothing was broken. The week had rolled over a few hours earlier, so every
+   week-scoped board was showing a few hours of trading and reading as a hole.
+   That is the instrument asking him to do calendar arithmetic before he can
+   trust it, which is the same failure as a pace figure quoted on day one.
+
+   So any week surface that is too young to mean anything says so, and carries
+   what last week actually closed at. Two gates, because Monday 8am and Tuesday
+   8am both look empty for the same innocent reason:
+
+     · the week began today, or
+     · it is barely underway and holds a small fraction of what last week did.
+
+   A genuinely bad week still shows the line, and that is fine — it says "last
+   week closed at X" and lets him draw his own conclusion, rather than hiding an
+   empty board behind an excuse. ─────────────────────────────────────────────── */
+function weekReset(){
+  const W = flat('week');
+  const daysIn = W.prevSpanDays || 1;
+  const full = W.prevFull || W.prev || { rev:0, jobs:0, reps:[] };
+  if (daysIn > 2) return null;
+  const thin = full.rev > 0 && W.rev < full.rev * 0.35;
+  if (daysIn > 1 && !thin) return null;
+  return { daysIn, full,
+           began: daysIn <= 1 ? 'Week began today' : `Week is ${daysIn} days old`,
+           topReps: (full.reps || []).filter(r => r.rev > 0).slice(0, 3) };
+}
+
+function weekResetNote(){
+  const r = weekReset(); if (!r) return '';
+  const reps = r.topReps.length
+    ? ` — ${r.topReps.map(x => `${esc(x.name)} ${short(x.rev)}`).join(', ')}`
+    : '';
+  return `<div class="weeknote">
+    <span class="wn-k">${esc(r.began)}</span>
+    <span class="wn-t">Last week closed at <b>${short(r.full.rev)}</b> across ${r.full.jobs} contract${r.full.jobs===1?'':'s'}${reps}.
+    A quiet board this early is the calendar resetting, not missing data.</span>
+  </div>`;
+}
+
 /* Full span of each window, for projecting a pace. */
 function spanOf(k){
   const n = new Date();
@@ -468,9 +521,13 @@ function hdr(){
   const tiles = [['day','Today'],['week','This week'],['month','MTD'],['ytd','YTD']].map(([k,label]) => {
     const W = flat(k), pv = W.prev;
     const d = pv.rev ? Math.round((W.rev - pv.rev)/pv.rev*100) : null;
-    const sub = W.billdu
-      ? `${short(W.ccRev)} CC + ${short(W.billdu)} Billdu`
-      : (W.prevSpanDays >= spanOf(k) ? `${W.jobs} signed` : `pace ${short(paceOf(k))}`);
+    // a young week says so on the tile itself, before he taps into it
+    const wr = k === 'week' ? weekReset() : null;
+    const sub = wr
+      ? `${wr.daysIn <= 1 ? 'began today' : wr.daysIn + ' days in'} · last wk ${short(wr.full.rev)}`
+      : W.billdu
+        ? `${short(W.ccRev)} CC + ${short(W.billdu)} Billdu`
+        : (W.prevSpanDays >= spanOf(k) ? `${W.jobs} signed` : `pace ${short(paceOf(k))}`);
     return `<button class="snap" onclick="openWindow('${k}')">
       <div class="snap-k">${esc(label)}</div>
       <div class="snap-v">${short(W.rev)}</div>
@@ -651,6 +708,7 @@ function cardWow(){
   return `<div class="card">
     <div class="card-title">${esc(W.label)} vs ${esc(W.prevLabel)}<span class="feed-tag cc">live · cc</span></div>
     <div class="card-sub">Like for like — ${W.prevSpanDays} day${W.prevSpanDays===1?'':'s'} against the same ${W.prevSpanDays} day${W.prevSpanDays===1?'':'s'} of ${esc(W.prevLabel)}.</div>
+    ${weekResetNote()}
     <div class="wow-hero">
       <div class="wow-col"><div class="k">${esc(W.prevLabel)}</div><div class="v">${short(pv.rev)}</div></div>
       <div class="wow-arrow"><div class="d" style="${d!==null&&d<0?'color:#d8997f':''}">${d===null?'—':(d>=0?'▲':'▼')+Math.abs(d)+'%'}</div><div class="c">${pv.jobs}→${W.jobs}</div></div>
@@ -878,6 +936,7 @@ function cardEffort(){
       ${[['day','Day'],['week','Week'],['month','Month'],['year','Year']]
         .map(([k,l])=>`<button class="${k===K?'on':''}" onclick="setEff('${k}')">${l}</button>`).join('')}
     </div>
+    ${K === 'week' ? weekResetNote() : ''}
 
     <div class="stat-grid" style="margin-bottom:14px">
       <div class="stat-tile"><div class="lbl">Touches ${esc(label)}</div>
@@ -1072,6 +1131,8 @@ function diveView(k){
     <div class="dive-h">${esc(DIVE_TITLE[k])}</div>
   </div>
 
+  ${k === 'week' ? weekResetNote() : ''}
+
   ${(()=>{ const s = sigFor('dive:'+k);
     return s.length ? `<div class="card full acts hasfire" style="margin-bottom:12px">
       <div class="card-title">What needs you in this window</div>
@@ -1144,6 +1205,11 @@ function diveView(k){
     <div class="card">
       <div class="card-title">Who signed it<span class="feed-tag cc">live · cc</span></div>
       <div class="card-sub">${reps.length?'Ranked by signed value in this window.':'No rep activity in this window.'}</div>
+      ${k === 'week' ? weekResetNote() : ''}
+      ${k === 'week' && !reps.length && weekReset() ? `<div class="card-sub" style="margin:0">Last week's board: ${
+        (weekReset().topReps.length
+          ? weekReset().topReps.map(x=>`${esc(x.name)} ${short(x.rev)}`).join(' · ')
+          : 'no rep activity recorded')}.</div>` : ''}
       ${reps.slice(0,12).map((r,i)=>`<div class="rep-row" ${r.office?'style="opacity:.8"':''}>
         <div class="rep-head">
           <div class="nm"><span class="rk ${i===0?'top':''}">${i+1}</span>${esc(r.name)}${r.billdu?'<span class="tick">billdu</span>':''}${r.role&&r.role!=='sales'&&!r.office?`<span class="brand">${esc(r.role)}</span>`:''}</div>
@@ -1504,7 +1570,7 @@ addEventListener('resize', () => {
    server for hours while Kevin looked at yesterday's build and reported the bug
    as unfixed. That happened. The page now checks version.json on every load and
    reloads itself once if the deployed build is newer than the one running. */
-const BUILD = '2026-07-21T03:20Z-notice-do';
+const BUILD = '2026-07-21T12:00Z-week-reset-context';
 const SB_URL = 'https://lzegjjbkfuecrhdvlvay.supabase.co';
 const SB_KEY = 'sb_publishable_kToiGqET7XzO2It9evStJw_kYzvjSF8';
 const SKEY = 'lcc.session';
@@ -2380,7 +2446,13 @@ function buildData(raw){
     windows: Object.fromEntries(Object.entries(WINS).map(([k,wv]) => [k, {
       label: wv.label, prevLabel: wv.pLabel, prevSpanDays: elapsedDays(wv),
       ...slice(wv.from, wv.to),
-      prev: (p => ({ ...p.company, brands:p.brands }))(slice(...prevRange(wv))),
+      // reps on prev too: when a week has just reset, "who closed last week" is
+      // the context that stops an empty board reading as a broken one
+      prev: (p => ({ ...p.company, brands:p.brands, reps:p.reps }))(slice(...prevRange(wv))),
+      // and the FULL prior period, not just the like-for-like slice — on a Monday
+      // the like-for-like comparison is one day against one day, which is not the
+      // number he means when he says "last week"
+      prevFull: (p => ({ ...p.company, brands:p.brands, reps:p.reps }))(slice(wv.pFrom, wv.pTo)),
     }])),
   };
 }
