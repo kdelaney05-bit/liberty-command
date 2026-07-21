@@ -169,6 +169,26 @@
 
   /* ── appointments: the card he opens this for ── */
   .appt { border-color: rgba(240,131,74,0.22); }
+  /* the money shot — biggest number on the page */
+  .hero-booked { background: var(--bg-card-hi); border: 1px solid var(--line);
+    border-left: 3px solid var(--text-dim); border-radius: 12px; padding: 15px 16px; margin: 12px 0 0; }
+  .hero-booked .k { font-family: 'JetBrains Mono', monospace; font-size: 9.5px; letter-spacing: 0.16em;
+    text-transform: uppercase; color: var(--text-dim); }
+  .hero-booked .v { font-family: 'Fraunces', serif; font-size: 60px; font-weight: 500;
+    letter-spacing: -0.03em; line-height: 1; margin: 6px 0 4px; }
+  @media (min-width: 700px) { .hero-booked .v { font-size: 72px; } }
+  .hero-booked .s { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--text-dim); }
+  .hero-booked.good { border-left-color: var(--green); } .hero-booked.good .v { color: var(--green-soft); }
+  .hero-booked.warn { border-left-color: var(--gold); }  .hero-booked.warn .v { color: var(--gold); }
+  .hero-booked.bad  { border-left-color: var(--red); }   .hero-booked.bad .v  { color: #e8968c; }
+  .hero-booked.flat .v { color: var(--text); }
+  .bookedbrands { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+  .bb { display: flex; align-items: center; gap: 6px; background: rgba(255,255,255,0.03);
+    border: 1px solid var(--line); border-radius: 100px; padding: 5px 11px;
+    font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--text-dim); }
+  .bb b { color: var(--text); font-weight: 600; }
+  .bbdot { width: 7px; height: 7px; border-radius: 2px; flex-shrink: 0; }
+
   .apptrow { display: grid; grid-template-columns: 1fr 1.35fr; gap: 10px; margin: 12px 0 4px; }
   .apptbig { background: var(--bg-card-hi); border: 1px solid var(--line); border-radius: 12px; padding: 13px 14px; }
   .apptbig .k { font-family: 'JetBrains Mono', monospace; font-size: 8.5px; letter-spacing: 0.14em;
@@ -453,6 +473,25 @@ function hdr(){
    more." So this sits directly under the hero, and it leads with what is ON THE
    BOOKS rather than what already ran — the forward number is the one that
    carries the worry. ─────────────────────────────────────────────────────── */
+/* The setting-day verdict. Deliberately does NOT scold before the day has had a
+   chance to happen — a low count at 9am is a morning, not a problem. */
+function bookedVerdict(A){
+  const n = A.bookedToday, norm = A.bookedNorm, d = A.bookedVsNorm;
+  if (A.isWeekend) return { tone:'flat', line: n
+    ? `${n} booked on a weekend — setting normally runs Monday to Friday.`
+    : 'Weekend. Setting normally runs Monday to Friday.' };
+  if (!norm) return { tone:'flat', line:`${n} booked today. Not enough history yet for a norm.` };
+  // how far through the setting day are we? most setting happens 7am–5pm
+  const h = new Date().getHours();
+  const early = h < 12;
+  if (d >= 25)  return { tone:'good', line:`Setters booked ${n} today — well above the ${norm}/day norm.` };
+  if (d >= 10)  return { tone:'good', line:`Setters booked ${n} today — running ahead of the ${norm}/day norm.` };
+  if (d > -15)  return { tone:'flat', line:`${n} booked today, against a ${norm}/day norm. Normal setting day.` };
+  if (early)    return { tone:'warn', line:`${n} booked so far against a ${norm}/day norm — still early, but worth a look.` };
+  if (d <= -40) return { tone:'bad',  line:`Only ${n} booked today against a ${norm}/day norm — slow setting day, check the girls.` };
+  return { tone:'warn', line:`${n} booked today against a ${norm}/day norm — setting is behind.` };
+}
+
 function apptVerdict(A){
   const d = A.vsPrior;
   const stale = A.staleHours != null && A.staleHours >= 6;
@@ -466,9 +505,20 @@ function apptVerdict(A){
 }
 const DAYNAME = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
 
+/* who the setters booked for, today */
+function bookedBrandRows(A){
+  const rows = Object.entries(A.bookedByBrand).sort((a,b)=>b[1]-a[1]);
+  const tot = rows.reduce((n,[,c])=>n+c,0);
+  if (!tot) return '';
+  return `<div class="bookedbrands">${rows.map(([b,n])=>{const m=brandOf(b);
+    return `<div class="bb"><span class="bbdot" style="background:${m.c}"></span>${esc(m.s)}
+      <b>${n}</b></div>`}).join('')}</div>`;
+}
+
 function cardAppointments(){
   const A = D.appointments; if (!A) return '';
   const v = apptVerdict(A);
+  const bv = bookedVerdict(A);
   const ahead = Object.entries(A.brandsAhead).sort((a,b)=>b[1]-a[1]);
   const totAhead = ahead.reduce((n,[,c])=>n+c,0);
   const stale = A.staleHours != null && A.staleHours >= 6;
@@ -476,9 +526,22 @@ function cardAppointments(){
     <div class="card-title">Appointments<span class="feed-tag cc">live · cc</span></div>
     <div class="card-sub">What ran, and what is on the books ahead.</div>
 
-    <div class="apptrow">
+    <div class="hero-booked ${bv.tone}">
+      <div class="k">New appointments booked today</div>
+      <div class="v">${A.bookedToday}</div>
+      <div class="s">${A.bookedNorm?`${A.bookedNorm}/day norm${A.bookedVsNorm!==null?` · ${A.bookedVsNorm>=0?'+':''}${A.bookedVsNorm}%`:''}`:'no norm yet'}
+        · ${A.bookedYesterday} yesterday${A.yesterdayWasWeekend?' (weekend)':''}</div>
+    </div>
+    <div class="verdict ${bv.tone}">${esc(bv.line)}</div>
+
+    ${bookedBrandRows(A)}
+
+    <div class="chart-wrap" style="height:150px;margin-top:14px"><canvas id="cBooked"></canvas></div>
+    <div class="wfoot" style="text-align:center;margin-top:2px">Booked per day · last 14 days · <b>when the appointment was set</b></div>
+
+    <div class="apptrow" style="margin-top:18px">
       <div class="apptbig">
-        <div class="k">Today</div>
+        <div class="k">Running today</div>
         <div class="v">${A.today}</div>
         <div class="s">${A.yesterday?`${A.yesterday} yesterday`:'none yesterday'}</div>
       </div>
@@ -514,16 +577,29 @@ function cardAppointments(){
   </div>`;
 }
 
+/* Two bases, never blended. "Booked" answers how hard marketing is producing;
+   "calendar" answers how full the diary is. A good booking week and a full
+   calendar week are different facts and can disagree. */
 function cardApptTrends(){
   const A = D.appointments; if (!A) return '';
   return `<div class="card chart-card">
-      <div class="card-title">Appointments by week<span class="feed-tag cc">live · cc</span></div>
-      <div class="card-sub">Last 8 weeks. The current week is still filling.</div>
+      <div class="card-title">Booked by week<span class="feed-tag cc">live · cc</span><span class="feed-tag none">set date</span></div>
+      <div class="card-sub">How many appointments the team <b>set</b> each week — marketing output. Current week still filling.</div>
+      <div class="chart-wrap"><canvas id="cBookedWeek"></canvas></div>
+    </div>
+    <div class="card chart-card">
+      <div class="card-title">Booked by month<span class="feed-tag cc">live · cc</span><span class="feed-tag none">set date</span></div>
+      <div class="card-sub">Setting output by month. Current month is partial.</div>
+      <div class="chart-wrap"><canvas id="cBookedMonth"></canvas></div>
+    </div>
+    <div class="card chart-card">
+      <div class="card-title">Calendar load by week<span class="feed-tag cc">live · cc</span><span class="feed-tag none">appt date</span></div>
+      <div class="card-sub">How many appointments <b>sat on the calendar</b> each week — what the crews drove to. A different question from how many were set.</div>
       <div class="chart-wrap"><canvas id="cApptWeek"></canvas></div>
     </div>
     <div class="card chart-card">
-      <div class="card-title">Appointments by month<span class="feed-tag cc">live · cc</span></div>
-      <div class="card-sub">Last 12 months. The current month is partial.</div>
+      <div class="card-title">Calendar load by month<span class="feed-tag cc">live · cc</span><span class="feed-tag none">appt date</span></div>
+      <div class="card-sub">Last 12 months by appointment date. Current month is partial.</div>
       <div class="chart-wrap"><canvas id="cApptMonth"></canvas></div>
     </div>`;
 }
@@ -1109,6 +1185,45 @@ function drawCharts(){
 
   /* appointments: past / today / booked-ahead in one shape, so the cliff between
      what ran and what is booked is visible rather than described */
+  /* booked-per-day: the setters' output. Today highlighted, weekends muted so a
+     structural zero never reads as a bad day. */
+  const bk = document.getElementById('cBooked');
+  if (bk && D.appointments) {
+    const s = D.appointments.bookedSeries, norm = D.appointments.bookedNorm;
+    charts.push(new Chart(bk.getContext('2d'), {
+      type:'bar',
+      data:{ labels:s.map(x=>x.label),
+        datasets:[{ label:'Booked', borderRadius:3,
+          backgroundColor:s.map(x=>x.today?'#f0834a':x.weekend?'rgba(138,160,148,0.25)':'#6cc28b'),
+          data:s.map(x=>x.n) }] },
+      options:{ responsive:true, maintainAspectRatio:false,
+        plugins:{ legend:{display:false},
+          tooltip:{...TIP, callbacks:{ label:c=>' '+c.parsed.y+' booked',
+            afterLabel:c=>s[c.dataIndex].weekend?'weekend':(norm?`${norm}/day norm`:'') }}},
+        scales:{ x:{grid:{display:false},ticks:{font:{family:MONO,size:8},maxRotation:0,autoSkip:true,maxTicksLimit:8}},
+          y:{beginAtZero:true,grid:{color:'rgba(255,255,255,0.04)'},
+             ticks:{font:{family:MONO,size:9},precision:0,maxTicksLimit:4}} } }
+    }));
+  }
+  for (const [id, series, colour] of [
+    ['cBookedWeek',  D.appointments && D.appointments.bookedWeekly,  '#6cc28b'],
+    ['cBookedMonth', D.appointments && D.appointments.bookedMonthly, '#6cc28b'],
+  ]) {
+    const el2 = document.getElementById(id);
+    if (!el2 || !series) continue;
+    charts.push(new Chart(el2.getContext('2d'), {
+      type:'bar',
+      data:{ labels:series.map(x=>x.label),
+        datasets:[{ label:'Booked', borderRadius:3,
+          backgroundColor:series.map(x=>x.current?'#f0834a':colour), data:series.map(x=>x.n) }] },
+      options:{ responsive:true, maintainAspectRatio:false,
+        plugins:{ legend:{display:false}, tooltip:{...TIP, callbacks:{ label:c=>' '+c.parsed.y+' booked',
+          afterLabel:c=>series[c.dataIndex].current?'still filling':'' }}},
+        scales:{ x:{grid:{display:false},ticks:{font:{family:MONO,size:9},maxRotation:0,autoSkip:true,maxTicksLimit:12}},
+          y:{beginAtZero:true,grid:{color:'rgba(255,255,255,0.04)'},ticks:{font:{family:MONO,size:9},precision:0,maxTicksLimit:5}} } }
+    }));
+  }
+
   const ap = document.getElementById('cAppt');
   if (ap && D.appointments) {
     const s = D.appointments.series;
@@ -1256,7 +1371,7 @@ addEventListener('resize', () => {
    server for hours while Kevin looked at yesterday's build and reported the bug
    as unfixed. That happened. The page now checks version.json on every load and
    reloads itself once if the deployed build is newer than the one running. */
-const BUILD = '2026-07-21T01:30Z-appointments-first';
+const BUILD = '2026-07-21T02:20Z-booked-today';
 const SB_URL = 'https://lzegjjbkfuecrhdvlvay.supabase.co';
 const SB_KEY = 'sb_publishable_kToiGqET7XzO2It9evStJw_kYzvjSF8';
 const SKEY = 'lcc.session';
@@ -1626,6 +1741,19 @@ function buildData(raw){
     const at = a => new Date(a.starts_at);
     const inD = (a, x, y) => { const t = at(a); return t >= x && t < y; };
     const count = (x, y) => live.filter(a => inD(a, x, y)).length;
+
+    /* Contractors Cloud stores these as Eastern local time but LABELS them UTC.
+       Checked rather than assumed: both starts_at and cc_created_at cluster
+       07:00–17:00 "UTC" with nothing between 19:00 and 06:00. Real UTC would put
+       Eastern business hours at 12:00–22:00. So parsing them as UTC and letting
+       the browser convert shifts every timestamp four hours earlier.
+
+       It happens not to break day buckets — business hours minus four hours is
+       still the same calendar day — but relying on that is luck, not design. Day
+       comparisons therefore use the DATE PORTION OF THE STRING, which is the
+       business date CC intended, whatever the offset claims. */
+    const dstr = ts => String(ts || '').slice(0, 10);
+    const ymdL = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
     // as-of: only what had been created by `asOf`
     const bookedAsOf = (asOf, days) => live.filter(a => {
       const t = at(a);
@@ -1635,6 +1763,57 @@ function buildData(raw){
     }).length;
 
     const T = sod(NOW);
+
+    /* ── BOOKED TODAY · the setters' output ────────────────────────────────
+       Kevin: "Liked booked today is my key indicator. I check my marketing
+       girls… That's the money shot. Daily new appts."
+
+       This counts appointments CREATED today, which is a different question
+       from how full the calendar is: it measures what the setting team produced
+       today, not what the crews are driving to. Both bases are kept and both
+       are labelled, because confusing them would make a busy calendar look like
+       a productive morning. ─────────────────────────────────────────────── */
+    const createdOn = day => appts.filter(a => a.cc_created_at && dstr(a.cc_created_at) === day);
+    const todayStr = ymdL(T), yestStr = ymdL(addD(T,-1));
+    const bookedTodayRows = createdOn(todayStr);
+    const bookedToday = bookedTodayRows.length;
+    const bookedYesterday = createdOn(yestStr).length;
+
+    // Weekday norm: weekends are structurally zero here and would drag a plain
+    // average down until every weekday looked like a win.
+    const normDays = [];
+    for (let i = 1; i <= 28; i++) {
+      const d = addD(T, -i);
+      if (d.getDay() === 0 || d.getDay() === 6) continue;
+      normDays.push(createdOn(ymdL(d)).length);
+    }
+    const sortedNorm = [...normDays].sort((x,y)=>x-y);
+    const bookedNorm = sortedNorm.length ? sortedNorm[Math.floor(sortedNorm.length/2)] : 0;
+    const isWeekend = T.getDay() === 0 || T.getDay() === 6;
+
+    const bookedByBrand = {};
+    for (const a of bookedTodayRows) {
+      const b = projBrand[String(a.cc_project_id)] || 'unknown';
+      bookedByBrand[b] = (bookedByBrand[b] || 0) + 1;
+    }
+
+    // creation-basis series, alongside the calendar-load series
+    const bookedSeries = [];
+    for (let i = 13; i >= 0; i--) { const d = addD(T,-i);
+      bookedSeries.push({ label:`${d.getMonth()+1}/${d.getDate()}`, n:createdOn(ymdL(d)).length,
+                          today:i===0, weekend:d.getDay()===0||d.getDay()===6 }); }
+    const bookedWeekly = [];
+    for (let i = 7; i >= 0; i--) {
+      const a0 = addD(sow(NOW), -7*i); let n = 0;
+      for (let k = 0; k < 7; k++) n += createdOn(ymdL(addD(a0,k))).length;
+      bookedWeekly.push({ label:`${a0.getMonth()+1}/${a0.getDate()}`, n, current:i===0 }); }
+    const bookedMonthly = [];
+    for (let i = 11; i >= 0; i--) {
+      const a0 = addM(som(NOW), -i), b0 = addM(a0,1); let n = 0;
+      for (let d = new Date(a0); d < b0; d = addD(d,1)) n += createdOn(ymdL(d)).length;
+      bookedMonthly.push({ label:['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][a0.getMonth()],
+                           n, current:i===0 }); }
+
     const next7 = bookedAsOf(T, 7);
     // same weekday, three weeks back, measured the same way
     const priorSameDay = [1,2,3].map(w => {
@@ -1671,6 +1850,14 @@ function buildData(raw){
     const staleHours = newest ? (Date.now() - new Date(newest).getTime())/3600000 : null;
 
     return {
+      // creation basis — what the setters produced
+      bookedToday, bookedYesterday, bookedNorm, isWeekend,
+      // a Sunday zero is structural, not a bad day — say which it is
+      yesterdayWasWeekend: [0,6].includes(addD(T,-1).getDay()),
+      bookedVsNorm: bookedNorm ? Math.round((bookedToday - bookedNorm)/bookedNorm*100) : null,
+      bookedByBrand, bookedSeries, bookedWeekly, bookedMonthly,
+      lastCreatedAt: bookedTodayRows.map(a=>a.cc_created_at).sort().pop() || null,
+      // calendar basis — what the crews are driving to
       today: count(T, addD(T,1)),
       yesterday: count(addD(T,-1), T),
       next7, priorSameDay, priorAvg,
