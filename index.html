@@ -169,6 +169,28 @@
 
   /* ── appointments: the card he opens this for ── */
   .appt { border-color: rgba(240,131,74,0.22); }
+  /* ── NOTICE → DO ── every signal states what is off and what to do about it */
+  .acts.hasfire { border-color: rgba(217,106,94,0.35); }
+  .acts.haswatch { border-color: rgba(212,177,90,0.3); }
+  .acts.clear { border-color: rgba(108,194,139,0.28); }
+  .sig { border-left: 3px solid var(--line2); padding: 10px 0 10px 12px; margin-top: 12px; }
+  .sig.fire { border-left-color: var(--red); }
+  .sig.watch { border-left-color: var(--gold); }
+  .sig.note { border-left-color: var(--text-dim); }
+  .sig-h { display: flex; align-items: center; gap: 6px; margin-bottom: 5px; }
+  .sig-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+  .sig-k { font-family: 'JetBrains Mono', monospace; font-size: 8px; letter-spacing: 0.16em;
+    text-transform: uppercase; color: var(--text-dim); }
+  .sig-n { font-size: 13.5px; line-height: 1.5; color: var(--text); }
+  .sig-d { font-size: 13px; line-height: 1.55; color: var(--accent-soft); margin-top: 6px;
+    display: flex; gap: 7px; align-items: baseline; }
+  .sig-arrow { font-family: 'JetBrains Mono', monospace; font-size: 12px; flex-shrink: 0; opacity: .8; }
+  .sig-sep { font-family: 'JetBrains Mono', monospace; font-size: 9px; letter-spacing: 0.14em;
+    text-transform: uppercase; color: var(--text-dim); margin-top: 18px; padding-top: 12px;
+    border-top: 1px solid var(--line); }
+  .nofires { font-size: 13.5px; line-height: 1.6; color: var(--green-soft);
+    border-left: 3px solid var(--green); padding: 10px 0 10px 12px; margin-top: 10px; }
+
   /* the money shot — biggest number on the page */
   .hero-booked { background: var(--bg-card-hi); border: 1px solid var(--line);
     border-left: 3px solid var(--text-dim); border-radius: 12px; padding: 15px 16px; margin: 12px 0 0; }
@@ -569,6 +591,8 @@ function cardAppointments(){
           <div class="amt">${n} <span>· ${pct(n,totAhead)}%</span></div></div>
         <div class="meter"><div class="meter-fill" style="width:${pct(n,totAhead)}%;background:${m.c}"></div></div>
       </div>`}).join('')}`:''}
+
+    ${signalList(sigFor('appointments'))}
 
     ${stale?`<div class="withheld"><div class="wt">Read this number knowing when it was taken</div><div class="wx">
       The appointment feed last synced <b>${A.staleHours<24?`${Math.round(A.staleHours)} hours`:`${Math.round(A.staleHours/24)} days`} ago</b>. Anything booked since then is not counted here, so the week ahead can only look thinner than it is — never fuller.</div></div>`:''}
@@ -973,6 +997,22 @@ function cardLeadCategories(){
 }
 
 /* ── 10. flags ────────────────────────────────────────────────────────────── */
+/* ── NOTICE → DO, rendered ──────────────────────────────────────────────────
+   One component, used by the appointments card, the flags card and every
+   drill-in, so a signal reads identically wherever it surfaces. ─────────── */
+const SEV = { fire:{c:'#d96a5e', k:'act today'}, watch:{c:'#d4b15a', k:'watch'}, note:{c:'#8aa094', k:'note'} };
+function sigFor(tag){ return (D.signals && D.signals.list || []).filter(s => s.tags.includes(tag)); }
+
+function signalList(sigs, { quiet } = {}){
+  if (!sigs.length) return quiet ? `<div class="nofires">${esc(quiet)}</div>` : '';
+  return sigs.map(s => `<div class="sig ${s.sev}">
+    <div class="sig-h"><span class="sig-dot" style="background:${SEV[s.sev].c}"></span>
+      <span class="sig-k">${SEV[s.sev].k}</span></div>
+    <div class="sig-n">${esc(s.notice)}</div>
+    <div class="sig-d"><span class="sig-arrow">→</span>${esc(s.action)}</div>
+  </div>`).join('');
+}
+
 function cardFlags(){
   const W = w(), f = [];
   const X = D.exclusions;
@@ -988,8 +1028,25 @@ function cardFlags(){
   if (W.close === null) f.push(['#8aa094', `<b>No close rate for ${esc(W.label.toLowerCase())}.</b> No appointments in the window to divide by.`]);
   return `<div class="card full">
     <div class="card-title">Flags · read before trusting</div>
-    <div class="card-sub">What would mislead you if nobody said it.</div>
+    <div class="card-sub">What would mislead you if nobody said it. These are caveats about the data, not things to act on — anything needing action is at the top of the page.</div>
     ${f.map(([c,t])=>`<div class="flag-row"><div class="flag-dot" style="background:${c}"></div><div class="ft">${t}</div></div>`).join('')}
+  </div>`;
+}
+
+/* The page's answer to "what needs me today". Sits at the top because that is
+   the question he opens it with. When nothing crosses a threshold it says so
+   plainly — a console that always finds something wrong gets ignored. */
+function cardActions(){
+  const S = D.signals; if (!S) return '';
+  const acts = S.list.filter(s => s.sev !== 'note');
+  const notes = S.list.filter(s => s.sev === 'note');
+  const headline = S.fires ? `${S.fires} thing${S.fires===1?'':'s'} to act on`
+                 : S.watches ? `${S.watches} to watch` : 'No fires';
+  return `<div class="card full acts ${S.fires?'hasfire':S.watches?'haswatch':'clear'}">
+    <div class="card-title">What needs you${S.fires?'':' right now'}<span class="feed-tag ${S.fires?'':'none'}">${esc(headline)}</span></div>
+    <div class="card-sub">Checked against this business's own recent numbers, not a rule of thumb. Nothing appears here unless it crossed a threshold.</div>
+    ${signalList(acts, { quiet: 'Nothing is off today. Bookings, pipeline and money are all inside their normal range — no action needed from you this morning.' })}
+    ${notes.length?`<div class="sig-sep">Worth doing when there's time</div>${signalList(notes)}`:''}
   </div>`;
 }
 
@@ -1014,6 +1071,12 @@ function diveView(k){
     <button class="backbtn" onclick="closeWindow()">‹ Back</button>
     <div class="dive-h">${esc(DIVE_TITLE[k])}</div>
   </div>
+
+  ${(()=>{ const s = sigFor('dive:'+k);
+    return s.length ? `<div class="card full acts hasfire" style="margin-bottom:12px">
+      <div class="card-title">What needs you in this window</div>
+      ${signalList(s)}
+    </div>` : ''; })()}
 
   <div class="card full" style="margin-bottom:12px">
     <div class="card-title">Signed · ${esc(DIVE_TITLE[k].toLowerCase())}<span class="feed-tag cc">live · cc</span>${W.billdu?'<span class="feed-tag billdu">+ billdu</span>':''}</div>
@@ -1210,7 +1273,7 @@ function render(){
          the hero because that is the number Kevin's week turns on; the
          marketing-ROI breakdown moves near the bottom at his request — useful
          to him, but not what he opens this for. */
-      cardAppointments(), cardApptTrends(),
+      cardActions(), cardAppointments(), cardApptTrends(),
       cardWeeks(), cardWow(), cardStats(), cardTrending(), cardMix(),
       cardReps(), cardEffort(), cardCadence(), cardMoney(),
       cardLeads(), cardLeadCategories(),
@@ -1441,7 +1504,7 @@ addEventListener('resize', () => {
    server for hours while Kevin looked at yesterday's build and reported the bug
    as unfixed. That happened. The page now checks version.json on every load and
    reloads itself once if the deployed build is newer than the one running. */
-const BUILD = '2026-07-21T02:50Z-deep-dive';
+const BUILD = '2026-07-21T03:20Z-notice-do';
 const SB_URL = 'https://lzegjjbkfuecrhdvlvay.supabase.co';
 const SB_KEY = 'sb_publishable_kToiGqET7XzO2It9evStJw_kYzvjSF8';
 const SKEY = 'lcc.session';
@@ -1867,6 +1930,25 @@ function buildData(raw){
       bookedByBrand[b] = (bookedByBrand[b] || 0) + 1;
     }
 
+    /* Per-brand weekday norms. Needed before any "this brand is quiet" alert can
+       be trusted: measured over the last 56 days, Fencing books a median of 14 a
+       weekday and Oasis 6, but Pro-Tec books 1. A brand whose normal IS
+       near-zero cannot support a daily alarm — "below 40% of a median of 1" only
+       ever means "zero", which happens on a tenth of normal days. So the norm is
+       carried per brand and the alert gates on having enough baseline to mean
+       something. */
+    const brandNorm = {};
+    for (const b of BRAND_ORDER) {
+      const v = [];
+      for (let i = 1; i <= 56; i++) {
+        const d = addD(T, -i);
+        if (d.getDay() === 0 || d.getDay() === 6) continue;
+        v.push(createdOn(ymdL(d)).filter(a => (projBrand[String(a.cc_project_id)]||'unknown') === b).length);
+      }
+      v.sort((x,y)=>x-y);
+      brandNorm[b] = { median: v.length ? v[Math.floor(v.length/2)] : 0, days: v.length };
+    }
+
     // creation-basis series, alongside the calendar-load series
     const bookedSeries = [];
     for (let i = 13; i >= 0; i--) { const d = addD(T,-i);
@@ -1925,7 +2007,7 @@ function buildData(raw){
       // a Sunday zero is structural, not a bad day — say which it is
       yesterdayWasWeekend: [0,6].includes(addD(T,-1).getDay()),
       bookedVsNorm: bookedNorm ? Math.round((bookedToday - bookedNorm)/bookedNorm*100) : null,
-      bookedByBrand, bookedSeries, bookedWeekly, bookedMonthly,
+      bookedByBrand, bookedSeries, bookedWeekly, bookedMonthly, brandNorm,
       lastCreatedAt: bookedTodayRows.map(a=>a.cc_created_at).sort().pop() || null,
       // calendar basis — what the crews are driving to
       today: count(T, addD(T,1)),
@@ -2159,9 +2241,133 @@ function buildData(raw){
     };
   })();
 
+  /* ═══ SIGNALS · NOTICE → DO ═════════════════════════════════════════════
+     Kevin, as standing house law: "We need to build in as much proactive
+     forward thinking intelligence as possible. Don't rely on me to think of what
+     to do it clearly tells me what to not only notice but do."
+
+     So every signal carries both halves: what is off, and the thing to do about
+     it. Three rules keep it honest rather than noisy:
+
+     · THRESHOLD-GATED, NO INVENTED CONCERNS. Every trigger below is measured
+       against this business's own recent distribution, not a number that felt
+       about right. Where the data cannot support a judgement the signal does not
+       fire at all.
+     · A QUIET DAY IS A REAL ANSWER. If nothing crosses a threshold the verdict
+       is "no fires", not a scraped-together worry. A console that always finds
+       something wrong teaches him to stop reading it.
+     · IT MUST NOT SCOLD BEFORE THE DAY HAS HAPPENED. Daily setting alerts hold
+       until the afternoon; a slow 9am is a morning, not a problem.
+     ═════════════════════════════════════════════════════════════════════════ */
+  const signals = (() => {
+    const S = [];
+    const add = (sev, id, tags, notice, action) => S.push({ sev, id, tags, notice, action });
+    const A = appointments, hour = NOW.getHours();
+    const isWeekday = ![0,6].includes(NOW.getDay());
+    const afternoon = hour >= 13;
+
+    // ── data trust comes first: if the feed is stale, say so before anything
+    //    derived from it is used to make a decision
+    if (A && A.staleHours != null && A.staleHours >= 6) {
+      add('watch', 'sync-stale', ['appointments','flags'],
+        `The appointment feed last synced ${A.staleHours < 24 ? Math.round(A.staleHours)+' hours' : Math.round(A.staleHours/24)+' days'} ago.`,
+        `Today's booking count can only read low. Treat it as provisional until the sync catches up rather than acting on it.`);
+    }
+
+    // ── setting output today (afternoon only, weekdays only)
+    if (A && isWeekday && afternoon && A.bookedNorm >= 5) {
+      const r = A.bookedToday / A.bookedNorm;
+      if (r < 0.5) add('fire', 'booking-day-low', ['appointments','flags','dive:day'],
+        `Only ${A.bookedToday} appointments booked today against a ${A.bookedNorm}/day norm.`,
+        `Get the setters on the phone this afternoon — a day this far behind does not recover on its own.`);
+      else if (r < 0.75) add('watch', 'booking-day-soft', ['appointments','flags','dive:day'],
+        `${A.bookedToday} booked today, below the ${A.bookedNorm}/day norm.`,
+        `Worth a check-in with the setters before the day closes.`);
+    }
+
+    // ── the week ahead
+    if (A && A.priorAvg >= 8 && A.vsPrior !== null) {
+      if (A.vsPrior <= -35) add('fire', 'booking-week-thin', ['appointments','flags','dive:week'],
+        `Only ${A.next7} appointments on the books for the next 7 days, against ${A.priorAvg} typical.`,
+        `Push setting for next week today — the calendar is filled 3 days out on average, so a thin week ahead is still fixable this afternoon.`);
+      else if (A.vsPrior <= -20) add('watch', 'booking-week-soft', ['appointments','flags','dive:week'],
+        `${A.next7} on the books for next 7 days against ${A.priorAvg} typical.`,
+        `Keep an eye on it — one more setting push today closes the gap.`);
+    }
+
+    // ── per-brand setting, only where the brand has enough baseline to judge
+    if (A && isWeekday && afternoon) {
+      for (const b of BRAND_ORDER) {
+        const norm = (A.brandNorm && A.brandNorm[b]) || { median: 0 };
+        if (norm.median < 4) continue;   // a brand whose normal is ~1 cannot signal daily
+        const n = A.bookedByBrand[b] || 0;
+        if (n < norm.median * 0.4) {
+          const m = BRANDS[b] || { n: b };
+          add('watch', 'brand-booking-' + b, ['appointments','flags','dive:day'],
+            `${m.n} booked ${n} appointment${n===1?'':'s'} today against ${norm.median} typical.`,
+            `Point the setters at ${m.n} for the rest of the day — the other brands are carrying the count.`);
+        }
+      }
+    }
+
+    // ── Oasis work that has not reached Contractors Cloud
+    if (oasisLag && oasisLag.freshness && Number(oasisLag.freshness.not_in_cc_yet) > 200) {
+      add('watch', 'oasis-import', ['flags','dive:month'],
+        `${Number(oasisLag.freshness.not_in_cc_yet).toLocaleString()} Billdu documents still have no Contractors Cloud counterpart.`,
+        `Chase the CC import. Until it catches up, Oasis work is only visible here through Billdu, and anything downstream of CC — scheduling, production, commissions — has not seen it.`);
+    }
+
+    // ── money owed, measured against what a month actually bills
+    if (qb && !qb.unavailable) {
+      const invMonth = qb.windows.month ? qb.windows.month.invoiced : 0;
+      if (invMonth > 0 && qb.arTotal > invMonth * 1.25) {
+        add('watch', 'ar-heavy', ['flags','dive:month'],
+          `Open A/R is ${short(qb.arTotal)} against ${short(invMonth)} invoiced this month — more than a month of billing outstanding.`,
+          `Put someone on collections this week; the oldest balances are the ones that stop being collectable.`);
+      }
+    }
+
+    // ── the effort board cannot fill itself
+    if (effort && effort.total < 50) {
+      add('note', 'effort-unlogged', ['flags'],
+        `Only ${effort.total} touches logged by ${effort.repsEverLogged} of ${effort.activeReps} reps.`,
+        `The effort scoreboard stays at zero until reps log in the app. Either the habit needs pushing or the app is not in their hands yet — worth finding out which.`);
+    }
+
+    // ── marketing money attributed to a bare id
+    if (leadSources && leadSources.byTrade) {
+      for (const b of BRAND_ORDER) {
+        const T2 = leadSources.byTrade[b]; if (!T2) continue;
+        const unnamedRev = T2.allTime.filter(r=>!r.name).reduce((n,r)=>n+r.rev,0);
+        if (T2.namedRevShare < 60 && unnamedRev > 250000) {
+          const m = BRANDS[b] || { n: b };
+          add('note', 'sources-unnamed-' + b, ['flags','dive:ytd'],
+            `${short(unnamedRev)} of ${m.n}'s signed value sits on lead-source ids with no name.`,
+            `Name its top ids in cc_enum_map — until then you can see which sources earn but not which ones to buy more of.`);
+        }
+      }
+    }
+
+    // ── close rate falling against the like-for-like prior window
+    const wm = slice(WINS.month.from, WINS.month.to).company;
+    const wp = slice(...prevRange(WINS.month)).company;
+    if (wm.close !== null && wp.close !== null && wp.close >= 20 && wm.close < wp.close * 0.7) {
+      add('watch', 'close-drop', ['flags','dive:month'],
+        `Close rate is ${wm.close}% this month against ${wp.close}% last.`,
+        `Same appointments, fewer contracts — look at what changed in the pitch or the lead mix before it costs another month.`);
+    }
+
+    const order = { fire: 0, watch: 1, note: 2 };
+    S.sort((a,b) => order[a.sev] - order[b.sev]);
+    return { list: S,
+             fires: S.filter(s=>s.sev==='fire').length,
+             watches: S.filter(s=>s.sev==='watch').length,
+             forTag: tag => S.filter(s => s.tags.includes(tag)) };
+  })();
+
   return {
     generatedAt: new Date().toISOString(),
-    oasisLag, exclusions,
+    oasisLag, exclusions, signals,
     coverage: { jobs: jobs.length, appts: appts.length,
       apptsWithRep: appts.filter(a=>a.rep_id).length, touches: touches.length,
       // Coverage of the field every dollar on this page is actually built from.
