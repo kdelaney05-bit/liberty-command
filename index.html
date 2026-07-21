@@ -697,7 +697,7 @@ function cardAppointments(){
     ${stale?`<div class="withheld"><div class="wt">Read this number knowing when it was taken</div><div class="wx">
       The appointment feed last synced <b>${A.staleHours<24?`${Math.round(A.staleHours)} hours`:`${Math.round(A.staleHours/24)} days`} ago</b>. Anything booked since then is not counted here, so the week ahead can only look thinner than it is — never fuller.</div></div>`:''}
 
-    <div class="note">Appointments are booked a median of <b>${A.leadMedianDays} days</b> ahead, which is why the forward number means something: most of a week is not booked the morning of. <b>${A.coverage.dated.toLocaleString()}</b> appointments carry a date; <b>${A.coverage.withProject.toLocaleString()}</b> resolve to a brand, and the rest are left out of the brand split rather than bucketed as unknown.</div>
+    <div class="note">Appointments are booked a median of <b>${A.leadMedianDays} days</b> ahead, which is why the forward number means something: most of a week is not booked the morning of. Of the <b>${A.coverage.dated.toLocaleString()}</b> appointments in the last 13 months — the span this page reads, since nothing here looks further back — <b>${A.coverage.withProject.toLocaleString()}</b> resolve to a brand, and the rest are left out of the brand split rather than bucketed as unknown.</div>
   </div>`;
 }
 
@@ -1618,13 +1618,17 @@ addEventListener('resize', () => {
    server for hours while Kevin looked at yesterday's build and reported the bug
    as unfixed. That happened. The page now checks version.json on every load and
    reloads itself once if the deployed build is newer than the one running. */
-const BUILD = '2026-07-21T15:05Z-desktop-masonry';
+const BUILD = '2026-07-21T16:05Z-load-speed';
 const SB_URL = 'https://lzegjjbkfuecrhdvlvay.supabase.co';
 /* The one page that can finish a password reset. Hard-coded rather than derived,
    because every derivation of it so far has been a source of bugs: a bare origin
    404s (there is no user-root Pages site), and a path-derived value sends resets
    requested from invite.html back to invite.html. */
 const CONSOLE_HOME = 'https://kdelaney05-bit.github.io/liberty-command/';
+/* How far back appointments are read. The deepest appointment view on the page
+   is the 12-month chart, so 13 months covers everything with a month spare. */
+const APPT_SINCE = (() => { const d = new Date();
+  return `${d.getFullYear() - 1}-${String(d.getMonth() + 1).padStart(2,'0')}-01`; })();
 const SB_KEY = 'sb_publishable_kToiGqET7XzO2It9evStJw_kYzvjSF8';
 const SKEY = 'lcc.session';
 
@@ -1754,7 +1758,25 @@ async function sendReset(email){
 
 /* Paged read under the user's JWT. PostgREST caps at 1000 rows and says nothing
    about it, so always page. One transparent retry after a token refresh. */
-async function q(path, { retry = true } = {}){
+/* Paged read under the user's JWT.
+   PostgREST caps a response at 1000 rows and says nothing about it, so paging is
+   mandatory. It used to page SEQUENTIALLY — one round trip, wait, next — which
+   cost 12 trips for jobs and 10 for appointments. Measured on a normal
+   connection that was 8s and 15s respectively, so the console sat on "Reading
+   live…" for the better part of half a minute with nothing moving. That reads as
+   frozen, and Kevin reported it as exactly that.
+   Now the first page also asks for an exact count, and every remaining page is
+   requested at once. Same bytes, a fraction of the wall clock. */
+/* Paged read under the user's JWT. PostgREST caps a response at 1000 rows and
+   says nothing about it, so paging is mandatory.
+
+   PAGING STAYS SEQUENTIAL, DELIBERATELY. Fetching the pages concurrently is the
+   obvious speed-up and it does not work here: measured against this project,
+   eight of nine simultaneous page requests came back HTTP 500. The database pool
+   is ten connections and the console is not its only caller. A page that errors
+   is worse than a page that is slow, so the trips stay in series and the wait is
+   made visible instead — see the row counter in loadAll. */
+async function q(path, { retry = true, onPage } = {}){
   const s = sess.get();
   if (!s) throw new Error('not signed in');
   const rows = []; const PAGE = 1000;
@@ -1764,12 +1786,13 @@ async function q(path, { retry = true } = {}){
                  Range: `${from}-${from + PAGE - 1}` },
     });
     if (r.status === 401 && retry) {
-      if (await refresh()) return q(path, { retry:false });
+      if (await refresh()) return q(path, { retry:false, onPage });
       throw new Error('session expired');
     }
     if (!r.ok) { const e = new Error(`${path.split('?')[0]} → ${r.status}`); e.status = r.status; throw e; }
     const p = await r.json();
     rows.push(...p);
+    if (onPage) onPage(p.length);
     if (p.length < PAGE) return rows;
     if (from > 400000) throw new Error('runaway paging');
   }
@@ -2516,26 +2539,43 @@ function buildData(raw){
 }
 
 async function loadAll(){
-  appEl.innerHTML = `<div class="loading">Reading live<br/>Contractors Cloud · QuickBooks</div>`;
+  /* A visible counter, because a silent wait is indistinguishable from a hang.
+     This console reads about 5.8MB across four large tables; even fast that is a
+     few seconds, and Kevin reported the silent version as "stuck". */
+  let loaded = 0;
+  const tick = n => {
+    loaded += n;
+    const el2 = document.getElementById('loadcount');
+    if (el2) el2.textContent = loaded.toLocaleString() + ' rows';
+  };
+  appEl.innerHTML = `<div class="loading">Reading live<br/>Contractors Cloud · QuickBooks
+    <div id="loadcount" style="margin-top:10px;color:var(--accent-soft)">starting…</div></div>`;
   showApp();
+  const qp = p => q(p, { onPage: tick });
   // Only the columns something on the page actually renders. Every extra field
   // here is weight a phone carries on every open.
   const [jobs, appts, reps, touches, repTargets, playComponents, leadNames] = await Promise.all([
     // reporting_excluded comes down WITH the rows rather than being filtered in
     // the query, so the console can say how much it left out instead of silently
     // showing a smaller number than last time.
-    q('jobs?select=cc_company_id,cc_project_id,rep_id,contract_signed_at,completed_at,cc_lead_source_id,fin_sold_amount,reporting_excluded,reporting_exclusion_reason&source=eq.cc'),
+    qp('jobs?select=cc_company_id,cc_project_id,rep_id,contract_signed_at,completed_at,cc_lead_source_id,fin_sold_amount,reporting_excluded,reporting_exclusion_reason&source=eq.cc'),
     // cc_created_at is what makes a like-for-like booking comparison possible:
     // "what was on the books last Monday" has to count only what was booked BY
     // last Monday, not what the week eventually filled with.
-    q('cc_appointments?select=rep_id,starts_at,cc_project_id,cc_created_at,synced_at,is_internal'),
-    q('reps?select=id,name,initials,role,active'),
-    q('touches?select=rep_id,play,occurred_at'),
-    q('rep_targets?select=rep_id,daily_touch_goal,goal_source'),
-    q('score_components?select=key,title,weight&kind=eq.touch&order=ordinal'),
+    /* Appointments only as far back as anything on the page displays. The
+       furthest-back appointment view is the 12-month calendar-load chart, so a
+       13-month window covers every surface with a month to spare. That is 5,587
+       rows instead of 9,225 — four fewer sequential round trips. Kept on EITHER
+       date, since the booked series is creation-dated and the calendar series is
+       appointment-dated, and a row can be recent by one and not the other. */
+    qp(`cc_appointments?select=rep_id,starts_at,cc_project_id,cc_created_at,synced_at,is_internal&or=(starts_at.gte.${APPT_SINCE},cc_created_at.gte.${APPT_SINCE})`),
+    qp('reps?select=id,name,initials,role,active'),
+    qp('touches?select=rep_id,play,occurred_at'),
+    qp('rep_targets?select=rep_id,daily_touch_goal,goal_source'),
+    qp('score_components?select=key,title,weight&kind=eq.touch&order=ordinal'),
     // The real lead-source name map: 22 rows, name + category + whether the
     // category came from Kevin or was inferred.
-    q('lead_sources?select=cc_lead_id,name,category,category_from'),
+    qp('lead_sources?select=cc_lead_id,name,category,category_from'),
   ]);
   // Oasis sells through Billdu and Contractors Cloud imports it late, so a CC
   // zero for Oasis is not the same claim as "Oasis sold nothing". Optional:
@@ -2543,26 +2583,26 @@ async function loadAll(){
   let billdu = null;
   try {
     const [fresh, docs, signings, feed] = await Promise.all([
-      q('console_billdu_freshness?select=*'),
+      qp('console_billdu_freshness?select=*'),
       // rep_id is the backend's OWN mapping of a Billdu author to a rep. It is
       // set for sellers who send their own estimates and deliberately NULL for
       // the office accounts, so an office-sent deal is never credited to a
       // seller who did not sell it.
-      q('billdu_documents?select=billdu_id,doc_type,is_accepted,total_price,issue_date,job_id,rep_id,author'),
+      qp('billdu_documents?select=billdu_id,doc_type,is_accepted,total_price,issue_date,job_id,rep_id,author'),
       // Oasis's real signings: an accepted Billdu estimate IS the signature.
-      q('console_oasis_signings_live?select=*'),
+      qp('console_oasis_signings_live?select=*'),
       // the whole feed, not a page of it — the union needs every acceptance,
       // and 769 rows is nothing next to the jobs table
-      q('console_oasis_signings_feed?select=billdu_id,client_name,client_city,rep,accepted_value,accepted_at,signed_date_et,match_status,job_id&order=accepted_at.desc'),
+      qp('console_oasis_signings_feed?select=billdu_id,client_name,client_city,rep,accepted_value,accepted_at,signed_date_et,match_status,job_id&order=accepted_at.desc'),
     ]);
     // Whether the CC side has actually recorded a signing for a linked job.
     // Every Billdu link is an Oasis job, so this stays a small fetch.
-    const oasisJobs = await q('jobs?select=id,contract_signed_at&source=eq.cc&cc_company_id=eq.1560');
+    const oasisJobs = await qp('jobs?select=id,contract_signed_at&source=eq.cc&cc_company_id=eq.1560');
     billdu = { fresh: fresh[0] || null, docs, signings, feed,
                ccSigned: Object.fromEntries(oasisJobs.map(j => [j.id, !!j.contract_signed_at])) };
   } catch(e){ billdu = null; }
   let qbInv = [], qbError = null;
-  try { qbInv = await q('qb_invoices?select=cc_company_id,txn_date,total_amt,balance,reporting_excluded'); }
+  try { qbInv = await qp('qb_invoices?select=cc_company_id,txn_date,total_amt,balance,reporting_excluded'); }
   catch(e){ qbError = e.status === 403
     ? 'qb_invoices is not readable by your login. The table has row-level security policies but no SELECT grant to the authenticated role, so it returns 403 rather than rows. This is a one-line backend grant, not missing money.'
     : e.message; }

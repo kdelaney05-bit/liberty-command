@@ -1,4 +1,4 @@
 {
-  "build": "2026-07-21T15:05Z-desktop-masonry",
+  "build": "2026-07-21T16:05Z-load-speed",
   "note": "Bumped on every deploy. The page compares this against its embedded BUILD on load AND on resume, then reloads once if they differ."
 }
