@@ -33,6 +33,11 @@
     --red: #d96a5e; --gold: #d4b15a; --blue: #6ba8c9; --violet: #a98fd5;
   }
   * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  /* html carries the base colour too. body's gradient is background-attachment:
+     fixed, so on a long desktop page the area outside the painted gradient fell
+     through to the canvas — which is white. That is the band across the top of
+     Kevin's monitor. */
+  html { background: var(--bg-deep); }
   html, body { width: 100%; overflow-x: hidden; }
   body { font-family: 'Inter Tight', sans-serif; background: radial-gradient(ellipse at top, #1a3326 0%, #0d1f17 60%); background-attachment: fixed; color: var(--text); min-height: 100vh; padding: 16px; -webkit-font-smoothing: antialiased; }
   .shell { width: 100%; max-width: 480px; margin: 0 auto; }
@@ -343,17 +348,55 @@
     line-height: 1.6; padding: 22px 6px; text-align: center; }
 
   /* ── DESKTOP: the same cards, flowing wider. Not a squished phone. ── */
+  /* ── DESKTOP ───────────────────────────────────────────────────────────────
+     Kevin, on his monitor: "so many gaps in space, can we make this better
+     formed. sloppy."
+
+     He was right, and it was structural rather than cosmetic. The old desktop
+     rule was a rigid 3-column grid, but eight of the nineteen cards spanned all
+     three columns. Every one of those breaks the grid into a fresh row, so any
+     leftover single card sat alone with two empty columns beside it. Measured:
+     3,531px of dead space in four such rows.
+
+     Masonry removes the failure mode instead of tuning around it. Cards flow
+     into the shortest column and cannot leave a hole, whatever mix of heights
+     the data produces on a given day — which matters, because the card set is
+     not fixed: signals appear and vanish, withheld blocks come and go.
+
+     Only two cards still break the flow to span the full width — the actions
+     card and the appointments instrument — because those two are what he opens
+     this for and should not be hunted for in a column. Everything else masonry-
+     fills beneath them.
+
+     Mobile is untouched: .stack stays a plain flex column below 900px.
+     ─────────────────────────────────────────────────────────────────────── */
   @media (min-width: 900px) {
-    body { padding: 26px 26px 40px; }
+    body { padding: 26px 26px 44px; }
     .shell { max-width: 1180px; }
     .hdr h1 { font-size: 36px; }
     .nw-block .nw { font-size: 38px; }
-    .stack { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; align-items: start; }
-    .stack > .full { grid-column: 1 / -1; }
+
+    .stack { display: block; columns: 2; column-gap: 16px; }
+    /* a card must never be sliced down the middle by a column break */
+    .stack > * { break-inside: avoid; page-break-inside: avoid; -webkit-column-break-inside: avoid;
+                 display: block; width: 100%; margin: 0 0 16px; }
+    /* .full loses its meaning here — in masonry every card already fills its own
+       column. Reset it FIRST: it and the .acts/.appt rule below have equal
+       specificity, so source order decides, and most spanning cards also carry
+       .full. Putting this after silently cancelled the span. */
+    .stack > .full { column-span: none; }
+    /* the two that earn the full width */
+    .stack > .acts, .stack > .appt { column-span: all; margin-bottom: 16px; }
   }
-  @media (min-width: 1360px) {
-    .shell { max-width: 1500px; }
-    .stack { grid-template-columns: repeat(3, 1fr); }
+  @media (min-width: 1300px) {
+    .shell { max-width: 1480px; }
+    .stack { columns: 3; }
+    /* the hero pair sit side by side once there is room for both */
+    .stack > .acts { column-span: none; }
+  }
+  @media (min-width: 1700px) {
+    .shell { max-width: 1680px; }
+    .stack { columns: 4; }
   }
 </style>
 </head>
@@ -732,7 +775,13 @@ function cardStats(){
   const dl = (a,b) => { if (!b) return `<div class="delta flat">no prior baseline</div>`;
     const p = Math.round((a-b)/b*100);
     return `<div class="delta ${p>0?'up':p<0?'down':'flat'}">${p>0?'▲':p<0?'▼':'▬'} ${Math.abs(p)}% vs ${esc(W.prevLabel)}</div>`; };
-  return `<div class="stat-grid">
+  /* One card, not a bare stat-grid plus a note in its own card. Those were two
+     separate children of the layout: an unbordered block that did not read as a
+     card, and a 49px sliver holding nothing but a sentence. Together they are a
+     card like every other. */
+  return `<div class="card">
+    <div class="card-title">The month so far<span class="feed-tag cc">live · cc</span>${qbOK()?'<span class="feed-tag qb">live · qb</span>':''}</div>
+    <div class="stat-grid" style="margin-top:10px">
     <div class="stat-tile"><div class="lbl">Signed MTD</div>
       <div class="val green">${short(W.rev)}</div><div class="sub">${W.jobs} contracts · cc</div>${dl(W.rev,pv.rev)}</div>
     <div class="stat-tile"><div class="lbl">Appts scheduled</div>
@@ -745,8 +794,7 @@ function cardStats(){
       <div class="delta flat">position, not a window</div>`
       : `<div class="val" style="color:var(--text-dim)">—</div><div class="sub">not readable</div><div class="delta flat">see note below</div>`}</div>
   </div>
-  <div class="card full">
-    <div class="note" style="margin:0;padding:0;border:none">
+    <div class="note">
       <b>Signed</b> is Contractors Cloud contract value. <b>Invoiced</b> is QuickBooks face value. They count different events in different systems and are never added together on this page.
       ${qbOK() ? `<b>${D.qb.dropped}</b> of ${D.qb.total.toLocaleString()} QuickBooks invoices are flagged <b>reporting_excluded</b> and are left out of every figure here.`
                : `QuickBooks figures are <b>withheld, not zero</b> — ${esc(D.qb.reason)}`}
@@ -1570,7 +1618,7 @@ addEventListener('resize', () => {
    server for hours while Kevin looked at yesterday's build and reported the bug
    as unfixed. That happened. The page now checks version.json on every load and
    reloads itself once if the deployed build is newer than the one running. */
-const BUILD = '2026-07-21T14:10Z-reset-redirect-hardening';
+const BUILD = '2026-07-21T15:05Z-desktop-masonry';
 const SB_URL = 'https://lzegjjbkfuecrhdvlvay.supabase.co';
 /* The one page that can finish a password reset. Hard-coded rather than derived,
    because every derivation of it so far has been a source of bugs: a bare origin
