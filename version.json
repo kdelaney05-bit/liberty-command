@@ -1,4 +1,4 @@
 {
-  "build": "2026-07-21T00:45Z-union-everywhere",
+  "build": "2026-07-21T01:05Z-rep-attribution",
   "note": "Bumped on every deploy. The page compares this against its embedded BUILD on load AND on resume, then reloads once if they differ."
 }

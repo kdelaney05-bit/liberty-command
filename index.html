@@ -601,12 +601,13 @@ function cardReps(){
   return `<div class="card">
     <div class="card-title">Sales by rep · MTD<span class="feed-tag cc">live · cc</span></div>
     <div class="card-sub">${reps.length? 'Ranked by signed contract value this month.' : 'No rep activity this month.'}</div>
-    ${reps.map(r=>`<div class="rep-row">
+    ${reps.map(r=>`<div class="rep-row" ${r.office?'style="opacity:.8"':''}>
       <div class="rep-head">
-        <div class="nm">${esc(r.name)}${r.role&&r.role!=='sales'?`<span class="brand">${esc(r.role)}</span>`:''}</div>
-        <div class="amt">${short(r.rev)} <span>· ${r.jobs} job${r.jobs===1?'':'s'}</span></div>
+        <div class="nm">${esc(r.name)}${r.billdu?'<span class="tick">billdu</span>':''}${r.role&&r.role!=='sales'&&!r.office?`<span class="brand">${esc(r.role)}</span>`:''}</div>
+        <div class="amt">${short(r.rev)} <span>· ${r.jobs} deal${r.jobs===1?'':'s'}</span></div>
       </div>
-      <div class="meter"><div class="meter-fill" style="width:${Math.round(r.rev/mx*100)}%;background:${r.rev===mx?'#6cc28b':'#6ba8c9'}"></div></div>
+      <div class="meter"><div class="meter-fill" style="width:${Math.round(r.rev/mx*100)}%;background:${r.office?'#8aa094':(r.rev===mx?'#6cc28b':'#6ba8c9')}"></div></div>
+      ${r.billdu?`<div class="tgt-cap"><span>${r.office?'sent from the office account — seller not recorded':`${short(r.rev-r.billdu)} CC + ${short(r.billdu)} Billdu`}</span></div>`:''}
     </div>`).join('')}
     ${reps.length?`<div class="note">Rep is read from the job's own <b>rep_id</b>. <b>${D.coverage.apptsWithRep.toLocaleString()} of ${D.coverage.appts.toLocaleString()}</b> appointments carry a rep, so close rates below that coverage are unknown rather than assumed.</div>`:''}
   </div>`;
@@ -905,13 +906,15 @@ function diveView(k){
     <div class="card">
       <div class="card-title">Who signed it<span class="feed-tag cc">live · cc</span></div>
       <div class="card-sub">${reps.length?'Ranked by signed value in this window.':'No rep activity in this window.'}</div>
-      ${reps.slice(0,12).map((r,i)=>`<div class="rep-row">
+      ${reps.slice(0,12).map((r,i)=>`<div class="rep-row" ${r.office?'style="opacity:.8"':''}>
         <div class="rep-head">
-          <div class="nm"><span class="rk ${i===0?'top':''}">${i+1}</span>${esc(r.name)}${r.role&&r.role!=='sales'?`<span class="brand">${esc(r.role)}</span>`:''}</div>
-          <div class="amt">${short(r.rev)} <span>· ${r.jobs} job${r.jobs===1?'':'s'}</span></div>
+          <div class="nm"><span class="rk ${i===0?'top':''}">${i+1}</span>${esc(r.name)}${r.billdu?'<span class="tick">billdu</span>':''}${r.role&&r.role!=='sales'&&!r.office?`<span class="brand">${esc(r.role)}</span>`:''}</div>
+          <div class="amt">${short(r.rev)} <span>· ${r.jobs} deal${r.jobs===1?'':'s'}</span></div>
         </div>
-        <div class="meter"><div class="meter-fill" style="width:${Math.round(r.rev/mx*100)}%;background:${r.rev===mx?'#6cc28b':'#6ba8c9'}"></div></div>
+        <div class="meter"><div class="meter-fill" style="width:${Math.round(r.rev/mx*100)}%;background:${r.office?'#8aa094':(r.rev===mx?'#6cc28b':'#6ba8c9')}"></div></div>
+        ${r.billdu?`<div class="tgt-cap"><span>${r.office?'sent from the office account — seller not recorded':`${short(r.rev-r.billdu)} CC + ${short(r.billdu)} Billdu`}</span></div>`:''}
       </div>`).join('')}
+      ${reps.some(r=>r.office)?`<div class="note">Deals sent from Oasis's office account carry no seller on the Billdu record, so they are listed as unattributed rather than credited to a rep who may not have sold them. Deals a seller sent themselves are attributed from the backend's <b>rep_id</b> mapping, not by matching names.</div>`:''}
     </div>
 
     <div class="card">
@@ -1094,7 +1097,7 @@ addEventListener('resize', () => {
    server for hours while Kevin looked at yesterday's build and reported the bug
    as unfixed. That happened. The page now checks version.json on every load and
    reloads itself once if the deployed build is newer than the one running. */
-const BUILD = '2026-07-21T00:45Z-union-everywhere';
+const BUILD = '2026-07-21T01:05Z-rep-attribution';
 const SB_URL = 'https://lzegjjbkfuecrhdvlvay.supabase.co';
 const SB_KEY = 'sb_publishable_kToiGqET7XzO2It9evStJw_kYzvjSF8';
 const SKEY = 'lcc.session';
@@ -1300,16 +1303,35 @@ function buildData(raw){
   const bFeed = (billdu && billdu.feed) || null;
   const OASIS = '1560';
   const ymdOf = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  /* Billdu author → rep, taken from the backend's own rep_id rather than from
+     the author NAME. The distinction matters: Oasis's office account sends
+     estimates on a seller's behalf, so the document's author is not the person
+     who sold the work, and that account is not a rep at all. Fuzzy name matching
+     would have credited those deals to a similarly-named manager who had nothing
+     to do with them. Where rep_id is null the deal is shown as office-sent and
+     unattributed, which is the honest answer rather than a plausible one. */
+  const bRepOf = Object.fromEntries(
+    ((billdu && billdu.docs) || []).map(d => [String(d.billdu_id), d.rep_id || null]));
+  const OFFICE = '__office';
+
   const billduAdd = (a, b) => {
     if (!bFeed) return null;
     const A = ymdOf(a), B = ymdOf(b);
     const rows = bFeed.filter(r => { const d = String(r.signed_date_et).slice(0,10); return d >= A && d < B; });
     const add = rows.filter(r => !r.job_id || ccSignedMap[r.job_id] !== true);
+    // per-rep split of the additive money, so leaderboards can inherit it
+    const byRep = {};
+    for (const r of add) {
+      const rid = bRepOf[String(r.billdu_id)] || OFFICE;
+      (byRep[rid] ??= { value:0, count:0 });
+      byRep[rid].value += Number(r.accepted_value||0);
+      byRep[rid].count++;
+    }
     return { value: add.reduce((n,r)=>n+Number(r.accepted_value||0),0),
              count: add.length,
              suppressed: rows.filter(r => r.job_id && ccSignedMap[r.job_id] === true)
                              .reduce((n,r)=>n+Number(r.accepted_value||0),0),
-             rows: add };
+             byRep, rows: add };
   };
 
   function slice(a,b){
@@ -1334,6 +1356,14 @@ function buildData(raw){
       brands[OASIS].jobs += bd.count;
       brands[OASIS].billdu = bd.value;
       brands[OASIS].billduCount = bd.count;
+      // and into rep attribution, or a seller reads $0 on a day they sold
+      for (const [rid, v] of Object.entries(bd.byRep)) {
+        (byRep[rid] ??= { jobs:0, rev:0, appts:0 });
+        byRep[rid].rev += v.value;
+        byRep[rid].jobs += v.count;
+        byRep[rid].billdu = (byRep[rid].billdu || 0) + v.value;
+        byRep[rid].billduCount = (byRep[rid].billduCount || 0) + v.count;
+      }
     }
     const unionRev = rev + (bd ? bd.value : 0);
 
@@ -1350,8 +1380,14 @@ function buildData(raw){
                 avgJob: js.length ? Math.round(rev/js.length) : 0 },
       brands: Object.entries(brands).map(([id,v])=>({id,...v})),
       reps: Object.entries(byRep).map(([id,v])=>({
-        name: repById[id]?.name ?? 'Unknown', role: repById[id]?.role ?? 'sales', ...v,
-        close: v.appts ? Math.round(v.jobs/v.appts*100) : null,
+        id,
+        name: id === OFFICE ? 'Oasis · unattributed'
+                            : (repById[id]?.name ?? 'Unknown'),
+        role: id === OFFICE ? 'office-sent' : (repById[id]?.role ?? 'sales'),
+        office: id === OFFICE,
+        ...v,
+        // close rate is CC-over-CC; a Billdu deal carries no CC appointment
+        close: v.appts ? Math.round((v.jobs - (v.billduCount||0))/v.appts*100) : null,
       })).filter(r=>r.rev>0||r.appts>0).sort((x,y)=>y.rev-x.rev),
     };
   }
@@ -1647,7 +1683,11 @@ async function loadAll(){
   try {
     const [fresh, docs, signings, feed] = await Promise.all([
       q('console_billdu_freshness?select=*'),
-      q('billdu_documents?select=doc_type,is_accepted,total_price,issue_date,job_id'),
+      // rep_id is the backend's OWN mapping of a Billdu author to a rep. It is
+      // set for sellers who send their own estimates and deliberately NULL for
+      // the office accounts, so an office-sent deal is never credited to a
+      // seller who did not sell it.
+      q('billdu_documents?select=billdu_id,doc_type,is_accepted,total_price,issue_date,job_id,rep_id,author'),
       // Oasis's real signings: an accepted Billdu estimate IS the signature.
       q('console_oasis_signings_live?select=*'),
       // the whole feed, not a page of it — the union needs every acceptance,
