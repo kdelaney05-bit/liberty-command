@@ -102,7 +102,15 @@ var SB_URL = 'https://lzegjjbkfuecrhdvlvay.supabase.co';
   var raw = (window.location.hash || '').replace(/^#/, '');
   var p = new URLSearchParams(raw);
   var token = p.get('token') || p.get('token_hash') || '';
-  var type = p.get('type') || 'invite';
+
+  /* Default to recovery, not invite. Onboarding a rep from an existing shell
+     issues a type=recovery link (GO-LIVE.md, the Gio pattern), and a link that
+     lost its &type during hand-reassembly is exactly how that onboarding failed
+     three times — Supabase answers a missing type with "Verify requires a
+     verification type" before it ever looks the token up, which is why those
+     tokens survived. A page that can only work when the sender assembles the URL
+     perfectly is not a fix, so this one supplies the right default itself. */
+  var type = p.get('type') || 'recovery';
 
   /* 2. STRIP IT IMMEDIATELY. Once read, the token should not survive in the
         address bar, in history, or in anything the recipient might paste back
