@@ -995,38 +995,51 @@ function oasisNote(k){
    one at the call site is exactly how a folded row ended up quoting the month's
    figure on a card that reads the week. Next to the data, they cannot drift. ── */
 function oasisDetail(k){
-  const L = D.oasisLag; if (!L || !L.feed) return '';
-  const W = flat(k);
-  const b = W.brands.find(x => String(x.id) === '1560');
-  if (!b || !b.billdu) return '';
+  const L = D.oasisLag; if (!L || !L.leak) return '';
   const R = (D.windowRange || {})[k]; if (!R) return '';
-  const rows = L.feed
-    .filter(r => r.date >= R[0] && r.date < R[1] && r.additive)
-    .sort((x,y) => (x.at < y.at ? 1 : -1));
-  if (!rows.length) return '';
-  const f = L.freshness || {};
-  /* Local midnight, not Date.parse. A bare YYYY-MM-DD parses as UTC and lands on
-     the previous evening here, which would report every age a day short — the
-     same shift already fixed once on invoice dates. */
-  const midnight = s => { const [y,m,d] = String(s).slice(0,10).split('-').map(Number);
-                          return new Date(y, m - 1, d); };
-  const today = new Date(); today.setHours(0,0,0,0);
-  const oldest = Math.round((today - midnight(rows[rows.length-1].date)) / 86400000);
-  const age = oldest <= 0 ? 'all booked today' : `oldest ${oldest}d`;
+  /* Windowed on ISSUE DATE, which is the leak view's own basis and the one the
+     backend reconciles against. Every other figure in this drill-in windows on
+     signed date, so the two axes are not interchangeable and the card says which
+     it is using. Choosing the other basis shifts this window by a few deals —
+     small, but not nothing, and not something to leave unlabelled. */
+  const inWin = r => r.issued >= R[0] && r.issued < R[1];
+  const chase = L.leak.filter(r => r.category === 'never_imported' && inWin(r))
+                      .sort((x,y) => (y.age || 0) - (x.age || 0));
+  const held  = L.leak.filter(r => r.category === 'match_limited' && inWin(r));
+  if (!chase.length && !held.length) return '';
 
-  return minor('oasis', `${short(b.billdu)} in ${rows.length} deal${rows.length===1?'':'s'} awaiting CC import · ${age}`,
+  const value = chase.reduce((n,r) => n + r.value, 0);
+  const heldValue = held.reduce((n,r) => n + r.value, 0);
+  const oldest = chase.length ? (chase[0].age ?? null) : null;
+  /* Age is the actionable part, so it leads even when the money is small. */
+  const agePart = oldest == null ? '' : oldest <= 0 ? ' · all issued today' : ` · oldest ${oldest}d`;
+  const summary = chase.length
+    ? `${short(value)} in ${chase.length} deal${chase.length===1?'':'s'} awaiting CC import${agePart}`
+    : `nothing awaiting import · ${held.length} held by our matcher`;
+
+  return minor('oasis', summary,
   `<div class="card">
-    <div class="card-title">Oasis · what Billdu added<span class="feed-tag billdu">live · billdu</span></div>
-    <div class="card-sub">The ${short(b.billdu)} inside the Oasis figure above, deal by deal. Oasis signs in Billdu and Contractors Cloud imports later, so these are signed deals CC has not recorded yet.</div>
-    ${rows.slice(0,12).map(r => `<div class="rep-row">
+    <div class="card-title">Oasis · awaiting CC import<span class="feed-tag billdu">live · billdu</span></div>
+    <div class="card-sub">Deals Billdu accepted that Contractors Cloud has <b>no record of</b>, oldest first. Windowed on the date the estimate was issued — the rest of this drill-in windows on signed date, so this one card is on a different axis and is not additive with the figures above it.</div>
+    ${chase.length ? chase.slice(0,12).map(r => `<div class="rep-row">
       <div class="rep-head">
         <div class="nm">${esc(r.name||'—')}${r.city?`<span class="brand">${esc(String(r.city).trim())}</span>`:''}</div>
-        <div class="amt">${short(r.value)} <span>· ${esc((r.rep||'').split(' ')[0])}</span></div>
+        <div class="amt">${short(r.value)}${r.rep?` <span>· ${esc(String(r.rep).split(' ')[0])}</span>`:''}</div>
       </div>
-      <div class="tgt-cap"><span>${esc(r.date)}</span><span class="miss">not in CC yet</span></div>
-    </div>`).join('')}
-    ${rows.length>12?`<div class="wfoot" style="margin-top:8px">+ ${rows.length-12} more</div>`:''}
-    <div class="note">An acceptance counts here only while CC has no signing for it. Once CC records the sale it moves to the CC side on CC's own date — typically a few days earlier — so this list shrinks as the import catches up.${f.minutes_since_newest!=null?` Newest Billdu document is ${Math.round(f.minutes_since_newest)} minutes old.`:''} The oldest deal here has been waiting <b>${oldest}</b> day${oldest===1?'':'s'}.</div>
+      <div class="tgt-cap"><span>${esc(r.issued)}</span><span class="miss">${r.age==null?'not in CC':`${r.age}d waiting`}</span></div>
+    </div>`).join('')
+    : `<div class="card-sub" style="margin:0">Nothing in this window is missing from Contractors Cloud.</div>`}
+    ${chase.length>12?`<div class="wfoot" style="margin-top:8px">+ ${chase.length-12} more</div>`:''}
+
+    ${held.length ? `<div class="withheld"><div class="wt">Not a chase item</div><div class="wx">
+      A further <b>${held.length}</b> deal${held.length===1?'':'s'} worth <b>${short(heldValue)}</b> ${held.length===1?'is':'are'} <b>not</b> listed above.
+      Our own matcher declined to link ${held.length===1?'it':'them'} because the customer has several jobs and it could not tell which one to attach to.
+      That is a limit of the matching, not a gap in anyone's data entry — backend confirmed six such deals were already in Contractors Cloud to the cent.
+      Nothing here is for Oasis to fix.</div></div>` : ''}
+
+    <div class="note">Split comes from the backend's own leak view, which separates deals CC never received from deals our matcher would not link. Only the first kind is counted as awaiting import.${
+      L.leak.filter(r=>r.category==='never_imported'&&inWin(r)&&!r.actionable).length
+        ? ` <b>${L.leak.filter(r=>r.category==='never_imported'&&inWin(r)&&!r.actionable).length}</b> of these are old enough that the view no longer marks them worth chasing; they are still shown, because a stale leak is still a leak.` : ''}</div>
   </div>`);
 }
 
@@ -1793,7 +1806,7 @@ addEventListener('resize', () => {
    server for hours while Kevin looked at yesterday's build and reported the bug
    as unfixed. That happened. The page now checks version.json on every load and
    reloads itself once if the deployed build is newer than the one running. */
-const BUILD = '2026-07-21T19:05Z-oasis-fold';
+const BUILD = '2026-07-21T20:40Z-leak-view';
 const SB_URL = 'https://lzegjjbkfuecrhdvlvay.supabase.co';
 /* The one page that can finish a password reset. Hard-coded rather than derived,
    because every derivation of it so far has been a source of bugs: a bare origin
@@ -2514,6 +2527,8 @@ function buildData(raw){
      qualified rather than presented as the whole story. */
   const oasisLag = (() => {
     if (!billdu || !billdu.docs) return null;
+    const repByBillduId = Object.fromEntries(
+      (billdu.feed || []).map(r => [String(r.billdu_id), r.rep]).filter(([,v]) => v));
     const live = billdu.docs.filter(x => Number(x.total_price) > 0);
     const win = (a,b) => {
       const rows = live.filter(x => inR(x.issue_date, a, b));
@@ -2559,6 +2574,32 @@ function buildData(raw){
         // the same predicate the totals use: matched to a CC project is not the
         // same as signed in CC, and only the unsigned ones were added
         additive: !r.job_id || ccSignedMap[r.job_id] !== true,
+      })),
+      /* THE CHASE LIST, kept deliberately separate from `feed` above.
+         `additive` answers "is this money already counted on the CC side?" —
+         a money-attribution question. It is NOT "has CC imported this?", and
+         using it as one is what put 124 deals / $603K on a card that should
+         have said 45 / $204K. It swept in every acceptance linked to a CC job
+         that simply had no signing date yet: already imported, plainly not a
+         leak. One predicate cannot answer both questions, so now it doesn't. */
+      leak: (billdu.leak || []).map(r => ({
+        id: r.billdu_id,
+        name: r.client_name, city: r.client_city,
+        /* Both sources can hand back a LOGIN EMAIL rather than a name: the leak
+           view's billdu_author always does, and the feed's rep does too for
+           anything sent from the office account. Guarding only the fallback left
+           the address on screen anyway, because the mapped value was the address.
+           So the guard belongs on the resolved value. An unmapped author shows as
+           nothing: we do not know whose deal it is, and a raw login is not an
+           answer to that question — it is the same office-account case the rep
+           leaderboard already declines to credit to a seller. */
+        rep: [repByBillduId[String(r.billdu_id)], r.billdu_author]
+               .map(v => String(v || '').trim())
+               .find(v => v && !v.includes('@')) || '',
+        value: Number(r.accepted_value||0),
+        issued: String(r.issue_date||'').slice(0,10),
+        age: r.age_days == null ? null : Number(r.age_days),
+        category: r.category, actionable: r.actionable === true,
       })),
     };
   })();
@@ -2632,11 +2673,27 @@ function buildData(raw){
       }
     }
 
-    // ── Oasis work that has not reached Contractors Cloud
-    if (oasisLag && oasisLag.freshness && Number(oasisLag.freshness.not_in_cc_yet) > 200) {
-      add('watch', 'oasis-import', ['flags','dive:month'],
-        `${Number(oasisLag.freshness.not_in_cc_yet).toLocaleString()} Billdu documents still have no Contractors Cloud counterpart.`,
-        `Chase the CC import. Until it catches up, Oasis work is only visible here through Billdu, and anything downstream of CC — scheduling, production, commissions — has not seen it.`);
+    /* ── Oasis work that has not reached Contractors Cloud ────────────────────
+       This used to count freshness.not_in_cc_yet — 922 documents — and tell
+       Kevin to go and chase all of them. That number is not a chase list. It
+       swept in deals our own matcher declined to link (already in CC, provably,
+       to the cent) and a two-year backlog nobody is going to reconcile. Sending
+       him after 922 items when 37 are real is how a console teaches its owner to
+       ignore it.
+
+       Now it counts what the backend's leak view itself marks as worth chasing,
+       and it is a NOTE rather than a WATCH: a standing backlog is a thing to
+       work through when there is time, not a fire that reappears every morning
+       having not changed since yesterday. */
+    if (oasisLag && oasisLag.leak) {
+      const chase = oasisLag.leak.filter(r => r.category === 'never_imported' && r.actionable);
+      if (chase.length) {
+        const val = chase.reduce((n,r) => n + r.value, 0);
+        const oldest = Math.max(...chase.map(r => r.age || 0));
+        add('note', 'oasis-import', ['flags','dive:month'],
+          `${chase.length} Oasis deal${chase.length===1?'':'s'} worth ${short(val)} never reached Contractors Cloud — oldest ${oldest} days.`,
+          `Chase the CC import for these. Until CC has them, anything downstream — scheduling, production, commissions — has not seen the work. Deals our matcher merely could not link are excluded: those are ours to fix, not Oasis's.`);
+      }
     }
 
     // ── money owed, measured against what a month actually bills
@@ -2757,7 +2814,7 @@ async function loadAll(){
   // if the feed is not readable the console simply does not make the claim.
   let billdu = null;
   try {
-    const [fresh, docs, signings, feed] = await Promise.all([
+    const [fresh, docs, signings, feed, leak] = await Promise.all([
       qp('console_billdu_freshness?select=*'),
       // rep_id is the backend's OWN mapping of a Billdu author to a rep. It is
       // set for sellers who send their own estimates and deliberately NULL for
@@ -2769,11 +2826,26 @@ async function loadAll(){
       // the whole feed, not a page of it — the union needs every acceptance,
       // and 769 rows is nothing next to the jobs table
       qp('console_oasis_signings_feed?select=billdu_id,client_name,client_city,rep,accepted_value,accepted_at,signed_date_et,match_status,job_id&order=accepted_at.desc'),
+      /* Migration 059's leak view. It splits what used to be one undifferentiated
+         pile of "not in CC" into two very different things:
+
+           never_imported — Contractors Cloud genuinely has no record. A real
+                            chase item, and somebody's to fix.
+           match_limited  — OUR matcher declined to link it, because the customer
+                            has several jobs and it could not tell which. Backend
+                            proved six of these were already in CC to the cent.
+                            Nobody's data entry is at fault, so it must never be
+                            presented as though it were.
+
+         The console cannot derive that split itself — it is the matcher's own
+         verdict on its own confidence — which is exactly why this is read rather
+         than recomputed here. */
+      qp('console_billdu_import_leak?select=billdu_id,client_name,client_city,accepted_value,billdu_author,issue_date,accepted_at,age_days,actionable,category'),
     ]);
     // Whether the CC side has actually recorded a signing for a linked job.
     // Every Billdu link is an Oasis job, so this stays a small fetch.
     const oasisJobs = await qp('jobs?select=id,contract_signed_at&source=eq.cc&cc_company_id=eq.1560');
-    billdu = { fresh: fresh[0] || null, docs, signings, feed,
+    billdu = { fresh: fresh[0] || null, docs, signings, feed, leak,
                ccSigned: Object.fromEntries(oasisJobs.map(j => [j.id, !!j.contract_signed_at])) };
   } catch(e){ billdu = null; }
   let qbInv = [], qbError = null;
