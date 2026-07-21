@@ -426,6 +426,12 @@
        column. The result is three tiers: what needs him, appointments, then the
        instruments, then a quiet strip he can open when he wants it. */
     .stack > .mnr { column-span: all; margin-bottom: 10px; }
+    /* ...but only where folds arrive as a group. A drill-in has exactly one, and
+       spanning it there forces a column break in the middle of the flow for no
+       gain: measured at 167px of interior holes, worst gap 68px. One row does not
+       make a strip, so in a drill-in it stays in its column, next to the Oasis
+       figure it is the receipts for. */
+    .stack.dive > .mnr { column-span: none; margin-bottom: 26px; }
     /* The strip is full width because a folded row reads across. What it opens
        should not be: a seven-bar weekday chart stretched to 1526px, and note
        text set in one 1500px line, are both harder to read than the same thing
@@ -974,7 +980,20 @@ function oasisNote(k){
    Right — once every Oasis figure already includes Billdu, a separate card at
    the top is a second version of a number he has. What is still useful is WHICH
    deals make up the Billdu portion of a window, and that belongs behind the tap
-   as detail rather than above the fold as a rival headline. ───────────────── */
+   as detail rather than above the fold as a rival headline.
+
+   Then, on the calm pass: "seems out of place... no purpose I can think of."
+   The purpose is real — it is the import-leak chase list, and the receipts for
+   the Billdu money sitting inside the Oasis totals — but twenty-two open rows
+   put that purpose behind a wall of detail. So it folds like everything else in
+   the quiet strip, and its folded line carries the three things worth knowing
+   without opening it: how much, how many, and how old the oldest one is. Age is
+   the actionable part; a deal Contractors Cloud has not imported in three weeks
+   is the leak this card exists to catch.
+
+   The summary is built here rather than at the call site on purpose. Building
+   one at the call site is exactly how a folded row ended up quoting the month's
+   figure on a card that reads the week. Next to the data, they cannot drift. ── */
 function oasisDetail(k){
   const L = D.oasisLag; if (!L || !L.feed) return '';
   const W = flat(k);
@@ -986,7 +1005,17 @@ function oasisDetail(k){
     .sort((x,y) => (x.at < y.at ? 1 : -1));
   if (!rows.length) return '';
   const f = L.freshness || {};
-  return `<div class="card">
+  /* Local midnight, not Date.parse. A bare YYYY-MM-DD parses as UTC and lands on
+     the previous evening here, which would report every age a day short — the
+     same shift already fixed once on invoice dates. */
+  const midnight = s => { const [y,m,d] = String(s).slice(0,10).split('-').map(Number);
+                          return new Date(y, m - 1, d); };
+  const today = new Date(); today.setHours(0,0,0,0);
+  const oldest = Math.round((today - midnight(rows[rows.length-1].date)) / 86400000);
+  const age = oldest <= 0 ? 'all booked today' : `oldest ${oldest}d`;
+
+  return minor('oasis', `${short(b.billdu)} in ${rows.length} deal${rows.length===1?'':'s'} awaiting CC import · ${age}`,
+  `<div class="card">
     <div class="card-title">Oasis · what Billdu added<span class="feed-tag billdu">live · billdu</span></div>
     <div class="card-sub">The ${short(b.billdu)} inside the Oasis figure above, deal by deal. Oasis signs in Billdu and Contractors Cloud imports later, so these are signed deals CC has not recorded yet.</div>
     ${rows.slice(0,12).map(r => `<div class="rep-row">
@@ -997,8 +1026,8 @@ function oasisDetail(k){
       <div class="tgt-cap"><span>${esc(r.date)}</span><span class="miss">not in CC yet</span></div>
     </div>`).join('')}
     ${rows.length>12?`<div class="wfoot" style="margin-top:8px">+ ${rows.length-12} more</div>`:''}
-    <div class="note">An acceptance counts here only while CC has no signing for it. Once CC records the sale it moves to the CC side on CC's own date — typically a few days earlier — so this list shrinks as the import catches up.${f.minutes_since_newest!=null?` Newest Billdu document is ${Math.round(f.minutes_since_newest)} minutes old.`:''}</div>
-  </div>`;
+    <div class="note">An acceptance counts here only while CC has no signing for it. Once CC records the sale it moves to the CC side on CC's own date — typically a few days earlier — so this list shrinks as the import catches up.${f.minutes_since_newest!=null?` Newest Billdu document is ${Math.round(f.minutes_since_newest)} minutes old.`:''} The oldest deal here has been waiting <b>${oldest}</b> day${oldest===1?'':'s'}.</div>
+  </div>`);
 }
 
 function cardMix(){
@@ -1321,7 +1350,7 @@ function diveView(k){
     <div class="card-sub" style="margin:10px 0 0">${W.appts} appointments · ${W.completed} completed${W.close===null?'':' · '+W.close+'% close on CC work'}</div>
   </div>
 
-  <div class="stack">
+  <div class="stack dive">
     <div class="card chart-card full">
       <div class="card-title">${esc(DIVE_SERIES_LABEL[k])}<span class="feed-tag cc">live · cc</span></div>
       <div class="card-sub">Signed value, so this window sits in its own recent history.</div>
@@ -1764,7 +1793,7 @@ addEventListener('resize', () => {
    server for hours while Kevin looked at yesterday's build and reported the bug
    as unfixed. That happened. The page now checks version.json on every load and
    reloads itself once if the deployed build is newer than the one running. */
-const BUILD = '2026-07-21T18:20Z-calm';
+const BUILD = '2026-07-21T19:05Z-oasis-fold';
 const SB_URL = 'https://lzegjjbkfuecrhdvlvay.supabase.co';
 /* The one page that can finish a password reset. Hard-coded rather than derived,
    because every derivation of it so far has been a source of bugs: a bare origin
