@@ -1009,8 +1009,6 @@ function diveView(k){
   const complete = el >= full;
   const tot = W.brands.reduce((n,b)=>n+b.rev,0);
   const reps = W.reps, mx = Math.max(1, ...reps.map(r=>r.rev));
-  const L = (D.leadSources.windows[k] || []).slice(0, 6);
-  const lTot = L.reduce((n,r)=>n+r.rev,0);
   return `
   <div class="backbar">
     <button class="backbtn" onclick="closeWindow()">‹ Back</button>
@@ -1094,22 +1092,94 @@ function diveView(k){
       ${reps.some(r=>r.office)?`<div class="note">Deals sent from Oasis's office account carry no seller on the Billdu record, so they are listed as unattributed rather than credited to a rep who may not have sold them. Deals a seller sent themselves are attributed from the backend's <b>rep_id</b> mapping, not by matching names.</div>`:''}
     </div>
 
-    <div class="card">
-      <div class="card-title">Where it came from<span class="feed-tag cc">live · cc</span></div>
-      <div class="card-sub">${L.length?'Top lead sources for this window.':'Nothing signed in this window to attribute.'}</div>
-      ${L.map(r=>`<div class="rep-row">
-        <div class="rep-head">
-          <div class="nm">${r.name?esc(r.name):'#'+esc(r.id)}${r.name?'':'<span class="brand">unmapped</span>'}</div>
-          <div class="amt">${short(r.rev)} <span>· ${r.signed}</span></div>
-        </div>
-        <div class="meter"><div class="meter-fill" style="width:${pct(r.rev,lTot)}%;background:${r.name?'#f0834a':'#8aa094'}"></div></div>
-      </div>`).join('')}
-    </div>
+    ${diveAppointments(k)}
+    ${diveMarketing(k)}
   </div>`;
 }
 
 /* The phone's own back gesture must close the dive, not leave the console. Each
    dive pushes one history entry; popping it returns to the snapshot. */
+/* ── APPOINTMENTS, inside every drill-in ────────────────────────────────────
+   Kevin: "When I click on the daily report on owner dash no apt data at all…
+   Both clicks into that need deeper dive info including apts and marketing."
+   The drill-in should answer his morning in one screen: money, deals,
+   appointments, marketing pulse. ──────────────────────────────────────────── */
+function diveAppointments(k){
+  const A = D.appointments; if (!A || !A.perWindow) return '';
+  const p = A.perWindow[k], W = flat(k);
+  const label = { day:'today', week:'this week', month:'this month', ytd:'year to date' }[k];
+  const dl = (a,b) => b ? Math.round((a-b)/b*100) : null;
+  const dB = dl(p.booked, p.bookedPrev), dH = dl(p.held, p.heldPrev);
+  const bookedRows = Object.entries(p.bookedByBrand).sort((a,b)=>b[1]-a[1]);
+  const bookedTot = bookedRows.reduce((n,[,c])=>n+c,0);
+  const av = apptVerdict(A);
+  return `<div class="card full">
+    <div class="card-title">Appointments · ${esc(label)}<span class="feed-tag cc">live · cc</span></div>
+    <div class="card-sub">What the team <b>set</b> in this window, and what sat on the calendar during it. Two different questions.</div>
+
+    <div class="stat-grid" style="margin-bottom:12px">
+      <div class="stat-tile"><div class="lbl">Booked · set date</div>
+        <div class="val ${p.booked?'green':''}">${p.booked}</div>
+        <div class="sub">marketing output</div>
+        ${dB===null?'<div class="delta flat">no prior baseline</div>':`<div class="delta ${dB>=0?'up':'down'}">${dB>=0?'▲':'▼'} ${Math.abs(dB)}% vs ${esc(W.prevLabel)}</div>`}</div>
+      <div class="stat-tile"><div class="lbl">On the calendar</div>
+        <div class="val blue">${p.held}</div>
+        <div class="sub">appointment date</div>
+        ${dH===null?'<div class="delta flat">no prior baseline</div>':`<div class="delta ${dH>=0?'up':'down'}">${dH>=0?'▲':'▼'} ${Math.abs(dH)}% vs ${esc(W.prevLabel)}</div>`}</div>
+      <div class="stat-tile"><div class="lbl">Close on run</div>
+        <div class="val ${W.close===null?'':'gold'}">${W.close===null?'—':W.close+'%'}</div>
+        <div class="sub">${W.jobs} signed of ${W.appts} run</div>
+        <div class="delta flat">CC work only</div></div>
+      <div class="stat-tile"><div class="lbl">Completed</div>
+        <div class="val">${W.completed}</div>
+        <div class="sub">jobs finished</div>
+        <div class="delta flat">in this window</div></div>
+    </div>
+
+    <div class="verdict ${av.tone}">${esc(av.line)}</div>
+
+    ${bookedTot?`<div class="card-title" style="margin:16px 0 8px">Booked for, by brand</div>
+    ${bookedRows.map(([b,n])=>{const m=brandOf(b);
+      return `<div class="rep-row">
+        <div class="rep-head"><div class="nm">${esc(m.n)}${b==='unknown'?'<span class="brand">no project link</span>':''}</div>
+          <div class="amt">${n} <span>· ${pct(n,bookedTot)}%</span></div></div>
+        <div class="meter"><div class="meter-fill" style="width:${pct(n,bookedTot)}%;background:${m.c}"></div></div>
+      </div>`}).join('')}`:''}
+
+    <div class="note"><b>Booked</b> counts when the appointment was created — what the setters produced. <b>On the calendar</b> counts when it was scheduled to happen — what the crews drove to. A busy calendar and a productive setting week are different facts, so they are never added together. Close rate is signed ÷ run on Contractors Cloud work; Billdu deals carry no CC appointment and are excluded from it.</div>
+  </div>`;
+}
+
+/* ── MARKETING, inside every drill-in ─────────────────────────────────────── */
+function diveMarketing(k){
+  const L = D.leadSources; if (!L) return '';
+  const rows = (L.windows[k] || []).slice(0, 8);
+  const label = { day:'today', week:'this week', month:'this month', ytd:'year to date' }[k];
+  const tot = rows.reduce((n,r)=>n+r.rev,0);
+  const mx = Math.max(1, ...rows.map(r=>r.rev));
+  return `<div class="card full">
+    <div class="card-title">Marketing · ${esc(label)}<span class="feed-tag cc">live · cc</span></div>
+    <div class="card-sub">Which sources produced the signed work in this window, and how they convert overall.</div>
+
+    ${rows.length ? rows.map(r=>{
+      const all = L.allTime.find(a=>a.id===r.id);
+      const conv = all && all.jobs ? Math.round(all.signed/all.jobs*100) : null;
+      return `<div class="rep-row">
+        <div class="rep-head">
+          <div class="nm">${r.name?esc(r.name):(r.id==='none'?'No source on the job':'#'+esc(r.id))}${r.name?'':'<span class="brand">unmapped</span>'}</div>
+          <div class="amt">${short(r.rev)} <span>· ${r.signed} signed</span></div>
+        </div>
+        <div class="meter"><div class="meter-fill" style="width:${Math.round(r.rev/mx*100)}%;background:${r.name?'#f0834a':'#8aa094'}"></div></div>
+        <div class="tgt-cap"><span>${pct(r.rev,tot)}% of signed value ${esc(label)}</span>
+          <span class="${conv!==null&&conv>=50?'hit':''}">${conv===null?'':conv+'% close all time'}</span></div>
+      </div>`}).join('')
+    : `<div class="card-sub" style="margin:0">Nothing signed ${esc(label)} to attribute to a source.</div>`}
+
+    <div class="withheld"><div class="wt">Ad spend not connected yet</div><div class="wx">
+      This shows what each source <b>produced</b>, which is half of return on investment. The other half — what each campaign <b>cost</b> — needs the Google Ads feed the backend is wiring now. Until spend lands, treat these as revenue by source, not ROI: a source can look strong here and still be losing money.</div></div>
+  </div>`;
+}
+
 function openWindow(k){
   DIVE = k;
   try { history.pushState({ dive:k }, '', location.pathname + '#' + k); } catch(e){}
@@ -1371,7 +1441,7 @@ addEventListener('resize', () => {
    server for hours while Kevin looked at yesterday's build and reported the bug
    as unfixed. That happened. The page now checks version.json on every load and
    reloads itself once if the deployed build is newer than the one running. */
-const BUILD = '2026-07-21T02:20Z-booked-today';
+const BUILD = '2026-07-21T02:50Z-deep-dive';
 const SB_URL = 'https://lzegjjbkfuecrhdvlvay.supabase.co';
 const SB_KEY = 'sb_publishable_kToiGqET7XzO2It9evStJw_kYzvjSF8';
 const SKEY = 'lcc.session';
@@ -1866,6 +1936,27 @@ function buildData(raw){
       brandsAhead: byBrandWin(T, addD(T,7)),
       brandsMonth: byBrandWin(som(NOW), addD(T,1)),
       windows: Object.fromEntries(Object.entries(WINS).map(([k,wv]) => [k, count(wv.from, wv.to)])),
+
+      /* Per-window appointment detail for the drill-ins. Kevin: "When I click on
+         the daily report on owner dash no apt data at all." Both bases are
+         carried per window — what was SET in it, and what SAT on the calendar in
+         it — plus the same figures a window back so each can be compared. */
+      perWindow: Object.fromEntries(Object.entries(WINS).map(([k,wv]) => {
+        const bookedIn = (x,y) => { let n = 0, by = {};
+          for (let d = new Date(x); d < y; d = addD(d,1)) {
+            for (const r of createdOn(ymdL(d))) { n++;
+              const b = projBrand[String(r.cc_project_id)] || 'unknown';
+              by[b] = (by[b]||0)+1; } }
+          return { n, by }; };
+        const heldBy = byBrandWin(wv.from, wv.to);
+        const [pa,pb] = prevRange(wv);
+        const b = bookedIn(wv.from, wv.to), pbk = bookedIn(pa, pb);
+        return [k, {
+          booked: b.n, bookedByBrand: b.by, bookedPrev: pbk.n,
+          held: count(wv.from, wv.to), heldByBrand: heldBy,
+          heldPrev: count(pa, pb),
+        }];
+      })),
       leadMedianDays: 3,
       coverage: { total: appts.length, dated: live.length,
                   withProject: live.filter(a=>projBrand[String(a.cc_project_id)]).length },

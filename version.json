@@ -1,4 +1,4 @@
 {
-  "build": "2026-07-21T02:20Z-booked-today",
+  "build": "2026-07-21T02:50Z-deep-dive",
   "note": "Bumped on every deploy. The page compares this against its embedded BUILD on load AND on resume, then reloads once if they differ."
 }
