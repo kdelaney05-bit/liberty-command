@@ -69,6 +69,13 @@
      His choice is remembered, so the page he arranges is the page he comes back
      to. Phones default to open: there the page is a scroll, not a wall, and
      folding would only add taps to reach something already reachable. ─────── */
+  /* the union, declared on the headline itself */
+  .hero-incl { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--text-dim);
+               margin-top: 8px; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+  .hero-incl b { color: var(--text); font-weight: 600; }
+  .hero-incl.warn { color: var(--accent-soft); line-height: 1.5; display: block; }
+  .bb.pending { opacity: .75; font-style: italic; }
+
   .card.mnr { padding: 0; }
   .mnr-head { display: flex; align-items: center; gap: 12px; padding: 14px 16px; cursor: pointer; }
   .mnr-head .card-title { margin: 0; min-width: 0; }
@@ -553,6 +560,11 @@ let DIVE = null;
    already flattened, so flatten here and both sides of every comparison read
    the same way. */
 const flat = k => ({ ...D.windows[k], ...D.windows[k].company });
+/* Is the Billdu side missing rather than empty? A silent fall back to CC-only
+   is the worst of the three states: an Oasis-inclusive figure and a CC-only
+   figure look identical, and Kevin has no way to tell which one he is reading.
+   Withheld, not zero — say it on the face of the number. */
+const billduDown = () => !D.oasisLag;
 const w  = () => flat('month');
 const wk = () => flat('week');
 const qbOK = () => D.qb && !D.qb.unavailable;
@@ -688,12 +700,24 @@ const DAYNAME = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Sa
 
 /* who the setters booked for, today */
 function bookedBrandRows(A){
-  const rows = Object.entries(A.bookedByBrand).sort((a,b)=>b[1]-a[1]);
-  const tot = rows.reduce((n,[,c])=>n+c,0);
+  const unknown = A.bookedByBrand.unknown || 0;
+  const rows = Object.entries(A.bookedByBrand).filter(([b]) => b !== 'unknown')
+                 .sort((a,b)=>b[1]-a[1]);
+  const tot = rows.reduce((n,[,c])=>n+c,0) + unknown;
   if (!tot) return '';
-  return `<div class="bookedbrands">${rows.map(([b,n])=>{const m=brandOf(b);
-    return `<div class="bb"><span class="bbdot" style="background:${m.c}"></span>${esc(m.s)}
-      <b>${n}</b></div>`}).join('')}</div>`;
+  /* The per-brand split is only worth reading when most of the day is actually
+     attributable. Printing "Fencing 1" while eighteen bookings sit unresolved
+     is not a smaller truth, it is a wrong one — so past half the day unplaced,
+     the brand row stands down and says what it is waiting for. Kevin gets the
+     honest total either way; what he loses is a split that would mislead him. */
+  const mostlyUnplaced = unknown > tot / 2;
+  return `<div class="bookedbrands">${
+    mostlyUnplaced ? '' : rows.map(([b,n])=>{const m=brandOf(b);
+      return `<div class="bb"><span class="bbdot" style="background:${m.c}"></span>${esc(m.s)}
+        <b>${n}</b></div>`}).join('')}
+    ${unknown ? `<div class="bb pending" title="Appointments booked against projects the sync has not delivered yet">
+      <span class="bbdot" style="background:#8aa094"></span>counting… <b>${unknown}</b> awaiting project sync</div>` : ''}
+  </div>`;
 }
 
 function cardAppointments(){
@@ -1347,7 +1371,7 @@ function diveView(k){
     </div>` : ''; })()}
 
   <div class="card full" style="margin-bottom:12px">
-    <div class="card-title">Signed · ${esc(DIVE_TITLE[k].toLowerCase())}<span class="feed-tag cc">live · cc</span>${W.billdu?'<span class="feed-tag billdu">+ billdu</span>':''}</div>
+    <div class="card-title">Signed · ${esc(DIVE_TITLE[k].toLowerCase())}<span class="feed-tag cc">live · cc</span>${W.billdu?'<span class="feed-tag billdu">live · billdu</span>':''}${billduDown()?'<span class="feed-tag none">billdu unreadable</span>':''}</div>
     <div class="dive-hero">
       <div class="big">${short(W.rev)}</div>
       <div class="side">
@@ -1355,6 +1379,13 @@ function diveView(k){
         ${dTot===null?'' : `<br/>${dTot>=0?'▲':'▼'} ${Math.abs(dTot)}% vs ${esc(W.prevLabel)}`}
       </div>
     </div>
+    ${/* The components sit ON the headline, not below the fold of the card.
+          Kevin read "$5K · live·cc" as the day's sales and reported the Billdu
+          money missing — it was in the total, but the total did not say so, and
+          the only place the split appeared was further down. A headline that is
+          a union has to declare itself a union at the point of reading. */''}
+    ${W.billdu ? `<div class="hero-incl">incl. <b>${short(W.billdu)}</b> <span class="feed-tag billdu">live · billdu</span> not yet in CC</div>` : ''}
+    ${billduDown() ? `<div class="hero-incl warn">Contractors Cloud only — the Billdu feed is unreadable, so any Oasis work signed in Billdu is <b>missing from this figure</b>, not absent from the day.</div>` : ''}
     ${W.billdu ? `<div class="seam">
       <span><b>${short(W.ccRev)}</b> signed in Contractors Cloud · ${W.jobs} contract${W.jobs===1?'':'s'}</span>
       <span><b>${short(W.billdu)}</b> accepted in Billdu, ${W.billduCount} Oasis deal${W.billduCount===1?'':'s'} CC has not recorded yet</span>
@@ -1475,12 +1506,23 @@ function diveAppointments(k){
     <div class="verdict ${av.tone}">${esc(av.line)}</div>
 
     ${bookedTot?`<div class="card-title" style="margin:16px 0 8px">Booked for, by brand</div>
-    ${bookedRows.map(([b,n])=>{const m=brandOf(b);
-      return `<div class="rep-row">
-        <div class="rep-head"><div class="nm">${esc(m.n)}${b==='unknown'?'<span class="brand">no project link</span>':''}</div>
-          <div class="amt">${n} <span>· ${pct(n,bookedTot)}%</span></div></div>
-        <div class="meter"><div class="meter-fill" style="width:${pct(n,bookedTot)}%;background:${m.c}"></div></div>
-      </div>`}).join('')}`:''}
+    ${(() => {
+      /* Same guard as the home card. A brand cannot be read off a booking until
+         the project sync has delivered its project, and on a busy morning most
+         of the day sits unresolved. Ranking brands then is not a partial answer,
+         it is a wrong one — "Fencing 1 · 5%" next to "unknown 18 · 95%" reads as
+         a dead morning for Fencing when Fencing had in fact booked most of it. */
+      const unknown = p.bookedByBrand.unknown || 0;
+      if (unknown > bookedTot / 2) return `<div class="withheld"><div class="wt">Still counting</div><div class="wx">
+        <b>${unknown}</b> of ${bookedTot} booking${bookedTot===1?'':'s'} in this window are against projects the sync has not delivered yet, so the brand split would be mostly guesswork.
+        The total is right; the breakdown appears once the projects land. Nothing here is missing — it is early.</div></div>`;
+      return bookedRows.map(([b,n])=>{const m=brandOf(b);
+        return `<div class="rep-row">
+          <div class="rep-head"><div class="nm">${esc(m.n)}${b==='unknown'?'<span class="brand">awaiting project sync</span>':''}</div>
+            <div class="amt">${n} <span>· ${pct(n,bookedTot)}%</span></div></div>
+          <div class="meter"><div class="meter-fill" style="width:${pct(n,bookedTot)}%;background:${m.c}"></div></div>
+        </div>`}).join('');
+    })()}`:''}
 
     <div class="note"><b>Booked</b> counts when the appointment was created — what the setters produced. <b>On the calendar</b> counts when it was scheduled to happen — what the crews drove to. A busy calendar and a productive setting week are different facts, so they are never added together. Close rate is signed ÷ run on Contractors Cloud work; Billdu deals carry no CC appointment and are excluded from it.</div>
   </div>`;
@@ -1806,7 +1848,7 @@ addEventListener('resize', () => {
    server for hours while Kevin looked at yesterday's build and reported the bug
    as unfixed. That happened. The page now checks version.json on every load and
    reloads itself once if the deployed build is newer than the one running. */
-const BUILD = '2026-07-21T20:40Z-leak-view';
+const BUILD = '2026-07-21T21:55Z-union-nowolf';
 const SB_URL = 'https://lzegjjbkfuecrhdvlvay.supabase.co';
 /* The one page that can finish a password reset. Hard-coded rather than derived,
    because every derivation of it so far has been a source of bugs: a bare origin
@@ -2585,21 +2627,25 @@ function buildData(raw){
       leak: (billdu.leak || []).map(r => ({
         id: r.billdu_id,
         name: r.client_name, city: r.client_city,
-        /* Both sources can hand back a LOGIN EMAIL rather than a name: the leak
-           view's billdu_author always does, and the feed's rep does too for
-           anything sent from the office account. Guarding only the fallback left
-           the address on screen anyway, because the mapped value was the address.
-           So the guard belongs on the resolved value. An unmapped author shows as
-           nothing: we do not know whose deal it is, and a raw login is not an
-           answer to that question — it is the same office-account case the rep
-           leaderboard already declines to credit to a seller. */
-        rep: [repByBillduId[String(r.billdu_id)], r.billdu_author]
+        /* The rebuilt view supplies sent_by_display — "office (kdelaney05)" or a
+           seller's name — which is what the email-stripping here was reaching
+           for. Prefer it, then the mapped rep, and still refuse a bare login:
+           billdu_author is an address and the feed's rep is one too for anything
+           sent from the office account. An unattributable deal shows nothing
+           rather than an email, the same way the rep leaderboard declines to
+           credit an office-sent deal to a seller who did not sell it. */
+        rep: [r.sent_by_display, repByBillduId[String(r.billdu_id)], r.billdu_author]
                .map(v => String(v || '').trim())
                .find(v => v && !v.includes('@')) || '',
+        sellingRep: r.sent_by_is_selling_rep === true,
         value: Number(r.accepted_value||0),
         issued: String(r.issue_date||'').slice(0,10),
-        age: r.age_days == null ? null : Number(r.age_days),
+        /* age_days was split into two by the view rebuild. The card windows on
+           issue date, so it ages on the same basis — mixing "issued in this
+           window" with "accepted N days ago" would put two clocks on one row. */
+        age: r.days_since_issued == null ? null : Number(r.days_since_issued),
         category: r.category, actionable: r.actionable === true,
+        inProcess: r.in_current_process === true,
       })),
     };
   })();
@@ -2660,16 +2706,37 @@ function buildData(raw){
 
     // ── per-brand setting, only where the brand has enough baseline to judge
     if (A && isWeekday && afternoon) {
+      /* ── DO NOT CRY WOLF WHEN THE SYNC IS SIMPLY BEHIND ──────────────────
+         A booking is resolved to a brand through its project, and projects
+         arrive on their own sync. Book an appointment this morning against a
+         project created this morning and, for a while, the appointment is here
+         and the project is not — so the brand cannot be resolved and the
+         booking lands in `unknown`.
+
+         That is not a quiet morning. It reads as one, and it read as one to
+         Kevin: the card told him Fencing had booked 1 against 14 typical and to
+         go and push the setters. Fencing had in fact booked 14. Eighteen of the
+         day's nineteen bookings were sitting in `unknown`, waiting on the
+         project sync.
+
+         The gate below needs no invented threshold, because the numbers already
+         in play answer the question. The shortfall being alleged is
+         (median - n). If `unknown` alone is big enough to cover that shortfall,
+         then the bookings we cannot yet attribute could account for the whole
+         gap, and the signal cannot know it is real. So it says nothing, and the
+         card says it is still counting instead. A signal that fires while the
+         evidence is still arriving teaches its reader to ignore it. */
+      const unknownToday = A.bookedByBrand.unknown || 0;
       for (const b of BRAND_ORDER) {
         const norm = (A.brandNorm && A.brandNorm[b]) || { median: 0 };
         if (norm.median < 4) continue;   // a brand whose normal is ~1 cannot signal daily
         const n = A.bookedByBrand[b] || 0;
-        if (n < norm.median * 0.4) {
-          const m = BRANDS[b] || { n: b };
-          add('watch', 'brand-booking-' + b, ['appointments','flags','dive:day'],
-            `${m.n} booked ${n} appointment${n===1?'':'s'} today against ${norm.median} typical.`,
-            `Point the setters at ${m.n} for the rest of the day — the other brands are carrying the count.`);
-        }
+        if (n >= norm.median * 0.4) continue;
+        if (unknownToday >= norm.median - n) continue;   // could be sync lag, not a slow day
+        const m = BRANDS[b] || { n: b };
+        add('watch', 'brand-booking-' + b, ['appointments','flags','dive:day'],
+          `${m.n} booked ${n} appointment${n===1?'':'s'} today against ${norm.median} typical.`,
+          `Point the setters at ${m.n} for the rest of the day — the other brands are carrying the count.`);
       }
     }
 
@@ -2812,9 +2879,9 @@ async function loadAll(){
   // Oasis sells through Billdu and Contractors Cloud imports it late, so a CC
   // zero for Oasis is not the same claim as "Oasis sold nothing". Optional:
   // if the feed is not readable the console simply does not make the claim.
-  let billdu = null;
+  let billdu = null, leakError = null;
   try {
-    const [fresh, docs, signings, feed, leak] = await Promise.all([
+    const [fresh, docs, signings, feed] = await Promise.all([
       qp('console_billdu_freshness?select=*'),
       // rep_id is the backend's OWN mapping of a Billdu author to a rep. It is
       // set for sellers who send their own estimates and deliberately NULL for
@@ -2840,12 +2907,27 @@ async function loadAll(){
          The console cannot derive that split itself — it is the matcher's own
          verdict on its own confidence — which is exactly why this is read rather
          than recomputed here. */
-      qp('console_billdu_import_leak?select=billdu_id,client_name,client_city,accepted_value,billdu_author,issue_date,accepted_at,age_days,actionable,category'),
     ]);
     // Whether the CC side has actually recorded a signing for a linked job.
     // Every Billdu link is an Oasis job, so this stays a small fetch.
     const oasisJobs = await qp('jobs?select=id,contract_signed_at&source=eq.cc&cc_company_id=eq.1560');
-    billdu = { fresh: fresh[0] || null, docs, signings, feed, leak,
+    /* THE LEAK VIEW GETS ITS OWN try, AND THIS IS THE WHOLE POINT OF IT.
+       It first shipped inside the Promise.all above. Backend then rebuilt the
+       view and renamed age_days, the query started returning 400, and because
+       one rejected promise rejects the whole batch, the catch below set
+       billdu = null — which silently took out freshness, documents, signings and
+       the feed as well. The visible result was every Oasis figure dropping back
+       to $0: the exact bug Kevin reported months ago, reintroduced by a column
+       rename in a view that only feeds one card.
+
+       A supporting view is allowed to fail. It is not allowed to take the money
+       with it. The leak is a chase list; if it is unreadable the console shows
+       one card less and every figure stays correct. */
+    let leak = [];
+    try {
+      leak = await qp('console_billdu_import_leak?select=billdu_id,client_name,client_city,accepted_value,billdu_author,sent_by_display,sent_by_is_selling_rep,issue_date,accepted_at,days_since_accepted,days_since_issued,category,in_current_process,actionable');
+    } catch(e) { leak = []; leakError = e.status ? `${e.status}` : (e.message || 'unreadable'); }
+    billdu = { fresh: fresh[0] || null, docs, signings, feed, leak, leakError,
                ccSigned: Object.fromEntries(oasisJobs.map(j => [j.id, !!j.contract_signed_at])) };
   } catch(e){ billdu = null; }
   let qbInv = [], qbError = null;
