@@ -162,6 +162,13 @@
   .joblrow.sub .jobl-cust { font-size: 13px; }
   .acc-empty { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--text-dim); padding: 6px 0; }
   @media (hover: hover) { .rep-row.acc:hover .nm { color: var(--text); } .rep-row.acc:hover .acc-chev { color: var(--accent-soft); } }
+  /* Needs an owner — pulled out of the accordions and made loud on purpose */
+  .needs-owner { border-color: rgba(212,177,90,0.5); background: rgba(212,177,90,0.055); }
+  .no-head { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; }
+  .no-warn { font-size: 23px; line-height: 1; color: #e6b34d; flex-shrink: 0; }
+  .no-title { font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 0.18em; text-transform: uppercase; color: #e6b34d; font-weight: 600; }
+  .no-stat { font-family: 'Fraunces', serif; font-size: 19px; font-weight: 500; color: var(--text); margin-top: 3px; letter-spacing: -0.01em; }
+  .no-stat b { font-weight: 600; }
   /* appointments by company — one tile per company, count vs a measured typical,
      the tick marks typical. Three across where there is room, stacked on a phone. */
   .apco-tiles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 14px; }
@@ -1501,7 +1508,10 @@ function diveView(k){
   const full = spanOf(k), el = W.prevSpanDays || 1, pace = paceOf(k);
   const complete = el >= full;
   const tot = W.brands.reduce((n,b)=>n+b.rev,0);
-  const reps = W.reps, mx = Math.max(1, ...reps.map(r=>r.rev));
+  /* "Who signed it" is the real sellers only. The office/unattributed deals used
+     to rank here as "Oasis · unattributed"; they now surface loudly in Needs an
+     owner instead, so they are filtered out of this list and its bar scale. */
+  const reps = (W.reps||[]).filter(r=>!r.office), mx = Math.max(1, ...reps.map(r=>r.rev));
   return `
   <div class="backbar">
     <button class="backbtn" onclick="closeWindow()">‹ Back</button>
@@ -1539,6 +1549,33 @@ function diveView(k){
     </div>` : ''}
     <div class="card-sub" style="margin:10px 0 0">${W.appts} appointments · ${W.completed} completed${W.close===null?'':' · '+W.close+'% close on CC work'}</div>
   </div>
+
+  ${(()=>{ const u = W.unowned || []; if (!W.unownedCount) return '';
+    const rest = W.unownedCount - u.length;
+    return `<div class="card full needs-owner" style="margin-bottom:12px">
+      <div class="no-head">
+        <span class="no-warn">⚠</span>
+        <div class="no-headtext">
+          <div class="no-title">Needs an owner</div>
+          <div class="no-stat"><b>${W.unownedCount}</b> job${W.unownedCount===1?'':'s'} · <b>${short(W.unownedTotal)}</b> · no seller recorded</div>
+        </div>
+      </div>
+      <div class="card-sub">Signed work with nobody credited — pulled out so it does not hide.${
+        W.unownedNoRep?` <b>${W.unownedNoRep}</b> ${W.unownedNoRep===1?'is a Contractors Cloud contract with no rep on it':'are Contractors Cloud contracts with no rep on them'} — a gap to fix at the source.`:''}${
+        W.unownedOffice?` <b>${W.unownedOffice}</b> ${W.unownedOffice===1?'was':'were'} sent from Oasis's office account, where the seller is not on the Billdu record.`:''}</div>
+      ${u.map(r=>`<div class="joblrow sub">
+        <div class="jobl-top">
+          <div class="jobl-cust">${r.cust ? esc(r.cust) : '<span style="color:var(--text-dim)">name not on the record</span>'}</div>
+          <div class="jobl-amt">${r.amount ? short(r.amount) : '$0'}</div>
+        </div>
+        <div class="jobl-meta">
+          ${brandChip(r.brand, r.resolved)}
+          <span class="jobl-rep">${r.reason==='office'?'office-sent · no seller':'no rep on the contract'}</span>
+          <span class="feed-tag ${r.src==='billdu'?'billdu':'cc'}">live · ${r.src}</span>
+        </div>
+      </div>`).join('')}
+      ${rest>0?`<div class="wfoot" style="margin-top:8px">+ ${rest} more${W.unownedRest?` totaling ${short(W.unownedRest)}`:''} — the ${u.length} largest are listed.</div>`:''}
+    </div>`; })()}
 
   <div class="stack dive">
     <div class="card chart-card full">
@@ -2002,7 +2039,7 @@ addEventListener('resize', () => {
    server for hours while Kevin looked at yesterday's build and reported the bug
    as unfixed. That happened. The page now checks version.json on every load and
    reloads itself once if the deployed build is newer than the one running. */
-const BUILD = '2026-07-23T16:50Z-rep-accordion';
+const BUILD = '2026-07-23T17:30Z-needs-an-owner';
 const SB_URL = 'https://lzegjjbkfuecrhdvlvay.supabase.co';
 /* The one page that can finish a password reset. Hard-coded rather than derived,
    because every derivation of it so far has been a source of bugs: a bare origin
@@ -2287,7 +2324,12 @@ function buildData(raw){
        the sales guys name and his daily sales and units I can click on the box
        if I want to." Each row keeps its OWN brand, so a cross-brand rep like Eric
        reads as several chips, never one blurred line. */
-    const brands = {}, byRep = {};
+    /* unowned = signed deals with no salesperson on the record. Kevin: "pull the
+       uncategorized out and make those obvious." A CC contract with no rep_id is
+       a genuine data gap — the Jim Brown $23K class — and must stare at him, not
+       nest quietly under a brand. Office-sent Billdu deals belong here too: the
+       seller is not on the record either, though for a known reason. */
+    const brands = {}, byRep = {}, unowned = [];
     for (const j of js) {
       const bid = rollup(j.cc_company_id || 'unknown');
       const row = { cust: custName(j.title), brand: bid, resolved: !!BRANDS[bid],
@@ -2297,6 +2339,7 @@ function buildData(raw){
       brands[bid].jobs++; brands[bid].rev += row.amount; brands[bid].list.push(row);
       if (j.rep_id) { (byRep[j.rep_id] ??= { jobs:0, rev:0, appts:0, list:[] });
         byRep[j.rep_id].jobs++; byRep[j.rep_id].rev += row.amount; byRep[j.rep_id].list.push(row); }
+      else { unowned.push({ ...row, reason:'no-rep' }); }
     }
     for (const x of as) if (x.rep_id) { (byRep[x.rep_id] ??= { jobs:0, rev:0, appts:0, list:[] }); byRep[x.rep_id].appts++; }
 
@@ -2317,6 +2360,7 @@ function buildData(raw){
                       rep: rid === OFFICE ? null : (repById[rid]?.name || 'Unknown') };
         brands[OASIS].list.push(row);
         (byRep[rid] ??= { jobs:0, rev:0, appts:0, list:[] }).list.push(row);
+        if (rid === OFFICE) unowned.push({ ...row, reason:'office' });
       }
       // …and the aggregates keep the rep totals right, or a seller reads $0 on a
       // day they sold.
@@ -2342,7 +2386,15 @@ function buildData(raw){
       return { ...rest, jobList: sorted.slice(0,RCAP), jobCount: sorted.length,
                jobRest: sorted.slice(RCAP).reduce((n,r)=>n+r.amount,0) }; };
 
+    const uSorted = [...unowned].sort((a,b)=>b.amount-a.amount);
+
     return {
+      unowned: uSorted.slice(0,RCAP),
+      unownedCount: uSorted.length,
+      unownedTotal: uSorted.reduce((n,r)=>n+r.amount,0),
+      unownedRest: uSorted.slice(RCAP).reduce((n,r)=>n+r.amount,0),
+      unownedNoRep: unowned.filter(r=>r.reason==='no-rep').length,
+      unownedOffice: unowned.filter(r=>r.reason==='office').length,
       // rev is the COMPANY figure — both systems. ccRev keeps the seam readable.
       company:{ jobs:js.length, rev: unionRev, ccRev: rev,
                 billdu: bd ? bd.value : 0, billduCount: bd ? bd.count : 0,
