@@ -1305,10 +1305,16 @@ function cardLeads(){
   const label = { day:'today', week:'this week', month:'this month', ytd:'year to date' }[LEADWIN];
   const tot = rows.reduce((n,r) => n + r.rev, 0);
   const mx = Math.max(1, ...rows.map(r => r.rev));
-  const unmappedRev = rows.filter(r=>!r.name).reduce((n,r)=>n+r.rev,0);
-  // "Barely mapped" matters as much as "not mapped at all": Pro-Tec has one
-  // named source out of seventeen, which is 1% of its value and reads as noise.
-  const barelyNamed = T.distinct > 0 && T.namedRevShare < 25;
+  /* Unmapped share for THIS company, all-time, by signed value. The map now
+     covers Fencing and Pro-Tec effectively in full; Oasis is the outlier — one
+     dropdown id (#35082) carries the majority of its signed value with no name
+     in our sync, though the office masterlist shows real values for it. The
+     "#none" bucket (no source set at all) is a different thing from an unnamed
+     id and is not lumped in with it. */
+  const unmappedAll = T.allTime.filter(r => !r.name && r.id !== 'none');
+  const unmappedRevAll = unmappedAll.reduce((n,r) => n + r.rev, 0);
+  const revAll = T.allTime.reduce((n,r) => n + r.rev, 0);
+  const biggestUnmapped = [...unmappedAll].sort((a,b) => b.rev - a.rev)[0];
   return `<div class="card full">
     <div class="card-title">Leads by source<span class="feed-tag cc">live · cc</span></div>
     <div class="card-sub">Fencing and roofing buy leads in different markets, so this is one trade at a time — never a blended list. Close rate is that source's contracts against every lead it has produced.</div>
@@ -1343,12 +1349,10 @@ function cardLeads(){
         </div>
       </div>`}).join('') : `<div class="card-sub" style="margin:0">${esc(m.n)} signed nothing ${esc(label)} to attribute.</div>`}
 
-    ${barelyNamed ? `<div class="withheld"><div class="wt">${T.namedIds?'This trade is barely mapped':'This trade has no named sources'}</div><div class="wx">
-      The source-name map covers <b>Liberty Fencing only</b> — all ${L.mapSize} entries belong to it. ${esc(m.n)} has <b>${T.namedIds} of its ${T.distinct}</b> sources named, so <b>${short(T.allTime.filter(r=>!r.name).reduce((n,r)=>n+r.rev,0))}</b> of its signed value reads as a bare id. Its biggest unnamed source is <b>#${esc((T.allTime.find(r=>!r.name)||{}).id||'—')}</b> at <b>${short((T.allTime.find(r=>!r.name)||{}).rev||0)}</b>. Naming these is the same one-row-per-source job already done for Fencing.</div></div>`
-    : unmappedRev>0?`<div class="withheld"><div class="wt">Not every source is named</div><div class="wx">
-      <b>${short(unmappedRev)}</b> of what is shown ${esc(label)} sits on ids with no entry in the map. Those keep their raw id rather than being folded into "other" — a source you cannot name is still one you are paying for.</div></div>`:''}
+    ${unmappedRevAll > 0 ? `<div class="withheld"><div class="wt">${(100-T.namedRevShare) >= 40 ? 'Most of this company sits on an unnamed source' : 'Not every source is named'}</div><div class="wx">
+      <b>${short(unmappedRevAll)}</b> of ${esc(m.s)}'s signed value — <b>${pct(unmappedRevAll,revAll)}%</b> of it — sits on ${unmappedAll.length===1?'a source id':'source ids'} our sync carries no name for${biggestUnmapped?`, nearly all of it on <b>#${esc(biggestUnmapped.id)}</b> (${biggestUnmapped.jobs.toLocaleString()} leads · ${short(biggestUnmapped.rev)} signed)`:''}. The office masterlist shows real values for these — Google, Saving Safari and the like — but the warehouse has not mapped them yet, so they keep their raw id rather than being folded into "other". A source you cannot name is still one you are paying for.</div></div>` : ''}
 
-    <div class="note">${esc(m.n)}: <b>${T.namedIds} of ${T.distinct}</b> sources named, covering <b>${T.namedRevShare}%</b> of its signed value. Across all trades the map holds <b>${L.mapSize}</b> names. Categories marked <b>·inferred</b> were guessed rather than set by hand, so a guess never reads as a decision.</div>
+    <div class="note">${esc(m.n)}: <b>${T.namedIds} of ${T.distinct}</b> sources named, covering <b>${T.namedRevShare}%</b> of its signed value. The map now holds <b>${L.mapSize}</b> names and covers Fencing and Pro-Tec effectively in full; Oasis is the one still leaning on an unmapped dropdown id. Categories marked <b>·inferred</b> were guessed rather than set by hand, so a guess never reads as a decision.</div>
   </div>`;
 }
 
@@ -1684,7 +1688,6 @@ function render(){
   const _reps = _W.reps;
   const _E = D.effort, _eT = _E.rows.reduce((n, r) => n + r[EFFWIN].t, 0);
   const _eOn = _E.rows.filter(r => r[EFFWIN].t > 0).length;
-  const _T = D.leadSources.byTrade[LEADTRADE] || { distinct: 0, namedIds: 0 };
   const _cats = D.leadSources.categories.filter(c => c.rev > 0);
 
   document.getElementById('app').innerHTML =
@@ -1693,6 +1696,11 @@ function render(){
          These six are the cockpit at cruise: what needs him, the appointments
          his week turns on, and the money already on the board. */
       cardActions(), cardAppointments(), cardApptByCompany(), cardApptTrends(),
+      /* Leads by company — unfolded at Kevin's request ("break the lead sources
+         by company"). It was buried in the quiet strip, which is why he could
+         not find it; it is a sibling of Appointments by company, so it sits high
+         in the open flow rather than behind a click at the bottom. */
+      cardLeads(),
       cardWeeks(), cardStats(), cardTrending(),
 
       /* Everything below folds, and folds together, so they land as one quiet
@@ -1706,7 +1714,6 @@ function render(){
       minor('effort', `${_eT} touch${_eT === 1 ? '' : 'es'} · ${_eOn}/${_E.activeReps} reps on the board`, cardEffort()),
       minor('cadence', 'this week, by weekday', cardCadence()),
       minor('money', qbOK() ? `${short(qbw().invoiced)} invoiced · ${short(D.qb.arTotal)} open A/R` : 'withheld — not readable', cardMoney()),
-      minor('leads', `${_T.distinct} source${_T.distinct === 1 ? '' : 's'} · ${_T.namedIds} named`, cardLeads()),
       minor('leadcats', `${_cats.length} channel${_cats.length === 1 ? '' : 's'}`, cardLeadCategories()),
       minor('flags', 'caveats, not actions', cardFlags()),
     ].join('') + '</div>' +
@@ -1936,7 +1943,7 @@ addEventListener('resize', () => {
    server for hours while Kevin looked at yesterday's build and reported the bug
    as unfixed. That happened. The page now checks version.json on every load and
    reloads itself once if the deployed build is newer than the one running. */
-const BUILD = '2026-07-23T13:20Z-appts-by-company';
+const BUILD = '2026-07-23T14:30Z-leads-by-company';
 const SB_URL = 'https://lzegjjbkfuecrhdvlvay.supabase.co';
 /* The one page that can finish a password reset. Hard-coded rather than derived,
    because every derivation of it so far has been a source of bugs: a bare origin
