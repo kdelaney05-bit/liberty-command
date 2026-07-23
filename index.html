@@ -151,6 +151,17 @@
   .bchip { display: inline-flex; align-items: center; gap: 5px; font-family: 'JetBrains Mono', monospace; font-size: 8px; letter-spacing: .1em; text-transform: uppercase; font-weight: 600; padding: 2px 8px; border-radius: 100px; border: 1px solid; }
   .bchip .bdot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
   .bchip.await { color: var(--text-dim); border-color: rgba(255,255,255,0.14); }
+  /* accordion: a rep or brand row expands in place to the jobs behind it */
+  .rep-row.acc { cursor: pointer; -webkit-tap-highlight-color: transparent; }
+  .acc-chev { margin-left: 8px; color: var(--text-dim); font-size: 13px; display: inline-block; transition: transform .15s; }
+  .rep-row.acc.open .acc-chev { transform: rotate(90deg); color: var(--accent); }
+  .rep-row .acc-body { display: none; }
+  .rep-row.acc.open .acc-body { display: block; }
+  .acc-body { margin-top: 11px; padding-top: 2px; padding-left: 12px; border-left: 2px solid rgba(255,255,255,0.08); }
+  .joblrow.sub { padding: 9px 0; }
+  .joblrow.sub .jobl-cust { font-size: 13px; }
+  .acc-empty { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--text-dim); padding: 6px 0; }
+  @media (hover: hover) { .rep-row.acc:hover .nm { color: var(--text); } .rep-row.acc:hover .acc-chev { color: var(--accent-soft); } }
   /* appointments by company — one tile per company, count vs a measured typical,
      the tick marks typical. Three across where there is room, stacked on a phone. */
   .apco-tiles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 14px; }
@@ -1460,36 +1471,26 @@ function brandChip(brandId, resolved){
   return `<span class="bchip" style="color:${m.c};border-color:${m.c}55"><span class="bdot" style="background:${m.c}"></span>${esc(m.s)}</span>`;
 }
 
-/* ── THE JOB RECEIPT, inside every drill-in ─────────────────────────────────
-   The list behind the window's number: one row per job, each with its customer,
-   its own brand chip, its amount, its rep, and which system recorded it. CC
-   contracts and additive Billdu acceptances are one list here exactly as they
-   are one number above — so the rows add up to the headline. ───────────────── */
-function diveSignedJobs(k){
-  const W = flat(k);
-  const list = W.signedList || [];
-  const title = DIVE_TITLE[k];
-  const anyBilldu = list.some(r => r.src === 'billdu');
-  if (!list.length && !W.signedCount) return `<div class="card">
-    <div class="card-title">Jobs signed · ${esc(title.toLowerCase())}<span class="feed-tag none">nothing yet</span></div>
-    <div class="card-sub">No contracts signed in this window to itemise.</div></div>`;
-  const shown = list.length;
-  const rest = (W.signedCount || shown) - shown;
-  return `<div class="card">
-    <div class="card-title">Jobs signed · ${esc(title.toLowerCase())}<span class="feed-tag cc">live · cc</span>${anyBilldu?'<span class="feed-tag billdu">live · billdu</span>':''}</div>
-    <div class="card-sub">Every job behind the number, each tagged with <b>its own</b> brand — a rep who sells across brands shows one row per job, not one blended line. ${W.signedCount} deal${W.signedCount===1?'':'s'} in all.</div>
-    ${list.map(r => `<div class="joblrow">
+/* The job rows that live UNDER a rep or a brand, revealed when its row is tapped.
+   Under a rep, each row shows its own brand chip (the whole point — Eric's fence
+   and his Oasis job read as two colours); under a brand, it shows the rep who
+   sold it instead. Everything else — customer, amount, source tag, the +N cap —
+   is identical either way, so the two accordions stay honest in the same terms. */
+function jobSubList(list, count, rest, { showBrand = true, showRep = false } = {}){
+  if (!list || !list.length) return `<div class="acc-empty">No itemised jobs in this window.</div>`;
+  return `<div class="acc-body">
+    ${list.map(r => `<div class="joblrow sub">
       <div class="jobl-top">
         <div class="jobl-cust">${r.cust ? esc(r.cust) : '<span style="color:var(--text-dim)">name not on the record</span>'}</div>
         <div class="jobl-amt">${r.amount ? short(r.amount) : '$0'}</div>
       </div>
       <div class="jobl-meta">
-        ${brandChip(r.brand, r.resolved)}
-        <span class="jobl-rep">${r.rep ? esc(r.rep) : (r.office ? 'office · unattributed' : 'no rep recorded')}</span>
+        ${showBrand ? brandChip(r.brand, r.resolved) : ''}
+        ${showRep ? `<span class="jobl-rep">${r.rep ? esc(r.rep) : (r.office ? 'office · unattributed' : 'no rep recorded')}</span>` : ''}
         <span class="feed-tag ${r.src==='billdu'?'billdu':'cc'}">live · ${r.src}</span>
       </div>
     </div>`).join('')}
-    ${rest > 0 ? `<div class="wfoot" style="margin-top:10px">+ ${rest} more job${rest===1?'':'s'}${W.signedRestValue?` totaling ${short(W.signedRestValue)}`:''} — the fifty largest are listed.</div>` : ''}
+    ${count > list.length ? `<div class="wfoot" style="margin-top:8px">+ ${count-list.length} more${rest?` totaling ${short(rest)}`:''} — the ${list.length} largest are listed.</div>` : ''}
   </div>`;
 }
 
@@ -1540,8 +1541,6 @@ function diveView(k){
   </div>
 
   <div class="stack dive">
-    ${diveSignedJobs(k)}
-
     <div class="card chart-card full">
       <div class="card-title">${esc(DIVE_SERIES_LABEL[k])}<span class="feed-tag cc">live · cc</span></div>
       <div class="card-sub">Signed value, so this window sits in its own recent history.</div>
@@ -1571,16 +1570,18 @@ function diveView(k){
 
     <div class="card">
       <div class="card-title">Brand mix<span class="feed-tag cc">live · cc</span></div>
-      <div class="card-sub">Every brand, including any that signed nothing.</div>
+      <div class="card-sub">Every brand, including any that signed nothing. Tap a brand for the jobs behind it.</div>
       ${allBrands(W.brands).sort((a,b)=>b.rev-a.rev).map(b=>{const m=brandOf(b.id);
-        return `<div class="rep-row" ${b.rev?'':'style="opacity:.6"'}>
+        const tap = !!(b.jobList && b.jobList.length);
+        return `<div class="rep-row${tap?' acc':''}" ${b.rev?'':'style="opacity:.6"'}${tap?` onclick="this.classList.toggle('open')"`:''}>
           <div class="rep-head"><div class="nm">${esc(m.n)}${b.billdu?'<span class="tick">billdu</span>':''}</div>
-            <div class="amt">${b.rev?short(b.rev):'$0'} <span>· ${b.jobs} deal${b.jobs===1?'':'s'}</span></div></div>
+            <div class="amt">${b.rev?short(b.rev):'$0'} <span>· ${b.jobs} deal${b.jobs===1?'':'s'}</span>${tap?'<span class="acc-chev">›</span>':''}</div></div>
           <div class="meter"><div class="meter-fill" style="width:${pct(b.rev,tot)}%;background:${m.c}"></div></div>
           <div class="tgt-cap">
             <span>${b.rev?pct(b.rev,tot)+'% of the window':'nothing signed in this window'}</span>
             ${b.billdu?`<span class="hit">${short(b.billdu)} via Billdu</span>`:''}
           </div>
+          ${tap?jobSubList(b.jobList, b.jobCount, b.jobRest, {showBrand:false, showRep:true}):''}
         </div>`}).join('')}
       ${(W.brands.find(b=>String(b.id)==='1560')?.rev) ? '' : oasisNote(k)}
     </div>
@@ -1589,20 +1590,22 @@ function diveView(k){
 
     <div class="card">
       <div class="card-title">Who signed it<span class="feed-tag cc">live · cc</span></div>
-      <div class="card-sub">${reps.length?'Ranked by signed value in this window.':'No rep activity in this window.'}</div>
+      <div class="card-sub">${reps.length?'Ranked by signed value — tap a name for the jobs behind it.':'No rep activity in this window.'}</div>
       ${k === 'week' ? weekResetNote() : ''}
       ${k === 'week' && !reps.length && weekReset() ? `<div class="card-sub" style="margin:0">Last week's board: ${
         (weekReset().topReps.length
           ? weekReset().topReps.map(x=>`${esc(x.name)} ${short(x.rev)}`).join(' · ')
           : 'no rep activity recorded')}.</div>` : ''}
-      ${reps.slice(0,12).map((r,i)=>`<div class="rep-row" ${r.office?'style="opacity:.8"':''}>
+      ${reps.slice(0,12).map((r,i)=>{const tap = !!(r.jobList && r.jobList.length);
+        return `<div class="rep-row${tap?' acc':''}" ${r.office?'style="opacity:.8"':''}${tap?` onclick="this.classList.toggle('open')"`:''}>
         <div class="rep-head">
           <div class="nm"><span class="rk ${i===0?'top':''}">${i+1}</span>${esc(r.name)}${r.billdu?'<span class="tick">billdu</span>':''}${r.role&&r.role!=='sales'&&!r.office?`<span class="brand">${esc(r.role)}</span>`:''}</div>
-          <div class="amt">${short(r.rev)} <span>· ${r.jobs} deal${r.jobs===1?'':'s'}</span></div>
+          <div class="amt">${short(r.rev)} <span>· ${r.jobs} deal${r.jobs===1?'':'s'}</span>${tap?'<span class="acc-chev">›</span>':''}</div>
         </div>
         <div class="meter"><div class="meter-fill" style="width:${Math.round(r.rev/mx*100)}%;background:${r.office?'#8aa094':(r.rev===mx?'#6cc28b':'#6ba8c9')}"></div></div>
         ${r.billdu?`<div class="tgt-cap"><span>${r.office?'sent from the office account — seller not recorded':`${short(r.rev-r.billdu)} CC + ${short(r.billdu)} Billdu`}</span></div>`:''}
-      </div>`).join('')}
+        ${tap?jobSubList(r.jobList, r.jobCount, r.jobRest, {showBrand:true, showRep:false}):''}
+      </div>`}).join('')}
       ${reps.some(r=>r.office)?`<div class="note">Deals sent from Oasis's office account carry no seller on the Billdu record, so they are listed as unattributed rather than credited to a rep who may not have sold them. Deals a seller sent themselves are attributed from the backend's <b>rep_id</b> mapping, not by matching names.</div>`:''}
     </div>
 
@@ -1999,7 +2002,7 @@ addEventListener('resize', () => {
    server for hours while Kevin looked at yesterday's build and reported the bug
    as unfixed. That happened. The page now checks version.json on every load and
    reloads itself once if the deployed build is newer than the one running. */
-const BUILD = '2026-07-23T15:40Z-job-receipts';
+const BUILD = '2026-07-23T16:50Z-rep-accordion';
 const SB_URL = 'https://lzegjjbkfuecrhdvlvay.supabase.co';
 /* The one page that can finish a password reset. Hard-coded rather than derived,
    because every derivation of it so far has been a source of bugs: a bare origin
@@ -2279,26 +2282,46 @@ function buildData(raw){
     const as = appts.filter(x => inR(x.starts_at,a,b));
     const done = jobs.filter(j => inR(j.completed_at,a,b));
     const rev = js.reduce((n,j)=>n+Number(j.fin_sold_amount||0),0);
+    /* brands and byRep each carry a `list` of their own job rows, so a rep row
+       or a brand row can expand in place to the jobs behind it — Kevin: "under
+       the sales guys name and his daily sales and units I can click on the box
+       if I want to." Each row keeps its OWN brand, so a cross-brand rep like Eric
+       reads as several chips, never one blurred line. */
     const brands = {}, byRep = {};
     for (const j of js) {
-      const b2 = rollup(j.cc_company_id || 'unknown');
-      (brands[b2] ??= { jobs:0, rev:0 }); brands[b2].jobs++; brands[b2].rev += Number(j.fin_sold_amount||0);
-      if (j.rep_id) { (byRep[j.rep_id] ??= { jobs:0, rev:0, appts:0 });
-        byRep[j.rep_id].jobs++; byRep[j.rep_id].rev += Number(j.fin_sold_amount||0); }
+      const bid = rollup(j.cc_company_id || 'unknown');
+      const row = { cust: custName(j.title), brand: bid, resolved: !!BRANDS[bid],
+                    amount: Number(j.fin_sold_amount||0), src:'cc',
+                    rep: j.rep_id ? (repById[j.rep_id]?.name || 'Unknown') : null };
+      (brands[bid] ??= { jobs:0, rev:0, list:[] });
+      brands[bid].jobs++; brands[bid].rev += row.amount; brands[bid].list.push(row);
+      if (j.rep_id) { (byRep[j.rep_id] ??= { jobs:0, rev:0, appts:0, list:[] });
+        byRep[j.rep_id].jobs++; byRep[j.rep_id].rev += row.amount; byRep[j.rep_id].list.push(row); }
     }
-    for (const x of as) if (x.rep_id) { (byRep[x.rep_id] ??= { jobs:0, rev:0, appts:0 }); byRep[x.rep_id].appts++; }
+    for (const x of as) if (x.rep_id) { (byRep[x.rep_id] ??= { jobs:0, rev:0, appts:0, list:[] }); byRep[x.rep_id].appts++; }
 
     // Fold Billdu into Oasis here, so no downstream card has to remember to.
     const bd = billduAdd(a,b);
     if (bd && (bd.value || bd.count)) {
-      (brands[OASIS] ??= { jobs:0, rev:0 });
+      (brands[OASIS] ??= { jobs:0, rev:0, list:[] });
       brands[OASIS].rev += bd.value;
       brands[OASIS].jobs += bd.count;
       brands[OASIS].billdu = bd.value;
       brands[OASIS].billduCount = bd.count;
-      // and into rep attribution, or a seller reads $0 on a day they sold
+      // individual acceptances feed the per-rep and per-brand lists…
+      for (const r of bd.rows) {
+        const rid = bRepOf[String(r.billdu_id)] || OFFICE;
+        const row = { cust: r.client_name || null, brand: OASIS, resolved: true,
+                      amount: Number(r.accepted_value||0), src:'billdu',
+                      office: rid === OFFICE,
+                      rep: rid === OFFICE ? null : (repById[rid]?.name || 'Unknown') };
+        brands[OASIS].list.push(row);
+        (byRep[rid] ??= { jobs:0, rev:0, appts:0, list:[] }).list.push(row);
+      }
+      // …and the aggregates keep the rep totals right, or a seller reads $0 on a
+      // day they sold.
       for (const [rid, v] of Object.entries(bd.byRep)) {
-        (byRep[rid] ??= { jobs:0, rev:0, appts:0 });
+        (byRep[rid] ??= { jobs:0, rev:0, appts:0, list:[] });
         byRep[rid].rev += v.value;
         byRep[rid].jobs += v.count;
         byRep[rid].billdu = (byRep[rid].billdu || 0) + v.value;
@@ -2307,38 +2330,19 @@ function buildData(raw){
     }
     const unionRev = rev + (bd ? bd.value : 0);
 
-    /* ── THE RECEIPT · every job that made up this number, one row each ────────
-       Kevin: "if I click on the jobs sold today it expands to show the actual
-       job details. Like Eric sells fencing/landscapes/roofing so it needs to
-       differentiate." So each JOB carries its OWN brand, read from that job's
-       own company — a day where Eric signs a fence and an Oasis job is two rows
-       with two different chips, never one blurred rep total. CC contracts and
-       the additive Billdu acceptances are unioned and tagged by source system,
-       so the list reconciles to the union figure above it. A job whose company
-       does not resolve to a known brand is shown as awaiting sync, never guessed
-       into one. Stored top-50 by value to keep the payload lean; the count and
-       the remaining value are kept so the card can say what it did not list. */
-    const ccRows = js.map(j => {
-      const bid = rollup(j.cc_company_id || 'unknown');
-      return { cust: custName(j.title), brand: bid, resolved: !!BRANDS[bid],
-               amount: Number(j.fin_sold_amount||0),
-               rep: j.rep_id ? (repById[j.rep_id]?.name || 'Unknown') : null,
-               src: 'cc' };
-    });
-    const bdRows = (bd ? bd.rows : []).map(r => {
-      const rid = bRepOf[String(r.billdu_id)] || OFFICE;
-      return { cust: r.client_name || null, brand: OASIS, resolved: true,
-               amount: Number(r.accepted_value||0),
-               rep: rid === OFFICE ? null : (repById[rid]?.name || 'Unknown'),
-               office: rid === OFFICE, src: 'billdu' };
-    });
-    const fullList = [...ccRows, ...bdRows].sort((a,b) => b.amount - a.amount);
-    const CAP = 50;
+    /* Each rep and each brand carries its own job list, capped and sorted by
+       value so the accordion under it stays bounded on a long window; the count
+       and the remaining value are kept so it can say what it did not list. The
+       flat all-jobs card this used to feed is gone — Kevin found it too busy —
+       so the jobs now live only under the rep and brand rows that expand to
+       them, quiet until asked. */
+    const RCAP = 25;
+    const capped = (v) => { const { list, ...rest } = v;
+      const sorted = [...(list||[])].sort((a,b)=>b.amount-a.amount);
+      return { ...rest, jobList: sorted.slice(0,RCAP), jobCount: sorted.length,
+               jobRest: sorted.slice(RCAP).reduce((n,r)=>n+r.amount,0) }; };
 
     return {
-      signedList: fullList.slice(0, CAP),
-      signedCount: fullList.length,
-      signedRestValue: fullList.slice(CAP).reduce((n,r) => n + r.amount, 0),
       // rev is the COMPANY figure — both systems. ccRev keeps the seam readable.
       company:{ jobs:js.length, rev: unionRev, ccRev: rev,
                 billdu: bd ? bd.value : 0, billduCount: bd ? bd.count : 0,
@@ -2349,14 +2353,14 @@ function buildData(raw){
                 // and mixing them would inflate it.
                 close: as.length ? Math.round(js.length/as.length*100) : null,
                 avgJob: js.length ? Math.round(rev/js.length) : 0 },
-      brands: Object.entries(brands).map(([id,v])=>({id,...v})),
+      brands: Object.entries(brands).map(([id,v])=>({id, ...capped(v)})),
       reps: Object.entries(byRep).map(([id,v])=>({
         id,
         name: id === OFFICE ? 'Oasis · unattributed'
                             : (repById[id]?.name ?? 'Unknown'),
         role: id === OFFICE ? 'office-sent' : (repById[id]?.role ?? 'sales'),
         office: id === OFFICE,
-        ...v,
+        ...capped(v),
         // close rate is CC-over-CC; a Billdu deal carries no CC appointment
         close: v.appts ? Math.round((v.jobs - (v.billduCount||0))/v.appts*100) : null,
       })).filter(r=>r.rev>0||r.appts>0).sort((x,y)=>y.rev-x.rev),
