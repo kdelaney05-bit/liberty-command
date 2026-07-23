@@ -140,6 +140,17 @@
   .rep-head .amt span { color: var(--text-dim); font-size: 10px; }
   .meter { height: 7px; background: rgba(255,255,255,0.05); border-radius: 100px; overflow: hidden; }
   .meter-fill { height: 100%; border-radius: 100px; }
+  /* per-job receipt rows in a drill-in — each job carries its own brand chip */
+  .joblrow { padding: 11px 0; border-bottom: 1px solid rgba(255,255,255,0.045); }
+  .joblrow:last-child { border-bottom: none; }
+  .jobl-top { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+  .jobl-cust { font-size: 13.5px; font-weight: 500; color: var(--text); }
+  .jobl-amt { font-family: 'JetBrains Mono', monospace; font-size: 13px; color: var(--text); font-weight: 600; white-space: nowrap; }
+  .jobl-meta { display: flex; align-items: center; gap: 8px; margin-top: 7px; flex-wrap: wrap; }
+  .jobl-rep { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--text-dim); letter-spacing: .03em; }
+  .bchip { display: inline-flex; align-items: center; gap: 5px; font-family: 'JetBrains Mono', monospace; font-size: 8px; letter-spacing: .1em; text-transform: uppercase; font-weight: 600; padding: 2px 8px; border-radius: 100px; border: 1px solid; }
+  .bchip .bdot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+  .bchip.await { color: var(--text-dim); border-color: rgba(255,255,255,0.14); }
   /* appointments by company — one tile per company, count vs a measured typical,
      the tick marks typical. Three across where there is room, stacked on a phone. */
   .apco-tiles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 14px; }
@@ -1439,6 +1450,49 @@ const DIVE_TITLE = { day:'Today', week:'This week', month:'This month', ytd:'Yea
 const DIVE_SERIES = { day:'daily', week:'daily', month:'weeks', ytd:'monthly' };
 const DIVE_SERIES_LABEL = { day:'Last 14 days', week:'Last 14 days', month:'Last 3 weeks', ytd:'Last 13 months' };
 
+/* A brand chip in each job's own colour — the console's brand palette, so Eric's
+   fence row and his Oasis row read as two different colours at a glance. A job
+   whose company has not resolved to a known brand gets the neutral "awaiting
+   sync" chip rather than being coloured as a guess. */
+function brandChip(brandId, resolved){
+  if (resolved === false) return `<span class="bchip await"><span class="bdot" style="background:#8aa094"></span>awaiting sync</span>`;
+  const m = brandOf(brandId);
+  return `<span class="bchip" style="color:${m.c};border-color:${m.c}55"><span class="bdot" style="background:${m.c}"></span>${esc(m.s)}</span>`;
+}
+
+/* ── THE JOB RECEIPT, inside every drill-in ─────────────────────────────────
+   The list behind the window's number: one row per job, each with its customer,
+   its own brand chip, its amount, its rep, and which system recorded it. CC
+   contracts and additive Billdu acceptances are one list here exactly as they
+   are one number above — so the rows add up to the headline. ───────────────── */
+function diveSignedJobs(k){
+  const W = flat(k);
+  const list = W.signedList || [];
+  const title = DIVE_TITLE[k];
+  const anyBilldu = list.some(r => r.src === 'billdu');
+  if (!list.length && !W.signedCount) return `<div class="card">
+    <div class="card-title">Jobs signed · ${esc(title.toLowerCase())}<span class="feed-tag none">nothing yet</span></div>
+    <div class="card-sub">No contracts signed in this window to itemise.</div></div>`;
+  const shown = list.length;
+  const rest = (W.signedCount || shown) - shown;
+  return `<div class="card">
+    <div class="card-title">Jobs signed · ${esc(title.toLowerCase())}<span class="feed-tag cc">live · cc</span>${anyBilldu?'<span class="feed-tag billdu">live · billdu</span>':''}</div>
+    <div class="card-sub">Every job behind the number, each tagged with <b>its own</b> brand — a rep who sells across brands shows one row per job, not one blended line. ${W.signedCount} deal${W.signedCount===1?'':'s'} in all.</div>
+    ${list.map(r => `<div class="joblrow">
+      <div class="jobl-top">
+        <div class="jobl-cust">${r.cust ? esc(r.cust) : '<span style="color:var(--text-dim)">name not on the record</span>'}</div>
+        <div class="jobl-amt">${r.amount ? short(r.amount) : '$0'}</div>
+      </div>
+      <div class="jobl-meta">
+        ${brandChip(r.brand, r.resolved)}
+        <span class="jobl-rep">${r.rep ? esc(r.rep) : (r.office ? 'office · unattributed' : 'no rep recorded')}</span>
+        <span class="feed-tag ${r.src==='billdu'?'billdu':'cc'}">live · ${r.src}</span>
+      </div>
+    </div>`).join('')}
+    ${rest > 0 ? `<div class="wfoot" style="margin-top:10px">+ ${rest} more job${rest===1?'':'s'}${W.signedRestValue?` totaling ${short(W.signedRestValue)}`:''} — the fifty largest are listed.</div>` : ''}
+  </div>`;
+}
+
 function diveView(k){
   const W = flat(k), pv = W.prev;
   const d = pv.rev ? Math.round((W.rev - pv.rev)/pv.rev*100) : null;
@@ -1486,6 +1540,8 @@ function diveView(k){
   </div>
 
   <div class="stack dive">
+    ${diveSignedJobs(k)}
+
     <div class="card chart-card full">
       <div class="card-title">${esc(DIVE_SERIES_LABEL[k])}<span class="feed-tag cc">live · cc</span></div>
       <div class="card-sub">Signed value, so this window sits in its own recent history.</div>
@@ -1943,7 +1999,7 @@ addEventListener('resize', () => {
    server for hours while Kevin looked at yesterday's build and reported the bug
    as unfixed. That happened. The page now checks version.json on every load and
    reloads itself once if the deployed build is newer than the one running. */
-const BUILD = '2026-07-23T14:30Z-leads-by-company';
+const BUILD = '2026-07-23T15:40Z-job-receipts';
 const SB_URL = 'https://lzegjjbkfuecrhdvlvay.supabase.co';
 /* The one page that can finish a password reset. Hard-coded rather than derived,
    because every derivation of it so far has been a source of bugs: a bare origin
@@ -2193,6 +2249,11 @@ function buildData(raw){
     ((billdu && billdu.docs) || []).map(d => [String(d.billdu_id), d.rep_id || null]));
   const OFFICE = '__office';
 
+  /* The customer name sits inside the CC job title as "Lastname, Firstname —
+     jobnumber". The number is not part of the identity, so it is dropped; if a
+     title is blank the receipt says so rather than inventing one. */
+  const custName = t => { if (!t) return null; const s = String(t).split(' — ')[0].trim(); return s || null; };
+
   const billduAdd = (a, b) => {
     if (!bFeed) return null;
     const A = ymdOf(a), B = ymdOf(b);
@@ -2246,7 +2307,38 @@ function buildData(raw){
     }
     const unionRev = rev + (bd ? bd.value : 0);
 
+    /* ── THE RECEIPT · every job that made up this number, one row each ────────
+       Kevin: "if I click on the jobs sold today it expands to show the actual
+       job details. Like Eric sells fencing/landscapes/roofing so it needs to
+       differentiate." So each JOB carries its OWN brand, read from that job's
+       own company — a day where Eric signs a fence and an Oasis job is two rows
+       with two different chips, never one blurred rep total. CC contracts and
+       the additive Billdu acceptances are unioned and tagged by source system,
+       so the list reconciles to the union figure above it. A job whose company
+       does not resolve to a known brand is shown as awaiting sync, never guessed
+       into one. Stored top-50 by value to keep the payload lean; the count and
+       the remaining value are kept so the card can say what it did not list. */
+    const ccRows = js.map(j => {
+      const bid = rollup(j.cc_company_id || 'unknown');
+      return { cust: custName(j.title), brand: bid, resolved: !!BRANDS[bid],
+               amount: Number(j.fin_sold_amount||0),
+               rep: j.rep_id ? (repById[j.rep_id]?.name || 'Unknown') : null,
+               src: 'cc' };
+    });
+    const bdRows = (bd ? bd.rows : []).map(r => {
+      const rid = bRepOf[String(r.billdu_id)] || OFFICE;
+      return { cust: r.client_name || null, brand: OASIS, resolved: true,
+               amount: Number(r.accepted_value||0),
+               rep: rid === OFFICE ? null : (repById[rid]?.name || 'Unknown'),
+               office: rid === OFFICE, src: 'billdu' };
+    });
+    const fullList = [...ccRows, ...bdRows].sort((a,b) => b.amount - a.amount);
+    const CAP = 50;
+
     return {
+      signedList: fullList.slice(0, CAP),
+      signedCount: fullList.length,
+      signedRestValue: fullList.slice(CAP).reduce((n,r) => n + r.amount, 0),
       // rev is the COMPANY figure — both systems. ccRev keeps the seam readable.
       company:{ jobs:js.length, rev: unionRev, ccRev: rev,
                 billdu: bd ? bd.value : 0, billduCount: bd ? bd.count : 0,
@@ -3028,7 +3120,7 @@ async function loadAll(){
     // reporting_excluded comes down WITH the rows rather than being filtered in
     // the query, so the console can say how much it left out instead of silently
     // showing a smaller number than last time.
-    qp('jobs?select=cc_company_id,cc_project_id,rep_id,contract_signed_at,completed_at,cc_lead_source_id,fin_sold_amount,reporting_excluded,reporting_exclusion_reason&source=eq.cc'),
+    qp('jobs?select=cc_company_id,cc_project_id,rep_id,contract_signed_at,completed_at,cc_lead_source_id,fin_sold_amount,reporting_excluded,reporting_exclusion_reason,title&source=eq.cc'),
     // cc_created_at is what makes a like-for-like booking comparison possible:
     // "what was on the books last Monday" has to count only what was booked BY
     // last Monday, not what the week eventually filled with.
