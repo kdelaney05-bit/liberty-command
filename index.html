@@ -140,6 +140,25 @@
   .rep-head .amt span { color: var(--text-dim); font-size: 10px; }
   .meter { height: 7px; background: rgba(255,255,255,0.05); border-radius: 100px; overflow: hidden; }
   .meter-fill { height: 100%; border-radius: 100px; }
+  /* appointments by company — one tile per company, count vs a measured typical,
+     the tick marks typical. Three across where there is room, stacked on a phone. */
+  .apco-tiles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 14px; }
+  @media (max-width: 620px) { .apco-tiles { grid-template-columns: 1fr; } }
+  .apco-tile { background: var(--bg-card-hi); border: 1px solid var(--line); border-radius: 12px; padding: 15px; }
+  .apco-nm { display: flex; align-items: center; gap: 8px; font-size: 13.5px; font-weight: 500; margin-bottom: 10px; }
+  .apco-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+  .apco-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+  .apco-n { font-family: 'Fraunces', serif; font-size: 30px; font-weight: 500; line-height: 1; }
+  .apco-delta { font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 600; letter-spacing: .02em; }
+  .apco-delta.down { color: #d8997f; } .apco-delta.up { color: var(--green-soft); } .apco-delta.flat { color: var(--text-dim); }
+  .apco-track { position: relative; height: 8px; background: rgba(255,255,255,0.06); border-radius: 100px; margin-top: 12px; }
+  .apco-fill { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 100px; min-width: 2px; }
+  .apco-tick { position: absolute; top: -3px; bottom: -3px; width: 2px; background: var(--text); opacity: .8; border-radius: 2px; }
+  .apco-cap { font-family: 'JetBrains Mono', monospace; font-size: 9px; color: var(--text-dim); margin-top: 9px; letter-spacing: .03em; line-height: 1.5; }
+  .apco-cap b { color: var(--text); font-weight: 600; }
+  .apco-cap .s { display: block; margin-top: 3px; opacity: .8; }
+  .apco-pending { font-family: 'JetBrains Mono', monospace; font-size: 10.5px; font-style: italic; color: var(--text-dim); margin-top: 14px; padding-top: 13px; border-top: 1px solid var(--line); display: flex; align-items: baseline; gap: 7px; line-height: 1.5; }
+  .apco-pending .d { width: 6px; height: 6px; border-radius: 50%; background: #8aa094; flex-shrink: 0; position: relative; top: 3px; }
   .brand-tile { background: var(--bg-card-hi); border: 1px solid var(--line); border-radius: 12px; padding: 14px; margin-bottom: 10px; }
   .brand-tile:last-child { margin-bottom: 0; }
   .brand-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; }
@@ -422,7 +441,7 @@
        .full. Putting this after silently cancelled the span. */
     .stack > .full { column-span: none; }
     /* the two that earn the full width */
-    .stack > .acts, .stack > .appt { column-span: all; margin-bottom: 26px; }
+    .stack > .acts, .stack > .appt, .stack > .apco-band { column-span: all; margin-bottom: 26px; }
 
     /* Folded rows run the full width as a strip beneath the grid, rather than
        being packed into the columns with everything else. Two reasons, both
@@ -552,6 +571,10 @@ let D = null;
 // Card-scoped windows. The page as a whole stays MTD per the model; only the
 // scoreboard and the lead-source table carry their own range.
 let EFFWIN = 'month', LEADWIN = 'month', LEADTRADE = '1461';
+/* Defaults to month: it is where Kevin's question started ("month-to-date
+   doesn't break down per company") and the most stable of the three — a single
+   day of bookings is noisy and half-filled, a month-to-date is not. */
+let APPTCOWIN = 'month';
 // null = the snapshot home; 'day'|'week'|'month'|'ytd' = that window, full screen
 let DIVE = null;
 /* v1 follows the model's own windows: the month card set is monthly, the
@@ -781,6 +804,70 @@ function cardAppointments(){
       The appointment feed last synced <b>${A.staleHours<24?`${Math.round(A.staleHours)} hours`:`${Math.round(A.staleHours/24)} days`} ago</b>. Anything booked since then is not counted here, so the week ahead can only look thinner than it is — never fuller.</div></div>`:''}
 
     <div class="note">Appointments are booked a median of <b>${A.leadMedianDays} days</b> ahead, which is why the forward number means something: most of a week is not booked the morning of. Of the <b>${A.coverage.dated.toLocaleString()}</b> appointments in the last 13 months — the span this page reads, since nothing here looks further back — <b>${A.coverage.withProject.toLocaleString()}</b> resolve to a brand, and the rest are left out of the brand split rather than bucketed as unknown.</div>
+  </div>`;
+}
+
+/* ── APPOINTMENTS BY COMPANY ─────────────────────────────────────────────────
+   Kevin needed to separate appointments per company across today / week / month
+   with an honest "up or down against typical", so "Oasis is down when we think
+   it is" stops being a hunch. Rows are the three brands (Pro-Tec already carries
+   legacy 1537 via the DBA rollup); the toggle picks the window; each row reads
+   its count against a measured typical, with the tick on the bar marking where
+   typical sits. Down is amber and states the deficit; up is green. ──────────── */
+function cardApptByCompany(){
+  const A = D.appointments; if (!A || !A.byCompany) return '';
+  const K = APPTCOWIN, W = A.byCompany[K];
+  const rows = BRAND_ORDER.map(b => {
+    const m = brandOf(b);
+    const n = W.counts[b] || 0;
+    const t = (W.typ[b] || {}).mean || 0;
+    const vals = (W.typ[b] || {}).vals || null;
+    const rd = Math.round(t);
+    const gap = n - rd;
+    const pct = t ? Math.round((n - t)/t*100) : null;
+    const dir = !t ? 'flat' : n > t ? 'up' : n < t ? 'down' : 'flat';
+    return { m, n, t, rd, gap, pct, dir, vals };
+  });
+  const scale = Math.max(1, ...rows.map(r => Math.max(r.n, r.t)));
+  const unknown = W.counts.unknown || 0;
+  const spanLabel = { day:'today', week:'this week', month:'this month' }[K];
+  return `<div class="card full apco-band">
+    <div class="card-title">Appointments by company<span class="feed-tag cc">live · cc</span></div>
+    <div class="card-sub">New appointments <b>booked</b> ${spanLabel}, by company, each against ${W.typLabel} — like for like, never a partial window against a finished one.</div>
+
+    <div class="seg">
+      ${[['day','Today'],['week','Week'],['month','Month']]
+        .map(([k,l])=>`<button class="${k===K?'on':''}" onclick="setApptCo('${k}')">${l}</button>`).join('')}
+    </div>
+
+    <div class="apco-tiles">
+    ${rows.map(r => {
+      const arrow = r.dir==='up'?'▲':r.dir==='down'?'▼':'▬';
+      const pill = r.t ? `${arrow} ${Math.abs(r.pct)}%` : 'no baseline';
+      const fillColor = r.dir==='up'?'var(--green)':r.dir==='down'?'#d8997f':'var(--text-dim)';
+      return `<div class="apco-tile">
+        <div class="apco-nm"><span class="apco-dot" style="background:${r.m.c}"></span>${esc(r.m.s)}</div>
+        <div class="apco-head">
+          <span class="apco-n">${r.n}</span>
+          <span class="apco-delta ${r.dir}">${pill}</span>
+        </div>
+        <div class="apco-track">
+          <div class="apco-fill" style="width:${Math.round(r.n/scale*100)}%;background:${fillColor}"></div>
+          ${r.t?`<div class="apco-tick" style="left:${Math.round(r.t/scale*100)}%" title="typical ${r.rd}"></div>`:''}
+        </div>
+        <div class="apco-cap">
+          ${r.n} booked · <b>${r.t?r.rd:'—'}</b> typical${r.t&&r.gap?` · <b style="color:${r.gap<0?'#d8997f':'var(--green-soft)'}">${Math.abs(r.gap)} ${r.gap<0?'behind':'ahead'}</b>`:''}
+          <span class="s">${r.vals?esc(r.vals.join(' · ')):esc(W.sampleLabel)}</span>
+        </div>
+      </div>`;
+    }).join('')}
+    </div>
+
+    ${unknown?`<div class="apco-pending"><span class="d"></span><span>counting… <b>${unknown}</b> booked ${spanLabel} awaiting project sync — booked against projects the sync has not delivered yet, so not attributed to a company and not in the tiles above.</span></div>`:''}
+
+    ${K==='day'
+      ? `<div class="note">Today is still filling — bookings arrive through the day, so a company below its weekday typical this morning is not yet a slow day. <b>Week and month are the steadier read.</b> Booking basis: counted when the appointment was set.</div>`
+      : `<div class="note">Booking basis — counted when the appointment was <b>set</b>, which is what measures the setting team's output, not what the crews drive to. "Typical" is the mean of the ${esc(W.sampleLabel)} over the same elapsed span, measured rather than targeted; the tick on each bar marks it.</div>`}
   </div>`;
 }
 
@@ -1605,7 +1692,7 @@ function render(){
       /* Order is a statement of what matters, and now so is what stays open.
          These six are the cockpit at cruise: what needs him, the appointments
          his week turns on, and the money already on the board. */
-      cardActions(), cardAppointments(), cardApptTrends(),
+      cardActions(), cardAppointments(), cardApptByCompany(), cardApptTrends(),
       cardWeeks(), cardStats(), cardTrending(),
 
       /* Everything below folds, and folds together, so they land as one quiet
@@ -1639,6 +1726,7 @@ function keepScroll(fn){
   window.scrollTo({ top: y });
 }
 function setEff(k){ keepScroll(() => { EFFWIN = k; }); }
+function setApptCo(k){ keepScroll(() => { APPTCOWIN = k; }); }
 function setLead(k){ keepScroll(() => { LEADWIN = k; }); }
 function setTrade(b){ keepScroll(() => { LEADTRADE = b; }); }
 
@@ -1848,7 +1936,7 @@ addEventListener('resize', () => {
    server for hours while Kevin looked at yesterday's build and reported the bug
    as unfixed. That happened. The page now checks version.json on every load and
    reloads itself once if the deployed build is newer than the one running. */
-const BUILD = '2026-07-21T21:55Z-union-nowolf';
+const BUILD = '2026-07-23T13:20Z-appts-by-company';
 const SB_URL = 'https://lzegjjbkfuecrhdvlvay.supabase.co';
 /* The one page that can finish a password reset. Hard-coded rather than derived,
    because every derivation of it so far has been a source of bugs: a bare origin
@@ -2326,6 +2414,81 @@ function buildData(raw){
       brandNorm[b] = { median: v.length ? v[Math.floor(v.length/2)] : 0, days: v.length };
     }
 
+    /* ── APPOINTMENTS BY COMPANY · today / week / month, each like-for-like ────
+       Kevin, from the office laptop: "month-to-date doesn't break down
+       appointments per company… I need to separate them… Oasis is down when we
+       think it is, but I don't really know. I need to know these things."
+
+       Booking basis (cc_created_at) — the setters' output, the number he watches.
+       Every window is compared against the SAME ELAPSED SPAN of prior periods,
+       never a partial window against a finished one: this week's Monday-through-
+       today against the same Monday-through-same-weekday of the prior four weeks,
+       this month's first-N-days against the first-N-days of the prior three
+       months. That is the week-reset discipline, applied per company. "Typical"
+       is measured from real prior periods — never a target set by hand, never an
+       invented threshold. The card shows direction and size against it and lets
+       Kevin read the verdict himself.
+
+       Bookings whose project the sync has not delivered resolve to no company.
+       They are counted and surfaced as "N awaiting project sync", never dropped
+       and never guessed into a brand — the same defect that made the setter
+       alarm cry wolf earlier this week. */
+    const bookedByBrandInRange = (x, y) => {
+      const by = { unknown: 0 };
+      for (const b of BRAND_ORDER) by[b] = 0;
+      for (let d = new Date(x); d < y; d = addD(d, 1))
+        for (const r of createdOn(ymdL(d))) {
+          const b = projBrand[String(r.cc_project_id)] || 'unknown';
+          by[b] = (by[b] || 0) + 1;
+        }
+      return by;
+    };
+    /* mean count for one brand across a set of prior periods, each [start, +len days).
+       Samples are kept so the receipt can show which periods the typical came
+       from — a typical nobody can interrogate is exactly what this page refuses
+       to print. */
+    const priorMean = (b, starts, lenDays) => {
+      const vals = starts.map(s => {
+        let n = 0;
+        for (let i = 0; i < lenDays; i++)
+          n += createdOn(ymdL(addD(s, i)))
+                 .filter(r => (projBrand[String(r.cc_project_id)]||'unknown') === b).length;
+        return n;
+      });
+      return { vals, mean: vals.length ? vals.reduce((a,c)=>a+c,0)/vals.length : 0 };
+    };
+    const elapsedWk = ((T.getDay()+6)%7) + 1;   // days Mon..today inclusive
+    const elapsedMo = T.getDate();              // days 1..today inclusive
+    const winEnd = addD(T, 1);
+    const byCompany = {
+      day: {
+        typLabel: 'a typical weekday', sampleLabel: 'median weekday · last 8 weeks',
+        partial: true,
+        counts: bookedByBrandInRange(T, winEnd),
+        // the same weekday-median baseline the daily alarm already trusts, so the
+        // page never shows two different "typical today" numbers for one brand
+        typ: Object.fromEntries(BRAND_ORDER.map(b => [b, { mean: brandNorm[b].median, vals: null }])),
+      },
+      week: (() => {
+        const starts = [1,2,3,4].map(w => addD(sow(T), -7*w));
+        return {
+          typLabel: `the same ${elapsedWk} day${elapsedWk===1?'':'s'} of the prior 4 weeks`,
+          sampleLabel: 'prior 4 weeks', partial: elapsedWk < 7,
+          counts: bookedByBrandInRange(sow(T), winEnd),
+          typ: Object.fromEntries(BRAND_ORDER.map(b => [b, priorMean(b, starts, elapsedWk)])),
+        };
+      })(),
+      month: (() => {
+        const starts = [1,2,3].map(m => new Date(T.getFullYear(), T.getMonth()-m, 1));
+        return {
+          typLabel: `the same ${elapsedMo} day${elapsedMo===1?'':'s'} of the prior 3 months`,
+          sampleLabel: 'prior 3 months', partial: true,
+          counts: bookedByBrandInRange(som(T), winEnd),
+          typ: Object.fromEntries(BRAND_ORDER.map(b => [b, priorMean(b, starts, elapsedMo)])),
+        };
+      })(),
+    };
+
     // creation-basis series, alongside the calendar-load series
     const bookedSeries = [];
     for (let i = 13; i >= 0; i--) { const d = addD(T,-i);
@@ -2394,6 +2557,7 @@ function buildData(raw){
       series, weekly, monthly: monthlyA,
       brandsAhead: byBrandWin(T, addD(T,7)),
       brandsMonth: byBrandWin(som(NOW), addD(T,1)),
+      byCompany,
       windows: Object.fromEntries(Object.entries(WINS).map(([k,wv]) => [k, count(wv.from, wv.to)])),
 
       /* Per-window appointment detail for the drill-ins. Kevin: "When I click on
