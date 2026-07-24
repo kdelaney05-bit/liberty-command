@@ -202,6 +202,7 @@
   .proj-u { font-family: 'JetBrains Mono', monospace; font-size: 9px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-dim); line-height: 1.55; }
   .proj-u span { text-transform: none; letter-spacing: 0.02em; }
   .goalchip { font-family: 'JetBrains Mono', monospace; font-size: 7.5px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-dim); border: 1px solid var(--line); border-radius: 100px; padding: 1px 7px; }
+  .lumpwarn { font-size: 11px; line-height: 1.5; color: var(--gold); margin-top: 9px; padding: 8px 10px; background: rgba(212,177,90,0.06); border-left: 2px solid rgba(212,177,90,0.5); border-radius: 0 6px 6px 0; }
   .pace-bar { height: 8px; background: rgba(255,255,255,0.05); border-radius: 100px; position: relative; overflow: hidden; margin-bottom: 6px; }
   .pace-fill { height: 100%; border-radius: 100px; }
   .pace-foot { display: flex; justify-content: space-between; font-family: 'JetBrains Mono', monospace; font-size: 9px; color: var(--text-dim); }
@@ -1187,26 +1188,34 @@ function cardStats(){
    a number the team committed to. ─────────────────────────────────────────── */
 function cardTrending(){
   const W = w();
-  const now = new Date();
-  const days = new Date(now.getFullYear(), now.getMonth()+1, 0).getDate();
-  const elapsed = W.prevSpanDays;
+  const SH = D.monthShape || {};
+  const elapsed = SH.elapsedDOM || W.prevSpanDays;
+  const days = SH.dim || new Date(new Date().getFullYear(), new Date().getMonth()+1, 0).getDate();
   const rows = allBrands(W.brands).sort((a,b) => b.rev - a.rev);
   return `<div class="card">
     <div class="card-title">Trending to finish<span class="feed-tag cc">live · cc</span><span class="feed-tag seed">goal · auto-set</span></div>
-    <div class="card-sub">Where each brand lands this month if the current daily rate holds. Solid bar is booked; the faded run-on is the projection.</div>
+    <div class="card-sub">Where each brand lands this month, projected from <b>how its own months usually fill</b> — not a flat daily rate. Day ${elapsed} of ${days}. Solid bar is booked; the faded run-on is the projection.</div>
     ${rows.length ? rows.map(b => {
       const m = brandOf(b.id);
-      const proj = elapsed ? b.rev / elapsed * days : b.rev;
+      const linear = elapsed ? b.rev / elapsed * days : b.rev;
+      const sh = SH[b.id];
+      const shaped = (sh && sh.frac > 0 && sh.n >= 3) ? Math.round(b.rev / sh.frac) : null;
+      // the headline is the shaped number where the history supports it; linear
+      // is kept beside it so the method is visible, not hidden
+      const proj = shaped != null ? shaped : linear;
       const tgt = D.targets.monthly[b.id] || 0;
-      const mx = Math.max(proj, tgt, b.rev, 1);
+      const mx = Math.max(proj, linear, tgt, b.rev, 1);
       const hit = tgt && proj >= tgt;
+      // lumpiness: is the projection resting on one big deal rather than a base?
+      const big = b.jobList && b.jobList[0];
+      const bigShare = (big && b.rev) ? big.amount / b.rev : 0;
       return `<div class="brand-tile">
         <div class="brand-top">
           <div class="nm">${esc(m.n)}<span class="tag">${b.jobs} signed${m.unmapped?' · unmapped id':''}</span></div>
         </div>
         <div class="proj-head">
           <div class="proj-v" style="color:${tgt ? (hit?'var(--green-soft)':'var(--gold)') : 'var(--text)'}">${short(proj)}</div>
-          <div class="proj-u">projected finish<br/><span>${short(b.rev)} booked so far</span></div>
+          <div class="proj-u">projected finish<br/><span>${short(b.rev)} booked · ${shaped!=null?`shape from ${sh.n} mo`:'flat rate'}</span></div>
         </div>
         <div class="pace-bar">
           <div class="pace-proj" style="width:${Math.round(proj/mx*100)}%;background:${m.c}"></div>
@@ -1214,10 +1223,11 @@ function cardTrending(){
         </div>
         <div class="tgt-cap">
           ${tgt ? `<span class="${hit?'hit':'miss'}">${hit?'clears':'short of'} goal <b>${short(tgt)}</b></span>` : `<span>no goal set</span>`}
-          <span class="goalchip">auto-set from avg</span>
+          ${shaped!=null ? `<span class="goalchip">vs flat rate ${short(linear)}</span>` : `<span class="goalchip">too little history to shape</span>`}
         </div>
+        ${bigShare >= 0.25 ? `<div class="lumpwarn">⚠ one ${short(big.amount)} deal is ${Math.round(bigShare*100)}% of ${esc(m.s)}'s month — the projection leans on it, so treat it as soft.</div>` : ''}
       </div>`}).join('') : '<div class="card-sub" style="margin:0">Nothing signed in this window.</div>'}
-    <div class="note"><b>Goals are auto-set, not committed to.</b> ${esc(D.targets.note)}</div>
+    <div class="note"><b>Projection is shape-aware.</b> Each brand's finish is its booked value divided by the share of the month it has typically signed by day ${elapsed} — measured on its own Contractors Cloud history, median of up to six prior months. Oasis front-loads, so a flat daily rate overstated it; Fencing tails late, so the flat rate understated it. Where fewer than three months exist to learn from, it falls back to the flat rate and says so. <b>Goals are auto-set, not committed to.</b> ${esc(D.targets.note)}</div>
   </div>`;
 }
 
@@ -2442,7 +2452,7 @@ addEventListener('resize', () => {
    server for hours while Kevin looked at yesterday's build and reported the bug
    as unfixed. That happened. The page now checks version.json on every load and
    reloads itself once if the deployed build is newer than the one running. */
-const BUILD = '2026-07-24T01:15Z-recommendations';
+const BUILD = '2026-07-24T02:20Z-shape-projection';
 const SB_URL = 'https://lzegjjbkfuecrhdvlvay.supabase.co';
 /* The one page that can finish a password reset. Hard-coded rather than derived,
    because every derivation of it so far has been a source of bugs: a bare origin
@@ -3246,6 +3256,46 @@ function buildData(raw){
       monthly };
   })();
 
+  /* ── MONTH SHAPE ──────────────────────────────────────────────────────────
+     Kevin, on Trending to Finish: "Is Oasis really on pace to sell that much
+     this month? No way."
+
+     He was right, and it is the projection method, not the input — the $379K
+     Oasis has booked is verified correct. The old projection was linear: booked
+     ÷ days-elapsed × days-in-month, i.e. "if today's daily rate holds all month".
+     But months are not flat. Measured on Contractors Cloud signing history,
+     Oasis lands ~85% of its month by the 23rd — it front-loads and tails off —
+     so projecting a fifth week it does not historically have overshoots by tens
+     of thousands. Fencing is the opposite, a touch back-loaded, so the same fix
+     nudges it up. The shape is per brand because the brands genuinely differ.
+
+     Measured on CC reportable value, which is the clean, computable signing
+     cadence; the projection then scales the union (CC + Billdu) booked by it, on
+     the assumption Billdu signs to the same monthly rhythm. Needs at least three
+     prior full months or it declines to shape and says so. */
+  const monthShape = (() => {
+    const elapsedDOM = NOW.getDate();
+    const dim = new Date(NOW.getFullYear(), NOW.getMonth()+1, 0).getDate();
+    const curKey = ymdOf(som(NOW)).slice(0,7);
+    const med = a => { const v=[...a].sort((x,y)=>x-y), n=v.length;
+      return n ? (n%2 ? v[(n-1)/2] : (v[n/2-1]+v[n/2])/2) : 0; };
+    const out = { elapsedDOM, dim };
+    for (const bid of BRAND_ORDER) {
+      const months = {};
+      for (const j of jobs) {
+        if (rollup(j.cc_company_id) !== bid || !j.contract_signed_at) continue;
+        const d = String(j.contract_signed_at).slice(0,10), m = d.slice(0,7), amt = Number(j.fin_sold_amount||0);
+        (months[m] ??= { full:0, e:0 }).full += amt;
+        if (Number(d.slice(8,10)) <= elapsedDOM) months[m].e += amt;
+      }
+      const priors = Object.keys(months).filter(m => m < curKey && months[m].e>0 && months[m].full>0).sort().slice(-6);
+      const fracs = priors.map(m => months[m].e / months[m].full);
+      const frac = med(fracs);
+      out[bid] = { frac, n: fracs.length };
+    }
+    return out;
+  })();
+
   const effort = (() => {
     const wt = Object.fromEntries(playComponents.map(p=>[p.key,p.weight]));
     const goals = Object.fromEntries(repTargets.map(t=>[t.rep_id,t]));
@@ -3726,7 +3776,7 @@ function buildData(raw){
       apptsWithRep: appts.filter(a=>a.rep_id).length, touches: touches.length,
       // Coverage of the field every dollar on this page is actually built from.
       jobsWithSold: jobs.filter(j=>Number(j.fin_sold_amount)>0).length },
-    weeks, daily, monthly, cadence, targets, effort, leadSources, qb, appointments,
+    weeks, daily, monthly, cadence, targets, monthShape, effort, leadSources, qb, appointments,
     // window bounds as plain YYYY-MM-DD, so the Billdu feed (whose dates are
     // already resolved to Eastern) can be filtered without re-parsing timezones
     windowRange: Object.fromEntries(Object.entries(WINS).map(([k,wv]) =>
