@@ -322,6 +322,22 @@
   .sr-open .sig-k { margin-bottom: 6px; }
   @media (hover: hover) { .sigrow:hover .sr-subj { color: #fff; } }
 
+  /* ── recommendations: notice, do, and here is exactly how ────────────────── */
+  .recs { margin-top: 12px; padding-top: 11px; border-top: 1px solid var(--line); }
+  .recs-h { font-family: 'JetBrains Mono', monospace; font-size: 8.5px; letter-spacing: 0.16em;
+    text-transform: uppercase; color: var(--green); font-weight: 700; margin-bottom: 8px; }
+  .rec-line { display: flex; gap: 8px; align-items: baseline; font-size: 13px; line-height: 1.55;
+    color: var(--text); margin-bottom: 7px; }
+  .rec-bullet { color: var(--green); font-family: 'JetBrains Mono', monospace; font-size: 11px; flex-shrink: 0; }
+  .draftbox { margin-top: 10px; background: rgba(255,255,255,0.03); border: 1px solid var(--line);
+    border-radius: 10px; padding: 11px 12px; }
+  .draft-t { font-size: 12.5px; line-height: 1.6; color: var(--text-dim); font-style: italic; }
+  .copybtn { margin-top: 9px; background: rgba(108,194,139,0.1); border: 1px solid rgba(108,194,139,0.4);
+    color: var(--green-soft); border-radius: 8px; padding: 6px 12px; cursor: pointer;
+    font-family: 'JetBrains Mono', monospace; font-size: 9.5px; letter-spacing: 0.1em; text-transform: uppercase; }
+  .copybtn:hover { background: rgba(108,194,139,0.18); }
+  .copybtn.ok { background: rgba(108,194,139,0.25); color: #fff; }
+
   /* ── the checklist: tick it off, and the rest behind one quiet row ───────── */
   .sigcheck { margin-left: auto; width: 27px; height: 27px; border-radius: 8px; flex-shrink: 0;
     border: 1px solid var(--line); background: rgba(255,255,255,0.03); color: var(--text-dim);
@@ -1614,8 +1630,44 @@ function sigRow(s){
       <div class="sig-k">${SEV[s.sev].k}</div>
       <div class="sig-n">${esc(s.notice)}</div>
       <div class="sig-d"><span class="sig-arrow">→</span>${esc(s.action)}</div>
+      ${s.rec && s.rec.lines && s.rec.lines.length ? `<div class="recs">
+        <div class="recs-h">Recommended</div>
+        ${s.rec.lines.map(l=>`<div class="rec-line"><span class="rec-bullet">→</span>${esc(l)}</div>`).join('')}
+        ${s.rec.draft ? `<div class="draftbox">
+          <div class="draft-t">${esc(s.rec.draft)}</div>
+          <button class="copybtn" onclick="event.stopPropagation();copyDraft('${esc(k)}',this)">Copy message</button>
+        </div>` : ''}
+      </div>` : ''}
     </div>
   </div>`;
+}
+
+/* Copy, never send. The console has no outbound channel and is not getting one:
+   a dashboard that can message the team on its own is a dashboard that can
+   message the team by mistake. Kevin taps, reads it, sends it himself. */
+function copyDraft(k, btn){
+  const s = ((D.signals && D.signals.list) || []).find(x => sigKey(x) === k);
+  if (!s || !s.rec || !s.rec.draft) return;
+  const reset = () => setTimeout(()=>{ btn.textContent='Copy message'; btn.classList.remove('ok'); }, 1900);
+  const ok = () => { btn.textContent = 'Copied ✓'; btn.classList.add('ok'); reset(); };
+  /* If the clipboard API is refused — an insecure context, or a browser that
+     wants a closer user gesture — SELECT the draft instead of just saying the
+     word "copy". A dead button that blames the user is worse than no button;
+     this way a long-press or ⌘C still gets him the message. */
+  const fallback = () => {
+    const el = btn.parentElement && btn.parentElement.querySelector('.draft-t');
+    if (el && window.getSelection) {
+      const r = document.createRange(); r.selectNodeContents(el);
+      const sel = window.getSelection(); sel.removeAllRanges(); sel.addRange(r);
+      btn.textContent = 'Selected — copy it';
+    } else { btn.textContent = 'Copy failed'; }
+    reset();
+  };
+  try {
+    if (navigator.clipboard && navigator.clipboard.writeText)
+      navigator.clipboard.writeText(s.rec.draft).then(ok).catch(fallback);
+    else fallback();
+  } catch(e) { fallback(); }
 }
 
 /* THE DIGEST — every open item stitched into a couple of sentences, the way
@@ -2390,7 +2442,7 @@ addEventListener('resize', () => {
    server for hours while Kevin looked at yesterday's build and reported the bug
    as unfixed. That happened. The page now checks version.json on every load and
    reloads itself once if the deployed build is newer than the one running. */
-const BUILD = '2026-07-24T00:20Z-weekday-shape';
+const BUILD = '2026-07-24T01:15Z-recommendations';
 const SB_URL = 'https://lzegjjbkfuecrhdvlvay.supabase.co';
 /* The one page that can finish a password reset. Hard-coded rather than derived,
    because every derivation of it so far has been a source of bugs: a bare origin
@@ -3428,9 +3480,51 @@ function buildData(raw){
   const signals = (() => {
     const S = [];
     /* brief = the terse clause the digest stitches into prose and the inbox row
-       shows on its single line. Each signal writes its own, because only the
-       signal knows which of its numbers is the one worth carrying. */
-    const add = (sev, id, tags, notice, action, brief) => S.push({ sev, id, tags, notice, action, brief });
+       shows on its single line. rec = the recommended actions behind the tap.
+       Each signal writes its own, because only the signal knows which of its
+       numbers is the one worth carrying. */
+    const add = (sev, id, tags, notice, action, brief, rec) => S.push({ sev, id, tags, notice, action, brief, rec });
+
+    /* ── WHO TO GO TO ─────────────────────────────────────────────────────────
+       Kevin: "text this person, call this person… You should know what I need
+       to do."
+
+       Every name here is resolved AT RUNTIME from the reps table's own role and
+       company columns — never hard-coded. Two reasons, and both matter. The
+       deployed bundle is a public repo, so an employee name written into the
+       source would be a leak the pre-publish gate rightly blocks. And a name
+       typed into code is a claim nobody checked; a name read from `reps` is a
+       fact the database is willing to stand behind.
+
+       Where a role resolves to exactly one active person, the recommendation
+       names them. Where several people hold it, it names them as the team
+       rather than guessing which one Kevin meant. It never invents a person to
+       make a sentence read better. */
+    const activeReps = (reps || []).filter(r => r.active);
+    const byRole = (role, co) => activeReps.filter(r =>
+      r.role === role && (co == null || String(r.cc_default_company_id) === String(co)));
+    /* NAME ONLY WHEN THE DATA IS SURE. If exactly one active person holds a
+       role, the recommendation names them. If several do, it says the role and
+       lets Kevin pick — because reading three names off a roster is not "text
+       this person", and one of them being wrong is worse than none being named.
+       Tested against the live table this matters: the Fencing office role holds
+       four active people, one of whom is plainly a junk record, and a
+       recommendation that told Kevin to text them would have burned the whole
+       feature's credibility on its first morning. */
+    const nameList = (a, fallback) => (a && a.length === 1) ? a[0].name : fallback;
+    const ORG = {
+      office:     byRole('office', '1461'),
+      mgrFencing: byRole('manager', '1461'),
+      mgrOasis:   byRole('manager', '1560'),
+      mgrRoofing: byRole('manager', '1563'),
+    };
+    ORG.officeWho  = nameList(ORG.office, 'the office team');
+    ORG.setterWho  = nameList(ORG.office, 'the setters');
+    ORG.oasisWho   = nameList(ORG.mgrOasis, 'the Oasis manager');
+    ORG.salesWho   = nameList(ORG.mgrFencing, 'the sales managers');
+    const mgrForBrand = b => b === '1560' ? nameList(ORG.mgrOasis, 'the Oasis manager')
+                          : b === '1563' ? nameList(ORG.mgrRoofing, 'the roofing manager')
+                          : nameList(ORG.mgrFencing, 'the sales managers');
     const A = appointments, hour = NOW.getHours();
     const isWeekday = ![0,6].includes(NOW.getDay());
     const afternoon = hour >= 13;
@@ -3441,7 +3535,9 @@ function buildData(raw){
       add('watch', 'sync-stale', ['appointments','flags'],
         `The appointment feed last synced ${A.staleHours < 24 ? Math.round(A.staleHours)+' hours' : Math.round(A.staleHours/24)+' days'} ago.`,
         `Today's booking count can only read low. Treat it as provisional until the sync catches up rather than acting on it.`,
-        `the appointment feed is ${A.staleHours < 24 ? Math.round(A.staleHours)+'h' : Math.round(A.staleHours/24)+'d'} stale`);
+        `the appointment feed is ${A.staleHours < 24 ? Math.round(A.staleHours)+'h' : Math.round(A.staleHours/24)+'d'} stale`,
+        { lines: ['Nobody to call on this one — it is the Contractors Cloud feed, not the team.',
+                  'Hold off acting on today’s booking count until it catches up; it can only read low.'] });
     }
 
     // ── setting output today (afternoon only, weekdays only)
@@ -3454,11 +3550,16 @@ function buildData(raw){
       if (r < 0.5) add('fire', 'booking-day-low', ['appointments','flags','dive:day'],
         `Only ${A.bookedToday} appointments booked today against ${A.bookedNormHour} typical for a ${dayName} ${byWhen}.`,
         `Get the setters on the phone this afternoon — a day this far behind does not recover on its own.`,
-        `bookings well down for a ${dayName} (${A.bookedToday} vs ${A.bookedNormHour})`);
+        `bookings well down for a ${dayName} (${A.bookedToday} vs ${A.bookedNormHour})`,
+        { lines: [`Text ${ORG.setterWho} before the shift ends — ask what is still in tonight's pipeline.`,
+                  `If the gap is real, pull one person onto outbound for the last hour.`],
+          draft: `Hey — we're at ${A.bookedToday} booked today and a ${dayName} normally has ${A.bookedNormHour} by ${hourLabel(A.nowHour)}. What's still in the pipeline for tonight? Anything I can unblock?` });
       else if (r < 0.75) add('watch', 'booking-day-soft', ['appointments','flags','dive:day'],
         `${A.bookedToday} booked today, below the ${A.bookedNormHour} typical for a ${dayName} ${byWhen}.`,
         `Worth a check-in with the setters before the day closes.`,
-        `bookings soft for a ${dayName} (${A.bookedToday} vs ${A.bookedNormHour})`);
+        `bookings soft for a ${dayName} (${A.bookedToday} vs ${A.bookedNormHour})`,
+        { lines: [`Quick check-in with ${ORG.setterWho} before the day closes — no alarm, just a number check.`],
+          draft: `Quick one — we're at ${A.bookedToday} booked and a ${dayName} usually sits around ${A.bookedNormHour} by now. Anything slowing the calls down today?` });
     }
 
     // ── the week ahead
@@ -3466,11 +3567,16 @@ function buildData(raw){
       if (A.vsPrior <= -35) add('fire', 'booking-week-thin', ['appointments','flags','dive:week'],
         `Only ${A.next7} appointments on the books for the next 7 days, against ${A.priorAvg} typical.`,
         `Push setting for next week today — the calendar is filled 3 days out on average, so a thin week ahead is still fixable this afternoon.`,
-        `next week is thin (${A.next7} vs ${A.priorAvg} typical)`);
+        `next week is thin (${A.next7} vs ${A.priorAvg} typical)`,
+        { lines: [`Get ${ORG.setterWho} pushing next week TODAY — appointments are set a median of ${3} days out, so today's calls are next week's calendar.`,
+                  `Ask ${ORG.salesWho} which brand has the capacity to absorb them.`],
+          draft: `Next 7 days is showing ${A.next7} on the books against ${A.priorAvg} typical. Can we put the push on next week today? Today's calls are what fills it.` });
       else if (A.vsPrior <= -20) add('watch', 'booking-week-soft', ['appointments','flags','dive:week'],
         `${A.next7} on the books for next 7 days against ${A.priorAvg} typical.`,
         `Keep an eye on it — one more setting push today closes the gap.`,
-        `next week light (${A.next7} vs ${A.priorAvg} typical)`);
+        `next week light (${A.next7} vs ${A.priorAvg} typical)`,
+        { lines: [`One more setting push today closes it — worth a word with ${ORG.setterWho}.`],
+          draft: `Next week is at ${A.next7} vs ${A.priorAvg} typical. One good push today should close the gap — can we lean on it?` });
     }
 
     // ── per-brand setting, only where the brand has enough baseline to judge
@@ -3506,7 +3612,10 @@ function buildData(raw){
         add('watch', 'brand-booking-' + b, ['appointments','flags','dive:day'],
           `${m.n} booked ${n} appointment${n===1?'':'s'} today against ${norm.median} typical for a ${A.todayDowName} by ${hourLabel(A.nowHour)}.`,
           `Point the setters at ${m.n} for the rest of the day — the other brands are carrying the count.`,
-          `${m.s} quiet for a ${A.todayDowName} (${n} vs ${norm.median})`);
+          `${m.s} quiet for a ${A.todayDowName} (${n} vs ${norm.median})`,
+          { lines: [`Point ${ORG.setterWho} at ${m.n} for the rest of the day — the other brands are carrying the count.`,
+                    `Worth telling ${mgrForBrand(b)} so they know the week may land light.`],
+            draft: `${m.n} is at ${n} booked today and normally has ${norm.median} by now on a ${A.todayDowName}. Can we weight the next block of calls to ${m.s}?` });
       }
     }
 
@@ -3527,10 +3636,22 @@ function buildData(raw){
       if (chase.length) {
         const val = chase.reduce((n,r) => n + r.value, 0);
         const oldest = Math.max(...chase.map(r => r.age || 0));
+        /* Who actually sent them, from the leak view's own sender column — not
+           from a guess about who handles Oasis. When one person sent all of
+           them, that is worth saying; when several did, the recommendation
+           stays with the office team rather than picking a name. */
+        const senders = {};
+        for (const r of chase) if (r.rep) senders[r.rep] = (senders[r.rep] || 0) + 1;
+        const topSender = Object.entries(senders).sort((a,b) => b[1] - a[1])[0];
+        const oneSender = topSender && topSender[1] === chase.length ? topSender[0] : null;
         add('note', 'oasis-import', ['flags','dive:month'],
           `${chase.length} Oasis deal${chase.length===1?'':'s'} worth ${short(val)} never reached Contractors Cloud — oldest ${oldest} days.`,
           `Chase the CC import for these. Until CC has them, anything downstream — scheduling, production, commissions — has not seen the work. Deals our matcher merely could not link are excluded: those are ours to fix, not Oasis's.`,
-          `${short(val)} of Oasis imports still aging`);
+          `${short(val)} of Oasis imports still aging`,
+          { lines: [`Send ${ORG.officeWho} the ${chase.length}-deal list — it is itemised in this month's drill-in under "Oasis · awaiting CC import".`,
+                    `Ask for CC entry by Friday; the oldest has been sitting ${oldest} days and nothing downstream — scheduling, production, commissions — can see it until it lands.`,
+                    ...(oneSender ? [`All ${chase.length} were sent by ${oneSender} — he can confirm which are genuinely missing before anyone re-keys them.`] : [])],
+            draft: `Can you get the ${chase.length} Oasis deals that never made it into Contractors Cloud entered by Friday? It's ${short(val)} of signed work and the oldest is ${oldest} days old — nothing downstream sees it until it's in CC. The list is on the owner console under this month > Oasis awaiting CC import.` });
       }
     }
 
@@ -3541,7 +3662,10 @@ function buildData(raw){
         add('watch', 'ar-heavy', ['flags','dive:month'],
           `Open A/R is ${short(qb.arTotal)} against ${short(invMonth)} invoiced this month — more than a month of billing outstanding.`,
           `Put someone on collections this week; the oldest balances are the ones that stop being collectable.`,
-          `${short(qb.arTotal)} sitting in open A/R`);
+          `${short(qb.arTotal)} sitting in open A/R`,
+          { lines: [`Put someone on collections this week — whoever runs your billing; the oldest balances are the ones that stop being collectable.`,
+                    `Start with the largest open balances: the drill-in's aging list is sorted by size.`],
+            draft: `We're carrying ${short(qb.arTotal)} in open A/R against ${short(invMonth)} invoiced this month — more than a month of billing outstanding. Can we put a pass on collections this week, oldest and largest first?` });
       }
     }
 
@@ -3550,7 +3674,10 @@ function buildData(raw){
       add('note', 'effort-unlogged', ['flags'],
         `Only ${effort.total} touches logged by ${effort.repsEverLogged} of ${effort.activeReps} reps.`,
         `The effort scoreboard stays at zero until reps log in the app. Either the habit needs pushing or the app is not in their hands yet — worth finding out which.`,
-        `only ${effort.repsEverLogged} of ${effort.activeReps} reps logging touches`);
+        `only ${effort.repsEverLogged} of ${effort.activeReps} reps logging touches`,
+        { lines: [`Ask ${ORG.salesWho} to find out which it is: the habit, or the app not being on their phones yet.`,
+                  `The effort board stays at zero either way — it is not broken, it is empty.`],
+          draft: `The touch log is showing ${effort.total} touches from ${effort.repsEverLogged} of ${effort.activeReps} reps. Can you find out whether that's a habit problem or an app-install problem? The scoreboard can't do anything until they're logging.` });
     }
 
     // ── marketing money attributed to a bare id
@@ -3563,7 +3690,10 @@ function buildData(raw){
           add('note', 'sources-unnamed-' + b, ['flags','dive:ytd'],
             `${short(unnamedRev)} of ${m.n}'s signed value sits on lead-source ids with no name.`,
             `Name its top ids in cc_enum_map — until then you can see which sources earn but not which ones to buy more of.`,
-            `${short(unnamedRev)} of ${m.s} leads unattributed`);
+            `${short(unnamedRev)} of ${m.s} leads unattributed`,
+            { lines: [`Have ${ORG.officeWho} name ${m.n}'s top source ids in cc_enum_map — a 15-minute job that unlocks source-level ROI.`,
+                      `Until then you can see which sources earn but not which ones to buy more of.`],
+              draft: `Can someone put names to ${m.n}'s top lead-source ids in cc_enum_map? ${short(unnamedRev)} of signed work is sitting on bare ids, so we can't tell which sources to spend more on. Should be a 15-minute job.` });
         }
       }
     }
@@ -3575,7 +3705,10 @@ function buildData(raw){
       add('watch', 'close-drop', ['flags','dive:month'],
         `Close rate is ${wm.close}% this month against ${wp.close}% last.`,
         `Same appointments, fewer contracts — look at what changed in the pitch or the lead mix before it costs another month.`,
-        `close rate down to ${wm.close}% from ${wp.close}%`);
+        `close rate down to ${wm.close}% from ${wp.close}%`,
+        { lines: [`Sit down with ${ORG.salesWho} on what changed — same appointments, fewer contracts.`,
+                  `Check the lead mix first: a shift in source mix moves close rate before the pitch does.`],
+          draft: `Close rate is ${wm.close}% this month against ${wp.close}% last. Same appointment volume, fewer contracts. Can we look at whether it's the pitch or the lead mix before it costs another month?` });
     }
 
     const order = { fire: 0, watch: 1, note: 2 };
@@ -3643,7 +3776,7 @@ async function loadAll(){
        date, since the booked series is creation-dated and the calendar series is
        appointment-dated, and a row can be recent by one and not the other. */
     qp(`cc_appointments?select=rep_id,starts_at,cc_project_id,cc_created_at,synced_at,is_internal&or=(starts_at.gte.${APPT_SINCE},cc_created_at.gte.${APPT_SINCE})`),
-    qp('reps?select=id,name,initials,role,active'),
+    qp('reps?select=id,name,initials,role,active,cc_default_company_id'),
     qp('touches?select=rep_id,play,occurred_at'),
     qp('rep_targets?select=rep_id,daily_touch_goal,goal_source'),
     qp('score_components?select=key,title,weight&kind=eq.touch&order=ordinal'),
