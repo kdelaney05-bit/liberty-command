@@ -2452,7 +2452,7 @@ addEventListener('resize', () => {
    server for hours while Kevin looked at yesterday's build and reported the bug
    as unfixed. That happened. The page now checks version.json on every load and
    reloads itself once if the deployed build is newer than the one running. */
-const BUILD = '2026-07-24T02:20Z-shape-projection';
+const BUILD = '2026-07-24T03:30Z-unify-attribution';
 const SB_URL = 'https://lzegjjbkfuecrhdvlvay.supabase.co';
 /* The one page that can finish a password reset. Hard-coded rather than derived,
    because every derivation of it so far has been a source of bugs: a bare origin
@@ -2701,6 +2701,28 @@ function buildData(raw){
   const bRepOf = Object.fromEntries(
     ((billdu && billdu.docs) || []).map(d => [String(d.billdu_id), d.rep_id || null]));
   const OFFICE = '__office';
+
+  /* ── ONE SELLER RULE FOR EVERY SURFACE ────────────────────────────────────
+     Kevin: "unattributed stays unattributed everywhere." The console had two
+     ways to name who sold a Billdu deal, and they disagreed:
+
+       · billdu_documents.rep_id (bRepOf) — the backend's mapping. Where it is
+         null the deal was office-sent and stays UNATTRIBUTED.
+       · console_oasis_signings_feed.rep — the view's own column, which still
+         applies the old office-default convention: it credited the Oasis manager
+         for two office-account deals and one that was another rep's — about $14K
+         that is not his.
+
+     The rep leaderboard already uses bRepOf and is correct. The chase card and
+     the leak-row labels were still reading the feed column, so a single deal
+     could name a seller there while counting as unattributed on the board. This
+     resolves every surface through bRepOf, once. Two Oasis reps share the Billdu
+     login, so authorship is not sellership — where the mapping is unsure the deal
+     stays unowned rather than guessed onto a manager. */
+  const sellerOf = billduId => {
+    const rid = bRepOf[String(billduId)];
+    return rid ? (repById[rid]?.name || null) : null;
+  };
 
   /* The customer name sits inside the CC job title as "Lastname, Firstname —
      jobnumber". The number is not part of the identity, so it is dropped; if a
@@ -3428,8 +3450,10 @@ function buildData(raw){
      qualified rather than presented as the whole story. */
   const oasisLag = (() => {
     if (!billdu || !billdu.docs) return null;
+    /* Resolved through bRepOf, not the feed's own rep column — so an office-sent
+       deal reads unattributed here exactly as it does on the sales board. */
     const repByBillduId = Object.fromEntries(
-      (billdu.feed || []).map(r => [String(r.billdu_id), r.rep]).filter(([,v]) => v));
+      (billdu.feed || []).map(r => [String(r.billdu_id), sellerOf(r.billdu_id)]).filter(([,v]) => v));
     const live = billdu.docs.filter(x => Number(x.total_price) > 0);
     const win = (a,b) => {
       const rows = live.filter(x => inR(x.issue_date, a, b));
@@ -3468,7 +3492,7 @@ function buildData(raw){
       signingsPrev: Object.fromEntries(Object.entries(WINS).map(([k,wv]) => [k, sumBetween(...prevRange(wv))])),
       daily: sign.sort((a,b)=>a.date<b.date?1:-1).slice(0,14),
       feed: (billdu.feed || []).map(r => ({
-        name: r.client_name, city: r.client_city, rep: r.rep,
+        name: r.client_name, city: r.client_city, rep: sellerOf(r.billdu_id),
         value: Number(r.accepted_value||0), at: r.accepted_at,
         date: String(r.signed_date_et).slice(0,10),
         matched: r.match_status === 'linked', inCc: !!r.job_id,
