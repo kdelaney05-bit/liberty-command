@@ -506,6 +506,15 @@
     border-radius: 11px; padding: 14px; color: var(--text); font-family: 'Inter Tight', sans-serif;
     font-size: 16px; min-height: 50px; }
   .field input:focus { outline: none; border-color: rgba(240,131,74,0.5); }
+  /* Show/hide password. The eye sits inside the field; input gets right padding
+     so long passwords never run under it. */
+  .pwwrap { position: relative; }
+  .pwwrap input { padding-right: 66px; }
+  .pweye { position: absolute; right: 6px; top: 50%; transform: translateY(-50%);
+    background: transparent; border: none; color: var(--text-dim); cursor: pointer;
+    font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 0.12em;
+    text-transform: uppercase; font-weight: 700; padding: 10px 10px; min-height: 40px; }
+  .pweye:active { color: var(--accent); }
   .gobtn { width: 100%; min-height: 50px; margin-top: 6px; border: none; border-radius: 11px;
     background: var(--accent); color: #17110c; font-family: 'JetBrains Mono', monospace;
     font-size: 11px; letter-spacing: 0.16em; text-transform: uppercase; font-weight: 700; cursor: pointer; }
@@ -639,11 +648,17 @@
       <div class="card-sub" style="margin-bottom:14px">Choose a new password for <b id="whofor">your account</b>.</div>
       <div class="field">
         <label for="np">New password</label>
-        <input id="np" type="password" autocomplete="new-password" minlength="8" required />
+        <div class="pwwrap">
+          <input id="np" type="password" autocomplete="new-password" minlength="8" required />
+          <button type="button" class="pweye" data-for="np" aria-label="Show password">Show</button>
+        </div>
       </div>
       <div class="field">
         <label for="np2">Confirm new password</label>
-        <input id="np2" type="password" autocomplete="new-password" minlength="8" required />
+        <div class="pwwrap">
+          <input id="np2" type="password" autocomplete="new-password" minlength="8" required />
+          <button type="button" class="pweye" data-for="np2" aria-label="Show password">Show</button>
+        </div>
       </div>
       <button class="gobtn" id="setbtn" type="submit">Set password &amp; sign in</button>
       <div class="gateerr" id="reseterr"></div>
@@ -4092,20 +4107,46 @@ document.getElementById('backtologin').addEventListener('click', () => {
 document.getElementById('resetform').addEventListener('submit', async ev => {
   ev.preventDefault();
   const err = document.getElementById('reseterr'), btn = document.getElementById('setbtn');
-  const a = document.getElementById('np').value, b = document.getElementById('np2').value;
-  err.className = 'gateerr';
-  if (a !== b) { err.textContent = 'Those two do not match.'; return; }
+  // Read the LIVE input values at submit time and TRIM both. iOS Strong-Password
+  // autofill and the keyboard's double-space-to-period leave a trailing space
+  // that makes two visually identical passwords compare unequal — the exact
+  // "those do not match while they match" Gio hit. Trimming both, and storing the
+  // trimmed value, means what he types to sign in later also matches.
+  const a = document.getElementById('np').value.trim(), b = document.getElementById('np2').value.trim();
+  // Clear any error from a PREVIOUS attempt first, so a stale "do not match" can
+  // never linger on screen beside a fresh "Setting…".
+  err.textContent = ''; err.className = 'gateerr';
   if (a.length < 8) { err.textContent = 'Use at least 8 characters.'; return; }
+  if (a !== b) { err.textContent = 'Those two do not match. Tap “Show” to compare them.'; return; }
   btn.disabled = true; btn.textContent = 'Setting…';
   try {
     await updatePassword(a);
     document.getElementById('resetform').style.display = 'none';
     await loadAll();                       // recovery session is a real session
   } catch(e){
+    // Any failure returns the button to its normal label — "Setting…" must never
+    // stick, alone or beside an error.
     err.textContent = e.message;
     btn.disabled = false; btn.textContent = 'Set password & sign in';
   }
 });
+
+// Editing either field clears a stale match/length error, so the message always
+// reflects the CURRENT input rather than a prior keystroke.
+['np','np2'].forEach(id => document.getElementById(id).addEventListener('input', () => {
+  const err = document.getElementById('reseterr');
+  if (err.textContent) { err.textContent = ''; }
+}));
+
+// Show/hide toggle on both fields (Kevin's ask) — lets a rep visually confirm the
+// two passwords are identical, which is the real cure for the autofill mismatch.
+document.querySelectorAll('.pweye').forEach(eye => eye.addEventListener('click', () => {
+  const inp = document.getElementById(eye.getAttribute('data-for'));
+  const reveal = inp.type === 'password';
+  inp.type = reveal ? 'text' : 'password';
+  eye.textContent = reveal ? 'Hide' : 'Show';
+  eye.setAttribute('aria-label', reveal ? 'Hide password' : 'Show password');
+}));
 
 (async () => {
   // Recovery is checked BEFORE any stored session, or arriving on a reset link
