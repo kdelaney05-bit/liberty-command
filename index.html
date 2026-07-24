@@ -336,6 +336,17 @@
     font-family: 'JetBrains Mono', monospace; font-size: 9.5px; letter-spacing: 0.08em;
     text-transform: uppercase; padding: 0; text-decoration: underline; }
 
+  /* ── drawers: what came off the surface but not out of the console ───────── */
+  .chartbox { cursor: pointer; }
+  .cb-row { display: flex; align-items: center; gap: 8px; padding-top: 12px;
+    border-top: 1px solid var(--line); font-family: 'JetBrains Mono', monospace;
+    font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-dim); }
+  .cb-row .cb-sum { margin-left: auto; color: var(--text); font-weight: 600; letter-spacing: 0.04em; }
+  .cb-body { display: none; }
+  .chartbox.open .cb-body { display: block; }
+  .chartbox.open > .cb-row .acc-chev { transform: rotate(90deg); color: var(--accent); }
+  @media (hover: hover) { .chartbox:hover .cb-row { color: var(--text); } }
+
   /* the money shot — biggest number on the page */
   .hero-booked { background: var(--bg-card-hi); border: 1px solid var(--line);
     border-left: 3px solid var(--text-dim); border-radius: 12px; padding: 15px 16px; margin: 12px 0 0; }
@@ -859,7 +870,7 @@ function cardAppointments(){
         <div class="at-eye set">Set today</div>
         <div class="at-desc">new appts <b>booked</b> today</div>
         <div class="at-v">${A.bookedToday}</div>
-        <div class="at-s">${A.bookedNorm?`norm ${A.bookedNorm}${A.bookedVsNorm!==null?` · <b class="${A.bookedVsNorm>=0?'up':'dn'}">${A.bookedVsNorm>=0?'▲':'▼'}${Math.abs(A.bookedVsNorm)}%</b>`:''}`:'no norm yet'} · ${A.bookedYesterday} yest.</div>
+        <div class="at-s">${A.bookedNorm?`norm ${A.bookedNorm}${A.bookedVsNorm!==null?` · <b class="${A.bookedVsNorm>=0?'up':'dn'}">${A.bookedVsNorm>=0?'▲':'▼'}${Math.abs(A.bookedVsNorm)}%</b>`:''}`:'no norm yet'} · ${A.bookedYesterday} yest.${A.yesterdayWasWeekend?' (wknd)':''}</div>
       </div>
       <div class="appt-tile">
         <div class="at-eye hap">Happening today</div>
@@ -880,8 +891,20 @@ function cardAppointments(){
     <div class="apptmini">Next 7 days: <b>${A.next7}</b> booked${A.priorAvg?` · typical <b>${A.priorAvg}</b> · <span class="${A.vsPrior>=0?'up':'dn'}">${A.vsPrior>=0?'▲':'▼'} ${Math.abs(A.vsPrior)}%</span>`:''}</div>
     <div class="verdict ${v.tone}" style="margin-top:4px">${esc(v.line)}</div>
 
+    ${/* The full 14-back · today · 7-ahead shape, restored. It left the surface
+          because 22 bars do not read on a phone, not because the history should
+          stop existing — it opens on a tap, at full detail. */''}
+    <div class="chartbox" onclick="toggleBox(this)" style="margin-top:14px">
+      <div class="cb-row">Calendar load · the full run<span class="cb-sum">14 back · today · 7 ahead</span><span class="acc-chev">›</span></div>
+      <div class="cb-body">
+        <div class="chart-wrap" style="height:180px;margin-top:8px"><canvas id="cAppt"></canvas></div>
+        <div class="wfoot" style="text-align:center;margin-top:2px">Every day on the calendar — what ran, today, and what is booked ahead</div>
+      </div>
+    </div>
+
     ${A.priorSameDay.length?`<div class="seam" style="margin-top:12px">
-      <span>Same ${esc(DAYNAME[new Date().getDay()])}, prior weeks, counted by this hour: ${A.priorSameDay.map(p=>`<b>${p.n}</b>`).join(' · ')}<span class="muted"> — like-for-like, not a finished week against an unfinished one.</span></span>
+      <span>Same ${esc(DAYNAME[new Date().getDay()])}, prior weeks, counted the same way: ${A.priorSameDay.map(p=>`<b>${p.n}</b>`).join(' · ')}</span>
+      <span class="muted">Each counts only what had been booked by that morning, so it is a fair comparison rather than a finished week against an unfinished one.</span>
     </div>`:''}
 
     ${totAhead?`<div class="card-title" style="margin:16px 0 8px">Booked ahead by brand</div>
@@ -1602,7 +1625,13 @@ function cardActions(){
 
     ${rest.length ? `<div class="morewrap" onclick="this.classList.toggle('open')">
       <div class="morerow">+ ${rest.length} more for review <span class="acc-chev">›</span></div>
-      <div class="acc-body">${rest.map(s=>sigRow(s,false)).join('')}</div>
+      ${/* the worth-doing grouping survives the fold — it told him which of these
+            are chores rather than concerns, and that is worth keeping */''}
+      <div class="acc-body">
+        ${rest.filter(s=>s.sev!=='note').map(s=>sigRow(s,false)).join('')}
+        ${rest.some(s=>s.sev==='note') ? `<div class="sig-sep">Worth doing when there's time</div>
+          ${rest.filter(s=>s.sev==='note').map(s=>sigRow(s,false)).join('')}` : ''}
+      </div>
     </div>` : ''}
 
     ${clearedN ? `<div class="clearedrow" title="${esc(Object.values(CLEARED).map(c=>`${c.by} · ${new Date(c.at).toLocaleString('en-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'})}`).join(' | '))}">
@@ -1634,10 +1663,13 @@ function brandChip(brandId, resolved){
    and his Oasis job read as two colours); under a brand, it shows the rep who
    sold it instead. Everything else — customer, amount, source tag, the +N cap —
    is identical either way, so the two accordions stay honest in the same terms. */
-function jobSubList(list, count, rest, { showBrand = true, showRep = false } = {}){
+/* Rows only, no wrapper — the caller owns the container, because these are now
+   built ON OPEN rather than pre-rendered hidden. Pre-rendering every rep's
+   hundred jobs put 10,655 nodes and 1.7 seconds into the year-to-date drill-in;
+   the depth is the same, it just arrives when the door is opened. */
+function jobRowsHtml(list, count, rest, { showBrand = true, showRep = false } = {}){
   if (!list || !list.length) return `<div class="acc-empty">No itemised jobs in this window.</div>`;
-  return `<div class="acc-body">
-    ${list.map(r => `<div class="joblrow sub">
+  return `${list.map(r => `<div class="joblrow sub">
       <div class="jobl-top">
         <div class="jobl-cust">${r.cust ? esc(r.cust) : '<span style="color:var(--text-dim)">name not on the record</span>'}</div>
         <div class="jobl-amt">${r.amount ? short(r.amount) : '$0'}</div>
@@ -1648,8 +1680,43 @@ function jobSubList(list, count, rest, { showBrand = true, showRep = false } = {
         <span class="feed-tag ${r.src==='billdu'?'billdu':'cc'}">live · ${r.src}</span>
       </div>
     </div>`).join('')}
-    ${count > list.length ? `<div class="wfoot" style="margin-top:8px">+ ${count-list.length} more${rest?` totaling ${short(rest)}`:''} — the ${list.length} largest are listed.</div>` : ''}
-  </div>`;
+    ${count > list.length ? `<div class="wfoot" style="margin-top:8px">+ ${count-list.length} more${rest?` totaling ${short(rest)}`:''} — the ${list.length} largest are listed.</div>` : ''}`;
+}
+
+/* Resolve a lazy container to its list and fill it once. The data was always
+   there — this only decides when the HTML for it is built. */
+function fillJobs(el){
+  if (!el || el.dataset.filled) return;
+  const W = flat(DIVE), src = el.dataset.src || '';
+  let list = [], count = 0, rest = 0, opts = { showBrand:true, showRep:false };
+  if (src.startsWith('rep:')) {
+    const r = (W.reps||[]).find(x => String(x.id) === src.slice(4));
+    if (r) { list = r.jobList; count = r.jobCount; rest = r.jobRest; }
+  } else if (src.startsWith('brand:')) {
+    const b = (W.brands||[]).find(x => String(x.id) === src.slice(6));
+    if (b) { list = b.jobList; count = b.jobCount; rest = b.jobRest; }
+    opts = { showBrand:false, showRep:true };
+  } else if (src === 'flat') {
+    list = W.signedList; count = W.signedCount; rest = W.signedRestValue;
+    opts = { showBrand:true, showRep:true };
+  } else if (src === 'unowned') {
+    list = (W.unowned||[]).slice(10); count = list.length; rest = 0;
+    opts = { showBrand:true, showRep:true };
+  }
+  el.innerHTML = jobRowsHtml(list, count, rest, opts);
+  el.dataset.filled = '1';
+}
+
+/* A drawer that holds a chart or a long ledger. Opening it redraws, because a
+   canvas measured while its box was closed has no size to draw into. Kevin's
+   rule: the tap is the door, not the trash — so nothing lives only on the
+   surface, and nothing that left the surface left the console. */
+function toggleBox(el){
+  const open = !el.classList.contains('open');
+  el.classList.toggle('open', open);
+  if (!open) return;
+  fillJobs(el.querySelector('.lazy'));
+  if (el.querySelector('canvas')) drawCharts();
 }
 
 function diveView(k){
@@ -1711,10 +1778,15 @@ function diveView(k){
           <div class="no-stat"><b>${W.unownedCount}</b> job${W.unownedCount===1?'':'s'} · <b>${short(W.unownedTotal)}</b> · no seller recorded</div>
         </div>
       </div>
-      <div class="card-sub">Signed work with nobody credited — pulled out so it does not hide.${
-        W.unownedNoRep?` <b>${W.unownedNoRep}</b> ${W.unownedNoRep===1?'is a Contractors Cloud contract with no rep on it':'are Contractors Cloud contracts with no rep on them'} — a gap to fix at the source.`:''}${
-        W.unownedOffice?` <b>${W.unownedOffice}</b> ${W.unownedOffice===1?'was':'were'} sent from Oasis's office account, where the seller is not on the Billdu record.`:''}</div>
-      ${u.map(r=>`<div class="joblrow sub">
+      <div class="card-sub">Signed work with nobody credited — pulled out so it does not hide.${(()=>{
+        const nr = u.filter(r=>r.reason==='no-rep'), of = u.filter(r=>r.reason==='office');
+        const $nr = nr.reduce((n,r)=>n+r.amount,0), $of = of.reduce((n,r)=>n+r.amount,0);
+        return (W.unownedNoRep?` <b>${W.unownedNoRep}</b> ${W.unownedNoRep===1?'is a Contractors Cloud contract':'are Contractors Cloud contracts'} worth <b>${short($nr)}</b> with no rep on ${W.unownedNoRep===1?'it':'them'} — a gap to fix at the source.`:'')
+             + (W.unownedOffice?` <b>${W.unownedOffice}</b> worth <b>${short($of)}</b> ${W.unownedOffice===1?'was':'were'} sent from Oasis's office account, where the seller is not on the Billdu record.`:'');
+      })()}</div>
+      ${/* the ten biggest stay loud on the face of the card; the tail opens on a
+            tap so a year-to-date backlog of 134 does not become a wall */''}
+      ${u.slice(0,10).map(r=>`<div class="joblrow sub">
         <div class="jobl-top">
           <div class="jobl-cust">${r.cust ? esc(r.cust) : '<span style="color:var(--text-dim)">name not on the record</span>'}</div>
           <div class="jobl-amt">${r.amount ? short(r.amount) : '$0'}</div>
@@ -1725,7 +1797,11 @@ function diveView(k){
           <span class="feed-tag ${r.src==='billdu'?'billdu':'cc'}">live · ${r.src}</span>
         </div>
       </div>`).join('')}
-      ${rest>0?`<div class="wfoot" style="margin-top:8px">+ ${rest} more${W.unownedRest?` totaling ${short(W.unownedRest)}`:''} — the ${u.length} largest are listed.</div>`:''}
+      ${u.length>10 ? `<div class="chartbox" onclick="toggleBox(this)" style="margin-top:10px">
+        <div class="cb-row">The other ${u.length-10} without an owner<span class="acc-chev">›</span></div>
+        <div class="cb-body"><div class="acc-body lazy" data-src="unowned"></div></div>
+      </div>` : ''}
+      ${rest>0?`<div class="wfoot" style="margin-top:8px">+ ${rest} more${W.unownedRest?` totaling ${short(W.unownedRest)}`:''} beyond the ${u.length} largest.</div>`:''}
     </div>`; })()}
 
   <div class="stack dive">
@@ -1761,7 +1837,7 @@ function diveView(k){
       <div class="card-sub">Every brand, including any that signed nothing. Tap a brand for the jobs behind it.</div>
       ${allBrands(W.brands).sort((a,b)=>b.rev-a.rev).map(b=>{const m=brandOf(b.id);
         const tap = !!(b.jobList && b.jobList.length);
-        return `<div class="rep-row${tap?' acc':''}" ${b.rev?'':'style="opacity:.6"'}${tap?` onclick="this.classList.toggle('open')"`:''}>
+        return `<div class="rep-row${tap?' acc':''}" ${b.rev?'':'style="opacity:.6"'}${tap?` onclick="toggleBox(this)"`:''}>
           <div class="rep-head"><div class="nm">${esc(m.n)}${b.billdu?'<span class="tick">billdu</span>':''}</div>
             <div class="amt">${b.rev?short(b.rev):'$0'} <span>· ${b.jobs} deal${b.jobs===1?'':'s'}</span>${tap?'<span class="acc-chev">›</span>':''}</div></div>
           <div class="meter"><div class="meter-fill" style="width:${pct(b.rev,tot)}%;background:${m.c}"></div></div>
@@ -1769,7 +1845,7 @@ function diveView(k){
             <span>${b.rev?pct(b.rev,tot)+'% of the window':'nothing signed in this window'}</span>
             ${b.billdu?`<span class="hit">${short(b.billdu)} via Billdu</span>`:''}
           </div>
-          ${tap?jobSubList(b.jobList, b.jobCount, b.jobRest, {showBrand:false, showRep:true}):''}
+          ${tap?`<div class="acc-body lazy" data-src="brand:${esc(String(b.id))}"></div>`:''}
         </div>`}).join('')}
       ${(W.brands.find(b=>String(b.id)==='1560')?.rev) ? '' : oasisNote(k)}
     </div>
@@ -1785,17 +1861,30 @@ function diveView(k){
           ? weekReset().topReps.map(x=>`${esc(x.name)} ${short(x.rev)}`).join(' · ')
           : 'no rep activity recorded')}.</div>` : ''}
       ${reps.slice(0,12).map((r,i)=>{const tap = !!(r.jobList && r.jobList.length);
-        return `<div class="rep-row${tap?' acc':''}" ${r.office?'style="opacity:.8"':''}${tap?` onclick="this.classList.toggle('open')"`:''}>
+        return `<div class="rep-row${tap?' acc':''}" ${r.office?'style="opacity:.8"':''}${tap?` onclick="toggleBox(this)"`:''}>
         <div class="rep-head">
           <div class="nm"><span class="rk ${i===0?'top':''}">${i+1}</span>${esc(r.name)}${r.billdu?'<span class="tick">billdu</span>':''}${r.role&&r.role!=='sales'&&!r.office?`<span class="brand">${esc(r.role)}</span>`:''}</div>
           <div class="amt">${short(r.rev)} <span>· ${r.jobs} deal${r.jobs===1?'':'s'}</span>${tap?'<span class="acc-chev">›</span>':''}</div>
         </div>
         <div class="meter"><div class="meter-fill" style="width:${Math.round(r.rev/mx*100)}%;background:${r.office?'#8aa094':(r.rev===mx?'#6cc28b':'#6ba8c9')}"></div></div>
         ${r.billdu?`<div class="tgt-cap"><span>${r.office?'sent from the office account — seller not recorded':`${short(r.rev-r.billdu)} CC + ${short(r.billdu)} Billdu`}</span></div>`:''}
-        ${tap?jobSubList(r.jobList, r.jobCount, r.jobRest, {showBrand:true, showRep:false}):''}
+        ${tap?`<div class="acc-body lazy" data-src="rep:${esc(String(r.id))}"></div>`:''}
       </div>`}).join('')}
       ${reps.some(r=>r.office)?`<div class="note">Deals sent from Oasis's office account carry no seller on the Billdu record, so they are listed as unattributed rather than credited to a rep who may not have sold them. Deals a seller sent themselves are attributed from the backend's <b>rep_id</b> mapping, not by matching names.</div>`:''}
     </div>
+
+    ${/* The flat ledger, restored. It came off the surface because it was too
+          busy there, not because it should stop existing — every job in the
+          window, both systems, one row each, behind one tap. */''}
+    ${(W.signedList||[]).length ? `<div class="card">
+      <div class="chartbox" onclick="toggleBox(this)">
+        <div class="cb-row">All jobs · ${W.signedCount} in this window<span class="cb-sum">${short(W.rev)}</span><span class="acc-chev">›</span></div>
+        <div class="cb-body">
+          <div class="card-sub" style="margin:10px 0 4px">Every contract behind this window's number, largest first — customer, brand, rep and the system that recorded it.</div>
+          <div class="acc-body lazy" data-src="flat"></div>
+        </div>
+      </div>
+    </div>` : ''}
 
     ${diveAppointments(k)}
     ${diveMarketing(k)}
@@ -2014,7 +2103,7 @@ function drawCharts(){
      beside it. Three shapes: a plain/ grouped bar labels each bar; a stacked bar
      labels the column total; a highlighted bar (today/current) draws in accent.
      A per-bar flag series is optional and only tunes colour and the TODAY tag. */
-  function barLabels(chart, { series, fmt = String, todayTag = false, skipZero = false } = {}){
+  function barLabels(chart, { series, fmt = String, todayTag = false, skipZero = false, size = 9 } = {}){
     const ctx = chart.ctx; ctx.save(); ctx.textAlign = 'center';
     chart.data.datasets.forEach((ds, di) => {
       if (ds.type === 'line') return;                 // skip the norm reference line
@@ -2025,7 +2114,7 @@ function drawCharts(){
         const f = series ? series[j] : null;
         const hot = f && (f.today || f.current);
         const cool = f && (f.weekend || f.future);
-        ctx.font = "600 9px 'JetBrains Mono', monospace";
+        ctx.font = `600 ${size}px 'JetBrains Mono', monospace`;
         ctx.fillStyle = hot ? '#f0834a' : cool ? 'rgba(138,160,148,0.55)' : '#e8efe9';
         ctx.fillText(fmt(v), bar.x, bar.y - 5);
         if (hot && todayTag){ ctx.font = "700 7px 'JetBrains Mono', monospace"; ctx.fillStyle = '#f0834a';
@@ -2109,6 +2198,29 @@ function drawCharts(){
       plugins:[barLabelsPlugin({series:s, todayTag:true})]
     }));
   }
+  /* the full calendar run — 14 back, today, 7 ahead. Lives in a drawer because
+     22 bars do not read on a phone surface; at full detail inside it, with a
+     smaller label so every bar still carries its number. */
+  const ap = document.getElementById('cAppt');
+  if (ap && D.appointments) {
+    const s = D.appointments.series;
+    charts.push(new Chart(ap.getContext('2d'), {
+      type:'bar',
+      data:{ labels: s.map(x=>x.label),
+        datasets:[{ label:'Appointments', borderRadius:3,
+          backgroundColor: s.map(x => x.when==='ahead' ? 'rgba(240,131,74,0.55)'
+                                    : x.when==='today' ? '#f0834a' : '#6ba8c9'),
+          data: s.map(x=>x.n) }] },
+      options:{ responsive:true, maintainAspectRatio:false, layout:{padding:{top:16}},
+        plugins:{ legend:{display:false},
+          tooltip:{...TIP, callbacks:{ label:c=>' '+c.parsed.y+' appointment'+(c.parsed.y===1?'':'s'),
+            afterLabel:c=>({past:'already run',today:'today',ahead:'on the books'})[s[c.dataIndex].when] }}},
+        scales:{ x:{grid:{display:false},ticks:{font:{family:MONO,size:8},maxRotation:0,autoSkip:true,maxTicksLimit:8}},
+          y:{display:false,beginAtZero:true,grace:'14%'} } },
+      plugins:[barLabelsPlugin({ series: s.map(x=>({ today:x.when==='today' })), size:7, skipZero:true })]
+    }));
+  }
+
   const apw = document.getElementById('cApptWeek');
   if (apw && D.appointments) {
     const s = D.appointments.weekly;
@@ -2242,7 +2354,7 @@ addEventListener('resize', () => {
    server for hours while Kevin looked at yesterday's build and reported the bug
    as unfixed. That happened. The page now checks version.json on every load and
    reloads itself once if the deployed build is newer than the one running. */
-const BUILD = '2026-07-23T21:05Z-owner-checklist';
+const BUILD = '2026-07-23T22:10Z-falcon-restore';
 const SB_URL = 'https://lzegjjbkfuecrhdvlvay.supabase.co';
 /* The one page that can finish a password reset. Hard-coded rather than derived,
    because every derivation of it so far has been a source of bugs: a bare origin
@@ -2532,12 +2644,13 @@ function buildData(raw){
        a genuine data gap — the Jim Brown $23K class — and must stare at him, not
        nest quietly under a brand. Office-sent Billdu deals belong here too: the
        seller is not on the record either, though for a known reason. */
-    const brands = {}, byRep = {}, unowned = [];
+    const brands = {}, byRep = {}, unowned = [], allRows = [];
     for (const j of js) {
       const bid = rollup(j.cc_company_id || 'unknown');
       const row = { cust: custName(j.title), brand: bid, resolved: !!BRANDS[bid],
                     amount: Number(j.fin_sold_amount||0), src:'cc',
                     rep: j.rep_id ? (repById[j.rep_id]?.name || 'Unknown') : null };
+      allRows.push(row);
       (brands[bid] ??= { jobs:0, rev:0, list:[] });
       brands[bid].jobs++; brands[bid].rev += row.amount; brands[bid].list.push(row);
       if (j.rep_id) { (byRep[j.rep_id] ??= { jobs:0, rev:0, appts:0, list:[] });
@@ -2561,6 +2674,7 @@ function buildData(raw){
                       amount: Number(r.accepted_value||0), src:'billdu',
                       office: rid === OFFICE,
                       rep: rid === OFFICE ? null : (repById[rid]?.name || 'Unknown') };
+        allRows.push(row);
         brands[OASIS].list.push(row);
         (byRep[rid] ??= { jobs:0, rev:0, appts:0, list:[] }).list.push(row);
         if (rid === OFFICE) unowned.push({ ...row, reason:'office' });
@@ -2583,15 +2697,27 @@ function buildData(raw){
        flat all-jobs card this used to feed is gone — Kevin found it too busy —
        so the jobs now live only under the rep and brand rows that expand to
        them, quiet until asked. */
-    const RCAP = 25;
+    /* Kevin: "I didn't want less, just less on the FIRST screen… Each item needs
+       to show everything in the world. I want to see the Millennium Falcon on
+       mine." So the caps behind a tap are generous, not tidy: a rep or brand
+       opens to its hundred largest, and the whole window keeps a flat ledger of
+       its two hundred largest for the all-jobs drawer. The tap is the door, not
+       the trash. */
+    const RCAP = 100, FLATCAP = 200;
     const capped = (v) => { const { list, ...rest } = v;
       const sorted = [...(list||[])].sort((a,b)=>b.amount-a.amount);
       return { ...rest, jobList: sorted.slice(0,RCAP), jobCount: sorted.length,
                jobRest: sorted.slice(RCAP).reduce((n,r)=>n+r.amount,0) }; };
 
     const uSorted = [...unowned].sort((a,b)=>b.amount-a.amount);
+    // the flat ledger the all-jobs drawer reopens — every job in the window,
+    // both systems, largest first
+    const flat = [...allRows].sort((a,b)=>b.amount-a.amount);
 
     return {
+      signedList: flat.slice(0,FLATCAP),
+      signedCount: flat.length,
+      signedRestValue: flat.slice(FLATCAP).reduce((n,r)=>n+r.amount,0),
       unowned: uSorted.slice(0,RCAP),
       unownedCount: uSorted.length,
       unownedTotal: uSorted.reduce((n,r)=>n+r.amount,0),
