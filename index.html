@@ -4179,7 +4179,54 @@ function buildData(raw){
   };
 }
 
+/* ── ROLE GATE ──────────────────────────────────────────────────────────────
+   Kevin's order, 2026-07-24: a SALES login must never land on the owner console.
+   Reps are getting invite links that finish on this domain ("setting a new
+   password signs you in on this device"), so without this a rep who completes a
+   reset lands straight in the owner console.
+
+   The check sits at the TOP of loadAll() on purpose: sign-in, recovery-link and
+   restored-session all funnel through here, so one gate covers every door, and it
+   returns BEFORE a single row is requested — no owner-flavoured shell, no partial
+   render, no data fetched and then hidden.
+
+   ⚠️ This is the UI half only. Several console_* views are SECURITY DEFINER and
+   answer a sales JWT directly over the REST API — see the note to Kevin. This
+   stops the screen; it does not stop curl. */
+async function consoleRoleGate(){
+  try {
+    const s = sess.get(); if (!s || !s.access_token) return false;
+    const sub = JSON.parse(atob(s.access_token.split('.')[1].replace(/-/g,'+').replace(/_/g,'/'))).sub;
+    const r = await fetch(`${SB_URL}/rest/v1/reps?id=eq.${sub}&select=role,name`,
+      { headers: { apikey: SB_KEY, Authorization: 'Bearer ' + s.access_token } });
+    const rows = r.ok ? await r.json() : [];
+    const role = rows[0]?.role ?? 'sales';
+    if (['manager','owner','admin'].includes(role)) return true;
+
+    gate.style.display = 'flex'; appEl.style.display = 'none';
+    document.getElementById('loginform').style.display = 'none';
+    const rf = document.getElementById('resetform'); if (rf) rf.style.display = 'none';
+    const err = document.getElementById('gateerr'); if (err) err.textContent = '';
+    if (!document.getElementById('repnotice')) {
+      document.querySelector('.gatebox')?.insertAdjacentHTML('beforeend',
+        `<div id="repnotice" class="gatefoot" style="line-height:1.7">
+           <b>You're all set — but this isn't your screen.</b><br/>
+           This is the owner console. Your password is saved, so open the
+           <b>TruReview app</b> and sign in there with the same email and password.
+           <br/><button type="button" class="linkbtn" style="margin-top:10px"
+             onclick="signOut()">Sign out</button>
+         </div>`);
+    }
+    return false;
+  } catch (e) {
+    // Fail CLOSED: if the role cannot be established, do not render the console.
+    gate.style.display = 'flex'; appEl.style.display = 'none';
+    return false;
+  }
+}
+
 async function loadAll(){
+  if (!(await consoleRoleGate())) return;
   /* A visible counter, because a silent wait is indistinguishable from a hang.
      This console reads about 5.8MB across four large tables; even fast that is a
      few seconds, and Kevin reported the silent version as "stuck". */
