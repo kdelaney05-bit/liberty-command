@@ -305,6 +305,37 @@
   .nofires { font-size: 13.5px; line-height: 1.6; color: var(--green-soft);
     border-left: 3px solid var(--green); padding: 10px 0 10px 12px; margin-top: 10px; }
 
+  /* ── the checklist: tick it off, and the rest behind one quiet row ───────── */
+  .sigcheck { margin-left: auto; width: 27px; height: 27px; border-radius: 8px; flex-shrink: 0;
+    border: 1px solid var(--line); background: rgba(255,255,255,0.03); color: var(--text-dim);
+    font-size: 13px; line-height: 1; cursor: pointer; font-family: inherit;
+    transition: border-color .12s, color .12s, background .12s; }
+  .sigcheck:hover { border-color: var(--green); color: var(--green-soft); background: rgba(108,194,139,0.1); }
+  .sigcheck:active { transform: scale(.9); }
+  /* terse rows: one line, the rest one tap away */
+  .sig.terse { cursor: pointer; margin-top: 10px; }
+  .sig.terse .sig-n { display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden; }
+  .sig.terse .sig-d { display: none; }
+  .sig.terse.open .sig-n { -webkit-line-clamp: unset; overflow: visible; }
+  .sig.terse.open .sig-d { display: flex; }
+  .sig-chev { margin-left: 0; font-size: 12px; }
+  .sig.terse.open .sig-chev { transform: rotate(90deg); color: var(--accent); }
+  .morewrap { cursor: pointer; margin-top: 14px; }
+  .morerow { font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 0.12em;
+    text-transform: uppercase; color: var(--text-dim); display: flex; align-items: center; gap: 7px;
+    padding-top: 12px; border-top: 1px solid var(--line); }
+  .morewrap .acc-body { display: none; margin-top: 4px; padding-left: 0; border-left: none; }
+  .morewrap.open .acc-body { display: block; }
+  .morewrap.open > .morerow .acc-chev { transform: rotate(90deg); color: var(--accent); }
+  @media (hover: hover) { .morewrap:hover .morerow { color: var(--text); } }
+  .clearedrow { display: flex; align-items: center; gap: 8px; margin-top: 14px; padding-top: 11px;
+    border-top: 1px solid var(--line); font-family: 'JetBrains Mono', monospace;
+    font-size: 9.5px; letter-spacing: 0.06em; color: var(--text-dim); }
+  .cl-tick { color: var(--green); font-size: 11px; }
+  .undo { margin-left: auto; background: none; border: none; color: var(--accent); cursor: pointer;
+    font-family: 'JetBrains Mono', monospace; font-size: 9.5px; letter-spacing: 0.08em;
+    text-transform: uppercase; padding: 0; text-decoration: underline; }
+
   /* the money shot — biggest number on the page */
   .hero-booked { background: var(--bg-card-hi); border: 1px solid var(--line);
     border-left: 3px solid var(--text-dim); border-radius: 12px; padding: 15px 16px; margin: 12px 0 0; }
@@ -1457,7 +1488,44 @@ function cardLeadCategories(){
    One component, used by the appointments card, the flags card and every
    drill-in, so a signal reads identically wherever it surfaces. ─────────── */
 const SEV = { fire:{c:'#d96a5e', k:'act today'}, watch:{c:'#d4b15a', k:'watch'}, note:{c:'#8aa094', k:'note'} };
-function sigFor(tag){ return (D.signals && D.signals.list || []).filter(s => s.tags.includes(tag)); }
+
+/* ── THE OWNER'S CHECKLIST ───────────────────────────────────────────────────
+   Kevin: "make this crucial items for review and the most important one or two
+   visible and the rest a drop down to check them off" — a board he can clear on
+   the way to his jet, not a wall to read.
+
+   Ticking is an AUDIT TRAIL, not a delete: each cleared item records who cleared
+   it and when. And the key carries a hash of the NOTICE TEXT, not just the
+   signal id — so when the numbers move the sentence is materially different, the
+   key no longer matches, and the item comes back rather than staying buried
+   under a tick from last week. That is the "resurface only if it re-triggers
+   fresh" rule, made mechanical. Entries older than 14 days are pruned, so a
+   stale tick can never hide a live problem indefinitely.
+
+   Device-local: this is localStorage, so a tick on the phone does not clear the
+   desktop. Making it travel needs a small backend table — noted for that session
+   rather than faked here. ─────────────────────────────────────────────────── */
+const CLEAR_STORE = 'lcc.cleared', CLEAR_TTL_DAYS = 14;
+let CLEARED = (() => {
+  let o = {};
+  try { o = JSON.parse(localStorage.getItem(CLEAR_STORE)) || {}; } catch(e) { o = {}; }
+  const cut = Date.now() - CLEAR_TTL_DAYS * 86400000;
+  for (const k of Object.keys(o)) if (!o[k] || !(Number(o[k].at) > cut)) delete o[k];
+  return o;
+})();
+function saveCleared(){ try { localStorage.setItem(CLEAR_STORE, JSON.stringify(CLEARED)); } catch(e){} }
+const hash32 = s => { let h = 5381; for (let i=0;i<s.length;i++) h = ((h*33) ^ s.charCodeAt(i)) >>> 0; return h.toString(36); };
+const sigKey = s => `${s.id}::${hash32(String(s.notice||''))}`;
+const isCleared = s => !!CLEARED[sigKey(s)];
+function clearSig(k){
+  const s = ((D.signals && D.signals.list) || []).find(x => sigKey(x) === k); if (!s) return;
+  CLEARED[k] = { at: Date.now(), by: (sess.get()||{}).email || 'unknown', sev: s.sev, notice: s.notice };
+  saveCleared(); keepScroll(()=>{});
+}
+function restoreCleared(){ CLEARED = {}; saveCleared(); keepScroll(()=>{}); }
+
+/* a cleared item is cleared everywhere, not just on the board */
+function sigFor(tag){ return (D.signals && D.signals.list || []).filter(s => s.tags.includes(tag) && !isCleared(s)); }
 
 function signalList(sigs, { quiet } = {}){
   if (!sigs.length) return quiet ? `<div class="nofires">${esc(quiet)}</div>` : '';
@@ -1492,17 +1560,54 @@ function cardFlags(){
 /* The page's answer to "what needs me today". Sits at the top because that is
    the question he opens it with. When nothing crosses a threshold it says so
    plainly — a console that always finds something wrong gets ignored. */
+/* One row for a signal. The top items render in full; everything behind the
+   drop-down renders terse — one line, its detail one tap away — because Kevin
+   wants page one to be the only screen he has to read, not the longest. */
+function sigRow(s, full){
+  const k = sigKey(s);
+  /* stopPropagation, or opening a row bubbles to the drop-down wrapper and
+     collapses the whole list under the reader's thumb. */
+  return `<div class="sig ${s.sev}${full?'':' terse'}"${full?'':' onclick="event.stopPropagation();this.classList.toggle(\'open\')"'}>
+    <div class="sig-h">
+      <span class="sig-dot" style="background:${SEV[s.sev].c}"></span>
+      <span class="sig-k">${SEV[s.sev].k}</span>
+      ${full?'':'<span class="acc-chev sig-chev">›</span>'}
+      <button class="sigcheck" title="Mark handled — it leaves the board and is logged with your name and the time"
+        onclick="event.stopPropagation();clearSig('${esc(k)}')">✓</button>
+    </div>
+    <div class="sig-n">${esc(s.notice)}</div>
+    <div class="sig-d"><span class="sig-arrow">→</span>${esc(s.action)}</div>
+  </div>`;
+}
+
 function cardActions(){
   const S = D.signals; if (!S) return '';
-  const acts = S.list.filter(s => s.sev !== 'note');
-  const notes = S.list.filter(s => s.sev === 'note');
-  const headline = S.fires ? `${S.fires} thing${S.fires===1?'':'s'} to act on`
-                 : S.watches ? `${S.watches} to watch` : 'No fires';
-  return `<div class="card full acts ${S.fires?'hasfire':S.watches?'haswatch':'clear'}">
-    <div class="card-title">What needs you${S.fires?'':' right now'}<span class="feed-tag ${S.fires?'':'none'}">${esc(headline)}</span></div>
-    <div class="card-sub">Checked against this business's own recent numbers, not a rule of thumb. Nothing appears here unless it crossed a threshold.</div>
-    ${signalList(acts, { quiet: 'Nothing is off today. Bookings, pipeline and money are all inside their normal range — no action needed from you this morning.' })}
-    ${notes.length?`<div class="sig-sep">Worth doing when there's time</div>${signalList(notes)}`:''}
+  const RANK = { fire:0, watch:1, note:2 };
+  const live = (S.list||[]).filter(s => !isCleared(s))
+                           .sort((a,b) => (RANK[a.sev]??9) - (RANK[b.sev]??9));
+  const fires = live.filter(s=>s.sev==='fire').length;
+  const watches = live.filter(s=>s.sev==='watch').length;
+  const top = live.slice(0,2), rest = live.slice(2);
+  const clearedN = Object.keys(CLEARED).length;
+  const headline = fires ? `${fires} to act on` : watches ? `${watches} to watch`
+                 : live.length ? `${live.length} to review` : 'all clear';
+  return `<div class="card full acts ${fires?'hasfire':watches?'haswatch':'clear'}">
+    <div class="card-title">What needs you<span class="feed-tag ${fires?'':'none'}">${esc(headline)}</span></div>
+    <div class="card-sub">The one or two things worth your attention, measured against this business's own numbers. Tick one off and it leaves the board.</div>
+
+    ${top.length ? top.map(s=>sigRow(s,true)).join('')
+      : `<div class="nofires">${clearedN
+          ? 'Board clear — everything raised has been ticked off.'
+          : 'Nothing is off today. Bookings, pipeline and money are all inside their normal range.'}</div>`}
+
+    ${rest.length ? `<div class="morewrap" onclick="this.classList.toggle('open')">
+      <div class="morerow">+ ${rest.length} more for review <span class="acc-chev">›</span></div>
+      <div class="acc-body">${rest.map(s=>sigRow(s,false)).join('')}</div>
+    </div>` : ''}
+
+    ${clearedN ? `<div class="clearedrow" title="${esc(Object.values(CLEARED).map(c=>`${c.by} · ${new Date(c.at).toLocaleString('en-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'})}`).join(' | '))}">
+      <span class="cl-tick">✓</span> ${clearedN} cleared · logged with who and when
+      <button class="undo" onclick="restoreCleared()">bring back</button></div>` : ''}
   </div>`;
 }
 
@@ -2137,7 +2242,7 @@ addEventListener('resize', () => {
    server for hours while Kevin looked at yesterday's build and reported the bug
    as unfixed. That happened. The page now checks version.json on every load and
    reloads itself once if the deployed build is newer than the one running. */
-const BUILD = '2026-07-23T20:15Z-tap-affordance';
+const BUILD = '2026-07-23T21:05Z-owner-checklist';
 const SB_URL = 'https://lzegjjbkfuecrhdvlvay.supabase.co';
 /* The one page that can finish a password reset. Hard-coded rather than derived,
    because every derivation of it so far has been a source of bugs: a bare origin
