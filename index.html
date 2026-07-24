@@ -242,7 +242,16 @@
     color: var(--text); font-family: inherit; transition: border-color .15s, background .15s;
     display: flex; flex-direction: column; gap: 2px; }
   .snap:active { background: var(--bg-card-hi); transform: scale(.985); }
-  .snap:hover { border-color: rgba(240,131,74,0.35); }
+  .snap:hover { border-color: rgba(240,131,74,0.55); background: var(--bg-card-hi); }
+  /* the affordance rides on the tile, pinned to its bottom edge so all four
+     line up however tall the figures above them run */
+  .snap-go { margin-top: auto; padding-top: 7px; text-align: right;
+    font-family: 'JetBrains Mono', monospace; font-size: 8.5px; letter-spacing: 0.12em;
+    text-transform: uppercase; font-weight: 600; color: var(--accent); }
+  .snap-go .go-chev { display: inline-block; font-size: 11px; line-height: 1;
+    vertical-align: -1px; margin-left: 1px; transition: transform .15s; }
+  .snap:hover .snap-go { color: var(--accent-soft); }
+  .snap:hover .snap-go .go-chev { transform: translateX(2px); }
   .snap-k { font-family: 'JetBrains Mono', monospace; font-size: 9px; letter-spacing: 0.16em;
     text-transform: uppercase; color: var(--text-dim); }
   .snap-v { font-family: 'Fraunces', serif; font-size: 27px; font-weight: 500;
@@ -719,11 +728,15 @@ function hdr(){
       : W.billdu
         ? `${short(W.ccRev)} CC + ${short(W.billdu)} Billdu`
         : (W.prevSpanDays >= spanOf(k) ? `${W.jobs} signed` : `pace ${short(paceOf(k))}`);
-    return `<button class="snap" onclick="openWindow('${k}')">
+    /* Every tile says "details ›" on its own face. Kevin: "Gio didn't know that
+       today when I was with him." One shared caption under four tiles was not
+       carrying the message — an affordance has to sit on the thing it affords. */
+    return `<button class="snap" onclick="openWindow('${k}')" aria-label="${esc(label)} — open details">
       <div class="snap-k">${esc(label)}</div>
       <div class="snap-v">${short(W.rev)}</div>
       <div class="snap-s">${sub}</div>
       <div class="snap-d ${d===null?'flat':d>=0?'up':'down'}">${d===null?'—':(d>=0?'▲':'▼')+' '+Math.abs(d)+'% vs '+esc(W.prevLabel)}</div>
+      <div class="snap-go">details <span class="go-chev">›</span></div>
     </button>`;
   }).join('');
   const anyBilldu = ['day','week','month','ytd'].some(k => flat(k).billdu > 0);
@@ -731,9 +744,11 @@ function hdr(){
     <div class="eyebrow">Liberty · three companies</div>
     <h1>Liberty <em>Command</em> Console</h1>
     <div class="snapgrid">${tiles}</div>
+    ${/* the "tap to open" instruction moved onto each tile, so this line goes
+          back to saying what the figures ARE rather than how to use them */''}
     <div class="snaphint">${anyBilldu
-      ? 'Signed everywhere · Contractors Cloud + Oasis via Billdu · tap to open'
-      : 'Signed contract value · tap any figure to open it'}</div>
+      ? 'Signed contract value · Contractors Cloud + Oasis via Billdu'
+      : 'Signed contract value'}</div>
   </div>`;
 }
 
@@ -2122,7 +2137,7 @@ addEventListener('resize', () => {
    server for hours while Kevin looked at yesterday's build and reported the bug
    as unfixed. That happened. The page now checks version.json on every load and
    reloads itself once if the deployed build is newer than the one running. */
-const BUILD = '2026-07-23T19:35Z-labels-proj-goal';
+const BUILD = '2026-07-23T20:15Z-tap-affordance';
 const SB_URL = 'https://lzegjjbkfuecrhdvlvay.supabase.co';
 /* The one page that can finish a password reset. Hard-coded rather than derived,
    because every derivation of it so far has been a source of bugs: a bare origin
