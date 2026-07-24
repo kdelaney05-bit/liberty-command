@@ -804,22 +804,26 @@ function hdr(){
    carries the worry. ─────────────────────────────────────────────────────── */
 /* The setting-day verdict. Deliberately does NOT scold before the day has had a
    chance to happen — a low count at 9am is a morning, not a problem. */
+/* Every line names the weekday, because "23/day" was never a real thing — it was
+   Mondays and Thursdays averaged into a number that fits neither. */
 function bookedVerdict(A){
-  const n = A.bookedToday, norm = A.bookedNorm, d = A.bookedVsNorm;
+  const n = A.bookedToday, norm = A.bookedNormHour, d = A.bookedVsNorm;
+  const day = A.todayDowName || 'weekday';
+  const by = `by ${hourLabel(A.nowHour)}`;
   if (A.isWeekend) return { tone:'flat', line: n
     ? `${n} booked on a weekend — setting normally runs Monday to Friday.`
     : 'Weekend. Setting normally runs Monday to Friday.' };
-  if (!norm) return { tone:'flat', line:`${n} booked today. Not enough history yet for a norm.` };
-  // how far through the setting day are we? most setting happens 7am–5pm
-  const h = new Date().getHours();
-  const early = h < 12;
-  if (d >= 25)  return { tone:'good', line:`Setters booked ${n} today — well above the ${norm}/day norm.` };
-  if (d >= 10)  return { tone:'good', line:`Setters booked ${n} today — running ahead of the ${norm}/day norm.` };
-  if (d > -15)  return { tone:'flat', line:`${n} booked today, against a ${norm}/day norm. Normal setting day.` };
-  if (early)    return { tone:'warn', line:`${n} booked so far against a ${norm}/day norm — still early, but worth a look.` };
-  if (d <= -40) return { tone:'bad',  line:`Only ${n} booked today against a ${norm}/day norm — slow setting day, check the girls.` };
-  return { tone:'warn', line:`${n} booked today against a ${norm}/day norm — setting is behind.` };
+  if (!norm) return { tone:'flat', line:`${n} booked today. Not enough ${day} history yet for a norm.` };
+  const early = (A.nowHour ?? new Date().getHours()) < 12;
+  if (d >= 25)  return { tone:'good', line:`Setters booked ${n} today — well ahead of the ${norm} a ${day} normally has ${by}.` };
+  if (d >= 10)  return { tone:'good', line:`Setters booked ${n} today — ahead of the ${norm} typical for a ${day} ${by}.` };
+  if (d > -15)  return { tone:'flat', line:`${n} booked today against ${norm} typical for a ${day} ${by}. Normal ${day}.` };
+  if (early)    return { tone:'warn', line:`${n} booked so far against ${norm} typical for a ${day} ${by} — still early, but worth a look.` };
+  if (d <= -40) return { tone:'bad',  line:`Only ${n} booked today against ${norm} typical for a ${day} ${by} — slow ${day}, check the girls.` };
+  return { tone:'warn', line:`${n} booked today against ${norm} typical for a ${day} ${by} — setting is behind.` };
 }
+const hourLabel = h => { const x = ((h ?? 0) % 24); const ap = x < 12 ? 'am' : 'pm';
+  const t = x % 12 === 0 ? 12 : x % 12; return `${t}${ap}`; };
 
 function apptVerdict(A){
   const d = A.vsPrior;
@@ -872,7 +876,7 @@ function cardAppointments(){
         <div class="at-eye set">Set today</div>
         <div class="at-desc">new appts <b>booked</b> today</div>
         <div class="at-v">${A.bookedToday}</div>
-        <div class="at-s">${A.bookedNorm?`norm ${A.bookedNorm}${A.bookedVsNorm!==null?` · <b class="${A.bookedVsNorm>=0?'up':'dn'}">${A.bookedVsNorm>=0?'▲':'▼'}${Math.abs(A.bookedVsNorm)}%</b>`:''}`:'no norm yet'} · ${A.bookedYesterday} yest.${A.yesterdayWasWeekend?' (wknd)':''}</div>
+        <div class="at-s">${A.bookedNormHour?`${esc((A.todayDowName||'').slice(0,3))} typical ${A.bookedNormHour} by ${hourLabel(A.nowHour)}${A.bookedVsNorm!==null?` · <b class="${A.bookedVsNorm>=0?'up':'dn'}">${A.bookedVsNorm>=0?'▲':'▼'}${Math.abs(A.bookedVsNorm)}%</b>`:''}`:'no norm yet'} · ${A.bookedYesterday} yest.${A.yesterdayWasWeekend?' (wknd)':''}</div>
       </div>
       <div class="appt-tile">
         <div class="at-eye hap">Happening today</div>
@@ -882,7 +886,7 @@ function cardAppointments(){
       </div>
     </div>
 
-    <div class="chart-head"><span class="ch-dot" style="background:#6cc28b"></span>New appts <b>booked</b> · per day<span class="ch-note">last 14 days · dashed = norm</span></div>
+    <div class="chart-head"><span class="ch-dot" style="background:#6cc28b"></span>New appts <b>booked</b> · per day<span class="ch-note">dashed = typical for that weekday</span></div>
     <div class="chart-wrap" style="height:174px"><canvas id="cBooked"></canvas></div>
     <div class="verdict ${bv.tone}" style="margin-top:4px">${esc(bv.line)}</div>
 
@@ -2161,7 +2165,14 @@ function drawCharts(){
   /* booked-per-day: the setters' output. */
   const bk = document.getElementById('cBooked');
   if (bk && D.appointments) {
-    const s = D.appointments.bookedSeries, norm = D.appointments.bookedNorm;
+    const s = D.appointments.bookedSeries;
+    /* The typical line is a STAIRCASE, not a flat rule — Mondays sit high,
+       Thursdays low, and drawing one average across both was telling Kevin a
+       normal Monday was a good day and a normal Thursday a bad one. Each point
+       is that weekday's own finished-day median. */
+    const dn = D.appointments.dowNorm || {};
+    const normLine = s.map(x => dn[x.dowN] || 0);
+    const hasNorm = normLine.some(v => v > 0);
     charts.push(new Chart(bk.getContext('2d'), {
       type:'bar',
       data:{ labels:s.map(x=>[x.dow, x.label]),   // weekday letter over the date
@@ -2169,13 +2180,15 @@ function drawCharts(){
           { label:'Booked', borderRadius:3, order:1,
             backgroundColor:s.map(x=>x.today?'#f0834a':x.weekend?'rgba(138,160,148,0.22)':'#6cc28b'),
             data:s.map(x=>x.n) },
-          norm ? { type:'line', label:'norm', order:0, data:s.map(()=>norm),
-            borderColor:'rgba(212,177,90,0.6)', borderDash:[4,4], borderWidth:1.5, pointRadius:0, fill:false } : null
+          hasNorm ? { type:'line', label:'typical for that weekday', order:0, data:normLine,
+            borderColor:'rgba(212,177,90,0.65)', borderDash:[4,4], borderWidth:1.5,
+            pointRadius:0, fill:false, stepped:'middle' } : null
         ].filter(Boolean) },
       options:{ responsive:true, maintainAspectRatio:false, layout:{padding:{top:22}},
         plugins:{ legend:{display:false},
           tooltip:{...TIP, filter:c=>c.datasetIndex===0, callbacks:{ label:c=>' '+c.parsed.y+' booked',
-            afterLabel:c=>s[c.dataIndex].weekend?'weekend':(norm?`${norm}/day norm`:'') }}},
+            afterLabel:c=>{ const x=s[c.dataIndex];
+              return x.weekend ? 'weekend' : (normLine[c.dataIndex] ? `${normLine[c.dataIndex]} typical for a ${x.dow}` : ''); } }}},
         scales:{ x:{grid:{display:false},ticks:{font:{family:MONO,size:8},color:'#8aa094',maxRotation:0,autoSkip:false}},
           y:{display:false,beginAtZero:true,grace:'12%'} } },
       plugins:[barLabelsPlugin({series:s, todayTag:true})]
@@ -2377,7 +2390,7 @@ addEventListener('resize', () => {
    server for hours while Kevin looked at yesterday's build and reported the bug
    as unfixed. That happened. The page now checks version.json on every load and
    reloads itself once if the deployed build is newer than the one running. */
-const BUILD = '2026-07-23T23:05Z-inbox-digest';
+const BUILD = '2026-07-24T00:20Z-weekday-shape';
 const SB_URL = 'https://lzegjjbkfuecrhdvlvay.supabase.co';
 /* The one page that can finish a password reset. Hard-coded rather than derived,
    because every derivation of it so far has been a source of bugs: a bare origin
@@ -2878,7 +2891,17 @@ function buildData(raw){
        today, not what the crews are driving to. Both bases are kept and both
        are labelled, because confusing them would make a busy calendar look like
        a productive morning. ─────────────────────────────────────────────── */
-    const createdOn = day => appts.filter(a => a.cc_created_at && dstr(a.cc_created_at) === day);
+    /* Indexed once. Everything below asks "what was created on this date"
+       hundreds of times — per weekday, per brand, per bar — and a linear scan of
+       nine thousand appointments each time is how a phone gets slow. */
+    const createdIdx = {};
+    for (const a of appts) if (a.cc_created_at) (createdIdx[dstr(a.cc_created_at)] ??= []).push(a);
+    const createdOn = day => createdIdx[day] || [];
+    /* Contractors Cloud labels Eastern local time as UTC, so the hour inside the
+       string IS the Eastern hour the booking was taken. That makes an honest
+       as-of-this-hour comparison possible without any timezone maths. */
+    const hourOf = a => Number(String(a.cc_created_at).slice(11,13));
+    const createdOnBy = (day, h) => createdOn(day).filter(a => hourOf(a) <= h);
     const todayStr = ymdL(T), yestStr = ymdL(addD(T,-1));
     const bookedTodayRows = createdOn(todayStr);
     const bookedToday = bookedTodayRows.length;
@@ -2893,8 +2916,54 @@ function buildData(raw){
       normDays.push(createdOn(ymdL(d)).length);
     }
     const sortedNorm = [...normDays].sort((x,y)=>x-y);
-    const bookedNorm = sortedNorm.length ? sortedNorm[Math.floor(sortedNorm.length/2)] : 0;
+    const bookedNormFlat = sortedNorm.length ? sortedNorm[Math.floor(sortedNorm.length/2)] : 0;
     const isWeekend = T.getDay() === 0 || T.getDay() === 6;
+
+    /* ── WEEKDAY SHAPE ────────────────────────────────────────────────────────
+       Kevin: "appts don't come evenly all week. Monday is top-heavy etc. Can you
+       calculate the actual daily call average for that stat."
+
+       He is right and the distortion is large. Measured over the last nine
+       weeks, the median booked per day runs Mon 32 · Tue 22 · Wed 23 · Thu 19 ·
+       Fri 23. A single flat norm of 23 therefore makes an ordinary Monday read
+       nearly 40% ahead and an ordinary Thursday read behind, purely from which
+       day it is. Every daily comparison on this page now comes from the same
+       weekday, not from a blended week.
+
+       Two baselines per weekday, because a day in progress is not a finished
+       one: `full` is what that weekday finishes at, `byHour` is what it has
+       normally reached by the hour it is now. Bookings land through the whole
+       day — half by 11am, ~88% by 2pm — so comparing a part-day against a
+       finished-day norm is the same mistake in a different axis. */
+    const med = a => { const v = [...a].sort((x,y)=>x-y);
+                       return v.length ? v[Math.floor(v.length/2)] : 0; };
+    const NOWH = NOW.getHours();
+    const LOOKBACK = 63;                   // nine samples per weekday
+    const dowFull = {}, dowByHour = {}, brandDowFull = {}, brandDowByHour = {};
+    for (const b of BRAND_ORDER) { brandDowFull[b] = {}; brandDowByHour[b] = {}; }
+    for (let i = 1; i <= LOOKBACK; i++) {
+      const d = addD(T, -i), w = d.getDay(), key = ymdL(d);
+      const all = createdOn(key), upto = createdOnBy(key, NOWH);
+      (dowFull[w] ??= []).push(all.length);
+      (dowByHour[w] ??= []).push(upto.length);
+      for (const b of BRAND_ORDER) {
+        const hit = a => (projBrand[String(a.cc_project_id)] || 'unknown') === b;
+        (brandDowFull[b][w] ??= []).push(all.filter(hit).length);
+        (brandDowByHour[b][w] ??= []).push(upto.filter(hit).length);
+      }
+    }
+    const DOWN = [0,1,2,3,4,5,6];
+    const dowNorm     = Object.fromEntries(DOWN.map(w => [w, med(dowFull[w] || [])]));
+    const dowNormHour = Object.fromEntries(DOWN.map(w => [w, med(dowByHour[w] || [])]));
+    const brandDowNorm     = Object.fromEntries(BRAND_ORDER.map(b =>
+      [b, Object.fromEntries(DOWN.map(w => [w, med(brandDowFull[b][w] || [])]))]));
+    const brandDowNormHour = Object.fromEntries(BRAND_ORDER.map(b =>
+      [b, Object.fromEntries(DOWN.map(w => [w, med(brandDowByHour[b][w] || [])]))]));
+    const TDOW = T.getDay();
+    // what today should be measured against: this weekday, by this hour
+    const bookedNorm     = dowNorm[TDOW] || 0;        // a finished one of today's weekday
+    const bookedNormHour = dowNormHour[TDOW] || 0;    // where it normally stands by now
+    const DOWFULL = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
 
     const bookedByBrand = {};
     for (const a of bookedTodayRows) {
@@ -2909,17 +2978,16 @@ function buildData(raw){
        ever means "zero", which happens on a tenth of normal days. So the norm is
        carried per brand and the alert gates on having enough baseline to mean
        something. */
-    const brandNorm = {};
-    for (const b of BRAND_ORDER) {
-      const v = [];
-      for (let i = 1; i <= 56; i++) {
-        const d = addD(T, -i);
-        if (d.getDay() === 0 || d.getDay() === 6) continue;
-        v.push(createdOn(ymdL(d)).filter(a => (projBrand[String(a.cc_project_id)]||'unknown') === b).length);
-      }
-      v.sort((x,y)=>x-y);
-      brandNorm[b] = { median: v.length ? v[Math.floor(v.length/2)] : 0, days: v.length };
-    }
+    /* Per brand, same discipline: today's weekday, by this hour. `median` stays
+       the name every consumer already reads, but it is no longer a blended-week
+       figure — it is what this brand normally has on the board by now on a day
+       like today. `full` is the finished-day figure, kept for labels and for the
+       gate that decides whether a brand books enough to signal on daily at all. */
+    const brandNorm = Object.fromEntries(BRAND_ORDER.map(b => [b, {
+      median: brandDowNormHour[b][TDOW] || 0,
+      full:   brandDowNorm[b][TDOW] || 0,
+      days:   (brandDowFull[b][TDOW] || []).length,
+    }]));
 
     /* ── APPOINTMENTS BY COMPANY · today / week / month, each like-for-like ────
        Kevin, from the office laptop: "month-to-date doesn't break down
@@ -2969,11 +3037,12 @@ function buildData(raw){
     const winEnd = addD(T, 1);
     const byCompany = {
       day: {
-        typLabel: 'a typical weekday', sampleLabel: 'median weekday · last 8 weeks',
+        typLabel: `a typical ${DOWFULL[TDOW]} by this hour`,
+        sampleLabel: `median ${DOWFULL[TDOW].slice(0,3)} · last 9`,
         partial: true,
         counts: bookedByBrandInRange(T, winEnd),
-        // the same weekday-median baseline the daily alarm already trusts, so the
-        // page never shows two different "typical today" numbers for one brand
+        /* the same weekday-and-hour baseline the daily alarm now trusts, so the
+           page never shows two different "typical today" numbers for one brand */
         typ: Object.fromEntries(BRAND_ORDER.map(b => [b, { mean: brandNorm[b].median, vals: null }])),
       },
       week: (() => {
@@ -3001,7 +3070,8 @@ function buildData(raw){
     const DOW2 = ['Su','Mo','Tu','We','Th','Fr','Sa'];
     const bookedSeries = [];
     for (let i = 13; i >= 0; i--) { const d = addD(T,-i);
-      bookedSeries.push({ label:`${d.getMonth()+1}/${d.getDate()}`, dow:DOW2[d.getDay()], n:createdOn(ymdL(d)).length,
+      bookedSeries.push({ label:`${d.getMonth()+1}/${d.getDate()}`, dow:DOW2[d.getDay()], dowN:d.getDay(),
+                          n:createdOn(ymdL(d)).length,
                           today:i===0, weekend:d.getDay()===0||d.getDay()===6 }); }
     // forward calendar: today + the next 7 days, the "is the diary filling" read
     const aheadSeries = [];
@@ -3060,7 +3130,14 @@ function buildData(raw){
       bookedToday, bookedYesterday, bookedNorm, isWeekend,
       // a Sunday zero is structural, not a bad day — say which it is
       yesterdayWasWeekend: [0,6].includes(addD(T,-1).getDay()),
-      bookedVsNorm: bookedNorm ? Math.round((bookedToday - bookedNorm)/bookedNorm*100) : null,
+      /* vs THIS weekday, by THIS hour — the only comparison that is not
+         flattered or punished by which day of the week it happens to be. The
+         old flat-week figure is kept alongside so the page can show how far off
+         the blended number was. */
+      bookedNormHour, bookedNormFlat,
+      bookedVsNorm: bookedNormHour ? Math.round((bookedToday - bookedNormHour)/bookedNormHour*100) : null,
+      dowNorm, dowNormHour, todayDow: TDOW, todayDowName: DOWFULL[TDOW],
+      nowHour: NOWH,
       bookedByBrand, bookedSeries, aheadSeries, bookedWeekly, bookedMonthly, brandNorm,
       lastCreatedAt: bookedTodayRows.map(a=>a.cc_created_at).sort().pop() || null,
       // calendar basis — what the crews are driving to
@@ -3368,16 +3445,20 @@ function buildData(raw){
     }
 
     // ── setting output today (afternoon only, weekdays only)
-    if (A && isWeekday && afternoon && A.bookedNorm >= 5) {
-      const r = A.bookedToday / A.bookedNorm;
+    /* Weekday-shaped: today against what THIS weekday normally has on the board
+       by THIS hour. A flat 23/day gate fired on ordinary Thursdays and stayed
+       quiet on genuinely poor Mondays. */
+    if (A && isWeekday && afternoon && A.bookedNormHour >= 5) {
+      const dayName = A.todayDowName, byWhen = `by ${hourLabel(A.nowHour)}`;
+      const r = A.bookedToday / A.bookedNormHour;
       if (r < 0.5) add('fire', 'booking-day-low', ['appointments','flags','dive:day'],
-        `Only ${A.bookedToday} appointments booked today against a ${A.bookedNorm}/day norm.`,
+        `Only ${A.bookedToday} appointments booked today against ${A.bookedNormHour} typical for a ${dayName} ${byWhen}.`,
         `Get the setters on the phone this afternoon — a day this far behind does not recover on its own.`,
-        `bookings well down today (${A.bookedToday} vs ${A.bookedNorm})`);
+        `bookings well down for a ${dayName} (${A.bookedToday} vs ${A.bookedNormHour})`);
       else if (r < 0.75) add('watch', 'booking-day-soft', ['appointments','flags','dive:day'],
-        `${A.bookedToday} booked today, below the ${A.bookedNorm}/day norm.`,
+        `${A.bookedToday} booked today, below the ${A.bookedNormHour} typical for a ${dayName} ${byWhen}.`,
         `Worth a check-in with the setters before the day closes.`,
-        `bookings soft today (${A.bookedToday} vs ${A.bookedNorm})`);
+        `bookings soft for a ${dayName} (${A.bookedToday} vs ${A.bookedNormHour})`);
     }
 
     // ── the week ahead
@@ -3416,16 +3497,16 @@ function buildData(raw){
          evidence is still arriving teaches its reader to ignore it. */
       const unknownToday = A.bookedByBrand.unknown || 0;
       for (const b of BRAND_ORDER) {
-        const norm = (A.brandNorm && A.brandNorm[b]) || { median: 0 };
-        if (norm.median < 4) continue;   // a brand whose normal is ~1 cannot signal daily
+        const norm = (A.brandNorm && A.brandNorm[b]) || { median: 0, full: 0 };
+        if ((norm.full || 0) < 4) continue;   // a brand whose normal is ~1 cannot signal daily
         const n = A.bookedByBrand[b] || 0;
         if (n >= norm.median * 0.4) continue;
         if (unknownToday >= norm.median - n) continue;   // could be sync lag, not a slow day
         const m = BRANDS[b] || { n: b };
         add('watch', 'brand-booking-' + b, ['appointments','flags','dive:day'],
-          `${m.n} booked ${n} appointment${n===1?'':'s'} today against ${norm.median} typical.`,
+          `${m.n} booked ${n} appointment${n===1?'':'s'} today against ${norm.median} typical for a ${A.todayDowName} by ${hourLabel(A.nowHour)}.`,
           `Point the setters at ${m.n} for the rest of the day — the other brands are carrying the count.`,
-          `${m.s} quiet today (${n} vs ${norm.median})`);
+          `${m.s} quiet for a ${A.todayDowName} (${n} vs ${norm.median})`);
       }
     }
 
