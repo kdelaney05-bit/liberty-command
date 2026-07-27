@@ -268,6 +268,27 @@
   .snaphint { font-family: 'JetBrains Mono', monospace; font-size: 9px; letter-spacing: 0.1em;
     text-transform: uppercase; color: var(--text-dim); text-align: center; margin-top: 12px; }
 
+  /* actual money, on the hero. The four tiles above are SIGNED work — new
+     sales. These three cells are what actually happened to money this month:
+     jobs built, dollars invoiced, dollars still owed. On a phone this used to
+     live six screens down; it belongs on screen one, next to the sales it
+     pays for. Same honesty rules: badged sources, withheld is said out loud. */
+  .moneystrip { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 9px; margin-top: 9px; }
+  .moneystrip .ms { display: flex; flex-direction: column; text-align: left; font: inherit; color: inherit;
+    background: var(--bg-card); border: 1px solid var(--line);
+    border-radius: 12px; padding: 11px 12px; cursor: pointer; }
+  .moneystrip .ms-k { font-family: 'JetBrains Mono', monospace; font-size: 8px; letter-spacing: 0.14em;
+    text-transform: uppercase; color: var(--text-dim); }
+  .moneystrip .ms-v { font-family: 'Fraunces', serif; font-size: 24px; font-weight: 500; margin-top: 4px; }
+  @media (min-width: 700px) { .moneystrip .ms-v { font-size: 27px; } }
+  .moneystrip .ms-v.gold { color: var(--gold); } .moneystrip .ms-v.orange { color: var(--accent-soft); }
+  .moneystrip .ms-v.dim { color: var(--text-dim); font-size: 16px; }
+  .moneystrip .ms-s { font-family: 'JetBrains Mono', monospace; font-size: 8px; color: var(--text-dim); margin-top: 4px; line-height: 1.4; }
+  .moneystrip .ms-go { margin-top: auto; padding-top: 6px; text-align: right;
+    font-family: 'JetBrains Mono', monospace; font-size: 8px; letter-spacing: 0.12em;
+    text-transform: uppercase; color: var(--text-dim); }
+  .moneystrip .ms:hover .ms-go { color: var(--accent-soft); }
+
   /* the seam: what the one total is made of, shown under it rather than as a
      second number that appears to contradict it */
   .seam { display: flex; flex-direction: column; gap: 5px; margin-top: 12px;
@@ -811,6 +832,7 @@ const w  = () => flat('month');
 const wk = () => flat('week');
 const qbOK = () => D.qb && !D.qb.unavailable;
 const qbw = () => qbOK() ? D.qb.windows.month : null;
+const qbWinOf = k => qbOK() ? D.qb.windows[k] : null;
 const charts = [];
 
 /* ── header ───────────────────────────────────────────────────────────────── */
@@ -896,6 +918,41 @@ function hdr(){
     </button>`;
   }).join('');
   const anyBilldu = ['day','week','month','ytd'].some(k => flat(k).billdu > 0);
+  /* Actual money rides on the hero, right under the signed tiles. Kevin (27
+     Jul, from Gio's phone): the mobile page led with new sales and nothing
+     else — "my desktop has actual revenue numbers… the mobile version I don't
+     see anything." Signed is a promise; built is the promise kept.
+
+     BUILT IS A QUICKBOOKS FIGURE — Kevin's ruling, same day: "Needs to be
+     built off qb." A job is billed when it is built, so QB invoiced IS the
+     built number, at face value, dated by invoice date. CC's completed_at is
+     not used here — it stays a CC fact inside the drill-ins, under its own
+     name, and is never blended with this. */
+  const _qm = qbWinOf('month'), _qy = qbWinOf('ytd');
+  /* Each cell is a door to its window's built deep-dive, with the affordance on
+     its own face — the same law the signed tiles learned ("Gio didn't know
+     that"). A/R has no window of its own; it opens the month, where the built
+     card carries it. */
+  const moneyStrip = `<div class="moneystrip">
+    <button class="ms" onclick="openWindow('month')" aria-label="Built month to date — open details">
+      <div class="ms-k">Built · MTD</div>
+      ${_qm ? `<div class="ms-v gold">${short(_qm.invoiced)}</div>
+      <div class="ms-s">${_qm.count} invoice${_qm.count===1?'':'s'} · billed when built · qb</div>`
+            : `<div class="ms-v dim">withheld</div><div class="ms-s">qb not readable</div>`}
+      <div class="ms-go">details ›</div></button>
+    <button class="ms" onclick="openWindow('ytd')" aria-label="Built year to date — open details">
+      <div class="ms-k">Built · YTD</div>
+      ${_qy ? `<div class="ms-v gold">${short(_qy.invoiced)}</div>
+      <div class="ms-s">${_qy.count} invoice${_qy.count===1?'':'s'} · billed when built · qb</div>`
+            : `<div class="ms-v dim">withheld</div><div class="ms-s">qb not readable</div>`}
+      <div class="ms-go">details ›</div></button>
+    <button class="ms" onclick="openWindow('month')" aria-label="Open accounts receivable — open details">
+      <div class="ms-k">Open A/R</div>
+      ${qbOK() ? `<div class="ms-v orange">${short(D.qb.arTotal)}</div>
+      <div class="ms-s">billed, not yet paid · qb</div>`
+           : `<div class="ms-v dim">withheld</div><div class="ms-s">qb not readable</div>`}
+      <div class="ms-go">details ›</div></button>
+  </div>`;
   return `<div class="hdr">
     <div class="eyebrow">Liberty · three companies</div>
     <h1>Liberty <em>Command</em> Console</h1>
@@ -905,6 +962,8 @@ function hdr(){
     <div class="snaphint">${anyBilldu
       ? 'Signed contract value · Contractors Cloud + Oasis via Billdu'
       : 'Signed contract value'}</div>
+    ${moneyStrip}
+    <div class="snaphint">Actual revenue · built = invoiced in QuickBooks · not the signed figure, never added to it</div>
   </div>`;
 }
 
@@ -1167,7 +1226,11 @@ function cardQuota(){
   const Q = D.quotaBoard; if (!Q || !Q.carriers.length) return '';
   const K = QUOTAWIN, W = Q.wins[K];
   const label = { week:'this week', month:'this month', ytd:'year to date' }[K];
-  const rows = Q.carriers.map(r => {
+  /* A seller at zero stays — showing who is under the floor is the point.
+     A non-seller (owner, non-selling manager) appears only in windows where
+     they actually signed; their $0 weeks are not a floor miss, they are a
+     different job. */
+  const rows = Q.carriers.filter(r => r.sells || (W.sig[r.id] || 0) > 0).map(r => {
     const signed = W.sig[r.id] || 0;
     const delta = signed - W.pace;
     const pct = W.pace ? Math.round(signed / W.pace * 100) : 0;
@@ -1310,8 +1373,8 @@ function cardStats(){
       <div class="val green">${short(W.rev)}</div><div class="sub">${W.jobs} contracts · cc</div>${dl(W.rev,pv.rev)}</div>
     <div class="stat-tile"><div class="lbl">Appts scheduled</div>
       <div class="val blue">${W.appts}</div><div class="sub">${W.close===null?'no close rate':W.close+'% closed'}</div>${dl(W.appts,pv.appts)}</div>
-    <div class="stat-tile"><div class="lbl">New invoiced</div>
-      ${q ? `<div class="val gold">${short(q.invoiced)}</div><div class="sub">${q.count} invoices · qb</div>${dl(q.invoiced,q.prev.invoiced)}`
+    <div class="stat-tile"><div class="lbl">Built MTD</div>
+      ${q ? `<div class="val gold">${short(q.invoiced)}</div><div class="sub">${q.count} invoice${q.count===1?'':'s'} · billed when built · qb</div>${dl(q.invoiced,q.prev.invoiced)}`
           : `<div class="val" style="color:var(--text-dim)">—</div><div class="sub">not readable</div><div class="delta flat">see note below</div>`}</div>
     <div class="stat-tile"><div class="lbl">Open A/R</div>
       ${qbOK() ? `<div class="val orange">${short(D.qb.arTotal)}</div><div class="sub">${D.qb.ar.reduce((n,a)=>n+a.count,0)} open · as of now</div>
@@ -1319,7 +1382,7 @@ function cardStats(){
       : `<div class="val" style="color:var(--text-dim)">—</div><div class="sub">not readable</div><div class="delta flat">see note below</div>`}</div>
   </div>
     <div class="note">
-      <b>Signed</b> is Contractors Cloud contract value. <b>Invoiced</b> is QuickBooks face value. They count different events in different systems and are never added together on this page.
+      <b>Signed</b> is Contractors Cloud contract value. <b>Built</b> is QuickBooks invoiced face value — a job is billed when it is built, so the invoice is the built record. They count different events in different systems and are never added together on this page.
       ${qbOK() ? `<b>${D.qb.dropped}</b> of ${D.qb.total.toLocaleString()} QuickBooks invoices are flagged <b>reporting_excluded</b> and are left out of every figure here.`
                : `QuickBooks figures are <b>withheld, not zero</b> — ${esc(D.qb.reason)}`}
     </div>
@@ -1746,6 +1809,7 @@ function cardFlags(){
   const W = w(), f = [];
   const X = D.exclusions;
   if (X && X.jobs) f.push(['#a98fd5', `<b>${X.jobs} jobs held out of every figure.</b> ${X.signed} of them signed, worth <b>${short(X.value)}</b> — the batch-entry anomaly Liberty's own reports already exclude${X.brands.length===1?` (all on ${esc(brandOf(X.brands[0]).n)})`:''}. Flagged, not deleted: they are real jobs, excluded from reporting so this console agrees with the reports you already trust.`]);
+  if (D.sampleReps && D.sampleReps.length) f.push(['#a98fd5', `<b>${D.sampleReps.length} sample rep${D.sampleReps.length===1?'':'s'} excluded.</b> ${D.sampleReps.map(esc).join(', ')} — the app's invented demo team (reps.source = app_sample), not real people. Their demo touches are excluded the same way. Nothing they carry is counted anywhere on this page.`]);
   const cov = pct(D.coverage.jobsWithSold, D.coverage.jobs);
   f.push(['#d4b15a', `<b>${cov}% of jobs carry a contract value.</b> ${D.coverage.jobsWithSold.toLocaleString()} of ${D.coverage.jobs.toLocaleString()} have a sold amount on them. Every dollar on this page is a floor, not a full count.`]);
   if (!qbOK()) f.push(['#d96a5e', `<b>QuickBooks is unreadable to your login.</b> ${esc(D.qb.reason)} Every QB figure on this page is withheld rather than shown as zero.`]);
@@ -2130,6 +2194,61 @@ function toggleBox(el){
   if (el.querySelector('canvas')) drawCharts();
 }
 
+/* ── BUILT, inside every drill-in ───────────────────────────────────────────
+   Kevin's redesign ruling (27 Jul): the drill-ins were "just sales revenue and
+   marketing" — built has to be REPRESENTED EQUALLY, because built is the thing
+   that pays the bills. So every window carries a built deep-dive at the same
+   rank as Signed: headline, sold-vs-built, built by brand vs the same prior
+   span. The depth honestly ends at the brand — a QuickBooks invoice carries no
+   salesperson, so there is no built-by-rep board, and the card says so instead
+   of faking one. */
+function diveBuilt(k){
+  const W = flat(k);
+  const label = DIVE_TITLE[k].toLowerCase();
+  if (!qbOK()) return `<div class="card full" style="margin-bottom:12px">
+    <div class="card-title">Built · ${esc(label)}<span class="feed-tag none">not readable</span></div>
+    <div class="card-sub">What was billed — a job is billed when it is built, so the invoice is the built record.</div>
+    <div class="withheld"><div class="wt">Withheld, not zero</div><div class="wx">${esc(D.qb.reason)} The signed figures on this page are unaffected.</div></div>
+  </div>`;
+  const q = qbWinOf(k), pq = q.prev || { invoiced:0, count:0, byBrand:{} };
+  const dq = pq.invoiced ? Math.round((q.invoiced-pq.invoiced)/pq.invoiced*100) : null;
+  const ratio = W.rev > 0 ? Math.round(q.invoiced / W.rev * 100) : null;
+  const cur = q.byBrand || {}, prv = pq.byBrand || {};
+  const ids = [...new Set([...BRAND_ORDER, ...Object.keys(cur), ...Object.keys(prv)])]
+    .sort((a,b)=>((cur[b]?.invoiced)||0)-((cur[a]?.invoiced)||0));
+  return `<div class="card full" style="margin-bottom:12px">
+    <div class="card-title">Built · ${esc(label)}<span class="feed-tag qb">live · qb</span></div>
+    <div class="card-sub">What was billed in this window — a job is billed when it is built, so the invoice is the built record.</div>
+    <div class="dive-hero">
+      <div class="big">${short(q.invoiced)}</div>
+      <div class="side">${q.count} invoice${q.count===1?'':'s'}
+        ${dq===null?'':`<br/>${dq>=0?'▲':'▼'} ${Math.abs(dq)}% vs ${esc(W.prevLabel)}`}</div>
+    </div>
+
+    <div class="card-title" style="margin:14px 0 6px">Sold vs built</div>
+    <div class="wow-hero">
+      <div class="wow-col"><div class="k">Signed · cc</div><div class="v">${short(W.rev)}</div></div>
+      <div class="wow-arrow"><div class="d">${ratio===null?'—':ratio+'%'}</div><div class="c">built ÷ sold</div></div>
+      <div class="wow-col now"><div class="k">Built · qb</div><div class="v">${short(q.invoiced)}</div></div>
+    </div>
+    <div class="note" style="margin-top:8px">A pace gauge, not a conversion rate: the work built in this window was mostly <b>sold in earlier windows</b>, and the two figures come from different systems counting different events. Read it as "is production keeping up with sales" — never as one number owed to the other, and never summed.</div>
+
+    <div class="card-title" style="margin:14px 0 6px">Built by brand · vs ${esc(W.prevLabel)}</div>
+    ${ids.map(id=>{ const un = id==='unclassified';
+      const m = un ? { s:'No brand on the invoice' } : brandOf(id);
+      const a=(prv[id]?.invoiced)||0, b=(cur[id]?.invoiced)||0;
+      const ch=a?Math.round((b-a)/a*100):(b?null:0);
+      return `<div class="wow-row" ${(a||b)?'':'style="opacity:.6"'}>
+        <div class="nm">${esc(m.s)}${un?'<span class="tick">unmapped</span>':''}</div>
+        <div class="nums">${short(a)} → ${short(b)}</div>
+        <div class="chg ${ch===null?'':ch>=0?'up':'down'}">${ch===null?'new':(ch>=0?'+':'')+ch+'%'}</div></div>`}).join('')}
+    <div class="money-totals"><div class="nm">Open A/R · all work, as of now</div>
+      <div class="col ar">${short(D.qb.arTotal)}</div></div>
+
+    <div class="note">QuickBooks face value by invoice date, like-for-like against the same span of ${esc(W.prevLabel)}. <b>There is no built-by-rep board</b>: a QuickBooks invoice carries no salesperson, so built work cannot be credited to a rep without guessing — the depth ends at the brand, said out loud rather than faked. A/R is every open balance as of now and is deliberately not window-sliced.</div>
+  </div>`;
+}
+
 function diveView(k){
   const W = flat(k), pv = W.prev;
   const d = pv.rev ? Math.round((W.rev - pv.rev)/pv.rev*100) : null;
@@ -2176,8 +2295,10 @@ function diveView(k){
       <span><b>${short(W.billdu)}</b> accepted in Billdu, ${W.billduCount} Oasis deal${W.billduCount===1?'':'s'} CC has not recorded yet</span>
       ${W.suppressed?`<span class="muted">${short(W.suppressed)} of Billdu activity is already inside the CC figure and is not added again</span>`:''}
     </div>` : ''}
-    <div class="card-sub" style="margin:10px 0 0">${W.appts} appointments · ${W.completed} completed${W.close===null?'':' · '+W.close+'% close on CC work'}</div>
+    <div class="card-sub" style="margin:10px 0 0">${W.appts} appointments · ${W.completed} completed in CC${W.close===null?'':' · '+W.close+'% close on CC work'}</div>
   </div>
+
+  ${diveBuilt(k)}
 
   ${(()=>{ const u = W.unowned || []; if (!W.unownedCount) return '';
     const rest = W.unownedCount - u.length;
@@ -2335,10 +2456,10 @@ function diveAppointments(k){
         <div class="val ${W.close===null?'':'gold'}">${W.close===null?'—':W.close+'%'}</div>
         <div class="sub">${W.jobs} signed of ${W.appts} run</div>
         <div class="delta flat">CC work only</div></div>
-      <div class="stat-tile"><div class="lbl">Completed</div>
+      <div class="stat-tile"><div class="lbl">Completed in CC</div>
         <div class="val">${W.completed}</div>
-        <div class="sub">jobs finished</div>
-        <div class="delta flat">in this window</div></div>
+        <div class="sub">job${W.completed===1?'':'s'} · ${short(W.builtRev)} contract value</div>
+        <div class="delta flat">CC completed date — Built is the QB figure</div></div>
     </div>
 
     <div class="verdict ${av.tone}">${esc(av.line)}</div>
@@ -2440,15 +2561,20 @@ function render(){
   document.getElementById('app').innerHTML =
     hdr() + askBar() + '<div class="stack">' + [
       /* Order is a statement of what matters, and now so is what stays open.
-         These six are the cockpit at cruise: what needs him, the appointments
-         his week turns on, and the money already on the board. */
-      cardActions(), cardAppointments(), cardApptByCompany(), cardQuota(), cardApptTrends(),
+         The cockpit at cruise: what needs him, the appointments his week turns
+         on, and the money already on the board. The month so far and Trending
+         to Finish moved up next to Appointments (27 Jul, mobile parity): on a
+         phone the page is one column, and sitting behind six cards put the
+         actual revenue and the projection where nobody scrolled. Analysis
+         reads top-down now — what happened, what it means, where it lands. */
+      cardActions(), cardAppointments(), cardStats(), cardTrending(),
+      cardApptByCompany(), cardQuota(), cardApptTrends(),
       /* Leads by company — unfolded at Kevin's request ("break the lead sources
          by company"). It was buried in the quiet strip, which is why he could
          not find it; it is a sibling of Appointments by company, so it sits high
          in the open flow rather than behind a click at the bottom. */
       cardLeads(),
-      cardWeeks(), cardStats(), cardTrending(),
+      cardWeeks(),
 
       /* Everything below folds, and folds together, so they land as one quiet
          strip rather than as short rows scattered through the columns. None of
@@ -2775,7 +2901,7 @@ addEventListener('resize', () => {
    server for hours while Kevin looked at yesterday's build and reported the bug
    as unfixed. That happened. The page now checks version.json on every load and
    reloads itself once if the deployed build is newer than the one running. */
-const BUILD = '2026-07-24T14:05Z-ask-bar';
+const BUILD = '2026-07-27T16:40Z-built-equal';
 const SB_URL = 'https://lzegjjbkfuecrhdvlvay.supabase.co';
 /* The one page that can finish a password reset. Hard-coded rather than derived,
    because every derivation of it so far has been a source of bugs: a bare origin
@@ -2958,7 +3084,18 @@ async function q(path, { retry = true, onPage } = {}){
 /* ── aggregation. Mirrors console/build-console.mjs so the figures on the
       phone are the same figures, computed the same way, just client-side. ── */
 function buildData(raw){
-  const { jobs: allJobs, appts, reps, touches, repTargets, playComponents, leadNames, qbInv, qbError, billdu } = raw;
+  const { jobs: allJobs, appts, reps: allReps, touches, repTargets, playComponents, leadNames, qbInv, qbError, billdu } = raw;
+
+  /* PHANTOM REPS OUT FIRST. Migration 011 tagged the roster the same way 009
+     tagged jobs: a rep linked to a real Contractors Cloud user is source='cc';
+     the app's invented demo team is source='app_sample'. The jobs query has
+     filtered source=eq.cc since v1, but the roster never did — so four people
+     who do not exist stood on the quota fleet at $0 and padded every "of N
+     reps" denominator. Dropped before anything is counted, and what was
+     dropped is stated on the Flags card, by name, because the names are
+     fictional and saying them is what proves nothing real was removed. */
+  const reps = allReps.filter(r => r.source === 'cc');
+  const sampleReps = allReps.filter(r => r.source !== 'cc').map(r => r.name);
 
   /* EXCLUSIONS. Twelve jobs carry reporting_excluded — a batch-entry anomaly
      Liberty's own reports already leave out (migration 012). Counting them made
@@ -3173,6 +3310,11 @@ function buildData(raw){
                 suppressed: bd ? bd.suppressed : 0,
                 deals: js.length + (bd ? bd.count : 0),
                 appts:as.length, completed:done.length,
+                /* Built = CC project_completed_at landed in this window. The
+                   value is those jobs' contract value — what the built work was
+                   sold for, not what has been billed or banked for it. QB owns
+                   billing; this is production. */
+                builtRev: done.reduce((n,j)=>n+Number(j.fin_sold_amount||0),0),
                 // close rate stays CC-over-CC: Billdu deals carry no CC appointment,
                 // and mixing them would inflate it.
                 close: as.length ? Math.round(js.length/as.length*100) : null,
@@ -3672,8 +3814,13 @@ function buildData(raw){
     }
     const producers = new Set();
     for (const k of Object.keys(wins)) for (const rid of Object.keys(wins[k].sig)) producers.add(rid);
-    const carriers = reps.filter(r => r.active && (r.role === 'sales' || producers.has(r.id)))
-                         .map(r => ({ id: r.id, name: r.name, role: r.role }));
+    /* Who carries the floor: reps.sells, not role. Kevin's build-36 ruling
+       (077) — role is wrong in both directions: it drops managers who
+       genuinely sell and keeps stale sales accounts that do not. Sellers are
+       always on the board, zeros included; anyone else rides along only if
+       they actually signed, and cardQuota narrows that to the window shown. */
+    const carriers = reps.filter(r => r.active && (r.sells || producers.has(r.id)))
+                         .map(r => ({ id: r.id, name: r.name, role: r.role, sells: !!r.sells }));
     return { annual: ANNUAL, monthly: Math.round(ANNUAL/12), daily: Math.round(DAILY),
              incomeAt: 100000, rate: 5.5, wins, carriers };
   })();
@@ -4155,7 +4302,7 @@ function buildData(raw){
 
   return {
     generatedAt: new Date().toISOString(),
-    oasisLag, exclusions, signals,
+    oasisLag, exclusions, sampleReps, signals,
     coverage: { jobs: jobs.length, appts: appts.length,
       apptsWithRep: appts.filter(a=>a.rep_id).length, touches: touches.length,
       // Coverage of the field every dollar on this page is actually built from.
@@ -4257,8 +4404,14 @@ async function loadAll(){
        date, since the booked series is creation-dated and the calendar series is
        appointment-dated, and a row can be recent by one and not the other. */
     qp(`cc_appointments?select=rep_id,starts_at,cc_project_id,cc_created_at,synced_at,is_internal&or=(starts_at.gte.${APPT_SINCE},cc_created_at.gte.${APPT_SINCE})`),
-    qp('reps?select=id,name,initials,role,active,cc_default_company_id'),
-    qp('touches?select=rep_id,play,occurred_at'),
+    // source is the sample/real tag from migration 011; sells is Kevin's build-36
+    // ruling on who belongs on a seller board (077). Both come down so the
+    // roster can be filtered the same way the jobs already are.
+    qp('reps?select=id,name,initials,role,active,sells,source,cc_default_company_id'),
+    // Seeded demo touches carry source_kind=app_sample (009); real ones are cc
+    // or app_live. Filtered in the query — a demo touch has no business in an
+    // effort total even as a number to subtract later.
+    qp('touches?select=rep_id,play,occurred_at&source_kind=neq.app_sample'),
     qp('rep_targets?select=rep_id,daily_touch_goal,goal_source'),
     qp('score_components?select=key,title,weight&kind=eq.touch&order=ordinal'),
     // The real lead-source name map: 22 rows, name + category + whether the
