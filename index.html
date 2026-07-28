@@ -173,11 +173,11 @@
      "each week should be a color code if they're hot or cold." The bands are
      his: 35%+ green, 30–35 yellow, under 30 red. A window with no
      appointments stays neutral — no denominator is not a cold streak. */
-  .ct-chips { display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; margin-top: 6px; }
-  .ct-chip { border: 1px solid var(--line); border-radius: 6px; padding: 3px 3px 4px; text-align: center; min-width: 0; }
-  .ct-chip .k { font-family: 'JetBrains Mono', monospace; font-size: 7px; letter-spacing: .08em; text-transform: uppercase; color: var(--text-dim); }
-  .ct-chip .v { font-family: 'Fraunces', serif; font-size: 12.5px; font-weight: 500; line-height: 1.25; }
-  .ct-chip .n { font-family: 'JetBrains Mono', monospace; font-size: 7.5px; color: var(--text-dim); }
+  .ct-chips { display: grid; grid-template-columns: repeat(5, 1fr); gap: 3px; margin-top: 4px; max-width: 340px; }
+  .ct-chip { border: 1px solid var(--line); border-radius: 5px; padding: 2px 2px 3px; text-align: center; min-width: 0; }
+  .ct-chip .k { font-family: 'JetBrains Mono', monospace; font-size: 6px; letter-spacing: .06em; text-transform: uppercase; color: var(--text-dim); }
+  .ct-chip .v { font-family: 'Fraunces', serif; font-size: 10.5px; font-weight: 500; line-height: 1.2; }
+  .ct-chip .n { font-family: 'JetBrains Mono', monospace; font-size: 6.5px; color: var(--text-dim); }
   .ct-chip.hot  { border-color: rgba(108,194,139,.4);  background: rgba(108,194,139,.06); }  .ct-chip.hot .v  { color: var(--green); }
   .ct-chip.warm { border-color: rgba(212,177,90,.4);   background: rgba(212,177,90,.06); }   .ct-chip.warm .v { color: var(--gold); }
   .ct-chip.cold { border-color: rgba(217,106,94,.4);   background: rgba(217,106,94,.06); }   .ct-chip.cold .v { color: var(--red); }
@@ -2342,16 +2342,16 @@ function cardAttention(){
   return `<div class="card attn">
     <div class="card-title">Attention<span class="feed-tag cc">trends, not chores</span></div>
     <div class="stat-grid" style="margin-top:8px">
-      <div class="stat-tile"><div class="lbl">Appts set · WTD</div>
+      <div class="stat-tile" style="cursor:pointer;border-left:2px solid var(--blue)" onclick="openWindow('week')"><div class="lbl" style="color:var(--blue)">Appts · set WTD</div>
         <div class="val ${wtd&&wtd.setD!==null&&wtd.setD<0?'red':'green'}">${wtd?wtd.setNow:'—'}</div>
         <div class="sub">${wtd&&wtd.setD!==null?`vs ${wtd.setPrev} same point last wk${arr(wtd.setD)}`:'no last-week base'}</div></div>
-      <div class="stat-tile"><div class="lbl">Signed · MTD</div>
+      <div class="stat-tile" style="cursor:pointer;border-left:2px solid var(--green)" onclick="openWindow('month')"><div class="lbl" style="color:var(--green)">Sales · signed MTD</div>
         <div class="val ${revD!==null&&revD<0?'red':'green'}">${mo.company?short(mo.company.rev):'—'}</div>
         <div class="sub">${revD!==null?`vs same days last month${arr(revD)}`:''}</div></div>
-      <div class="stat-tile"><div class="lbl">Built · MTD</div>
+      <div class="stat-tile" style="cursor:pointer;border-left:2px solid var(--gold)" onclick="openWindow('month')"><div class="lbl" style="color:var(--gold)">Builds · completed MTD</div>
         <div class="val ${builtD!==null&&builtD<0?'red':'green'}">${short(builtNow)}</div>
         <div class="sub">${builtD!==null?`vs same days last month${arr(builtD)}`:`${mo.company?mo.company.completed:0} jobs completed`}</div></div>
-      <div class="stat-tile"><div class="lbl">Open A/R</div>
+      <div class="stat-tile" style="cursor:pointer;border-left:2px solid var(--accent-soft)" onclick="toggleMinor('money');document.querySelector('[data-mk=money]')?.scrollIntoView({behavior:'smooth'})"><div class="lbl" style="color:var(--accent-soft)">Financial · open A/R</div>
         <div class="val ${qbOK()&&D.qb.arTotal>0?'gold':''}">${qbOK()?short(D.qb.arTotal):'—'}</div>
         <div class="sub">${qbOK()?'every open balance, as of now':'QB feed not readable'}</div></div>
     </div>
@@ -3051,7 +3051,11 @@ function render(){
          reads top-down now — what happened, what it means, where it lands. */
       /* Attention first — trends, not chores. The old housekeeping inbox
          (What needs you) folds into the Review row at the bottom. */
-      cardAttention(), cardAppointments(),
+      cardAttention(),
+      /* THE sales box, directly under Attention and above Appointments —
+         Kevin: "move sales above the appointments box, remove the double." */
+      cardReps(),
+      cardAppointments(),
       /* The QUOTA FLEET rides in the first masonry tier, beside The month so
          far and Trending to finish — Kevin (28 Jul): "there's a ton of room up
          to the right of where the sales guys are — move that box up." And the
@@ -3061,10 +3065,7 @@ function render(){
          Closing momentum table states in full. On a phone this order simply
          reads: money, then the sellers, which is the same statement of
          priority. */
-      /* Individual sales data rides with the fleet, well BEFORE the leads
-         breakdown — Kevin (28 Jul): "it's revenue so we need it prominent." */
-      cardStats(), cardTrending(), cardQuota(),
-      cardReps(),
+      cardStats(), cardTrending(),
       cardPipeline(),
       cardApptByCompany(),
       cardIntel(),
@@ -3081,6 +3082,7 @@ function render(){
          opens it when he wants it. Booked-by-week/month and calendar load
          folded 28 Jul — Kevin: consolidate the abundance of appointment data;
          the main instrument and the by-company band carry the story. */
+      minor('fleet', 'every rep against the employment floor', cardQuota()),
       minor('appttrend', 'booked by week & month', cardApptTrends()),
       cardCalendarLoad(),
       minor('review', 'housekeeping & data chores', cardActions()),
@@ -3467,7 +3469,7 @@ addEventListener('resize', () => {
    server for hours while Kevin looked at yesterday's build and reported the bug
    as unfixed. That happened. The page now checks version.json on every load and
    reloads itself once if the deployed build is newer than the one running. */
-const BUILD = '2026-07-28T22:44Z-pipeline-stage1';
+const BUILD = '2026-07-28T23:05Z-sales-first';
 const SB_URL = 'https://lzegjjbkfuecrhdvlvay.supabase.co';
 /* The one page that can finish a password reset. Hard-coded rather than derived,
    because every derivation of it so far has been a source of bugs: a bare origin
