@@ -1616,7 +1616,12 @@ function cardReps(){
      useful, should be used anytime we can." So the sales box gets the same
      window toggle the fleet has, instead of being frozen on MTD. */
   const k = REPSWIN, W = D.windows[k] || {};
-  const reps = W.reps || [], mx = Math.max(1, ...reps.map(r=>r.rev));
+  /* Kevin: only the current sellers (roster sells flag) and Gio on the list;
+     everyone else compresses behind one tap. */
+  const all = W.reps || [];
+  const core0 = all.filter(r => (D.roster[String(r.id)]||{}).sells || /\bgio\b/i.test(r.name||''));
+  const rest0 = all.filter(r => !core0.includes(r));
+  const reps = [...core0, ...rest0], CORE = core0.length, mx = Math.max(1, ...all.map(r=>r.rev));
   const label = { day:'today', week:'this week', month:'this month', ytd:'this year' }[k];
   return `<div class="card">
     <div class="card-title">Sales by rep<span class="feed-tag cc">live · cc</span></div>
@@ -1624,7 +1629,7 @@ function cardReps(){
       ${[['day','Day'],['week','Week'],['month','Month'],['ytd','YTD']].map(([kk,l])=>`<button class="${kk===k?'on':''}" onclick="setRepsWin('${kk}')">${l}</button>`).join('')}
     </div>
     <div class="card-sub">${reps.length? `Ranked by signed contract value ${label}. Tap a name for their one-pager.` : `No rep activity ${label}.`}</div>
-    ${reps.map(r=>`<div class="rep-row${r.office?'':' acc'}" ${r.office?'style="opacity:.8"':`onclick="openRep('${esc(String(r.id))}')"`}>
+    ${reps.map((r,i)=>`<div class="rep-row${r.office?'':' acc'}"${i>=CORE?' data-extra="1" style="display:none"':''} ${r.office?'style="opacity:.8"':`onclick="openRep('${esc(String(r.id))}')"`}>
       <div class="rep-head">
         <div class="nm">${esc(r.name)}${r.billdu?'<span class="tick">billdu</span>':''}${r.role&&r.role!=='sales'&&!r.office?`<span class="brand">${esc(r.role)}</span>`:''}</div>
         <div class="amt">${short(r.rev)} <span>· ${r.jobs} deal${r.jobs===1?'':'s'}</span>${r.office?'':'<span class="acc-chev">›</span>'}</div>
@@ -1633,6 +1638,7 @@ function cardReps(){
       ${r.billdu?`<div class="tgt-cap"><span>${r.office?'sent from the office account — seller not recorded':`${short(r.rev-r.billdu)} CC + ${short(r.billdu)} Billdu`}</span></div>`:''}
       ${r.office?'':closeMini(r.id)}
     </div>`).join('')}
+    ${reps.length>CORE?`<button type="button" class="linkbtn" onclick="const x=[...this.parentElement.querySelectorAll('[data-extra]')];const open=x[0].style.display==='none';x.forEach(e=>e.style.display=open?'':'none');this.textContent=open?'Show fewer':'Show all ${reps.length} ›'">Show all ${reps.length} ›</button>`:''}
     ${reps.length?`<div class="note">Rep is read from the job's own <b>rep_id</b>. <b>${D.coverage.apptsWithRep.toLocaleString()} of ${D.coverage.appts.toLocaleString()}</b> appointments carry a rep, so close rates below that coverage are unknown rather than assumed.</div>`:''}
   </div>`;
 }
@@ -3479,7 +3485,7 @@ addEventListener('resize', () => {
    server for hours while Kevin looked at yesterday's build and reported the bug
    as unfixed. That happened. The page now checks version.json on every load and
    reloads itself once if the deployed build is newer than the one running. */
-const BUILD = '2026-07-28T23:20Z-sales-toggle';
+const BUILD = '2026-07-28T23:34Z-sellers-only-list';
 const SB_URL = 'https://lzegjjbkfuecrhdvlvay.supabase.co';
 /* The one page that can finish a password reset. Hard-coded rather than derived,
    because every derivation of it so far has been a source of bugs: a bare origin
