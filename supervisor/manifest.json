@@ -1,0 +1,26 @@
+{
+  "name": "TruReview Autopilot · Supervisor",
+  "short_name": "Supervisor",
+  "description": "Supervisor mode — the Babysit Board, pipeline, threads, payment and crew record. Demo data until live wiring lands.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#0d1626",
+  "theme_color": "#0d1626",
+  "categories": ["business", "productivity"],
+  "icons": [
+    {
+      "src": "./icon-1024.png",
+      "sizes": "1024x1024",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "./icon-1024.png",
+      "sizes": "1024x1024",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}
