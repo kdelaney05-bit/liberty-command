@@ -231,6 +231,9 @@
   /* appointments by company — one tile per company, count vs a measured typical,
      the tick marks typical. Three across where there is room, stacked on a phone. */
   .apco-tiles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 14px; }
+  .mini4 { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr); gap: 10px 12px; margin-top: 14px; border-top: 1px solid var(--line); padding-top: 12px; }
+  .mini4 .chart-wrap { min-width: 0; }
+  .mini4 .mini-cap { overflow: hidden; text-overflow: ellipsis; white-space: nowrap;  font-family: 'JetBrains Mono', monospace; font-size: 8px; letter-spacing: .1em; text-transform: uppercase; color: var(--text-dim); margin-bottom: 3px; }
   @media (max-width: 620px) { .apco-tiles { grid-template-columns: 1fr; } }
   .apco-tile { background: var(--bg-card-hi); border: 1px solid var(--line); border-radius: 12px; padding: 15px; }
   .apco-nm { display: flex; align-items: center; gap: 8px; font-size: 13.5px; font-weight: 500; margin-bottom: 10px; }
@@ -1204,7 +1207,7 @@ function cardApptByCompany(){
   });
   const scale = Math.max(1, ...rows.map(r => Math.max(r.n, r.t)));
   const unknown = W.counts.unknown || 0;
-  const spanLabel = { day:'today', week:'this week', month:'this month' }[K];
+  const spanLabel = { day:'today', week:'this week', month:'this month', ytd:'year to date' }[K];
   return `<div class="card full apco-band">
     <div class="card-title">Appointments by company<span class="feed-tag cc">live · cc</span></div>
     <div class="card-sub">New appointments <b>booked</b> ${spanLabel}, by company, each against ${W.typLabel} — like for like, never a partial window against a finished one.</div>
@@ -1222,7 +1225,7 @@ function cardApptByCompany(){
     </div></div>
 
     <div class="seg">
-      ${[['day','Today'],['week','Week'],['month','Month']]
+      ${[['day','Today'],['week','Week'],['month','Month'],['ytd','YTD']]
         .map(([k,l])=>`<button class="${k===K?'on':''}" onclick="setApptCo('${k}')">${l}</button>`).join('')}
     </div>
 
@@ -1247,6 +1250,13 @@ function cardApptByCompany(){
         </div>
       </div>`;
     }).join('')}
+    </div>
+
+    <div class="mini4">
+      <div><div class="mini-cap" style="color:var(--green)">Set · by week</div><div class="chart-wrap" style="height:104px"><canvas id="cBookedWeek"></canvas></div></div>
+      <div><div class="mini-cap" style="color:var(--green)">Set · by month</div><div class="chart-wrap" style="height:104px"><canvas id="cBookedMonth"></canvas></div></div>
+      <div><div class="mini-cap" style="color:var(--blue)">Calendar · by week</div><div class="chart-wrap" style="height:104px"><canvas id="cApptWeek"></canvas></div></div>
+      <div><div class="mini-cap" style="color:var(--blue)">Calendar · by month</div><div class="chart-wrap" style="height:104px"><canvas id="cApptMonth"></canvas></div></div>
     </div>
 
     ${unknown?`<div class="apco-pending"><span class="d"></span><span>counting… <b>${unknown}</b> booked ${spanLabel} awaiting project sync — booked against projects the sync has not delivered yet, so not attributed to a company and not in the tiles above.</span></div>`:''}
@@ -3118,8 +3128,6 @@ function render(){
       minor('trend', 'projected month finish, by brand, full detail', cardTrending()),
       minor('appt', `set today ${D.appointments?D.appointments.bookedToday:0} · on calendars ${D.appointments?D.appointments.today:0}`, cardAppointments()),
       minor('fleet', 'every rep against the employment floor', cardQuota()),
-      minor('appttrend', 'booked by week & month', cardApptTrends()),
-      cardCalendarLoad(),
       minor('review', 'housekeeping & data chores', cardActions()),
       minor('wow', `${short(_pv.rev)} → ${short(_Wk.rev)}${_d === null ? '' : ' · ' + (_d >= 0 ? '+' : '') + _d + '%'}`, cardWow()),
       minor('mix', `${short(_mixTot)} signed`, cardMix()),
@@ -3504,7 +3512,7 @@ addEventListener('resize', () => {
    server for hours while Kevin looked at yesterday's build and reported the bug
    as unfixed. That happened. The page now checks version.json on every load and
    reloads itself once if the deployed build is newer than the one running. */
-const BUILD = '2026-07-29T00:58Z-trend-in-hero';
+const BUILD = '2026-07-29T01:18Z-minicharts-ytd';
 const SB_URL = 'https://lzegjjbkfuecrhdvlvay.supabase.co';
 /* The one page that can finish a password reset. Hard-coded rather than derived,
    because every derivation of it so far has been a source of bugs: a bare origin
@@ -4217,6 +4225,15 @@ function buildData(raw){
           typ: Object.fromEntries(BRAND_ORDER.map(b => [b, priorMean(b, starts, elapsedMo)])),
         };
       })(),
+      /* YTD counts are real; a like-for-like baseline is NOT — appointment
+         history reaches 13 months back, which cannot cover last year's same
+         span. The baseline is declined rather than invented. */
+      ytd: {
+        typLabel: 'year to date — no like-for-like baseline, history reaches 13 months',
+        sampleLabel: 'no baseline', partial: true,
+        counts: bookedByBrandInRange(soy(T), winEnd),
+        typ: Object.fromEntries(BRAND_ORDER.map(b => [b, { mean: 0, vals: null }])),
+      },
     };
 
     // creation-basis series, alongside the calendar-load series
