@@ -156,6 +156,19 @@
      name is on the screen and the roster knows it, tapping it goes to the rep. */
   .tapname { cursor: pointer; -webkit-tap-highlight-color: transparent; text-decoration: underline dotted; text-underline-offset: 3px; }
   @media (hover: hover) { .tapname:hover { color: var(--accent-soft); } }
+  /* Closing momentum board: one row per seller, trailing windows as columns. */
+  .ct-head, .ct-row { display: grid; grid-template-columns: minmax(96px, 1.5fr) repeat(4, 1fr); gap: 8px; align-items: center; }
+  .ct-head { font-family: 'JetBrains Mono', monospace; font-size: 9px; letter-spacing: .12em; text-transform: uppercase; color: var(--text-dim); padding: 10px 0 6px; border-bottom: 1px solid var(--line); }
+  .ct-head span:not(:first-child), .ct-cell { text-align: right; }
+  .ct-row { padding: 10px 0; border-bottom: 1px solid var(--line); cursor: pointer; -webkit-tap-highlight-color: transparent; }
+  .ct-row:last-of-type { border-bottom: none; }
+  @media (hover: hover) { .ct-row:hover .ct-nm { color: var(--text); } }
+  .ct-nm { font-size: 13px; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .ct-nm .mom { font-family: 'JetBrains Mono', monospace; font-size: 10px; margin-left: 6px; }
+  .mom.up { color: var(--green); } .mom.dn { color: var(--red); } .mom.flat { color: var(--text-dim); }
+  .ct-cell b { display: block; font-family: 'Fraunces', serif; font-size: 15px; font-weight: 500; }
+  .ct-cell span { font-family: 'JetBrains Mono', monospace; font-size: 9px; color: var(--text-dim); }
+  .ct-cell.dim b { color: var(--text-dim); font-weight: 400; }
   .bchip { display: inline-flex; align-items: center; gap: 5px; font-family: 'JetBrains Mono', monospace; font-size: 8px; letter-spacing: .1em; text-transform: uppercase; font-weight: 600; padding: 2px 8px; border-radius: 100px; border: 1px solid; }
   .bchip .bdot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
   .bchip.await { color: var(--text-dim); border-color: rgba(255,255,255,0.14); }
@@ -1565,8 +1578,49 @@ function cardReps(){
       </div>
       <div class="meter"><div class="meter-fill" style="width:${Math.round(r.rev/mx*100)}%;background:${r.office?'#8aa094':(r.rev===mx?'#6cc28b':'#6ba8c9')}"></div></div>
       ${r.billdu?`<div class="tgt-cap"><span>${r.office?'sent from the office account — seller not recorded':`${short(r.rev-r.billdu)} CC + ${short(r.billdu)} Billdu`}</span></div>`:''}
+      ${r.office?'':`<div class="tgt-cap"><span>${r.appts?`close <b>${r.close}%</b> · ${r.jobs-(r.billduCount||0)} of ${r.appts} appts this month`:'no CC appointments this month'}</span></div>`}
     </div>`).join('')}
     ${reps.length?`<div class="note">Rep is read from the job's own <b>rep_id</b>. <b>${D.coverage.apptsWithRep.toLocaleString()} of ${D.coverage.appts.toLocaleString()}</b> appointments carry a rep, so close rates below that coverage are unknown rather than assumed.</div>`:''}
+  </div>`;
+}
+
+/* ── 6b. CLOSING MOMENTUM — Kevin (28 Jul): "momentum is everything with sales
+      guys. If they don't believe in themselves, they're gonna suck." The
+      salespeople's own category: every seller's close rate over trailing 1-wk /
+      2-wk / 30-day / 60-day windows ending today, so a streak or a slump shows
+      while it is still happening. Tap a row for the one-pager. ─────────────── */
+function cardCloseTrend(){
+  const C = D.closeTrend; if (!C) return '';
+  const rows = C.rows.filter(r => r.d60.appts > 0 || r.d60.signed > 0);
+  const t = C.team;
+  const momBadge = m => m === null ? ''
+    : m >= 8  ? `<span class="mom up">▲ +${m}</span>`
+    : m <= -8 ? `<span class="mom dn">▼ −${Math.abs(m)}</span>`
+    :           `<span class="mom flat">→ steady</span>`;
+  const cell = c => c.appts
+    ? `<div class="ct-cell"><b>${c.close}%</b><span>${c.signed}/${c.appts}</span></div>`
+    : `<div class="ct-cell dim"><b>—</b><span>${c.signed ? c.signed + ' signed' : 'no appts'}</span></div>`;
+  return `<div class="card full">
+    <div class="card-title">Closing momentum<span class="feed-tag cc">live · cc</span></div>
+    <div class="card-sub">Every seller's close rate over trailing windows ending today — signings ÷ appointments run, both from Contractors Cloud. The arrow is the last two weeks against the 60-day baseline. Tap a row for the one-pager.</div>
+
+    <div class="stat-grid" style="margin:12px 0 2px">
+      <div class="stat-tile"><div class="lbl">Team close · 30 day</div>
+        <div class="val ${t.d30.close!==null&&t.d30.close>=40?'green':''}">${t.d30.close!==null?t.d30.close+'%':'—'}</div>
+        <div class="sub">${t.d30.appts?`${t.d30.signed} signed of ${t.d30.appts} appts`:'no appointments in 30 days'}</div></div>
+      <div class="stat-tile"><div class="lbl">Team close · 2 wk</div>
+        <div class="val ${t.w2.close!==null&&t.d30.close!==null&&t.w2.close>=t.d30.close?'green':''}">${t.w2.close!==null?t.w2.close+'%':'—'}</div>
+        <div class="sub">${t.w2.appts?`${t.w2.signed} of ${t.w2.appts} — ${t.d30.close!==null&&t.w2.close!==null?(t.w2.close>=t.d30.close?'ahead of':'behind'):'vs'} the 30-day pace`:'no appointments in 2 weeks'}</div></div>
+    </div>
+
+    ${rows.length ? `
+    <div class="ct-head"><span>Rep</span>${C.spans.map(s=>`<span>${esc(s.label)}</span>`).join('')}</div>
+    ${rows.map(r => `<div class="ct-row" onclick="openRep('${esc(String(r.id))}')">
+      <div class="ct-nm">${esc(r.name)}${momBadge(r.momentum)}</div>
+      ${C.spans.map(s => cell(r[s.key])).join('')}
+    </div>`).join('')}` : '<div class="card-sub" style="margin:12px 0 0">No seller has run an appointment or signed in the last 60 days.</div>'}
+
+    <div class="note">Trailing windows, not calendar ones: each looks back exactly that many days from today, so Monday never resets the board. Close stays CC-over-CC — a Billdu acceptance carries no CC appointment, so it is counted in signings nowhere here. A dash is a missing denominator, never a zero; <b>x/y</b> rides with every rate so a thin sample can be seen. The arrow only speaks when the 60-day baseline holds at least 5 appointments.</div>
   </div>`;
 }
 
@@ -2624,6 +2678,29 @@ function repView(id){
     <div class="note">Close is CC-over-CC on purpose: a Billdu acceptance carries no CC appointment, so mixing systems would flatter the rate. ${D.coverage.apptsWithRep.toLocaleString()} of ${D.coverage.appts.toLocaleString()} appointments carry a rep — below that coverage a rate is unknown, not assumed.</div>
   </div>`;
 
+  /* Momentum: the same trailing windows as the front board, for THIS rep.
+     Kevin: "momentum is everything with sales guys" — this is the trend the
+     calendar toggle above cannot show, because a trailing 14 never resets. */
+  const ct = D.closeTrend && D.closeTrend.byId[String(id)];
+  const momCard = ct ? (() => {
+    const m = ct.momentum;
+    const verdict = m === null ? ''
+      : `<div class="card-sub" style="margin:10px 0 0">${
+          m >= 8  ? `<span class="mom up">▲ heating up</span> — closing ${m} points above their own 60-day baseline.`
+        : m <= -8 ? `<span class="mom dn">▼ cooling off</span> — closing ${Math.abs(m)} points below their own 60-day baseline.`
+        :           `<span class="mom flat">→ steady</span> — the last two weeks sit within ${Math.abs(m)} point${Math.abs(m)===1?'':'s'} of their 60-day baseline.`}</div>`;
+    return `<div class="card full" style="margin-bottom:12px">
+    <div class="card-title">Closing momentum<span class="feed-tag cc">live · cc</span></div>
+    <div class="stat-grid" style="margin:12px 0 0">
+      ${D.closeTrend.spans.map(sp => { const c = ct[sp.key];
+        return `<div class="stat-tile"><div class="lbl">${esc(sp.label)} close</div>
+          <div class="val ${c.appts&&c.close>=40?'green':''}">${c.appts?c.close+'%':'—'}</div>
+          <div class="sub">${c.appts?`${c.signed} of ${c.appts} appt${c.appts===1?'':'s'} run`:(c.signed?`${c.signed} signed · no appts run`:'no appointments run')}</div></div>`; }).join('')}
+    </div>
+    ${verdict}
+    <div class="note">Trailing windows ending today — the 30-day column is the last 30 days, whatever the calendar says. Same CC-over-CC close as everywhere on this page, and the counts stay beside every rate so a hot week on two appointments reads as exactly that.</div>
+  </div>`; })() : '';
+
   const effortCard = `<div class="card full" style="margin-bottom:12px">
     <div class="card-title">Effort · ${esc(label)}<span class="feed-tag none">app log</span></div>
     <div class="stat-grid" style="margin:12px 0 0">
@@ -2672,6 +2749,7 @@ function repView(id){
 
   ${floor}
   ${closeCard}
+  ${momCard}
   ${effortCard}
   ${ytdStrip}
 
@@ -2719,7 +2797,6 @@ function render(){
   const _Wk = wk(), _pv = _Wk.prev;
   const _d = _pv.rev ? Math.round((_Wk.rev - _pv.rev) / _pv.rev * 100) : null;
   const _mixTot = _W.brands.reduce((n, b) => n + b.rev, 0);
-  const _reps = _W.reps;
   const _E = D.effort, _eT = _E.rows.reduce((n, r) => n + r[EFFWIN].t, 0);
   const _eOn = _E.rows.filter(r => r[EFFWIN].t > 0).length;
   const _cats = D.leadSources.categories.filter(c => c.rev > 0);
@@ -2734,7 +2811,13 @@ function render(){
          actual revenue and the projection where nobody scrolled. Analysis
          reads top-down now — what happened, what it means, where it lands. */
       cardActions(), cardAppointments(), cardStats(), cardTrending(),
-      cardApptByCompany(), cardQuota(), cardApptTrends(),
+      cardApptByCompany(), cardQuota(),
+      /* The salespeople, in the open flow — Kevin (28 Jul): "move them up…
+         we should have a closing percentage by every sales guy pretty much
+         all the time." Sales by rep and the momentum board sit with the
+         quota fleet so everything about the sellers reads as one block. */
+      cardReps(), cardCloseTrend(),
+      cardApptTrends(),
       /* Leads by company — unfolded at Kevin's request ("break the lead sources
          by company"). It was buried in the quiet strip, which is why he could
          not find it; it is a sibling of Appointments by company, so it sits high
@@ -2749,7 +2832,6 @@ function render(){
       cardCalendarLoad(),
       minor('wow', `${short(_pv.rev)} → ${short(_Wk.rev)}${_d === null ? '' : ' · ' + (_d >= 0 ? '+' : '') + _d + '%'}`, cardWow()),
       minor('mix', `${short(_mixTot)} signed`, cardMix()),
-      minor('reps', _reps.length ? `${esc(_reps[0].name)} leads · ${short(_reps[0].rev)}` : 'no rep activity this month', cardReps()),
       minor('effort', `${_eT} touch${_eT === 1 ? '' : 'es'} · ${_eOn}/${_E.activeReps} reps on the board`, cardEffort()),
       minor('cadence', 'this week, by weekday', cardCadence()),
       minor('money', qbOK() ? `${short(qbw().invoiced)} invoiced · ${short(D.qb.arTotal)} open A/R` : 'withheld — not readable', cardMoney()),
@@ -3067,7 +3149,7 @@ addEventListener('resize', () => {
    server for hours while Kevin looked at yesterday's build and reported the bug
    as unfixed. That happened. The page now checks version.json on every load and
    reloads itself once if the deployed build is newer than the one running. */
-const BUILD = '2026-07-28T20:11Z-rep-tap-everywhere';
+const BUILD = '2026-07-28T20:24Z-closing-momentum';
 const SB_URL = 'https://lzegjjbkfuecrhdvlvay.supabase.co';
 /* The one page that can finish a password reset. Hard-coded rather than derived,
    because every derivation of it so far has been a source of bugs: a bare origin
@@ -4468,9 +4550,47 @@ function buildData(raw){
              forTag: tag => S.filter(s => s.tags.includes(tag)) };
   })();
 
+  /* ── CLOSING MOMENTUM. Kevin (28 Jul): "momentum is everything with sales
+     guys" — close rate over TRAILING windows ending today, so a hot streak or a
+     slump is visible while it is happening. A trailing 14 always holds 14 days,
+     so it never suffers the Monday reset the calendar windows do. Close stays
+     CC-over-CC — the same discipline as every close on this page — and the
+     counts always travel with the rate, so a thin denominator is seen rather
+     than trusted. */
+  const closeTrend = (() => {
+    const SPANS = [ ['w1','1 wk',7], ['w2','2 wk',14], ['d30','30 day',30], ['d60','60 day',60] ];
+    const end = addD(sod(NOW), 1);
+    const seller = Object.fromEntries(reps.filter(r => r.active).map(r => [r.id, r]));
+    const blank = () => Object.fromEntries(SPANS.map(([k]) => [k, { appts:0, signed:0 }]));
+    const by = {};
+    const bump = (rid, iso, field) => {
+      if (!rid || !seller[rid] || !iso) return;
+      const t = new Date(iso).getTime();
+      for (const [k,, days] of SPANS)
+        if (t >= addD(end, -days).getTime() && t < end.getTime()) (by[rid] ??= blank())[k][field]++;
+    };
+    for (const x of appts) bump(x.rep_id, x.starts_at, 'appts');
+    for (const j of jobs) bump(j.rep_id, j.contract_signed_at, 'signed');
+    const team = blank();
+    for (const v of Object.values(by)) for (const [k] of SPANS) { team[k].appts += v[k].appts; team[k].signed += v[k].signed; }
+    const rate = c => c.appts ? Math.round(c.signed / c.appts * 100) : null;
+    const finish = v => Object.fromEntries(SPANS.map(([k]) => [k, { ...v[k], close: rate(v[k]) }]));
+    const rows = Object.entries(by).map(([id, v]) => {
+      const f = finish(v);
+      /* momentum = the recent fortnight against the 60-day baseline. Only
+         claimed when the baseline has enough appointments to BE a baseline —
+         below that the arrow would be noise wearing a verdict's clothes. */
+      const mom = (f.w2.close !== null && f.d60.close !== null && f.d60.appts >= 5)
+        ? f.w2.close - f.d60.close : null;
+      return { id, name: seller[id].name, role: seller[id].role, sells: !!seller[id].sells, ...f, momentum: mom };
+    }).sort((a,b) => (b.d30.close ?? -1) - (a.d30.close ?? -1) || b.d30.signed - a.d30.signed);
+    return { spans: SPANS.map(([key,label,days]) => ({ key, label, days })), rows,
+             byId: Object.fromEntries(rows.map(r => [r.id, r])), team: finish(team) };
+  })();
+
   return {
     generatedAt: new Date().toISOString(),
-    oasisLag, exclusions, sampleReps, signals,
+    oasisLag, exclusions, sampleReps, signals, closeTrend,
     // the filtered roster by id, for the rep one-pager — name, role and the
     // sells flag travel together so the pager never re-derives who someone is
     roster: Object.fromEntries(reps.map(r =>
