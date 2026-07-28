@@ -1105,14 +1105,16 @@ function cardAppointments(){
         <div class="at-desc">new appts <b>booked</b> today</div>
         <div class="at-v">${A.bookedToday}</div>
         <div class="at-s">${A.bookedNormHour?`${esc((A.todayDowName||'').slice(0,3))} typical ${A.bookedNormHour} by ${hourLabel(A.nowHour)}${A.bookedVsNorm!==null?` · <b class="${A.bookedVsNorm>=0?'up':'dn'}">${A.bookedVsNorm>=0?'▲':'▼'}${Math.abs(A.bookedVsNorm)}%</b>`:''}`:'no norm yet'} · ${A.bookedYesterday} yest.${A.yesterdayWasWeekend?' (wknd)':''}</div>
-        ${D.apptWtd?`<div class="at-s">WTD <b>${D.apptWtd.setNow}</b> set${D.apptWtd.setD!==null?` · <b class="${D.apptWtd.setD>=0?'up':'dn'}">${D.apptWtd.setD>=0?'▲':'▼'}${Math.abs(D.apptWtd.setD)}%</b> vs same point last wk (${D.apptWtd.setPrev})`:''}</div>`:''}
+        ${D.apptWtd?`<div class="at-s">WTD <b>${D.apptWtd.setNow}</b> set${D.apptWtd.setD!==null?` · <b class="${D.apptWtd.setD>=0?'up':'dn'}">${D.apptWtd.setD>=0?'▲':'▼'}${Math.abs(D.apptWtd.setD)}%</b> vs last wk (${D.apptWtd.setPrev})`:''}</div>
+        <div class="at-s">MTD <b>${D.apptWtd.setMtd}</b> set${D.apptWtd.setMtdD!==null?` · <b class="${D.apptWtd.setMtdD>=0?'up':'dn'}">${D.apptWtd.setMtdD>=0?'▲':'▼'}${Math.abs(D.apptWtd.setMtdD)}%</b> vs last mo (${D.apptWtd.setMtdPrev})`:''}</div>`:''}
       </div>
       <div class="appt-tile">
         <div class="at-eye hap">Happening today</div>
         <div class="at-desc">appts on <b>calendars</b> today</div>
         <div class="at-v">${A.today}</div>
         <div class="at-s">${A.yesterday?`${A.yesterday} yesterday`:'none yesterday'}</div>
-        ${D.apptWtd?`<div class="at-s">WTD <b>${D.apptWtd.ranNow}</b> run${D.apptWtd.ranD!==null?` · <b class="${D.apptWtd.ranD>=0?'up':'dn'}">${D.apptWtd.ranD>=0?'▲':'▼'}${Math.abs(D.apptWtd.ranD)}%</b> vs same point last wk (${D.apptWtd.ranPrev})`:''}</div>`:''}
+        ${D.apptWtd?`<div class="at-s">WTD <b>${D.apptWtd.ranNow}</b> run${D.apptWtd.ranD!==null?` · <b class="${D.apptWtd.ranD>=0?'up':'dn'}">${D.apptWtd.ranD>=0?'▲':'▼'}${Math.abs(D.apptWtd.ranD)}%</b> vs last wk (${D.apptWtd.ranPrev})`:''}</div>
+        <div class="at-s">MTD <b>${D.apptWtd.ranMtd}</b> run${D.apptWtd.ranMtdD!==null?` · <b class="${D.apptWtd.ranMtdD>=0?'up':'dn'}">${D.apptWtd.ranMtdD>=0?'▲':'▼'}${Math.abs(D.apptWtd.ranMtdD)}%</b> vs last mo (${D.apptWtd.ranMtdPrev})`:''}</div>`:''}
       </div>
     </div>
 
@@ -3446,7 +3448,7 @@ addEventListener('resize', () => {
    server for hours while Kevin looked at yesterday's build and reported the bug
    as unfixed. That happened. The page now checks version.json on every load and
    reloads itself once if the deployed build is newer than the one running. */
-const BUILD = '2026-07-28T22:20Z-attention-compact';
+const BUILD = '2026-07-28T22:30Z-wtd-mtd-tiles';
 const SB_URL = 'https://lzegjjbkfuecrhdvlvay.supabase.co';
 /* The one page that can finish a password reset. Hard-coded rather than derived,
    because every derivation of it so far has been a source of bugs: a bare origin
@@ -4974,7 +4976,14 @@ function buildData(raw){
     const setNow = cnt('cc_created_at', a, b), setPrev = cnt('cc_created_at', pa, pb);
     const ranNow = cnt('starts_at', a, b), ranPrev = cnt('starts_at', pa, pb);
     const d = (c, p) => p ? Math.round((c - p) / p * 100) : null;
-    return { setNow, setPrev, setD: d(setNow, setPrev), ranNow, ranPrev, ranD: d(ranNow, ranPrev) };
+    // month to date, vs the same days of last month — like-for-like, never a
+    // finished month against a partial one
+    const ma = som(NOW), mpa = addM(ma, -1), mpb = addM(b, -1);
+    const setM = cnt('cc_created_at', ma, b), setMP = cnt('cc_created_at', mpa, mpb);
+    const ranM = cnt('starts_at', ma, b), ranMP = cnt('starts_at', mpa, mpb);
+    return { setNow, setPrev, setD: d(setNow, setPrev), ranNow, ranPrev, ranD: d(ranNow, ranPrev),
+             setMtd: setM, setMtdPrev: setMP, setMtdD: d(setM, setMP),
+             ranMtd: ranM, ranMtdPrev: ranMP, ranMtdD: d(ranM, ranMP) };
   })();
 
   return {
