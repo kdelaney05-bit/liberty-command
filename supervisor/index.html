@@ -27,13 +27,19 @@
     05 · PAY      — Payment Portal (invoice = signed contract)
     06 · CREWS    — Crew Record (who shows up)
 
-  DEMO DATA, same as the video: fictional crews, customers and payments —
-  Dana Reed, Delgado/Reyes/Brooks/Kowalski, contract #LC-2214. Not live jobs
-  and not Liberty's numbers. The demo banner stays on every screen on purpose.
+  TWO MODES since Phase A went in:
+    LIVE — sign in with a console login (role manager/owner). Pipeline and Pay
+           read supervisor_* views (migration 086), guarded server-side by
+           is_manager(); data is the office PC's 15-min CC sync + QB sync.
+    DEMO — the gate's demo button; the video's fictional data exactly as
+           approved (Dana Reed, Delgado/Reyes/Brooks/Kowalski, #LC-2214).
 
-  Interactions that work in this build: tab bar · THREAD/JOB/SEE PIPELINE
-  cross-links · punch-list "tap when fixed" · collect payment on the porch.
-  Wiring it to live data (Supabase RLS, console pattern) is the next step.
+  Today / Customer / Crew / Crews stay demo in BOTH modes — threads, punch
+  lists and geofence check-ins have no backend yet (Phases B–D). Their banners
+  say so in live mode; nothing demo is ever passed off as real.
+
+  Interactions: tab bar · THREAD/JOB/SEE PIPELINE cross-links · punch-list
+  "tap when fixed" · collect payment on the porch (demo only).
   ═══════════════════════════════════════════════════════════════════════════
 -->
 <style>
@@ -109,7 +115,7 @@ body{background:var(--bg);color:var(--txt);font-family:var(--sans);font-size:14p
 .thread .meta.hot{color:var(--orange)}.thread .meta.wait{color:var(--amber)}.thread .meta.ok{color:var(--green)}
 .thread .badge{position:absolute;right:34px;top:50%;transform:translateY(-50%);background:var(--gold);color:#241a05;font-family:var(--mono);font-size:10px;font-weight:700;width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center}
 .thread .chev{position:absolute;right:12px;top:50%;transform:translateY(-50%);color:var(--faint);font-size:13px}
-.act{font-family:var(--mono);font-size:9.5px;font-weight:600;letter-spacing:.08em;padding:8px 13px;border-radius:100px;border:1px solid rgba(255,255,255,.2);background:transparent;color:var(--txt);cursor:pointer;position:absolute;right:14px;top:50%;transform:translateY(-50%)}
+button.act{font-family:var(--mono);font-size:9.5px;font-weight:600;letter-spacing:.08em;padding:8px 13px;border-radius:100px;border:1px solid rgba(255,255,255,.2);background:transparent;color:var(--txt);cursor:pointer;position:absolute;right:14px;top:50%;transform:translateY(-50%)}
 /* punch list */
 .finjob{background:var(--card);border:1px solid var(--line);border-left:3px solid var(--gold);border-radius:14px;padding:13px 15px;margin-bottom:12px}
 .finjob .fmeta{font-family:var(--mono);font-size:10px;font-weight:600;letter-spacing:.1em;color:var(--amber);margin-top:5px}
@@ -179,6 +185,28 @@ body{background:var(--bg);color:var(--txt);font-family:var(--sans);font-size:14p
 .strow .res.clean{color:var(--green)}
 .strow .res.late{color:var(--orange)}
 .ride{border:1px solid rgba(240,114,74,.55);border-radius:14px;background:var(--card);padding:12px 15px;font-family:var(--mono);font-size:11px;font-weight:600;letter-spacing:.08em;color:var(--orange)}
+/* ── sign-in gate (console pattern) ── */
+.gate{position:fixed;inset:0;background:var(--bg);display:none;align-items:center;justify-content:center;padding:24px;z-index:50}
+.gate.on{display:flex}
+.gatebox{width:100%;max-width:360px}
+.gatebox .eyebrow{font-family:var(--mono);font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:var(--accent);margin-bottom:10px}
+.gatebox h1{font-size:24px;font-weight:800;letter-spacing:-.3px;margin-bottom:4px}
+.gatebox h1 em{font-style:normal;color:var(--accent)}
+.gatebox .gsub{font-family:var(--mono);font-size:10px;letter-spacing:.08em;color:var(--dim);margin-bottom:22px;line-height:1.8}
+.field{margin-bottom:14px}
+.field label{display:block;font-family:var(--mono);font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--dim);margin-bottom:6px}
+.field input{width:100%;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 14px;color:var(--txt);font-size:16px;font-family:var(--sans)}
+.field input:focus{outline:2px solid var(--accent);outline-offset:0;border-color:transparent}
+.gobtn{display:block;width:100%;border:none;border-radius:14px;background:var(--accent);color:#241203;padding:14px;font-size:15px;font-weight:800;letter-spacing:.02em;cursor:pointer;margin-top:6px}
+.gobtn[disabled]{opacity:.6}
+.gateerr{font-family:var(--mono);font-size:11px;color:var(--orange);margin-top:12px;line-height:1.6;min-height:16px}
+.demobtn{display:block;width:100%;border:1px solid rgba(255,255,255,.16);border-radius:14px;background:transparent;color:var(--dim);padding:12px;font-family:var(--mono);font-size:11px;font-weight:600;letter-spacing:.1em;cursor:pointer;margin-top:14px}
+.gatefoot{font-family:var(--mono);font-size:9px;letter-spacing:.08em;color:var(--faint);margin-top:18px;line-height:1.8;text-align:center}
+/* live-mode variants */
+.live.is-live{background:#0f2b1f}
+.live.is-live .l{color:var(--green)}
+.demo.is-live{background:#0f2b1f;color:var(--green)}
+.morerow{font-family:var(--mono);font-size:10px;letter-spacing:.1em;color:var(--faint);text-align:center;padding:6px 0 10px}
 /* tab bar */
 .tabbar{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:520px;background:var(--tabbar);border-top:1px solid var(--line);display:flex;padding:9px 4px calc(10px + env(safe-area-inset-bottom))}
 .tab{flex:1;border:none;background:none;color:var(--dim);font-family:var(--mono);font-size:9px;letter-spacing:.04em;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:4px;position:relative}
@@ -189,7 +217,30 @@ body{background:var(--bg);color:var(--txt);font-family:var(--sans);font-size:14p
 </style>
 </head>
 <body>
-<div class="app">
+<!-- The gate. Static markup, no business data — an unauthenticated visitor sees
+     only this and, if they choose it, the fictional demo. -->
+<div class="gate" id="gate">
+  <div class="gatebox">
+    <div class="eyebrow">TruReview · supervisor access</div>
+    <h1>TruReview <em>Autopilot</em></h1>
+    <div class="gsub">SUPERVISOR MODE · sign in with your console login.<br>Pipeline and Pay read live from Contractors&nbsp;Cloud&nbsp;+&nbsp;QuickBooks.</div>
+    <form id="loginform" autocomplete="on">
+      <div class="field">
+        <label for="em">Email</label>
+        <input id="em" type="email" inputmode="email" autocomplete="username" required />
+      </div>
+      <div class="field">
+        <label for="pw">Password</label>
+        <input id="pw" type="password" autocomplete="current-password" required />
+      </div>
+      <button class="gobtn" id="gobtn" type="submit">Sign in</button>
+      <div class="gateerr" id="gateerr"></div>
+    </form>
+    <button type="button" class="demobtn" id="demobtn">EXPLORE THE DEMO — FICTIONAL DATA</button>
+    <div class="gatefoot">PASSWORD RESETS HAPPEN ON THE COMMAND CONSOLE PAGE<br>SUPERVISOR ACCESS = MANAGER ROLE</div>
+  </div>
+</div>
+<div class="app" id="app" style="display:none">
 <div class="screens">
 
 <!-- ══ 01 · TODAY ══ -->
@@ -485,6 +536,205 @@ body{background:var(--bg);color:var(--txt);font-family:var(--sans);font-size:14p
 </div>
 
 <script>
+/* ═══ AUTH + LIVE DATA — console pattern, same Supabase project ═══
+   Two ways in: sign in (live Pipeline + Pay via supervisor_* views, guarded
+   server-side by is_manager()) or the demo button (the video's fictional data,
+   exactly as before). Threads and crew tracking have no backend yet, so those
+   screens stay demo in both modes — labeled, never passed off as live. */
+const SB_URL = 'https://lzegjjbkfuecrhdvlvay.supabase.co';
+const SB_KEY = 'sb_publishable_kToiGqET7XzO2It9evStJw_kYzvjSF8';
+const SKEY = 'tsv.session';
+
+const gate = document.getElementById('gate');
+const appEl = document.getElementById('app');
+const sess = {
+  get(){ try { return JSON.parse(localStorage.getItem(SKEY) || 'null'); } catch(e){ return null; } },
+  set(s){ try { localStorage.setItem(SKEY, JSON.stringify(s)); } catch(e){} },
+  clear(){ try { localStorage.removeItem(SKEY); } catch(e){} },
+};
+
+function showGate(msg){
+  gate.classList.add('on'); appEl.style.display = 'none';
+  document.getElementById('gateerr').textContent = msg || '';
+  const s = sess.get();
+  if (s && s.email) document.getElementById('em').value = s.email;
+}
+function showApp(){ gate.classList.remove('on'); appEl.style.display = ''; }
+
+async function signIn(email, password){
+  const r = await fetch(`${SB_URL}/auth/v1/token?grant_type=password`, {
+    method:'POST', headers:{ apikey: SB_KEY, 'Content-Type':'application/json' },
+    body: JSON.stringify({ email, password }),
+  });
+  const j = await r.json();
+  if (!r.ok) throw new Error(j.error_description || j.msg || j.message || `sign-in failed (${r.status})`);
+  sess.set({ access_token:j.access_token, refresh_token:j.refresh_token, email });
+  return j;
+}
+async function refresh(){
+  const s = sess.get();
+  if (!s || !s.refresh_token) return false;
+  const r = await fetch(`${SB_URL}/auth/v1/token?grant_type=refresh_token`, {
+    method:'POST', headers:{ apikey: SB_KEY, 'Content-Type':'application/json' },
+    body: JSON.stringify({ refresh_token: s.refresh_token }),
+  });
+  if (!r.ok) return false;
+  const j = await r.json();
+  sess.set({ access_token:j.access_token, refresh_token:j.refresh_token, email:s.email });
+  return true;
+}
+function signOut(){ sess.clear(); location.reload(); }
+
+async function q(path, retried){
+  const s = sess.get();
+  const r = await fetch(`${SB_URL}/rest/v1/${path}`, {
+    headers:{ apikey: SB_KEY, Authorization:`Bearer ${s.access_token}` },
+  });
+  if (r.status === 401 && !retried && await refresh()) return q(path, true);
+  if (!r.ok) throw new Error(`query failed (${r.status})`);
+  return r.json();
+}
+
+/* ── formatting ── */
+const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const money = n => n == null ? '—' : '$' + Math.round(+n).toLocaleString('en-US');
+const dshort = x => x ? new Date(x).toLocaleDateString('en-US',{month:'short',day:'numeric'}) : '—';
+const ago = x => { if(!x) return ''; const m = Math.round((Date.now()-new Date(x))/60000);
+  return m < 60 ? `${m}M AGO` : m < 2880 ? `${Math.round(m/60)}H AGO` : `${Math.round(m/1440)}D AGO`; };
+
+/* ── live renderers — rebuild Pipeline and Pay from supervisor_* rows ── */
+function jobCard(r){
+  const place = [r.customer_name, r.city].filter(Boolean).join(' · ') || r.title || 'Job';
+  return `<div class="job">
+    <h3>${esc(place)}<span class="cust">· ${esc(r.cc_job_number || '')}</span></h3>
+    <div class="crew">REP · ${esc((r.rep_name || 'unassigned').toUpperCase())}</div>
+    <div class="mile">SIGNED ${dshort(r.contract_signed_at)} · <b>${money(r.fin_sold_amount)}</b></div>
+  </div>`;
+}
+function outCard(r){
+  const place = [r.customer_name, r.city].filter(Boolean).join(' · ') || r.title || 'Job';
+  return `<div class="finjob">
+    <h3>${esc(place)}<span class="cust">· ${esc(r.cc_job_number || '')}</span></h3>
+    <div class="fmeta">DONE ${dshort(r.completed_at)} · OPEN ${r.days_since_done ?? '?'} DAYS · BALANCE ${money(r.fin_balance_amount)}</div>
+    <div class="quote">Collected ${money(r.fin_received_amount)} of ${money(r.fin_sold_amount)} — close it out.</div>
+  </div>`;
+}
+function renderPipeline(rows){
+  const act = rows.filter(r => r.bucket === 'active')
+    .sort((a,b) => new Date(b.contract_signed_at) - new Date(a.contract_signed_at));
+  const out = rows.filter(r => r.bucket === 'done_outstanding')
+    .sort((a,b) => (b.days_since_done ?? 0) - (a.days_since_done ?? 0));
+  const closed = rows.filter(r => r.bucket === 'closed' && (r.days_since_done ?? 99) <= 30)
+    .sort((a,b) => (a.days_since_done ?? 0) - (b.days_since_done ?? 0)).slice(0, 10);
+  const CAP = 25;
+  document.querySelector('#s-pipeline .pad').innerHTML = `
+    <div class="alertcard">
+      <div class="t">${act.length} ACTIVE · ${out.length} OUTSTANDING · ${closed.length} CLOSED · 30 DAYS</div>
+      <div class="s">Live from Contractors Cloud — active + finished-outstanding, nothing matters more</div>
+    </div>
+    <div class="sec act">▶ ACTIVE — SIGNED, NOT COMPLETED</div>
+    ${act.slice(0, CAP).map(jobCard).join('') || '<div class="morerow">NO ACTIVE JOBS</div>'}
+    ${act.length > CAP ? `<div class="morerow">+ ${act.length - CAP} MORE ACTIVE</div>` : ''}
+    <div class="sec wait">⏳ FINISHED — MONEY OUTSTANDING</div>
+    ${out.map(outCard).join('') || '<div class="morerow">NOTHING OUTSTANDING — CLEAN BOARD</div>'}
+    <div class="sec done">✓ CLOSED — PAID IN FULL · LAST 30 DAYS</div>
+    <div class="closedcard">
+      ${closed.map(r => `<div class="crow"><span class="n"><span class="ck">✓</span>${esc([r.customer_name, r.city].filter(Boolean).join(' · '))}</span><span class="r">DONE ${dshort(r.completed_at)} · ${money(r.fin_sold_amount)}</span></div>`).join('') || '<div class="crow"><span class="n">None in the last 30 days</span></div>'}
+    </div>`;
+  const bdg = document.querySelector('.tab[data-s="s-pipeline"] .bdg');
+  if (bdg) { bdg.textContent = out.length; bdg.style.display = out.length ? '' : 'none'; }
+}
+function renderPay(rows){
+  const open = rows.filter(r => +(r.balance ?? 0) > 0)
+    .sort((a,b) => (b.days_overdue ?? -1) - (a.days_overdue ?? -1));
+  const paid = rows.filter(r => +(r.balance ?? 0) <= 0)
+    .sort((a,b) => new Date(b.txn_date) - new Date(a.txn_date)).slice(0, 8);
+  const owed = open.reduce((s,r) => s + +(r.balance ?? 0), 0);
+  const CAP = 20;
+  document.querySelector('#s-pay .pad').innerHTML = `
+    <div class="alertcard">
+      <div class="t">${money(owed)} OUTSTANDING · ${open.length} OPEN INVOICE${open.length === 1 ? '' : 'S'}</div>
+      <div class="s">QuickBooks face value — never mixed with CC sold numbers</div>
+    </div>
+    <div class="sec hot">🔥 OPEN — COLLECT</div>
+    ${open.slice(0, CAP).map(r => `<div class="inv">
+      <div class="tag">INV ${esc(r.doc_number || '—')}${r.due_date ? ` · due ${dshort(r.due_date)}` : ' · no terms'}${r.days_overdue > 0 ? ` · <span style="color:var(--orange)">${r.days_overdue}D OVERDUE</span>` : ''}</div>
+      <h3>${esc(r.customer_name || r.cc_customer_name || 'Customer')}</h3>
+      <div class="irow"><span>Invoice total · ${dshort(r.txn_date)}</span><span class="amt">${money(r.total_amt)}</span></div>
+      <div class="itotal"><span class="k">BALANCE DUE</span><span class="v">${money(r.balance)}</span></div>
+      ${r.cc_job_number ? `<div class="iver">✓ MATCHED TO JOB ${esc(r.cc_job_number)}</div>` : ''}
+    </div>`).join('') || '<div class="morerow">NO OPEN INVOICES — ALL COLLECTED</div>'}
+    ${open.length > CAP ? `<div class="morerow">+ ${open.length - CAP} MORE OPEN</div>` : ''}
+    <div class="sec done">✓ PAID · LAST 60 DAYS</div>
+    <div class="closedcard">
+      ${paid.map(r => `<div class="crow"><span class="n"><span class="ck">✓</span>${esc(r.customer_name || 'Customer')}</span><span class="r">${dshort(r.txn_date)} · ${money(r.total_amt)}</span></div>`).join('') || '<div class="crow"><span class="n">No paid invoices in the window</span></div>'}
+    </div>`;
+}
+
+/* Banners + header: live tabs go green, demo tabs say exactly what is missing. */
+function markLive(freshest){
+  const s = sess.get();
+  const who = (s && s.email ? s.email.split('@')[0] : 'supervisor').toUpperCase();
+  document.querySelectorAll('.who .sup').forEach(el => el.textContent = `SUP · ${who}`);
+  document.querySelectorAll('.who .exit').forEach(el => { el.textContent = 'Tap to sign out'; });
+  document.querySelectorAll('.who').forEach(el => { el.style.cursor = 'pointer'; el.onclick = signOut; });
+  for (const id of ['s-pipeline','s-pay']) {
+    const sec = document.getElementById(id);
+    const live = sec.querySelector('.live'), demo = sec.querySelector('.demo');
+    live.classList.add('is-live');
+    live.innerHTML = `<span class="l">LIVE · CONTRACTORS CLOUD + QUICKBOOKS</span><span class="r">● SYNCED ${ago(freshest) || 'RECENTLY'}</span>`;
+    demo.classList.add('is-live');
+    demo.innerHTML = '<b>LIVE DATA</b> · real jobs and invoices, scoped to your access. Synced every 15 min from the office.';
+  }
+  for (const id of ['s-today','s-customer','s-crew','s-crews']) {
+    const demo = document.getElementById(id).querySelector('.demo');
+    demo.innerHTML = '<b>DEMO PREVIEW</b> · this screen needs crew check-ins + threads — not built yet. Pipeline and Pay are live.';
+  }
+}
+
+async function goLive(){
+  const [pipe, pay] = await Promise.all([
+    q('supervisor_pipeline?select=*&order=cc_updated_at.desc&limit=500'),
+    q('supervisor_pay?select=*&order=txn_date.desc&limit=300'),
+  ]);
+  if (!pipe.length && !pay.length) {
+    sess.clear();
+    showGate('That login works, but it has no supervisor access yet — the role must be manager (or owner). Ask Kevin to flip it, then sign in again.');
+    return false;
+  }
+  renderPipeline(pipe);
+  renderPay(pay);
+  const freshest = [...pipe.map(r => r.cc_updated_at), ...pay.map(r => r.qb_updated_at)]
+    .filter(Boolean).sort().pop();
+  markLive(freshest);
+  showApp();
+  return true;
+}
+
+document.getElementById('loginform').addEventListener('submit', async e => {
+  e.preventDefault();
+  const btn = document.getElementById('gobtn'), err = document.getElementById('gateerr');
+  btn.disabled = true; err.textContent = '';
+  try {
+    await signIn(document.getElementById('em').value.trim(), document.getElementById('pw').value);
+    await goLive();
+  } catch(ex){ err.textContent = ex.message; }
+  btn.disabled = false;
+});
+document.getElementById('demobtn').addEventListener('click', () => showApp());
+
+/* Boot: a stored session goes straight to live; anything else hits the gate.
+   A fetch failure while a session exists (offline, expired) falls back to the
+   gate rather than showing demo numbers as if they were real. */
+(async () => {
+  if (sess.get()) {
+    try { if (await goLive()) return; else return; }
+    catch(e){ showGate('Could not reach live data — sign in again.'); return; }
+  }
+  showGate();
+})();
+
+/* ═══ demo interactions — unchanged from the approved build ═══ */
 function show(id){
   document.querySelectorAll('.screen').forEach(s=>s.classList.remove('on'));
   document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('on',t.dataset.s===id));
