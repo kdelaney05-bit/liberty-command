@@ -2360,6 +2360,24 @@ function cardAttention(){
   </div>`;
 }
 
+/* Pipeline stage 1: booked-not-won, per rep. Grows a CC quote stage later. */
+function cardPipeline(){
+  const P = D.pipeline; if (!P || (!P.rows.length)) return '';
+  return `<div class="card">
+    <div class="card-title">Pipeline · booked, not won<span class="feed-tag cc">live · cc</span>${P.billduUp?'<span class="feed-tag billdu">live · billdu</span>':''}</div>
+    <div class="card-sub">Next 14 days of appointments plus open Billdu estimates (sent, not accepted, under 60 days). Tap a name for the one-pager.</div>
+    <div class="stat-grid" style="margin:10px 0 4px">
+      <div class="stat-tile"><div class="lbl">Appts ahead</div><div class="val blue">${P.appts}</div><div class="sub">next 14 days, all sellers</div></div>
+      <div class="stat-tile"><div class="lbl">Open estimates</div><div class="val gold">${P.billduUp?short(P.estVal):'—'}</div><div class="sub">${P.billduUp?`${P.estN} awaiting a yes`:'Billdu feed unreadable'}</div></div>
+    </div>
+    ${P.rows.slice(0,10).map(r=>`<div class="rep-row acc" onclick="openRep('${esc(String(r.id))}')">
+      <div class="rep-head"><div class="nm">${esc(r.name)}</div>
+        <div class="amt">${r.appts} appt${r.appts===1?'':'s'}${r.estN?` <span>· ${short(r.estVal)} open</span>`:''}<span class="acc-chev">›</span></div></div>
+    </div>`).join('')}
+    <div class="note">This is the half of pipeline the data already carries. The CC quote stage (quoted, pending decision) is not synced yet — when the backend links it, those deals join this card rather than being guessed at today.</div>
+  </div>`;
+}
+
 function cardActions(){
   const S = D.signals; if (!S) return '';
   const RANK = { fire:0, watch:1, note:2 };
@@ -3047,6 +3065,7 @@ function render(){
          breakdown — Kevin (28 Jul): "it's revenue so we need it prominent." */
       cardStats(), cardTrending(), cardQuota(),
       cardReps(),
+      cardPipeline(),
       cardApptByCompany(),
       cardIntel(),
       /* Leads by company — unfolded at Kevin's request ("break the lead sources
@@ -3448,7 +3467,7 @@ addEventListener('resize', () => {
    server for hours while Kevin looked at yesterday's build and reported the bug
    as unfixed. That happened. The page now checks version.json on every load and
    reloads itself once if the deployed build is newer than the one running. */
-const BUILD = '2026-07-28T22:30Z-wtd-mtd-tiles';
+const BUILD = '2026-07-28T22:44Z-pipeline-stage1';
 const SB_URL = 'https://lzegjjbkfuecrhdvlvay.supabase.co';
 /* The one page that can finish a password reset. Hard-coded rather than derived,
    because every derivation of it so far has been a source of bugs: a bare origin
@@ -4986,9 +5005,40 @@ function buildData(raw){
              ranMtd: ranM, ranMtdPrev: ranMP, ranMtdD: d(ranM, ranMP) };
   })();
 
+  /* ── PIPELINE, stage 1. Kevin (28 Jul): "we will at some point have closed
+     pipeline — that also needs to be in there." What the data can carry today:
+     work already booked but not yet won — upcoming CC appointments (next 14
+     days) and open Billdu estimates (sent, not accepted, ≤60 days old), per
+     rep. The CC quote stage isn't synced yet; when it lands this grows. */
+  const pipeline = (() => {
+    const a = new Date(), b = addD(sod(NOW), 15);
+    const by = {};
+    const seller = Object.fromEntries(reps.filter(r => r.active).map(r => [r.id, r]));
+    for (const x of appts) {
+      if (!x.rep_id || !seller[x.rep_id]) continue;
+      const t = new Date(x.starts_at);
+      if (t >= a && t < b) (by[x.rep_id] ??= { appts:0, estN:0, estVal:0 }).appts++;
+    }
+    const cut = addD(sod(NOW), -60);
+    for (const d2 of (billdu && billdu.docs) || []) {
+      if (!d2.rep_id || !seller[d2.rep_id] || d2.is_accepted) continue;
+      if (!/estimate/i.test(d2.doc_type || '')) continue;
+      if (d2.issue_date && new Date(d2.issue_date) < cut) continue;
+      const r = (by[d2.rep_id] ??= { appts:0, estN:0, estVal:0 });
+      r.estN++; r.estVal += Number(d2.total_price || 0);
+    }
+    const rows = Object.entries(by).map(([id, v]) => ({ id, name: seller[id].name, ...v }))
+      .sort((x,y) => (y.estVal + y.appts*1) - (x.estVal + x.appts*1));
+    return { rows,
+      appts: rows.reduce((n,r)=>n+r.appts,0),
+      estN: rows.reduce((n,r)=>n+r.estN,0),
+      estVal: rows.reduce((n,r)=>n+r.estVal,0),
+      billduUp: !!(billdu && billdu.docs) };
+  })();
+
   return {
     generatedAt: new Date().toISOString(),
-    oasisLag, exclusions, sampleReps, signals, closeTrend, marketWatch, apptWtd,
+    oasisLag, exclusions, sampleReps, signals, closeTrend, marketWatch, apptWtd, pipeline,
     // the filtered roster by id, for the rep one-pager — name, role and the
     // sells flag travel together so the pager never re-derives who someone is
     roster: Object.fromEntries(reps.map(r =>
