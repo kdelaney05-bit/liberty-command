@@ -183,6 +183,22 @@
   .ct-chip.cold { border-color: rgba(217,106,94,.4);   background: rgba(217,106,94,.06); }   .ct-chip.cold .v { color: var(--red); }
   .ct-chip.none .v { color: var(--text-dim); font-weight: 400; }
   .ct-cell.hot b { color: var(--green); } .ct-cell.warm b { color: var(--gold); } .ct-cell.cold b { color: var(--red); }
+  /* Market intelligence band */
+  .intel-alert { display: flex; gap: 10px; align-items: flex-start; padding: 9px 12px; margin-top: 8px;
+    border-left: 2px solid var(--gold); background: rgba(212,177,90,.07); border-radius: 0 8px 8px 0;
+    font-size: 12px; line-height: 1.5; }
+  .intel-alert.fire { border-left-color: var(--red); background: rgba(217,106,94,.08); }
+  .intel-alert .tag { font-family: 'JetBrains Mono', monospace; font-size: 9px; letter-spacing: .1em;
+    padding-top: 2px; color: var(--gold); flex-shrink: 0; }
+  .intel-alert.fire .tag { color: var(--red); }
+  .intel-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 12px; margin-top: 12px; }
+  .feedgrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 8px; margin-top: 10px; }
+  .feedtile { background: var(--bg-card-hi); border-radius: 8px; padding: 9px 11px; border-top: 2px solid var(--green); }
+  .feedtile.warn { border-top-color: var(--gold); } .feedtile.dead { border-top-color: var(--red); }
+  .feedtile .fl { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--text); }
+  .feedtile .fa { font-family: 'JetBrains Mono', monospace; font-size: 13px; margin: 3px 0; color: var(--green); }
+  .feedtile.warn .fa { color: var(--gold); } .feedtile.dead .fa { color: var(--red); }
+  .feedtile .fn { font-size: 10px; color: var(--text-dim); line-height: 1.4; }
   .bchip { display: inline-flex; align-items: center; gap: 5px; font-family: 'JetBrains Mono', monospace; font-size: 8px; letter-spacing: .1em; text-transform: uppercase; font-weight: 600; padding: 2px 8px; border-radius: 100px; border: 1px solid; }
   .bchip .bdot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
   .bchip.await { color: var(--text-dim); border-color: rgba(255,255,255,0.14); }
@@ -705,7 +721,7 @@
        .full. Putting this after silently cancelled the span. */
     .stack > .full { column-span: none; }
     /* the two that earn the full width */
-    .stack > .acts, .stack > .appt, .stack > .apco-band { column-span: all; margin-bottom: 26px; }
+    .stack > .acts, .stack > .appt, .stack > .apco-band, .stack > .intel-band { column-span: all; margin-bottom: 26px; }
 
     /* Folded rows run the full width as a strip beneath the grid, rather than
        being packed into the columns with everything else. Two reasons, both
@@ -1669,6 +1685,104 @@ function cardCloseTrend(){
   </div>`;
 }
 
+/* ── MARKET INTELLIGENCE. Kevin (28 Jul): "can we build this level of
+      intelligence into the owner dashboard" — the fencing deep-dive, as a
+      permanent instrument. Two layers, honestly separated:
+        · the DEMAND layer computes live in this page from the same jobs and
+          appointments every other card reads — bookings vs the same days last
+          year, per trade, with the cross-brand control
+        · the MONEY layer (P&L, gross margin, the lead/lag spread) needs
+          Contractors Cloud and Windsor keys, which a public page must never
+          hold — it loads from the liberty-intel Edge Function and is stated
+          as withheld until that service is deployed. ─────────────────────── */
+let INTEL = null, INTEL_STATE = 'idle';
+function cardIntel(){
+  const M = D.marketWatch; if (!M) return '';
+  const flags = M.brands.flatMap(b => b.flags.map(f => ({ ...f, brand: b.s })));
+  return `<div class="card full intel-band">
+    <div class="card-title">Market intelligence<span class="feed-tag cc">live · cc</span>${INTEL?'<span class="feed-tag qb">live · qb</span>':''}</div>
+    <div class="card-sub">Demand per trade against the same days last year, and whether a slump is one trade's problem or the market's. ${INTEL?'':'Money layer (P&L, margins) loads from the intel service.'}</div>
+    ${flags.map(f => `<div class="intel-alert ${f.sev}"><span class="tag">${f.sev==='fire'?'ALARM':'WATCH'}</span><span><b>${esc(f.brand)}:</b> ${f.txt}</span></div>`).join('')}
+    ${M.control ? `<div class="intel-alert" style="border-left-color:var(--blue);background:rgba(107,168,201,.07)"><span class="tag" style="color:var(--blue)">CONTROL</span><span>${M.control}</span></div>` : ''}
+    <div class="intel-grid">
+      <div>
+        <div class="card-title" style="font-size:11px;margin:10px 0 4px">Bookings · this month vs same days last year</div>
+        <div class="chart-wrap" style="height:180px"><canvas id="cMwDemand"></canvas></div>
+      </div>
+      <div>
+        <div class="card-title" style="font-size:11px;margin:10px 0 4px">Signed value · last 90 vs prior 90</div>
+        <div class="chart-wrap" style="height:180px"><canvas id="cMwMoney"></canvas></div>
+      </div>
+    </div>
+    <div id="intelbody">${INTEL ? intelBody() : `<div class="note" style="margin-top:12px">${
+      INTEL_STATE === 'loading' ? 'Reading the full deep-dive — the intel service paces Contractors Cloud’s rate limit, so a cold read can take a minute…'
+      : INTEL_STATE === 'absent' ? 'The money layer — QuickBooks P&L, gross margin by quarter, the bookings-vs-revenue spread — is <b>withheld, not missing</b>: the liberty-intel service is written (supabase/functions/liberty-intel) but not deployed with its CC and Windsor keys yet. The demand read above is live from this page’s own data.'
+      : 'Checking for the intel service…'}</div>`}</div>
+  </div>`;
+}
+
+function intelBody(){
+  const I = INTEL; if (!I) return '';
+  const pcts = (a,b) => b ? Math.round((a-b)/Math.abs(b)*100) : null;
+  const money$ = n => (n<0?'−$':'$') + Math.abs(Math.round(n)).toLocaleString();
+  const dInc = pcts(I.money.incomeCurrent, I.money.incomePrior);
+  const gpDrop = (I.money.gpPctPrior!=null&&I.money.gpPctCurrent!=null) ? +(I.money.gpPctPrior-I.money.gpPctCurrent).toFixed(1) : null;
+  const alerts = [];
+  const mtd = I.demand[I.demand.length-1];
+  if (mtd && mtd.prior && pcts(mtd.current, mtd.prior) <= -20)
+    alerts.push({sev:'fire', txt:`Fencing bookings ${pcts(mtd.current,mtd.prior)}% like-for-like this month (${mtd.current} vs ${mtd.prior}). Bookings lead revenue — next month is exposed.`});
+  if (gpDrop !== null && gpDrop >= 5)
+    alerts.push({sev:'fire', txt:`Gross margin down ${gpDrop} points H1 YoY (${I.money.gpPctPrior}% → ${I.money.gpPctCurrent}%). Margin is moving faster than volume.`});
+  for (const f of I.feeds.filter(f=>f.state==='dead'))
+    alerts.push({sev:'watch', txt:`${esc(f.label)} is not reporting — ${esc(f.note)}. Excluded from every figure above.`});
+  const maxC = Math.max(1, ...I.control.flatMap(r=>[r.prior,r.current]));
+  return `
+    ${I.stale?`<div class="intel-alert"><span class="tag">STALE</span><span>Upstream failed on the last refresh — showing the previous read (${esc(String(I.error||''))}).</span></div>`:''}
+    ${alerts.map(a=>`<div class="intel-alert ${a.sev==='fire'?'fire':''}"><span class="tag">${a.sev==='fire'?'ALARM':'WATCH'}</span><span>${a.txt}</span></div>`).join('')}
+    <div class="intel-grid">
+      <div>
+        <div class="card-title" style="font-size:11px;margin:10px 0 4px">Lead / lag spread — bookings vs revenue, indexed</div>
+        <div class="chart-wrap" style="height:200px"><canvas id="cIntelSpread"></canvas></div>
+        <div class="note">Bars are the gap: bookings index minus revenue index (first quarter = 100). A tall gold bar is work booked that revenue hasn't caught up to — a conversion gap or a backlog about to land.</div>
+      </div>
+      <div>
+        <div class="card-title" style="font-size:11px;margin:10px 0 4px">Money — Fencing, QuickBooks</div>
+        <div class="stat-grid">
+          <div class="stat-tile"><div class="lbl">H1 income</div><div class="val ${dInc!==null&&dInc<0?'red':'green'}">${money$(I.money.incomeCurrent)}</div><div class="sub">${dInc!==null?(dInc>=0?'+':'')+dInc+'% YoY':''}</div></div>
+          <div class="stat-tile"><div class="lbl">H1 net</div><div class="val ${I.money.netCurrent<0?'red':'green'}">${money$(I.money.netCurrent)}</div><div class="sub">was ${money$(I.money.netPrior)} last year</div></div>
+          <div class="stat-tile"><div class="lbl">Gross margin</div><div class="val ${gpDrop!==null&&gpDrop>=5?'red':''}">${I.money.gpPctCurrent!=null?I.money.gpPctCurrent+'%':'—'}</div><div class="sub">${gpDrop!==null?`${gpDrop>=0?'−':'+'}${Math.abs(gpDrop)} pts YoY`:''}</div></div>
+          <div class="stat-tile"><div class="lbl">Demand · MTD</div><div class="val ${mtd&&mtd.prior&&mtd.current<mtd.prior?'red':'green'}">${mtd?mtd.current:'—'}</div><div class="sub">${mtd&&mtd.prior?`vs ${mtd.prior} same days LY`:''}</div></div>
+        </div>
+        <div class="chart-wrap" style="height:110px;margin-top:10px"><canvas id="cIntelGP"></canvas></div>
+      </div>
+    </div>
+    <div class="card-title" style="font-size:11px;margin:14px 0 4px">Control — is it the market? (H1 income YoY)</div>
+    ${I.control.map(r=>{const d=pcts(r.current,r.prior);
+      return `<div class="rep-row"><div class="rep-head"><div class="nm">${esc(r.co)}</div>
+        <div class="amt"><span class="${d!==null&&d<0?'dn':'up'}">${d!==null?(d>=0?'+':'')+d+'%':'—'}</span></div></div>
+        <div class="meter"><div class="meter-fill" style="width:${Math.round((r.prior/maxC)*100)}%;background:#8aa094"></div></div>
+        <div class="meter"><div class="meter-fill" style="width:${Math.round((r.current/maxC)*100)}%;background:${d!==null&&d<0?'var(--red)':'var(--green)'}"></div></div>
+        <div class="tgt-cap"><span>${money$(r.prior)} → ${money$(r.current)}</span></div></div>`;}).join('')}
+    <div class="feedgrid">${I.feeds.map(f=>`<div class="feedtile ${f.state}"><div class="fl">${esc(f.label)}</div><div class="fa">${esc(f.state.toUpperCase())}</div><div class="fn">${esc(f.note)}</div></div>`).join('')}</div>
+    <div class="note">Read ${new Date(I.generatedAt).toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'})} · appointments from Contractors Cloud classic API · income, gross profit and net from QuickBooks via Windsor · cached 15 minutes, paced under CC's rate limit.</div>`;
+}
+
+async function loadIntel(){
+  if (INTEL_STATE === 'loading' || INTEL) return;
+  INTEL_STATE = 'loading';
+  const paint = () => { const el2 = document.querySelector('.intel-band'); if (el2) { el2.outerHTML = cardIntel(); drawCharts(); } };
+  paint();
+  try {
+    const s = sess.get(); if (!s) throw new Error('no session');
+    const r = await fetch(SB_URL + '/functions/v1/liberty-intel', {
+      headers: { apikey: SB_KEY, Authorization: 'Bearer ' + s.access_token } });
+    if (!r.ok) { INTEL_STATE = 'absent'; paint(); return; }
+    INTEL = await r.json();
+    if (INTEL.error) { INTEL = null; INTEL_STATE = 'absent'; paint(); return; }
+    INTEL_STATE = 'live'; paint();
+  } catch(e){ INTEL_STATE = 'absent'; paint(); }
+}
+
 /* ── 7. weekly cadence ────────────────────────────────────────────────────── */
 function cardCadence(){
   return `<div class="card chart-card">
@@ -2507,6 +2621,7 @@ function diveView(k){
         </div>
         <div class="meter"><div class="meter-fill" style="width:${Math.round(r.rev/mx*100)}%;background:${r.office?'#8aa094':(r.rev===mx?'#6cc28b':'#6ba8c9')}"></div></div>
         ${r.billdu?`<div class="tgt-cap"><span>${r.office?'sent from the office account — seller not recorded':`${short(r.rev-r.billdu)} CC + ${short(r.billdu)} Billdu`}</span></div>`:''}
+        ${r.office?'':closeMini(r.id)}
         ${tap && !pager?`<div class="acc-body lazy" data-src="rep:${esc(String(r.id))}"></div>`:''}
       </div>`}).join('')}
       ${reps.some(r=>r.office)?`<div class="note">Deals sent from Oasis's office account carry no seller on the Billdu record, so they are listed as unattributed rather than credited to a rep who may not have sold them. Deals a seller sent themselves are attributed from the backend's <b>rep_id</b> mapping, not by matching names.</div>`:''}
@@ -2868,6 +2983,7 @@ function render(){
          priority. */
       cardStats(), cardTrending(), cardQuota(),
       cardApptByCompany(),
+      cardIntel(),
       cardReps(),
       cardApptTrends(),
       /* Leads by company — unfolded at Kevin's request ("break the lead sources
@@ -2975,6 +3091,67 @@ function drawCharts(){
     }
     ctx.restore();
   } });
+
+  /* Market intelligence: demand + money per trade, and the intel service's
+     spread + margin charts when the payload is live. */
+  const mw = document.getElementById('cMwDemand');
+  if (mw && D.marketWatch) {
+    const B = D.marketWatch.brands;
+    charts.push(new Chart(mw.getContext('2d'), {
+      type:'bar',
+      data:{ labels:B.map(b=>b.s), datasets:[
+        { label:'same days last year', data:B.map(b=>b.mtd.apP), backgroundColor:'rgba(138,160,148,0.35)', borderRadius:3 },
+        { label:'this month', data:B.map(b=>b.mtd.ap), backgroundColor:B.map(b=>(b.mtd.apD!==null&&b.mtd.apD<=-20)?'#d96a5e':b.c), borderRadius:3 },
+      ]},
+      options:{ responsive:true, maintainAspectRatio:false, layout:{padding:{top:18}},
+        plugins:{ legend:{display:true, labels:{font:{family:MONO,size:9}, boxWidth:10}}, tooltip:TIP },
+        scales:{ x:{grid:{display:false},ticks:{font:{family:MONO,size:9}}}, y:{display:false,beginAtZero:true,grace:'12%'} } },
+      plugins:[barLabelsPlugin({})]
+    }));
+  }
+  const mwm = document.getElementById('cMwMoney');
+  if (mwm && D.marketWatch) {
+    const B = D.marketWatch.brands;
+    charts.push(new Chart(mwm.getContext('2d'), {
+      type:'bar',
+      data:{ labels:B.map(b=>b.s), datasets:[
+        { label:'prior 90 days', data:B.map(b=>b.t90.revP), backgroundColor:'rgba(138,160,148,0.35)', borderRadius:3 },
+        { label:'last 90 days', data:B.map(b=>b.t90.rev), backgroundColor:B.map(b=>(b.t90.revD!==null&&b.t90.revD<0)?'#d96a5e':b.c), borderRadius:3 },
+      ]},
+      options:{ responsive:true, maintainAspectRatio:false, layout:{padding:{top:18}},
+        plugins:{ legend:{display:true, labels:{font:{family:MONO,size:9}, boxWidth:10}}, tooltip:{...TIP, callbacks:{label:c=>' '+short(c.parsed.y)}} },
+        scales:{ x:{grid:{display:false},ticks:{font:{family:MONO,size:9}}}, y:{display:false,beginAtZero:true,grace:'12%'} } },
+      plugins:[barLabelsPlugin({fmt:short})]
+    }));
+  }
+  const sp = document.getElementById('cIntelSpread');
+  if (sp && INTEL && INTEL.spread) {
+    const S = INTEL.spread;
+    charts.push(new Chart(sp.getContext('2d'), {
+      data:{ labels:S.map(r=>r.q), datasets:[
+        { type:'bar', label:'spread (bookings − revenue)', data:S.map(r=>r.gap), order:2,
+          backgroundColor:S.map(r=>r.gap>=0?'rgba(212,177,90,0.4)':'rgba(108,194,139,0.4)'), borderRadius:2 },
+        { type:'line', label:'bookings index', data:S.map(r=>r.bookings), borderColor:'#e8efe9', borderWidth:1.75, pointRadius:2.5, fill:false, order:0 },
+        { type:'line', label:'revenue index', data:S.map(r=>r.revenue), borderColor:'#6cc28b', borderDash:[4,3], borderWidth:1.75, pointRadius:2.5, fill:false, order:1 },
+      ]},
+      options:{ responsive:true, maintainAspectRatio:false,
+        plugins:{ legend:{display:true, labels:{font:{family:MONO,size:9}, boxWidth:10}}, tooltip:TIP },
+        scales:{ x:{grid:{display:false},ticks:{font:{family:MONO,size:9}}}, y:{ticks:{font:{family:MONO,size:9}}} } }
+    }));
+  }
+  const gp = document.getElementById('cIntelGP');
+  if (gp && INTEL && INTEL.money && INTEL.money.gpByQuarter) {
+    const G = INTEL.money.gpByQuarter;
+    charts.push(new Chart(gp.getContext('2d'), {
+      type:'bar',
+      data:{ labels:G.map(g=>g.q), datasets:[{ label:'gross margin %', data:G.map(g=>g.pct), borderRadius:2,
+        backgroundColor:G.map(g=>g.pct==null?'rgba(138,160,148,0.3)':g.pct<25?'#d96a5e':g.pct<30?'#d4b15a':'#6cc28b') }]},
+      options:{ responsive:true, maintainAspectRatio:false, layout:{padding:{top:14}},
+        plugins:{ legend:{display:false}, tooltip:{...TIP, callbacks:{label:c=>' '+c.parsed.y+'% gross margin'}} },
+        scales:{ x:{grid:{display:false},ticks:{font:{family:MONO,size:8}}}, y:{display:false,beginAtZero:true,grace:'12%'} } },
+      plugins:[barLabelsPlugin({fmt:v=>v+'%'})]
+    }));
+  }
 
   /* booked-per-day: the setters' output. */
   const bk = document.getElementById('cBooked');
@@ -3204,7 +3381,7 @@ addEventListener('resize', () => {
    server for hours while Kevin looked at yesterday's build and reported the bug
    as unfixed. That happened. The page now checks version.json on every load and
    reloads itself once if the deployed build is newer than the one running. */
-const BUILD = '2026-07-28T21:33Z-quieter-close-boxes';
+const BUILD = '2026-07-28T21:43Z-market-intelligence';
 const SB_URL = 'https://lzegjjbkfuecrhdvlvay.supabase.co';
 /* The one page that can finish a password reset. Hard-coded rather than derived,
    because every derivation of it so far has been a source of bugs: a bare origin
@@ -4643,9 +4820,85 @@ function buildData(raw){
              byId: Object.fromEntries(rows.map(r => [r.id, r])), team: finish(team) };
   })();
 
+  /* ── MARKET WATCH. Kevin (28 Jul), after an offline deep-dive found Fencing
+     bookings off a cliff while Oasis boomed: "can we build this level of
+     intelligence into the owner dashboard." The full version — P&L margins,
+     Windsor, close-vs-pricing attribution — needs the ask-bar backend; what a
+     public static page can hold honestly is the demand-and-money core of that
+     analysis, recomputed live per trade:
+       · bookings this month vs the SAME DAYS last year, and trailing 90 vs
+         the prior 90 — the demand series
+       · signed value over the same four windows — the money series
+       · the divergence verdicts: a demand cliff, and "bookings lead revenue"
+         (bookings fall first; installed work follows next month)
+       · the cross-brand control — one trade down while another is up is not
+         a local-economy story, and the card says which it is reading.
+     Appointment history reaches APPT_SINCE (13 months), which is exactly
+     enough for the same-days-last-year comparison and no more — so this card
+     never claims a quarterly YoY series it cannot see. */
+  const marketWatch = (() => {
+    const pb = {};
+    for (const j of jobs) if (j.cc_project_id) pb[String(j.cc_project_id)] = rollup(j.cc_company_id);
+    const yrAgo = d => { const x = new Date(d); x.setFullYear(x.getFullYear() - 1); return x; };
+    const tomorrow = addD(sod(NOW), 1);
+    const WINS2 = {
+      mtd: { label: 'month · same days LY', a: som(NOW), b: tomorrow,
+             pa: som(yrAgo(NOW)), pb: addD(sod(yrAgo(NOW)), 1) },
+      t90: { label: 'last 90 · prior 90', a: addD(tomorrow, -90), b: tomorrow,
+             pa: addD(tomorrow, -180), pb: addD(tomorrow, -90) },
+    };
+    const mk = () => ({ mtd: { ap:0, apP:0, rev:0, revP:0 }, t90: { ap:0, apP:0, rev:0, revP:0 } });
+    const by = Object.fromEntries(BRAND_ORDER.map(id => [id, mk()]));
+    for (const x of appts) {
+      const b = pb[String(x.cc_project_id)]; if (!by[b]) continue;
+      for (const [k, w2] of Object.entries(WINS2)) {
+        if (inR(x.starts_at, w2.a, w2.b)) by[b][k].ap++;
+        if (inR(x.starts_at, w2.pa, w2.pb)) by[b][k].apP++;
+      }
+    }
+    for (const j of jobs) {
+      const b = rollup(j.cc_company_id); if (!by[b] || !j.contract_signed_at) continue;
+      const v = Number(j.fin_sold_amount || 0);
+      for (const [k, w2] of Object.entries(WINS2)) {
+        if (inR(j.contract_signed_at, w2.a, w2.b)) by[b][k].rev += v;
+        if (inR(j.contract_signed_at, w2.pa, w2.pb)) by[b][k].revP += v;
+      }
+    }
+    const pctd = (cur, prev) => prev ? Math.round((cur - prev) / prev * 100) : null;
+    const brands2 = BRAND_ORDER.map(id => {
+      const v = by[id], r = { id, name: brandOf(id).n, s: brandOf(id).s, c: brandOf(id).c };
+      for (const k of Object.keys(WINS2))
+        r[k] = { ...v[k], apD: pctd(v[k].ap, v[k].apP), revD: pctd(v[k].rev, v[k].revP) };
+      const flags = [];
+      const mo = r.mtd, t = r.t90;
+      /* A cliff needs a real prior-year base under it, or every quiet January
+         screams. Thresholds are deliberately coarse — this card flags, the
+         deep-dive decides. */
+      if (mo.apD !== null && mo.apD <= -20 && mo.apP >= 20)
+        flags.push({ sev:'fire', txt:`Bookings this month are <b>${Math.abs(mo.apD)}% below the same days last year</b> (${mo.ap} vs ${mo.apP}).` });
+      else if (t.apD !== null && t.apD <= -12 && t.apP >= 40)
+        flags.push({ sev:'watch', txt:`90-day bookings are <b>${Math.abs(t.apD)}% below the prior 90</b> (${t.ap} vs ${t.apP}).` });
+      if (mo.apD !== null && mo.revD !== null && mo.apD <= -20 && (mo.revD - mo.apD) >= 10)
+        flags.push({ sev:'watch', txt:`Bookings lead installed work: signed value is ${mo.revD < 0 ? 'only down ' + Math.abs(mo.revD) + '%' : 'still holding'} while bookings are down ${Math.abs(mo.apD)}% — if the booking rate holds, the money takes the hit next.` });
+      r.flags = flags;
+      r.sev = flags.some(f => f.sev === 'fire') ? 'fire' : flags.length ? 'watch' : 'ok';
+      return r;
+    });
+    /* The control: is a slump one trade's problem or the whole market's?
+       Read from the same 90-day demand series, stated only when it is clear. */
+    let control = null;
+    const down = brands2.filter(b => b.t90.apD !== null && b.t90.apD <= -15);
+    const up = brands2.filter(b => b.t90.apD !== null && b.t90.apD >= 15);
+    if (down.length && up.length)
+      control = `${down.map(b => b.s).join(' and ')} down while ${up.map(b => `${b.s} is up ${b.t90.apD}%`).join(' and ')} over the same 90 days — that reads <b>trade-specific, not a local-economy story</b>.`;
+    else if (down.length >= 2 && !up.length)
+      control = `${down.map(b => b.s).join(' and ')} are down together over the same 90 days — that reads <b>market-wide, not one trade's problem</b>.`;
+    return { brands: brands2, control, since: APPT_SINCE };
+  })();
+
   return {
     generatedAt: new Date().toISOString(),
-    oasisLag, exclusions, sampleReps, signals, closeTrend,
+    oasisLag, exclusions, sampleReps, signals, closeTrend, marketWatch,
     // the filtered roster by id, for the rep one-pager — name, role and the
     // sells flag travel together so the pager never re-derives who someone is
     roster: Object.fromEntries(reps.map(r =>
@@ -4827,6 +5080,7 @@ async function loadAll(){
   D = buildData({ jobs, appts, reps, touches, repTargets, playComponents,
     leadNames, qbInv, qbError, billdu });
   render();
+  loadIntel();
 }
 
 /* Reload once if the server has a newer build than the one running. Guarded by a
