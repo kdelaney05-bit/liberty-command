@@ -99,7 +99,7 @@
   .stat-tile .lbl { font-family: 'JetBrains Mono', monospace; font-size: 9px; letter-spacing: 0.15em; text-transform: uppercase; color: var(--text-dim); margin-bottom: 6px; }
   .stat-tile .val { font-family: 'Fraunces', serif; font-size: 22px; font-weight: 500; letter-spacing: -0.01em; line-height: 1; }
   .stat-tile .sub { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--text-dim); margin-top: 6px; }
-  .stat-tile .val.orange { color: var(--accent-soft); } .stat-tile .val.gold { color: var(--gold); } .stat-tile .val.blue { color: var(--blue); } .stat-tile .val.green { color: var(--green-soft); }
+  .stat-tile .val.orange { color: var(--accent-soft); } .stat-tile .val.gold { color: var(--gold); } .stat-tile .val.blue { color: var(--blue); } .stat-tile .val.green { color: var(--green-soft); } .stat-tile .val.red { color: var(--red); }
   .stat-tile .delta { font-family: 'JetBrains Mono', monospace; font-size: 9px; margin-top: 6px; letter-spacing: 0.02em; }
   .stat-tile .delta.up { color: var(--green-soft); } .stat-tile .delta.down { color: #d8997f; } .stat-tile .delta.flat { color: var(--text-dim); }
   .wow-hero { display: flex; align-items: stretch; gap: 8px; margin: 10px 0 12px; }
@@ -152,6 +152,53 @@
   .jobl-amt { font-family: 'JetBrains Mono', monospace; font-size: 13px; color: var(--text); font-weight: 600; white-space: nowrap; }
   .jobl-meta { display: flex; align-items: center; gap: 8px; margin-top: 7px; flex-wrap: wrap; }
   .jobl-rep { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--text-dim); letter-spacing: .03em; }
+  /* Any rep name that can open the one-pager. Same affordance everywhere: if a
+     name is on the screen and the roster knows it, tapping it goes to the rep. */
+  .tapname { cursor: pointer; -webkit-tap-highlight-color: transparent; text-decoration: underline dotted; text-underline-offset: 3px; }
+  @media (hover: hover) { .tapname:hover { color: var(--accent-soft); } }
+  /* Closing momentum board: one row per seller, trailing windows as columns. */
+  .ct-head, .ct-row { display: grid; grid-template-columns: minmax(96px, 1.5fr) repeat(4, 1fr); gap: 8px; align-items: center; }
+  .ct-head { font-family: 'JetBrains Mono', monospace; font-size: 9px; letter-spacing: .12em; text-transform: uppercase; color: var(--text-dim); padding: 10px 0 6px; border-bottom: 1px solid var(--line); }
+  .ct-head span:not(:first-child), .ct-cell { text-align: right; }
+  .ct-row { padding: 10px 0; border-bottom: 1px solid var(--line); cursor: pointer; -webkit-tap-highlight-color: transparent; }
+  .ct-row:last-of-type { border-bottom: none; }
+  @media (hover: hover) { .ct-row:hover .ct-nm { color: var(--text); } }
+  .ct-nm { font-size: 13px; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .ct-nm .mom { font-family: 'JetBrains Mono', monospace; font-size: 10px; margin-left: 6px; }
+  .mom.up { color: var(--green); } .mom.dn { color: var(--red); } .mom.flat { color: var(--text-dim); }
+  .ct-cell b { display: block; font-family: 'Fraunces', serif; font-size: 15px; font-weight: 500; }
+  .ct-cell span { font-family: 'JetBrains Mono', monospace; font-size: 9px; color: var(--text-dim); }
+  .ct-cell.dim b { color: var(--text-dim); font-weight: 400; }
+  /* The close trend under a rep's revenue bar, as color-banded boxes — Kevin:
+     "each week should be a color code if they're hot or cold." The bands are
+     his: 35%+ green, 30–35 yellow, under 30 red. A window with no
+     appointments stays neutral — no denominator is not a cold streak. */
+  .ct-chips { display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; margin-top: 6px; }
+  .ct-chip { border: 1px solid var(--line); border-radius: 6px; padding: 3px 3px 4px; text-align: center; min-width: 0; }
+  .ct-chip .k { font-family: 'JetBrains Mono', monospace; font-size: 7px; letter-spacing: .08em; text-transform: uppercase; color: var(--text-dim); }
+  .ct-chip .v { font-family: 'Fraunces', serif; font-size: 12.5px; font-weight: 500; line-height: 1.25; }
+  .ct-chip .n { font-family: 'JetBrains Mono', monospace; font-size: 7.5px; color: var(--text-dim); }
+  .ct-chip.hot  { border-color: rgba(108,194,139,.4);  background: rgba(108,194,139,.06); }  .ct-chip.hot .v  { color: var(--green); }
+  .ct-chip.warm { border-color: rgba(212,177,90,.4);   background: rgba(212,177,90,.06); }   .ct-chip.warm .v { color: var(--gold); }
+  .ct-chip.cold { border-color: rgba(217,106,94,.4);   background: rgba(217,106,94,.06); }   .ct-chip.cold .v { color: var(--red); }
+  .ct-chip.none .v { color: var(--text-dim); font-weight: 400; }
+  .ct-cell.hot b { color: var(--green); } .ct-cell.warm b { color: var(--gold); } .ct-cell.cold b { color: var(--red); }
+  /* Market intelligence band */
+  .intel-alert { display: flex; gap: 10px; align-items: flex-start; padding: 9px 12px; margin-top: 8px;
+    border-left: 2px solid var(--gold); background: rgba(212,177,90,.07); border-radius: 0 8px 8px 0;
+    font-size: 12px; line-height: 1.5; }
+  .intel-alert.fire { border-left-color: var(--red); background: rgba(217,106,94,.08); }
+  .intel-alert .tag { font-family: 'JetBrains Mono', monospace; font-size: 9px; letter-spacing: .1em;
+    padding-top: 2px; color: var(--gold); flex-shrink: 0; }
+  .intel-alert.fire .tag { color: var(--red); }
+  .intel-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 12px; margin-top: 12px; }
+  .feedgrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 8px; margin-top: 10px; }
+  .feedtile { background: var(--bg-card-hi); border-radius: 8px; padding: 9px 11px; border-top: 2px solid var(--green); }
+  .feedtile.warn { border-top-color: var(--gold); } .feedtile.dead { border-top-color: var(--red); }
+  .feedtile .fl { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--text); }
+  .feedtile .fa { font-family: 'JetBrains Mono', monospace; font-size: 13px; margin: 3px 0; color: var(--green); }
+  .feedtile.warn .fa { color: var(--gold); } .feedtile.dead .fa { color: var(--red); }
+  .feedtile .fn { font-size: 10px; color: var(--text-dim); line-height: 1.4; }
   .bchip { display: inline-flex; align-items: center; gap: 5px; font-family: 'JetBrains Mono', monospace; font-size: 8px; letter-spacing: .1em; text-transform: uppercase; font-weight: 600; padding: 2px 8px; border-radius: 100px; border: 1px solid; }
   .bchip .bdot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
   .bchip.await { color: var(--text-dim); border-color: rgba(255,255,255,0.14); }
@@ -674,7 +721,7 @@
        .full. Putting this after silently cancelled the span. */
     .stack > .full { column-span: none; }
     /* the two that earn the full width */
-    .stack > .acts, .stack > .appt, .stack > .apco-band { column-span: all; margin-bottom: 26px; }
+    .stack > .acts, .stack > .appt, .stack > .apco-band, .stack > .intel-band { column-span: all; margin-bottom: 26px; }
 
     /* Folded rows run the full width as a strip beneath the grid, rather than
        being packed into the columns with everything else. Two reasons, both
@@ -817,6 +864,8 @@ let APPTCOWIN = 'month';
 let QUOTAWIN = 'month';
 // null = the snapshot home; 'day'|'week'|'month'|'ytd' = that window, full screen
 let DIVE = null;
+// null = no rep open; a rep id = that person's one-pager, full screen
+let RDIVE = null, REPWIN = 'month';
 /* v1 follows the model's own windows: the month card set is monthly, the
    week-over-week card is weekly. No window toggle — that is a later iteration.
    build-console.mjs nests window totals under .company while `prev` arrives
@@ -870,7 +919,7 @@ function weekReset(){
 function weekResetNote(){
   const r = weekReset(); if (!r) return '';
   const reps = r.topReps.length
-    ? ` — ${r.topReps.map(x => `${esc(x.name)} ${short(x.rev)}`).join(', ')}`
+    ? ` — ${r.topReps.map(x => `${x.id && D.roster && D.roster[String(x.id)] ? `<span class="tapname" onclick="event.stopPropagation();openRep('${esc(String(x.id))}')">${esc(x.name)}</span>` : esc(x.name)} ${short(x.rev)}`).join(', ')}`
     : '';
   return `<div class="weeknote">
     <span class="wn-k">${esc(r.began)}</span>
@@ -1243,7 +1292,7 @@ function cardQuota(){
   const bandC = b => b==='ok' ? '#6cc28b' : b==='warn' ? '#d4b15a' : '#d96a5e';
   return `<div class="card full">
     <div class="card-title">Quota fleet<span class="feed-tag cc">live · cc</span><span class="feed-tag billdu">+ billdu</span></div>
-    <div class="card-sub">The <b>employment floor</b>: ${short(Q.annual)}/yr signed — ${short(Q.monthly)}/mo — earns $${(Q.incomeAt/1000)}K at ${Q.rate}%. Every rep against it, prorated to ${label} (day ${W.elapsed}). This is the pace to keep the seat, not a goal.</div>
+    <div class="card-sub">The <b>employment floor</b>: ${short(Q.annual)}/yr signed — ${short(Q.monthly)}/mo — earns $${(Q.incomeAt/1000)}K at ${Q.rate}%. Every rep against it, prorated to ${label} (day ${W.elapsed}). This is the pace to keep the seat, not a goal. <b>Tap a name for their one-pager.</b></div>
 
     <div class="seg">
       ${[['week','Week'],['month','Month'],['ytd','YTD']].map(([k,l])=>`<button class="${k===K?'on':''}" onclick="setQuota('${k}')">${l}</button>`).join('')}
@@ -1258,10 +1307,10 @@ function cardQuota(){
         <div class="val" style="color:${under?'#e8968c':'var(--text)'}">${under}</div><div class="sub">under 75% of pace</div></div>
     </div>
 
-    ${rows.map((r,i) => `<div class="rep-row">
+    ${rows.map((r,i) => `<div class="rep-row acc" onclick="openRep('${esc(String(r.id))}')">
       <div class="rep-head">
         <div class="nm"><span class="rk ${i===0?'top':''}">${i+1}</span>${esc(r.name)}${r.role!=='sales'?`<span class="brand">${esc(r.role)}</span>`:''}</div>
-        <div class="amt">${short(r.signed)} <span class="${r.delta>=0?'up':'dn'}">${r.delta>=0?'+':'−'}${short(Math.abs(r.delta))}</span></div>
+        <div class="amt">${short(r.signed)} <span class="${r.delta>=0?'up':'dn'}">${r.delta>=0?'+':'−'}${short(Math.abs(r.delta))}</span><span class="acc-chev">›</span></div>
       </div>
       <div class="qmeter">
         <div class="qfill" style="width:${Math.round(r.signed/mx*100)}%;background:${bandC(r.band)}"></div>
@@ -1271,6 +1320,7 @@ function cardQuota(){
         <span>${r.pct}% of floor pace</span>
         <span class="${r.band==='ok'?'hit':r.band==='bad'?'miss':''}">${r.band==='ok'?'making floor':r.band==='warn'?'closing on it':'below floor'}</span>
       </div>
+      ${closeMini(r.id)}
     </div>`).join('')}
 
     <div class="note">The floor is uniform — <b>${short(Q.daily)}/day signed, every rep</b>, prorated to the same point in ${label}. Signed value is Contractors Cloud contract value plus each rep's own Billdu acceptances, attributed the same way the rep board is; office-sent deals stay unattributed here too. The tick on each bar marks the floor. This is stated as a floor because that is what it is — not a target anyone may or may not choose to hit.</div>
@@ -1551,17 +1601,186 @@ function cardReps(){
   const reps = w().reps, mx = Math.max(1, ...reps.map(r=>r.rev));
   return `<div class="card">
     <div class="card-title">Sales by rep · MTD<span class="feed-tag cc">live · cc</span></div>
-    <div class="card-sub">${reps.length? 'Ranked by signed contract value this month.' : 'No rep activity this month.'}</div>
-    ${reps.map(r=>`<div class="rep-row" ${r.office?'style="opacity:.8"':''}>
+    <div class="card-sub">${reps.length? 'Ranked by signed contract value this month. Tap a name for their one-pager.' : 'No rep activity this month.'}</div>
+    ${reps.map(r=>`<div class="rep-row${r.office?'':' acc'}" ${r.office?'style="opacity:.8"':`onclick="openRep('${esc(String(r.id))}')"`}>
       <div class="rep-head">
         <div class="nm">${esc(r.name)}${r.billdu?'<span class="tick">billdu</span>':''}${r.role&&r.role!=='sales'&&!r.office?`<span class="brand">${esc(r.role)}</span>`:''}</div>
-        <div class="amt">${short(r.rev)} <span>· ${r.jobs} deal${r.jobs===1?'':'s'}</span></div>
+        <div class="amt">${short(r.rev)} <span>· ${r.jobs} deal${r.jobs===1?'':'s'}</span>${r.office?'':'<span class="acc-chev">›</span>'}</div>
       </div>
       <div class="meter"><div class="meter-fill" style="width:${Math.round(r.rev/mx*100)}%;background:${r.office?'#8aa094':(r.rev===mx?'#6cc28b':'#6ba8c9')}"></div></div>
       ${r.billdu?`<div class="tgt-cap"><span>${r.office?'sent from the office account — seller not recorded':`${short(r.rev-r.billdu)} CC + ${short(r.billdu)} Billdu`}</span></div>`:''}
+      ${r.office?'':closeMini(r.id)}
     </div>`).join('')}
     ${reps.length?`<div class="note">Rep is read from the job's own <b>rep_id</b>. <b>${D.coverage.apptsWithRep.toLocaleString()} of ${D.coverage.appts.toLocaleString()}</b> appointments carry a rep, so close rates below that coverage are unknown rather than assumed.</div>`:''}
   </div>`;
+}
+
+/* ── 6b. CLOSING MOMENTUM — Kevin (28 Jul): "momentum is everything with sales
+      guys. If they don't believe in themselves, they're gonna suck." The
+      salespeople's own category: every seller's close rate over trailing 1-wk /
+      2-wk / 30-day / 60-day windows ending today, so a streak or a slump shows
+      while it is still happening. Tap a row for the one-pager. ─────────────── */
+const momBadge = m => m === null ? ''
+  : m >= 8  ? `<span class="mom up">▲ +${m}</span>`
+  : m <= -8 ? `<span class="mom dn">▼ −${Math.abs(m)}</span>`
+  :           `<span class="mom flat">→ steady</span>`;
+
+/* Kevin's hot/cold bands, in one place so every close on the page bands the
+   same way: 35%+ hot (green), 30–35 warm (yellow), under 30 cold (red).
+   No appointments = no band — a missing denominator is not a cold streak. */
+const closeBand = c => !c || !c.appts ? 'none' : c.close >= 35 ? 'hot' : c.close >= 30 ? 'warm' : 'cold';
+
+/* The trailing-close boxes riding under a rep's revenue bar: four banded
+   windows plus the trend. Dash = no appointments to divide by, never a zero. */
+function closeMini(id){
+  const ct = D.closeTrend && D.closeTrend.byId[String(id)];
+  if (!ct) return '';
+  const m = ct.momentum;
+  return `<div class="ct-chips">${D.closeTrend.spans.map(sp => { const c = ct[sp.key];
+    return `<div class="ct-chip ${closeBand(c)}"><div class="k">${esc(sp.label)}</div>
+      <div class="v">${c.appts?c.close+'%':'—'}</div>
+      <div class="n">${c.appts?`${c.signed}/${c.appts}`:(c.signed?c.signed+' signed':'no appts')}</div></div>`; }).join('')}
+    <div class="ct-chip ${m===null?'none':m>=8?'hot':m<=-8?'cold':''}"><div class="k">Trend</div>
+      <div class="v">${m===null?'—':m>=8?'▲':m<=-8?'▼':'→'}</div>
+      <div class="n">${m===null?'thin data':m>=8?'+'+m+' heating':m<=-8?'−'+Math.abs(m)+' cooling':'steady'}</div></div>
+  </div>`;
+}
+
+function cardCloseTrend(){
+  const C = D.closeTrend; if (!C) return '';
+  const rows = C.rows.filter(r => r.d60.appts > 0 || r.d60.signed > 0);
+  const t = C.team;
+  const cell = c => c.appts
+    ? `<div class="ct-cell ${closeBand(c)}"><b>${c.close}%</b><span>${c.signed}/${c.appts}</span></div>`
+    : `<div class="ct-cell dim"><b>—</b><span>${c.signed ? c.signed + ' signed' : 'no appts'}</span></div>`;
+  return `<div class="card full">
+    <div class="card-title">Closing momentum<span class="feed-tag cc">live · cc</span></div>
+    <div class="card-sub">Every seller's close rate over trailing windows ending today — signings ÷ appointments run, both from Contractors Cloud. The arrow is the last two weeks against the 60-day baseline. Tap a row for the one-pager.</div>
+
+    <div class="stat-grid" style="margin:12px 0 2px">
+      <div class="stat-tile"><div class="lbl">Team close · 30 day</div>
+        <div class="val ${t.d30.close!==null&&t.d30.close>=40?'green':''}">${t.d30.close!==null?t.d30.close+'%':'—'}</div>
+        <div class="sub">${t.d30.appts?`${t.d30.signed} signed of ${t.d30.appts} appts`:'no appointments in 30 days'}</div></div>
+      <div class="stat-tile"><div class="lbl">Team close · 2 wk</div>
+        <div class="val ${t.w2.close!==null&&t.d30.close!==null&&t.w2.close>=t.d30.close?'green':''}">${t.w2.close!==null?t.w2.close+'%':'—'}</div>
+        <div class="sub">${t.w2.appts?`${t.w2.signed} of ${t.w2.appts} — ${t.d30.close!==null&&t.w2.close!==null?(t.w2.close>=t.d30.close?'ahead of':'behind'):'vs'} the 30-day pace`:'no appointments in 2 weeks'}</div></div>
+    </div>
+
+    ${rows.length ? (() => {
+      const row = r => `<div class="ct-row" onclick="openRep('${esc(String(r.id))}')">
+        <div class="ct-nm">${esc(r.name)}${momBadge(r.momentum)}</div>
+        ${C.spans.map(s => cell(r[s.key])).join('')}
+      </div>`;
+      /* Kevin: "I don't need to see everybody's" — the board leads with the six
+         busiest-by-close and the rest wait behind one tap, names intact. */
+      const CAP = 6;
+      return `
+    <div class="ct-head"><span>Rep</span>${C.spans.map(s=>`<span>${esc(s.label)}</span>`).join('')}</div>
+    ${rows.slice(0, CAP).map(row).join('')}
+    ${rows.length > CAP ? `<div id="ctrest" style="display:none">${rows.slice(CAP).map(row).join('')}</div>
+    <button type="button" class="linkbtn" onclick="const r=document.getElementById('ctrest');const open=r.style.display==='none';r.style.display=open?'':'none';this.textContent=open?'Show fewer':'Show all ${rows.length} sellers ›'">Show all ${rows.length} sellers ›</button>` : ''}`;
+    })() : '<div class="card-sub" style="margin:12px 0 0">No seller has run an appointment or signed in the last 60 days.</div>'}
+
+    <div class="note">Color is Kevin's hot/cold rule, the same everywhere on this page: <span style="color:var(--green)">35%+ green</span>, <span style="color:var(--gold)">30–35 yellow</span>, <span style="color:var(--red)">under 30 red</span>. Trailing windows, not calendar ones: each looks back exactly that many days from today, so Monday never resets the board. Close stays CC-over-CC — a Billdu acceptance carries no CC appointment, so it is counted in signings nowhere here. A dash is a missing denominator, never a zero; <b>x/y</b> rides with every rate so a thin sample can be seen. The arrow only speaks when the 60-day baseline holds at least 5 appointments.</div>
+  </div>`;
+}
+
+/* ── MARKET INTELLIGENCE. Kevin (28 Jul): "can we build this level of
+      intelligence into the owner dashboard" — the fencing deep-dive, as a
+      permanent instrument. Two layers, honestly separated:
+        · the DEMAND layer computes live in this page from the same jobs and
+          appointments every other card reads — bookings vs the same days last
+          year, per trade, with the cross-brand control
+        · the MONEY layer (P&L, gross margin, the lead/lag spread) needs
+          Contractors Cloud and Windsor keys, which a public page must never
+          hold — it loads from the liberty-intel Edge Function and is stated
+          as withheld until that service is deployed. ─────────────────────── */
+let INTEL = null, INTEL_STATE = 'idle';
+function cardIntel(){
+  const M = D.marketWatch; if (!M) return '';
+  const flags = M.brands.flatMap(b => b.flags.map(f => ({ ...f, brand: b.s })));
+  return `<div class="card full intel-band">
+    <div class="card-title">Market intelligence<span class="feed-tag cc">live · cc</span>${INTEL?'<span class="feed-tag qb">live · qb</span>':''}</div>
+    <div class="card-sub">Demand per trade against the same days last year, and whether a slump is one trade's problem or the market's. ${INTEL?'':'Money layer (P&L, margins) loads from the intel service.'}</div>
+    ${flags.map(f => `<div class="intel-alert ${f.sev}"><span class="tag">${f.sev==='fire'?'ALARM':'WATCH'}</span><span><b>${esc(f.brand)}:</b> ${f.txt}</span></div>`).join('')}
+    ${M.control ? `<div class="intel-alert" style="border-left-color:var(--blue);background:rgba(107,168,201,.07)"><span class="tag" style="color:var(--blue)">CONTROL</span><span>${M.control}</span></div>` : ''}
+    <div class="intel-grid">
+      <div>
+        <div class="card-title" style="font-size:11px;margin:10px 0 4px">Bookings · this month vs same days last year</div>
+        <div class="chart-wrap" style="height:180px"><canvas id="cMwDemand"></canvas></div>
+      </div>
+      <div>
+        <div class="card-title" style="font-size:11px;margin:10px 0 4px">Signed value · last 90 vs prior 90</div>
+        <div class="chart-wrap" style="height:180px"><canvas id="cMwMoney"></canvas></div>
+      </div>
+    </div>
+    <div id="intelbody">${INTEL ? intelBody() : `<div class="note" style="margin-top:12px">${
+      INTEL_STATE === 'loading' ? 'Reading the full deep-dive — the intel service paces Contractors Cloud’s rate limit, so a cold read can take a minute…'
+      : INTEL_STATE === 'absent' ? 'The money layer — QuickBooks P&L, gross margin by quarter, the bookings-vs-revenue spread — is <b>withheld, not missing</b>: the liberty-intel service is written (supabase/functions/liberty-intel) but not deployed with its CC and Windsor keys yet. The demand read above is live from this page’s own data.'
+      : 'Checking for the intel service…'}</div>`}</div>
+  </div>`;
+}
+
+function intelBody(){
+  const I = INTEL; if (!I) return '';
+  const pcts = (a,b) => b ? Math.round((a-b)/Math.abs(b)*100) : null;
+  const money$ = n => (n<0?'−$':'$') + Math.abs(Math.round(n)).toLocaleString();
+  const dInc = pcts(I.money.incomeCurrent, I.money.incomePrior);
+  const gpDrop = (I.money.gpPctPrior!=null&&I.money.gpPctCurrent!=null) ? +(I.money.gpPctPrior-I.money.gpPctCurrent).toFixed(1) : null;
+  const alerts = [];
+  const mtd = I.demand[I.demand.length-1];
+  if (mtd && mtd.prior && pcts(mtd.current, mtd.prior) <= -20)
+    alerts.push({sev:'fire', txt:`Fencing bookings ${pcts(mtd.current,mtd.prior)}% like-for-like this month (${mtd.current} vs ${mtd.prior}). Bookings lead revenue — next month is exposed.`});
+  if (gpDrop !== null && gpDrop >= 5)
+    alerts.push({sev:'fire', txt:`Gross margin down ${gpDrop} points H1 YoY (${I.money.gpPctPrior}% → ${I.money.gpPctCurrent}%). Margin is moving faster than volume.`});
+  for (const f of I.feeds.filter(f=>f.state==='dead'))
+    alerts.push({sev:'watch', txt:`${esc(f.label)} is not reporting — ${esc(f.note)}. Excluded from every figure above.`});
+  const maxC = Math.max(1, ...I.control.flatMap(r=>[r.prior,r.current]));
+  return `
+    ${I.stale?`<div class="intel-alert"><span class="tag">STALE</span><span>Upstream failed on the last refresh — showing the previous read (${esc(String(I.error||''))}).</span></div>`:''}
+    ${alerts.map(a=>`<div class="intel-alert ${a.sev==='fire'?'fire':''}"><span class="tag">${a.sev==='fire'?'ALARM':'WATCH'}</span><span>${a.txt}</span></div>`).join('')}
+    <div class="intel-grid">
+      <div>
+        <div class="card-title" style="font-size:11px;margin:10px 0 4px">Lead / lag spread — bookings vs revenue, indexed</div>
+        <div class="chart-wrap" style="height:200px"><canvas id="cIntelSpread"></canvas></div>
+        <div class="note">Bars are the gap: bookings index minus revenue index (first quarter = 100). A tall gold bar is work booked that revenue hasn't caught up to — a conversion gap or a backlog about to land.</div>
+      </div>
+      <div>
+        <div class="card-title" style="font-size:11px;margin:10px 0 4px">Money — Fencing, QuickBooks</div>
+        <div class="stat-grid">
+          <div class="stat-tile"><div class="lbl">H1 income</div><div class="val ${dInc!==null&&dInc<0?'red':'green'}">${money$(I.money.incomeCurrent)}</div><div class="sub">${dInc!==null?(dInc>=0?'+':'')+dInc+'% YoY':''}</div></div>
+          <div class="stat-tile"><div class="lbl">H1 net</div><div class="val ${I.money.netCurrent<0?'red':'green'}">${money$(I.money.netCurrent)}</div><div class="sub">was ${money$(I.money.netPrior)} last year</div></div>
+          <div class="stat-tile"><div class="lbl">Gross margin</div><div class="val ${gpDrop!==null&&gpDrop>=5?'red':''}">${I.money.gpPctCurrent!=null?I.money.gpPctCurrent+'%':'—'}</div><div class="sub">${gpDrop!==null?`${gpDrop>=0?'−':'+'}${Math.abs(gpDrop)} pts YoY`:''}</div></div>
+          <div class="stat-tile"><div class="lbl">Demand · MTD</div><div class="val ${mtd&&mtd.prior&&mtd.current<mtd.prior?'red':'green'}">${mtd?mtd.current:'—'}</div><div class="sub">${mtd&&mtd.prior?`vs ${mtd.prior} same days LY`:''}</div></div>
+        </div>
+        <div class="chart-wrap" style="height:110px;margin-top:10px"><canvas id="cIntelGP"></canvas></div>
+      </div>
+    </div>
+    <div class="card-title" style="font-size:11px;margin:14px 0 4px">Control — is it the market? (H1 income YoY)</div>
+    ${I.control.map(r=>{const d=pcts(r.current,r.prior);
+      return `<div class="rep-row"><div class="rep-head"><div class="nm">${esc(r.co)}</div>
+        <div class="amt"><span class="${d!==null&&d<0?'dn':'up'}">${d!==null?(d>=0?'+':'')+d+'%':'—'}</span></div></div>
+        <div class="meter"><div class="meter-fill" style="width:${Math.round((r.prior/maxC)*100)}%;background:#8aa094"></div></div>
+        <div class="meter"><div class="meter-fill" style="width:${Math.round((r.current/maxC)*100)}%;background:${d!==null&&d<0?'var(--red)':'var(--green)'}"></div></div>
+        <div class="tgt-cap"><span>${money$(r.prior)} → ${money$(r.current)}</span></div></div>`;}).join('')}
+    <div class="feedgrid">${I.feeds.map(f=>`<div class="feedtile ${f.state}"><div class="fl">${esc(f.label)}</div><div class="fa">${esc(f.state.toUpperCase())}</div><div class="fn">${esc(f.note)}</div></div>`).join('')}</div>
+    <div class="note">Read ${new Date(I.generatedAt).toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'})} · appointments from Contractors Cloud classic API · income, gross profit and net from QuickBooks via Windsor · cached 15 minutes, paced under CC's rate limit.</div>`;
+}
+
+async function loadIntel(){
+  if (INTEL_STATE === 'loading' || INTEL) return;
+  INTEL_STATE = 'loading';
+  const paint = () => { const el2 = document.querySelector('.intel-band'); if (el2) { el2.outerHTML = cardIntel(); drawCharts(); } };
+  paint();
+  try {
+    const s = sess.get(); if (!s) throw new Error('no session');
+    const r = await fetch(SB_URL + '/functions/v1/liberty-intel', {
+      headers: { apikey: SB_KEY, Authorization: 'Bearer ' + s.access_token } });
+    if (!r.ok) { INTEL_STATE = 'absent'; paint(); return; }
+    INTEL = await r.json();
+    if (INTEL.error) { INTEL = null; INTEL_STATE = 'absent'; paint(); return; }
+    INTEL_STATE = 'live'; paint();
+  } catch(e){ INTEL_STATE = 'absent'; paint(); }
 }
 
 /* ── 7. weekly cadence ────────────────────────────────────────────────────── */
@@ -1622,7 +1841,7 @@ function cardEffort(){
   const goalEach = (E.defaultGoal||0) * span;
   return `<div class="card full">
     <div class="card-title">Effort · scoreboard<span class="feed-tag ${live?'':'none'}">${live?'live · app':'awaiting logging'}</span></div>
-    <div class="card-sub">Touches logged in the field app, ranked. Meter is each rep against their own goal for ${label} — ${span} working day${span===1?'':'s'} at ${E.defaultGoal}/day.</div>
+    <div class="card-sub">Touches logged in the field app, ranked. Meter is each rep against their own goal for ${label} — ${span} working day${span===1?'':'s'} at ${E.defaultGoal}/day. Tap a name for their one-pager.</div>
 
     <div class="seg">
       ${[['day','Day'],['week','Week'],['month','Month'],['year','Year']]
@@ -1648,10 +1867,11 @@ function cardEffort(){
     ${logged.map((r,i) => {
       const goal = (r.goal||0) * span;
       const p = goal ? Math.min(100, Math.round(r[K].t / goal * 100)) : 0;
-      return `<div class="rep-row">
+      const pager = D.roster && D.roster[String(r.id)];
+      return `<div class="rep-row${pager?' acc':''}"${pager?` onclick="openRep('${esc(String(r.id))}')"`:''}>
         <div class="rep-head">
           <div class="nm"><span class="rk ${i===0?'top':''}">${i+1}</span>${esc(r.name)}${r.role&&r.role!=='sales'?`<span class="brand">${esc(r.role)}</span>`:''}</div>
-          <div class="amt">${r[K].t} <span>· ${r[K].p} pts</span></div>
+          <div class="amt">${r[K].t} <span>· ${r[K].p} pts</span>${pager?'<span class="acc-chev">›</span>':''}</div>
         </div>
         <div class="meter"><div class="meter-fill" style="width:${p}%;background:${p>=100?'#6cc28b':'#6ba8c9'}"></div></div>
         <div class="tgt-cap"><span>${r[K].t} of ${goal} goal</span>
@@ -2151,7 +2371,7 @@ function jobRowsHtml(list, count, rest, { showBrand = true, showRep = false } = 
       </div>
       <div class="jobl-meta">
         ${showBrand ? brandChip(r.brand, r.resolved) : ''}
-        ${showRep ? `<span class="jobl-rep">${r.rep ? esc(r.rep) : (r.office ? 'office · unattributed' : 'no rep recorded')}</span>` : ''}
+        ${showRep ? `<span class="jobl-rep${r.repId?' tapname':''}"${r.repId?` onclick="event.stopPropagation();openRep('${esc(String(r.repId))}')"`:''}>${r.rep ? esc(r.rep) : (r.office ? 'office · unattributed' : 'no rep recorded')}</span>` : ''}
         <span class="feed-tag ${r.src==='billdu'?'billdu':'cc'}">live · ${r.src}</span>
       </div>
     </div>`).join('')}
@@ -2386,21 +2606,23 @@ function diveView(k){
 
     <div class="card">
       <div class="card-title">Who signed it<span class="feed-tag cc">live · cc</span></div>
-      <div class="card-sub">${reps.length?'Ranked by signed value — tap a name for the jobs behind it.':'No rep activity in this window.'}</div>
+      <div class="card-sub">${reps.length?'Ranked by signed value — tap a name for their one-pager.':'No rep activity in this window.'}</div>
       ${k === 'week' ? weekResetNote() : ''}
       ${k === 'week' && !reps.length && weekReset() ? `<div class="card-sub" style="margin:0">Last week's board: ${
         (weekReset().topReps.length
-          ? weekReset().topReps.map(x=>`${esc(x.name)} ${short(x.rev)}`).join(' · ')
+          ? weekReset().topReps.map(x=>`${x.id && D.roster && D.roster[String(x.id)] ? `<span class="tapname" onclick="openRep('${esc(String(x.id))}')">${esc(x.name)}</span>` : esc(x.name)} ${short(x.rev)}`).join(' · ')
           : 'no rep activity recorded')}.</div>` : ''}
-      ${reps.slice(0,12).map((r,i)=>{const tap = !!(r.jobList && r.jobList.length);
-        return `<div class="rep-row${tap?' acc':''}" ${r.office?'style="opacity:.8"':''}${tap?` onclick="toggleBox(this)"`:''}>
+      ${reps.slice(0,12).map((r,i)=>{const pager = !r.office && D.roster && D.roster[String(r.id)];
+        const tap = pager || !!(r.jobList && r.jobList.length);
+        return `<div class="rep-row${tap?' acc':''}" ${r.office?'style="opacity:.8"':''}${pager?` onclick="openRep('${esc(String(r.id))}')"`:(tap?` onclick="toggleBox(this)"`:'')}>
         <div class="rep-head">
           <div class="nm"><span class="rk ${i===0?'top':''}">${i+1}</span>${esc(r.name)}${r.billdu?'<span class="tick">billdu</span>':''}${r.role&&r.role!=='sales'&&!r.office?`<span class="brand">${esc(r.role)}</span>`:''}</div>
           <div class="amt">${short(r.rev)} <span>· ${r.jobs} deal${r.jobs===1?'':'s'}</span>${tap?'<span class="acc-chev">›</span>':''}</div>
         </div>
         <div class="meter"><div class="meter-fill" style="width:${Math.round(r.rev/mx*100)}%;background:${r.office?'#8aa094':(r.rev===mx?'#6cc28b':'#6ba8c9')}"></div></div>
         ${r.billdu?`<div class="tgt-cap"><span>${r.office?'sent from the office account — seller not recorded':`${short(r.rev-r.billdu)} CC + ${short(r.billdu)} Billdu`}</span></div>`:''}
-        ${tap?`<div class="acc-body lazy" data-src="rep:${esc(String(r.id))}"></div>`:''}
+        ${r.office?'':closeMini(r.id)}
+        ${tap && !pager?`<div class="acc-body lazy" data-src="rep:${esc(String(r.id))}"></div>`:''}
       </div>`}).join('')}
       ${reps.some(r=>r.office)?`<div class="note">Deals sent from Oasis's office account carry no seller on the Billdu record, so they are listed as unattributed rather than credited to a rep who may not have sold them. Deals a seller sent themselves are attributed from the backend's <b>rep_id</b> mapping, not by matching names.</div>`:''}
     </div>
@@ -2528,13 +2750,196 @@ function closeWindow(){
   DIVE = null; render(); window.scrollTo({ top:0 });
 }
 addEventListener('popstate', () => {
-  const k = history.state && history.state.dive;
-  DIVE = (k && DIVE_TITLE[k]) ? k : null;
+  const s = history.state || {};
+  DIVE = (s.dive && DIVE_TITLE[s.dive]) ? s.dive : null;
+  RDIVE = (s.rep && D && D.roster && D.roster[s.rep]) ? s.rep : null;
   if (D) { render(); window.scrollTo({ top:0 }); }
 });
 
+/* ═══ THE REP ONE-PAGER ═════════════════════════════════════════════════════
+   Kevin, sitting down with a rep (27 Jul): "It showed me he was at 97,000 but
+   that was it… no easy way for me to just pull up a thing and see how this guy
+   is doing. I'd love a quick reference button — especially meeting with a
+   sales guy."
+
+   Tap a name on the quota fleet or the rep board and this is that reference:
+   one person, every window, on one screen — signed, deals, floor pace, close
+   rate, effort, and the receipts behind the number. NOTHING HERE IS COMPUTED
+   FRESH. Every figure is read from the same aggregates the boards already
+   show (windows[k].reps, quotaBoard.wins, effort.rows), so the pager can
+   never disagree with the board he tapped to get here. */
+function repStats(id, k){
+  const W = D.windows[k] || {};
+  const r = (W.reps || []).find(x => String(x.id) === String(id));
+  const who = (D.roster || {})[id] || {};
+  const q = (k !== 'day' && D.quotaBoard) ? D.quotaBoard.wins[k] : null;
+  const eff = (D.effort.rows || []).find(x => String(x.id) === String(id));
+  const e = eff ? eff[k === 'ytd' ? 'year' : k] : null;
+  return {
+    name: who.name || (r && r.name) || 'Unknown',
+    role: who.role || (r && r.role) || 'sales',
+    sells: !!who.sells,
+    rev: r ? r.rev : 0,
+    deals: r ? r.jobs : 0,
+    billdu: (r && r.billdu) || 0,
+    billduCount: (r && r.billduCount) || 0,
+    ccDeals: r ? r.jobs - (r.billduCount || 0) : 0,
+    appts: r ? r.appts : 0,
+    close: r ? r.close : null,
+    jobList: (r && r.jobList) || [], jobCount: (r && r.jobCount) || 0, jobRest: (r && r.jobRest) || 0,
+    pace: q ? q.pace : null, elapsed: q ? q.elapsed : null,
+    touches: e ? e.t : 0, touchPts: e ? e.p : 0,
+    goal: eff ? eff.goal : null,
+  };
+}
+
+function repView(id){
+  const k = REPWIN, S = repStats(id, k);
+  const label = DIVE_TITLE[k].toLowerCase();
+  const Y = k === 'ytd' ? S : repStats(id, 'ytd');
+  const avg = S.deals ? Math.round(S.rev / S.deals) : 0;
+
+  /* Floor pace — sellers only, and never for a single day: the floor is a
+     week-and-up instrument on the quota fleet, so it is the same here. */
+  const floor = (S.sells && S.pace) ? (() => {
+    const pct2 = Math.round(S.rev / S.pace * 100);
+    const band = pct2 >= 100 ? 'ok' : pct2 >= 75 ? 'warn' : 'bad';
+    const c = band==='ok' ? '#6cc28b' : band==='warn' ? '#d4b15a' : '#d96a5e';
+    const mx = Math.max(S.pace, S.rev, 1);
+    const delta = S.rev - S.pace;
+    return `<div class="card full" style="margin-bottom:12px">
+      <div class="card-title">Against the floor<span class="feed-tag cc">live · cc</span><span class="feed-tag billdu">+ billdu</span></div>
+      <div class="qmeter" style="margin-top:12px">
+        <div class="qfill" style="width:${Math.round(S.rev/mx*100)}%;background:${c}"></div>
+        <div class="qtick" style="left:${Math.round(S.pace/mx*100)}%" title="floor pace ${short(S.pace)}"></div>
+      </div>
+      <div class="tgt-cap">
+        <span>${pct2}% of floor pace — ${short(S.pace)} by day ${S.elapsed}</span>
+        <span class="${band==='ok'?'hit':band==='bad'?'miss':''}">${delta>=0?'+':'−'}${short(Math.abs(delta))} ${band==='ok'?'making floor':band==='warn'?'closing on it':'below floor'}</span>
+      </div>
+      <div class="note">Same floor as the fleet board: <b>${short(D.quotaBoard.daily)}/day signed, every rep</b>, prorated to the same point in ${esc(label)}. This is the pace to keep the seat, not a goal.</div>
+    </div>`;
+  })() : '';
+
+  /* Close rate keeps the scoreboard's own discipline: CC signings over CC
+     appointments, and no percentage at all on a denominator too small to
+     mean anything — the counts are stated instead. */
+  const closeCard = `<div class="card full" style="margin-bottom:12px">
+    <div class="card-title">Conversion · ${esc(label)}<span class="feed-tag cc">live · cc</span></div>
+    <div class="stat-grid" style="margin:12px 0 0">
+      <div class="stat-tile"><div class="lbl">Appointments</div>
+        <div class="val">${S.appts}</div><div class="sub">on the CC calendar</div></div>
+      <div class="stat-tile"><div class="lbl">CC contracts</div>
+        <div class="val">${S.ccDeals}</div><div class="sub">signed in CC</div></div>
+      <div class="stat-tile"><div class="lbl">Close</div>
+        <div class="val ${S.close!==null&&S.appts>=10&&S.close>=50?'green':''}">${S.close!==null&&S.appts>=10?S.close+'%':'—'}</div>
+        <div class="sub">${S.close===null?'no appointments to divide by':S.appts>=10?'CC signings ÷ CC appts':`${S.ccDeals} of ${S.appts} — too few appts for a rate`}</div></div>
+    </div>
+    <div class="note">Close is CC-over-CC on purpose: a Billdu acceptance carries no CC appointment, so mixing systems would flatter the rate. ${D.coverage.apptsWithRep.toLocaleString()} of ${D.coverage.appts.toLocaleString()} appointments carry a rep — below that coverage a rate is unknown, not assumed.</div>
+  </div>`;
+
+  /* Momentum: the same trailing windows as the front board, for THIS rep.
+     Kevin: "momentum is everything with sales guys" — this is the trend the
+     calendar toggle above cannot show, because a trailing 14 never resets. */
+  const ct = D.closeTrend && D.closeTrend.byId[String(id)];
+  const momCard = ct ? (() => {
+    const m = ct.momentum;
+    const verdict = m === null ? ''
+      : `<div class="card-sub" style="margin:10px 0 0">${
+          m >= 8  ? `<span class="mom up">▲ heating up</span> — closing ${m} points above their own 60-day baseline.`
+        : m <= -8 ? `<span class="mom dn">▼ cooling off</span> — closing ${Math.abs(m)} points below their own 60-day baseline.`
+        :           `<span class="mom flat">→ steady</span> — the last two weeks sit within ${Math.abs(m)} point${Math.abs(m)===1?'':'s'} of their 60-day baseline.`}</div>`;
+    return `<div class="card full" style="margin-bottom:12px">
+    <div class="card-title">Closing momentum<span class="feed-tag cc">live · cc</span></div>
+    <div class="stat-grid" style="margin:12px 0 0">
+      ${D.closeTrend.spans.map(sp => { const c = ct[sp.key];
+        const band = closeBand(c);
+        return `<div class="stat-tile"><div class="lbl">${esc(sp.label)} close</div>
+          <div class="val ${band==='hot'?'green':band==='warm'?'gold':band==='cold'?'red':''}">${c.appts?c.close+'%':'—'}</div>
+          <div class="sub">${c.appts?`${c.signed} of ${c.appts} appt${c.appts===1?'':'s'} run`:(c.signed?`${c.signed} signed · no appts run`:'no appointments run')}</div></div>`; }).join('')}
+    </div>
+    ${verdict}
+    <div class="note">Trailing windows ending today — the 30-day column is the last 30 days, whatever the calendar says. Same CC-over-CC close as everywhere on this page, and the counts stay beside every rate so a hot week on two appointments reads as exactly that.</div>
+  </div>`; })() : '';
+
+  const effortCard = `<div class="card full" style="margin-bottom:12px">
+    <div class="card-title">Effort · ${esc(label)}<span class="feed-tag none">app log</span></div>
+    <div class="stat-grid" style="margin:12px 0 0">
+      <div class="stat-tile"><div class="lbl">Touches</div>
+        <div class="val ${S.touches?'blue':''}">${S.touches}</div><div class="sub">logged in the app</div></div>
+      <div class="stat-tile"><div class="lbl">Points</div>
+        <div class="val">${S.touchPts}</div><div class="sub">by play weight</div></div>
+      <div class="stat-tile"><div class="lbl">Goal</div>
+        <div class="val">${S.goal ?? '—'}</div><div class="sub">per day${S.goal?'':' — none set'}</div></div>
+    </div>
+    <div class="note">Nothing is back-filled from sales: effort is what was logged, and <b>zeros are real</b>. A rep who closed work but logged nothing reads zero here because that is what the effort data says.</div>
+  </div>`;
+
+  const ytdStrip = k === 'ytd' ? '' : `<div class="card full" style="margin-bottom:12px">
+    <div class="card-title">Year so far</div>
+    <div class="stat-grid" style="margin:12px 0 0">
+      <div class="stat-tile"><div class="lbl">Signed YTD</div>
+        <div class="val gold">${short(Y.rev)}</div><div class="sub">${Y.deals} deal${Y.deals===1?'':'s'}</div></div>
+      <div class="stat-tile"><div class="lbl">Avg deal</div>
+        <div class="val">${Y.deals?short(Math.round(Y.rev/Y.deals)):'—'}</div><div class="sub">both systems</div></div>
+      <div class="stat-tile"><div class="lbl">Close YTD</div>
+        <div class="val">${Y.close!==null&&Y.appts>=10?Y.close+'%':'—'}</div>
+        <div class="sub">${Y.appts>=10?`${Y.ccDeals} of ${Y.appts} appts`:'too few appts for a rate'}</div></div>
+    </div>
+  </div>`;
+
+  return `
+  <div class="backbar">
+    <button class="backbtn" onclick="closeRep()">‹ Back</button>
+    <div class="dive-h">${esc(S.name)}${S.role!=='sales'?` <span class="brand">${esc(S.role)}</span>`:''}</div>
+  </div>
+
+  <div class="seg" style="margin-bottom:12px">
+    ${[['day','Day'],['week','Week'],['month','Month'],['ytd','YTD']].map(([kk,l])=>`<button class="${kk===k?'on':''}" onclick="setRepWin('${kk}')">${l}</button>`).join('')}
+  </div>
+
+  <div class="card full" style="margin-bottom:12px">
+    <div class="card-title">Signed · ${esc(label)}<span class="feed-tag cc">live · cc</span>${S.billdu?'<span class="feed-tag billdu">live · billdu</span>':''}</div>
+    <div class="dive-hero">
+      <div class="big">${short(S.rev)}</div>
+      <div class="side">${S.deals} deal${S.deals===1?'':'s'}${avg?`<br/>avg <b>${short(avg)}</b>`:''}</div>
+    </div>
+    ${S.billdu?`<div class="hero-incl">incl. <b>${short(S.billdu)}</b> <span class="feed-tag billdu">live · billdu</span> — ${S.billduCount} acceptance${S.billduCount===1?'':'s'} CC has not recorded yet</div>`:''}
+    ${billduDown()?`<div class="hero-incl warn">Contractors Cloud only — the Billdu feed is unreadable, so any of this rep's Billdu-signed work is <b>missing from this figure</b>, not absent from the window.</div>`:''}
+  </div>
+
+  ${floor}
+  ${closeCard}
+  ${momCard}
+  ${effortCard}
+  ${ytdStrip}
+
+  <div class="card full" style="margin-bottom:12px">
+    <div class="card-title">The deals · ${esc(label)}<span class="feed-tag cc">live · cc</span>${S.billdu?'<span class="feed-tag billdu">+ billdu</span>':''}</div>
+    <div class="card-sub">${S.jobCount?'Every contract behind the number above, largest first.':'Nothing signed in this window.'}</div>
+    ${jobRowsHtml(S.jobList, S.jobCount, S.jobRest, { showBrand:true, showRep:false })}
+  </div>`;
+}
+
+function openRep(id){
+  if (!D || !D.roster || !D.roster[id]) return;   // office/unattributed rows have no pager
+  RDIVE = id;
+  try { history.pushState({ dive: DIVE, rep: id }, '', location.pathname + '#rep'); } catch(e){}
+  render(); window.scrollTo({ top:0 });
+}
+function closeRep(){
+  if (history.state && history.state.rep) { history.back(); return; }
+  RDIVE = null; render(); window.scrollTo({ top:0 });
+}
+function setRepWin(k){ keepScroll(() => { REPWIN = k; }); }
+
 /* ── render ───────────────────────────────────────────────────────────────── */
 function render(){
+  if (RDIVE) {
+    document.getElementById('app').innerHTML = repView(RDIVE) +
+      `<div class="foot">Trust the instrument, not the retelling</div>`;
+    return;
+  }
   if (DIVE) {
     document.getElementById('app').innerHTML = diveView(DIVE) +
       `<div class="foot">Trust the instrument, not the retelling</div>`;
@@ -2553,7 +2958,6 @@ function render(){
   const _Wk = wk(), _pv = _Wk.prev;
   const _d = _pv.rev ? Math.round((_Wk.rev - _pv.rev) / _pv.rev * 100) : null;
   const _mixTot = _W.brands.reduce((n, b) => n + b.rev, 0);
-  const _reps = _W.reps;
   const _E = D.effort, _eT = _E.rows.reduce((n, r) => n + r[EFFWIN].t, 0);
   const _eOn = _E.rows.filter(r => r[EFFWIN].t > 0).length;
   const _cats = D.leadSources.categories.filter(c => c.rev > 0);
@@ -2567,8 +2971,21 @@ function render(){
          phone the page is one column, and sitting behind six cards put the
          actual revenue and the projection where nobody scrolled. Analysis
          reads top-down now — what happened, what it means, where it lands. */
-      cardActions(), cardAppointments(), cardStats(), cardTrending(),
-      cardApptByCompany(), cardQuota(), cardApptTrends(),
+      cardActions(), cardAppointments(),
+      /* The QUOTA FLEET rides in the first masonry tier, beside The month so
+         far and Trending to finish — Kevin (28 Jul): "there's a ton of room up
+         to the right of where the sales guys are — move that box up." And the
+         close trend lives INSIDE it now, one compressed line under each rep's
+         revenue bar ("put the closing percentage underneath it… static, all
+         the time, kinda trending") — the same trailing windows the folded
+         Closing momentum table states in full. On a phone this order simply
+         reads: money, then the sellers, which is the same statement of
+         priority. */
+      cardStats(), cardTrending(), cardQuota(),
+      cardApptByCompany(),
+      cardIntel(),
+      cardReps(),
+      cardApptTrends(),
       /* Leads by company — unfolded at Kevin's request ("break the lead sources
          by company"). It was buried in the quiet strip, which is why he could
          not find it; it is a sibling of Appointments by company, so it sits high
@@ -2583,7 +3000,9 @@ function render(){
       cardCalendarLoad(),
       minor('wow', `${short(_pv.rev)} → ${short(_Wk.rev)}${_d === null ? '' : ' · ' + (_d >= 0 ? '+' : '') + _d + '%'}`, cardWow()),
       minor('mix', `${short(_mixTot)} signed`, cardMix()),
-      minor('reps', _reps.length ? `${esc(_reps[0].name)} leads · ${short(_reps[0].rev)}` : 'no rep activity this month', cardReps()),
+      minor('closing', (_ct => _ct && _ct.team.d30.appts
+        ? `team ${_ct.team.d30.close}% · 30 day (${_ct.team.d30.signed}/${_ct.team.d30.appts})`
+        : 'no appointments in 30 days')(D.closeTrend), cardCloseTrend()),
       minor('effort', `${_eT} touch${_eT === 1 ? '' : 'es'} · ${_eOn}/${_E.activeReps} reps on the board`, cardEffort()),
       minor('cadence', 'this week, by weekday', cardCadence()),
       minor('money', qbOK() ? `${short(qbw().invoiced)} invoiced · ${short(D.qb.arTotal)} open A/R` : 'withheld — not readable', cardMoney()),
@@ -2672,6 +3091,67 @@ function drawCharts(){
     }
     ctx.restore();
   } });
+
+  /* Market intelligence: demand + money per trade, and the intel service's
+     spread + margin charts when the payload is live. */
+  const mw = document.getElementById('cMwDemand');
+  if (mw && D.marketWatch) {
+    const B = D.marketWatch.brands;
+    charts.push(new Chart(mw.getContext('2d'), {
+      type:'bar',
+      data:{ labels:B.map(b=>b.s), datasets:[
+        { label:'same days last year', data:B.map(b=>b.mtd.apP), backgroundColor:'rgba(138,160,148,0.35)', borderRadius:3 },
+        { label:'this month', data:B.map(b=>b.mtd.ap), backgroundColor:B.map(b=>(b.mtd.apD!==null&&b.mtd.apD<=-20)?'#d96a5e':b.c), borderRadius:3 },
+      ]},
+      options:{ responsive:true, maintainAspectRatio:false, layout:{padding:{top:18}},
+        plugins:{ legend:{display:true, labels:{font:{family:MONO,size:9}, boxWidth:10}}, tooltip:TIP },
+        scales:{ x:{grid:{display:false},ticks:{font:{family:MONO,size:9}}}, y:{display:false,beginAtZero:true,grace:'12%'} } },
+      plugins:[barLabelsPlugin({})]
+    }));
+  }
+  const mwm = document.getElementById('cMwMoney');
+  if (mwm && D.marketWatch) {
+    const B = D.marketWatch.brands;
+    charts.push(new Chart(mwm.getContext('2d'), {
+      type:'bar',
+      data:{ labels:B.map(b=>b.s), datasets:[
+        { label:'prior 90 days', data:B.map(b=>b.t90.revP), backgroundColor:'rgba(138,160,148,0.35)', borderRadius:3 },
+        { label:'last 90 days', data:B.map(b=>b.t90.rev), backgroundColor:B.map(b=>(b.t90.revD!==null&&b.t90.revD<0)?'#d96a5e':b.c), borderRadius:3 },
+      ]},
+      options:{ responsive:true, maintainAspectRatio:false, layout:{padding:{top:18}},
+        plugins:{ legend:{display:true, labels:{font:{family:MONO,size:9}, boxWidth:10}}, tooltip:{...TIP, callbacks:{label:c=>' '+short(c.parsed.y)}} },
+        scales:{ x:{grid:{display:false},ticks:{font:{family:MONO,size:9}}}, y:{display:false,beginAtZero:true,grace:'12%'} } },
+      plugins:[barLabelsPlugin({fmt:short})]
+    }));
+  }
+  const sp = document.getElementById('cIntelSpread');
+  if (sp && INTEL && INTEL.spread) {
+    const S = INTEL.spread;
+    charts.push(new Chart(sp.getContext('2d'), {
+      data:{ labels:S.map(r=>r.q), datasets:[
+        { type:'bar', label:'spread (bookings − revenue)', data:S.map(r=>r.gap), order:2,
+          backgroundColor:S.map(r=>r.gap>=0?'rgba(212,177,90,0.4)':'rgba(108,194,139,0.4)'), borderRadius:2 },
+        { type:'line', label:'bookings index', data:S.map(r=>r.bookings), borderColor:'#e8efe9', borderWidth:1.75, pointRadius:2.5, fill:false, order:0 },
+        { type:'line', label:'revenue index', data:S.map(r=>r.revenue), borderColor:'#6cc28b', borderDash:[4,3], borderWidth:1.75, pointRadius:2.5, fill:false, order:1 },
+      ]},
+      options:{ responsive:true, maintainAspectRatio:false,
+        plugins:{ legend:{display:true, labels:{font:{family:MONO,size:9}, boxWidth:10}}, tooltip:TIP },
+        scales:{ x:{grid:{display:false},ticks:{font:{family:MONO,size:9}}}, y:{ticks:{font:{family:MONO,size:9}}} } }
+    }));
+  }
+  const gp = document.getElementById('cIntelGP');
+  if (gp && INTEL && INTEL.money && INTEL.money.gpByQuarter) {
+    const G = INTEL.money.gpByQuarter;
+    charts.push(new Chart(gp.getContext('2d'), {
+      type:'bar',
+      data:{ labels:G.map(g=>g.q), datasets:[{ label:'gross margin %', data:G.map(g=>g.pct), borderRadius:2,
+        backgroundColor:G.map(g=>g.pct==null?'rgba(138,160,148,0.3)':g.pct<25?'#d96a5e':g.pct<30?'#d4b15a':'#6cc28b') }]},
+      options:{ responsive:true, maintainAspectRatio:false, layout:{padding:{top:14}},
+        plugins:{ legend:{display:false}, tooltip:{...TIP, callbacks:{label:c=>' '+c.parsed.y+'% gross margin'}} },
+        scales:{ x:{grid:{display:false},ticks:{font:{family:MONO,size:8}}}, y:{display:false,beginAtZero:true,grace:'12%'} } },
+      plugins:[barLabelsPlugin({fmt:v=>v+'%'})]
+    }));
+  }
 
   /* booked-per-day: the setters' output. */
   const bk = document.getElementById('cBooked');
@@ -2901,7 +3381,7 @@ addEventListener('resize', () => {
    server for hours while Kevin looked at yesterday's build and reported the bug
    as unfixed. That happened. The page now checks version.json on every load and
    reloads itself once if the deployed build is newer than the one running. */
-const BUILD = '2026-07-27T16:40Z-built-equal';
+const BUILD = '2026-07-28T21:43Z-market-intelligence';
 const SB_URL = 'https://lzegjjbkfuecrhdvlvay.supabase.co';
 /* The one page that can finish a password reset. Hard-coded rather than derived,
    because every derivation of it so far has been a source of bugs: a bare origin
@@ -3229,7 +3709,8 @@ function buildData(raw){
       const bid = rollup(j.cc_company_id || 'unknown');
       const row = { cust: custName(j.title), brand: bid, resolved: !!BRANDS[bid],
                     amount: Number(j.fin_sold_amount||0), src:'cc',
-                    rep: j.rep_id ? (repById[j.rep_id]?.name || 'Unknown') : null };
+                    rep: j.rep_id ? (repById[j.rep_id]?.name || 'Unknown') : null,
+                    repId: j.rep_id && repById[j.rep_id] ? j.rep_id : null };
       allRows.push(row);
       (brands[bid] ??= { jobs:0, rev:0, list:[] });
       brands[bid].jobs++; brands[bid].rev += row.amount; brands[bid].list.push(row);
@@ -3253,7 +3734,8 @@ function buildData(raw){
         const row = { cust: r.client_name || null, brand: OASIS, resolved: true,
                       amount: Number(r.accepted_value||0), src:'billdu',
                       office: rid === OFFICE,
-                      rep: rid === OFFICE ? null : (repById[rid]?.name || 'Unknown') };
+                      rep: rid === OFFICE ? null : (repById[rid]?.name || 'Unknown'),
+                      repId: rid !== OFFICE && repById[rid] ? rid : null };
         allRows.push(row);
         brands[OASIS].list.push(row);
         (byRep[rid] ??= { jobs:0, rev:0, appts:0, list:[] }).list.push(row);
@@ -3846,7 +4328,7 @@ function buildData(raw){
     }
     const active = reps.filter(r=>r.active);
     const rows = active.map(r => { const v = byRep[r.id]||blank(); const g = goals[r.id];
-      return { name:r.name, initials:r.initials, role:r.role,
+      return { id:r.id, name:r.name, initials:r.initials, role:r.role,
         goal: g?.daily_touch_goal ?? null, goalSource: g?.goal_source ?? null,
         today:v.day.t, week:v.week.t, month:v.month.t, points:v.month.p, ...v }; })
       .sort((a,b2)=>b2.month.t-a.month.t || b2.all-a.all || a.name.localeCompare(b2.name));
@@ -4300,9 +4782,127 @@ function buildData(raw){
              forTag: tag => S.filter(s => s.tags.includes(tag)) };
   })();
 
+  /* ── CLOSING MOMENTUM. Kevin (28 Jul): "momentum is everything with sales
+     guys" — close rate over TRAILING windows ending today, so a hot streak or a
+     slump is visible while it is happening. A trailing 14 always holds 14 days,
+     so it never suffers the Monday reset the calendar windows do. Close stays
+     CC-over-CC — the same discipline as every close on this page — and the
+     counts always travel with the rate, so a thin denominator is seen rather
+     than trusted. */
+  const closeTrend = (() => {
+    const SPANS = [ ['w1','1 wk',7], ['w2','2 wk',14], ['d30','30 day',30], ['d60','60 day',60] ];
+    const end = addD(sod(NOW), 1);
+    const seller = Object.fromEntries(reps.filter(r => r.active).map(r => [r.id, r]));
+    const blank = () => Object.fromEntries(SPANS.map(([k]) => [k, { appts:0, signed:0 }]));
+    const by = {};
+    const bump = (rid, iso, field) => {
+      if (!rid || !seller[rid] || !iso) return;
+      const t = new Date(iso).getTime();
+      for (const [k,, days] of SPANS)
+        if (t >= addD(end, -days).getTime() && t < end.getTime()) (by[rid] ??= blank())[k][field]++;
+    };
+    for (const x of appts) bump(x.rep_id, x.starts_at, 'appts');
+    for (const j of jobs) bump(j.rep_id, j.contract_signed_at, 'signed');
+    const team = blank();
+    for (const v of Object.values(by)) for (const [k] of SPANS) { team[k].appts += v[k].appts; team[k].signed += v[k].signed; }
+    const rate = c => c.appts ? Math.round(c.signed / c.appts * 100) : null;
+    const finish = v => Object.fromEntries(SPANS.map(([k]) => [k, { ...v[k], close: rate(v[k]) }]));
+    const rows = Object.entries(by).map(([id, v]) => {
+      const f = finish(v);
+      /* momentum = the recent fortnight against the 60-day baseline. Only
+         claimed when the baseline has enough appointments to BE a baseline —
+         below that the arrow would be noise wearing a verdict's clothes. */
+      const mom = (f.w2.close !== null && f.d60.close !== null && f.d60.appts >= 5)
+        ? f.w2.close - f.d60.close : null;
+      return { id, name: seller[id].name, role: seller[id].role, sells: !!seller[id].sells, ...f, momentum: mom };
+    }).sort((a,b) => (b.d30.close ?? -1) - (a.d30.close ?? -1) || b.d30.signed - a.d30.signed);
+    return { spans: SPANS.map(([key,label,days]) => ({ key, label, days })), rows,
+             byId: Object.fromEntries(rows.map(r => [r.id, r])), team: finish(team) };
+  })();
+
+  /* ── MARKET WATCH. Kevin (28 Jul), after an offline deep-dive found Fencing
+     bookings off a cliff while Oasis boomed: "can we build this level of
+     intelligence into the owner dashboard." The full version — P&L margins,
+     Windsor, close-vs-pricing attribution — needs the ask-bar backend; what a
+     public static page can hold honestly is the demand-and-money core of that
+     analysis, recomputed live per trade:
+       · bookings this month vs the SAME DAYS last year, and trailing 90 vs
+         the prior 90 — the demand series
+       · signed value over the same four windows — the money series
+       · the divergence verdicts: a demand cliff, and "bookings lead revenue"
+         (bookings fall first; installed work follows next month)
+       · the cross-brand control — one trade down while another is up is not
+         a local-economy story, and the card says which it is reading.
+     Appointment history reaches APPT_SINCE (13 months), which is exactly
+     enough for the same-days-last-year comparison and no more — so this card
+     never claims a quarterly YoY series it cannot see. */
+  const marketWatch = (() => {
+    const pb = {};
+    for (const j of jobs) if (j.cc_project_id) pb[String(j.cc_project_id)] = rollup(j.cc_company_id);
+    const yrAgo = d => { const x = new Date(d); x.setFullYear(x.getFullYear() - 1); return x; };
+    const tomorrow = addD(sod(NOW), 1);
+    const WINS2 = {
+      mtd: { label: 'month · same days LY', a: som(NOW), b: tomorrow,
+             pa: som(yrAgo(NOW)), pb: addD(sod(yrAgo(NOW)), 1) },
+      t90: { label: 'last 90 · prior 90', a: addD(tomorrow, -90), b: tomorrow,
+             pa: addD(tomorrow, -180), pb: addD(tomorrow, -90) },
+    };
+    const mk = () => ({ mtd: { ap:0, apP:0, rev:0, revP:0 }, t90: { ap:0, apP:0, rev:0, revP:0 } });
+    const by = Object.fromEntries(BRAND_ORDER.map(id => [id, mk()]));
+    for (const x of appts) {
+      const b = pb[String(x.cc_project_id)]; if (!by[b]) continue;
+      for (const [k, w2] of Object.entries(WINS2)) {
+        if (inR(x.starts_at, w2.a, w2.b)) by[b][k].ap++;
+        if (inR(x.starts_at, w2.pa, w2.pb)) by[b][k].apP++;
+      }
+    }
+    for (const j of jobs) {
+      const b = rollup(j.cc_company_id); if (!by[b] || !j.contract_signed_at) continue;
+      const v = Number(j.fin_sold_amount || 0);
+      for (const [k, w2] of Object.entries(WINS2)) {
+        if (inR(j.contract_signed_at, w2.a, w2.b)) by[b][k].rev += v;
+        if (inR(j.contract_signed_at, w2.pa, w2.pb)) by[b][k].revP += v;
+      }
+    }
+    const pctd = (cur, prev) => prev ? Math.round((cur - prev) / prev * 100) : null;
+    const brands2 = BRAND_ORDER.map(id => {
+      const v = by[id], r = { id, name: brandOf(id).n, s: brandOf(id).s, c: brandOf(id).c };
+      for (const k of Object.keys(WINS2))
+        r[k] = { ...v[k], apD: pctd(v[k].ap, v[k].apP), revD: pctd(v[k].rev, v[k].revP) };
+      const flags = [];
+      const mo = r.mtd, t = r.t90;
+      /* A cliff needs a real prior-year base under it, or every quiet January
+         screams. Thresholds are deliberately coarse — this card flags, the
+         deep-dive decides. */
+      if (mo.apD !== null && mo.apD <= -20 && mo.apP >= 20)
+        flags.push({ sev:'fire', txt:`Bookings this month are <b>${Math.abs(mo.apD)}% below the same days last year</b> (${mo.ap} vs ${mo.apP}).` });
+      else if (t.apD !== null && t.apD <= -12 && t.apP >= 40)
+        flags.push({ sev:'watch', txt:`90-day bookings are <b>${Math.abs(t.apD)}% below the prior 90</b> (${t.ap} vs ${t.apP}).` });
+      if (mo.apD !== null && mo.revD !== null && mo.apD <= -20 && (mo.revD - mo.apD) >= 10)
+        flags.push({ sev:'watch', txt:`Bookings lead installed work: signed value is ${mo.revD < 0 ? 'only down ' + Math.abs(mo.revD) + '%' : 'still holding'} while bookings are down ${Math.abs(mo.apD)}% — if the booking rate holds, the money takes the hit next.` });
+      r.flags = flags;
+      r.sev = flags.some(f => f.sev === 'fire') ? 'fire' : flags.length ? 'watch' : 'ok';
+      return r;
+    });
+    /* The control: is a slump one trade's problem or the whole market's?
+       Read from the same 90-day demand series, stated only when it is clear. */
+    let control = null;
+    const down = brands2.filter(b => b.t90.apD !== null && b.t90.apD <= -15);
+    const up = brands2.filter(b => b.t90.apD !== null && b.t90.apD >= 15);
+    if (down.length && up.length)
+      control = `${down.map(b => b.s).join(' and ')} down while ${up.map(b => `${b.s} is up ${b.t90.apD}%`).join(' and ')} over the same 90 days — that reads <b>trade-specific, not a local-economy story</b>.`;
+    else if (down.length >= 2 && !up.length)
+      control = `${down.map(b => b.s).join(' and ')} are down together over the same 90 days — that reads <b>market-wide, not one trade's problem</b>.`;
+    return { brands: brands2, control, since: APPT_SINCE };
+  })();
+
   return {
     generatedAt: new Date().toISOString(),
-    oasisLag, exclusions, sampleReps, signals,
+    oasisLag, exclusions, sampleReps, signals, closeTrend, marketWatch,
+    // the filtered roster by id, for the rep one-pager — name, role and the
+    // sells flag travel together so the pager never re-derives who someone is
+    roster: Object.fromEntries(reps.map(r =>
+      [r.id, { name:r.name, initials:r.initials, role:r.role, sells:!!r.sells, active:!!r.active }])),
     coverage: { jobs: jobs.length, appts: appts.length,
       apptsWithRep: appts.filter(a=>a.rep_id).length, touches: touches.length,
       // Coverage of the field every dollar on this page is actually built from.
@@ -4480,6 +5080,7 @@ async function loadAll(){
   D = buildData({ jobs, appts, reps, touches, repTargets, playComponents,
     leadNames, qbInv, qbError, billdu });
   render();
+  loadIntel();
 }
 
 /* Reload once if the server has a newer build than the one running. Guarded by a
