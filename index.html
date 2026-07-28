@@ -99,7 +99,7 @@
   .stat-tile .lbl { font-family: 'JetBrains Mono', monospace; font-size: 9px; letter-spacing: 0.15em; text-transform: uppercase; color: var(--text-dim); margin-bottom: 6px; }
   .stat-tile .val { font-family: 'Fraunces', serif; font-size: 22px; font-weight: 500; letter-spacing: -0.01em; line-height: 1; }
   .stat-tile .sub { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--text-dim); margin-top: 6px; }
-  .stat-tile .val.orange { color: var(--accent-soft); } .stat-tile .val.gold { color: var(--gold); } .stat-tile .val.blue { color: var(--blue); } .stat-tile .val.green { color: var(--green-soft); }
+  .stat-tile .val.orange { color: var(--accent-soft); } .stat-tile .val.gold { color: var(--gold); } .stat-tile .val.blue { color: var(--blue); } .stat-tile .val.green { color: var(--green-soft); } .stat-tile .val.red { color: var(--red); }
   .stat-tile .delta { font-family: 'JetBrains Mono', monospace; font-size: 9px; margin-top: 6px; letter-spacing: 0.02em; }
   .stat-tile .delta.up { color: var(--green-soft); } .stat-tile .delta.down { color: #d8997f; } .stat-tile .delta.flat { color: var(--text-dim); }
   .wow-hero { display: flex; align-items: stretch; gap: 8px; margin: 10px 0 12px; }
@@ -169,13 +169,20 @@
   .ct-cell b { display: block; font-family: 'Fraunces', serif; font-size: 15px; font-weight: 500; }
   .ct-cell span { font-family: 'JetBrains Mono', monospace; font-size: 9px; color: var(--text-dim); }
   .ct-cell.dim b { color: var(--text-dim); font-weight: 400; }
-  /* The same close-trend numbers, compressed to one quiet line under a rep's
-     revenue bar — Kevin: "static closing percentage all the time, kinda
-     trending", living inside the board he already reads. */
-  .ct-mini { display: flex; flex-wrap: wrap; gap: 3px 12px; align-items: baseline; margin-top: 6px;
-    font-family: 'JetBrains Mono', monospace; font-size: 9px; color: var(--text-dim); letter-spacing: .03em; }
-  .ct-mini b { color: var(--text); font-weight: 600; font-size: 10px; }
-  .ct-mini .dim b { color: var(--text-dim); font-weight: 400; }
+  /* The close trend under a rep's revenue bar, as color-banded boxes — Kevin:
+     "each week should be a color code if they're hot or cold." The bands are
+     his: 35%+ green, 30–35 yellow, under 30 red. A window with no
+     appointments stays neutral — no denominator is not a cold streak. */
+  .ct-chips { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; margin-top: 8px; }
+  .ct-chip { border: 1px solid var(--line); border-radius: 8px; padding: 5px 4px 6px; text-align: center; min-width: 0; }
+  .ct-chip .k { font-family: 'JetBrains Mono', monospace; font-size: 8px; letter-spacing: .1em; text-transform: uppercase; color: var(--text-dim); }
+  .ct-chip .v { font-family: 'Fraunces', serif; font-size: 17px; font-weight: 500; line-height: 1.2; }
+  .ct-chip .n { font-family: 'JetBrains Mono', monospace; font-size: 8.5px; color: var(--text-dim); }
+  .ct-chip.hot  { border-color: rgba(108,194,139,.5);  background: rgba(108,194,139,.09); }  .ct-chip.hot .v  { color: var(--green); }
+  .ct-chip.warm { border-color: rgba(212,177,90,.5);   background: rgba(212,177,90,.09); }   .ct-chip.warm .v { color: var(--gold); }
+  .ct-chip.cold { border-color: rgba(217,106,94,.5);   background: rgba(217,106,94,.09); }   .ct-chip.cold .v { color: var(--red); }
+  .ct-chip.none .v { color: var(--text-dim); font-weight: 400; }
+  .ct-cell.hot b { color: var(--green); } .ct-cell.warm b { color: var(--gold); } .ct-cell.cold b { color: var(--red); }
   .bchip { display: inline-flex; align-items: center; gap: 5px; font-family: 'JetBrains Mono', monospace; font-size: 8px; letter-spacing: .1em; text-transform: uppercase; font-weight: 600; padding: 2px 8px; border-radius: 100px; border: 1px solid; }
   .bchip .bdot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
   .bchip.await { color: var(--text-dim); border-color: rgba(255,255,255,0.14); }
@@ -1602,13 +1609,25 @@ const momBadge = m => m === null ? ''
   : m <= -8 ? `<span class="mom dn">▼ −${Math.abs(m)}</span>`
   :           `<span class="mom flat">→ steady</span>`;
 
-/* One compressed line of the same trailing-close numbers, for riding under a
-   rep's revenue bar. Dash = no appointments to divide by, never a zero. */
+/* Kevin's hot/cold bands, in one place so every close on the page bands the
+   same way: 35%+ hot (green), 30–35 warm (yellow), under 30 cold (red).
+   No appointments = no band — a missing denominator is not a cold streak. */
+const closeBand = c => !c || !c.appts ? 'none' : c.close >= 35 ? 'hot' : c.close >= 30 ? 'warm' : 'cold';
+
+/* The trailing-close boxes riding under a rep's revenue bar: four banded
+   windows plus the trend. Dash = no appointments to divide by, never a zero. */
 function closeMini(id){
   const ct = D.closeTrend && D.closeTrend.byId[String(id)];
   if (!ct) return '';
-  return `<div class="ct-mini"><span>close</span>${D.closeTrend.spans.map(sp => { const c = ct[sp.key];
-    return `<span class="${c.appts?'':'dim'}">${esc(sp.label)} <b>${c.appts?c.close+'%':'—'}</b>${c.appts?` ${c.signed}/${c.appts}`:''}</span>`; }).join('')}${momBadge(ct.momentum)}</div>`;
+  const m = ct.momentum;
+  return `<div class="ct-chips">${D.closeTrend.spans.map(sp => { const c = ct[sp.key];
+    return `<div class="ct-chip ${closeBand(c)}"><div class="k">${esc(sp.label)}</div>
+      <div class="v">${c.appts?c.close+'%':'—'}</div>
+      <div class="n">${c.appts?`${c.signed}/${c.appts}`:(c.signed?c.signed+' signed':'no appts')}</div></div>`; }).join('')}
+    <div class="ct-chip ${m===null?'none':m>=8?'hot':m<=-8?'cold':''}"><div class="k">Trend</div>
+      <div class="v">${m===null?'—':m>=8?'▲':m<=-8?'▼':'→'}</div>
+      <div class="n">${m===null?'thin data':m>=8?'+'+m+' heating':m<=-8?'−'+Math.abs(m)+' cooling':'steady'}</div></div>
+  </div>`;
 }
 
 function cardCloseTrend(){
@@ -1616,7 +1635,7 @@ function cardCloseTrend(){
   const rows = C.rows.filter(r => r.d60.appts > 0 || r.d60.signed > 0);
   const t = C.team;
   const cell = c => c.appts
-    ? `<div class="ct-cell"><b>${c.close}%</b><span>${c.signed}/${c.appts}</span></div>`
+    ? `<div class="ct-cell ${closeBand(c)}"><b>${c.close}%</b><span>${c.signed}/${c.appts}</span></div>`
     : `<div class="ct-cell dim"><b>—</b><span>${c.signed ? c.signed + ' signed' : 'no appts'}</span></div>`;
   return `<div class="card full">
     <div class="card-title">Closing momentum<span class="feed-tag cc">live · cc</span></div>
@@ -1646,7 +1665,7 @@ function cardCloseTrend(){
     <button type="button" class="linkbtn" onclick="const r=document.getElementById('ctrest');const open=r.style.display==='none';r.style.display=open?'':'none';this.textContent=open?'Show fewer':'Show all ${rows.length} sellers ›'">Show all ${rows.length} sellers ›</button>` : ''}`;
     })() : '<div class="card-sub" style="margin:12px 0 0">No seller has run an appointment or signed in the last 60 days.</div>'}
 
-    <div class="note">Trailing windows, not calendar ones: each looks back exactly that many days from today, so Monday never resets the board. Close stays CC-over-CC — a Billdu acceptance carries no CC appointment, so it is counted in signings nowhere here. A dash is a missing denominator, never a zero; <b>x/y</b> rides with every rate so a thin sample can be seen. The arrow only speaks when the 60-day baseline holds at least 5 appointments.</div>
+    <div class="note">Color is Kevin's hot/cold rule, the same everywhere on this page: <span style="color:var(--green)">35%+ green</span>, <span style="color:var(--gold)">30–35 yellow</span>, <span style="color:var(--red)">under 30 red</span>. Trailing windows, not calendar ones: each looks back exactly that many days from today, so Monday never resets the board. Close stays CC-over-CC — a Billdu acceptance carries no CC appointment, so it is counted in signings nowhere here. A dash is a missing denominator, never a zero; <b>x/y</b> rides with every rate so a thin sample can be seen. The arrow only speaks when the 60-day baseline holds at least 5 appointments.</div>
   </div>`;
 }
 
@@ -2719,8 +2738,9 @@ function repView(id){
     <div class="card-title">Closing momentum<span class="feed-tag cc">live · cc</span></div>
     <div class="stat-grid" style="margin:12px 0 0">
       ${D.closeTrend.spans.map(sp => { const c = ct[sp.key];
+        const band = closeBand(c);
         return `<div class="stat-tile"><div class="lbl">${esc(sp.label)} close</div>
-          <div class="val ${c.appts&&c.close>=40?'green':''}">${c.appts?c.close+'%':'—'}</div>
+          <div class="val ${band==='hot'?'green':band==='warm'?'gold':band==='cold'?'red':''}">${c.appts?c.close+'%':'—'}</div>
           <div class="sub">${c.appts?`${c.signed} of ${c.appts} appt${c.appts===1?'':'s'} run`:(c.signed?`${c.signed} signed · no appts run`:'no appointments run')}</div></div>`; }).join('')}
     </div>
     ${verdict}
@@ -3184,7 +3204,7 @@ addEventListener('resize', () => {
    server for hours while Kevin looked at yesterday's build and reported the bug
    as unfixed. That happened. The page now checks version.json on every load and
    reloads itself once if the deployed build is newer than the one running. */
-const BUILD = '2026-07-28T21:24Z-close-under-every-bar';
+const BUILD = '2026-07-28T21:30Z-hot-cold-close-boxes';
 const SB_URL = 'https://lzegjjbkfuecrhdvlvay.supabase.co';
 /* The one page that can finish a password reset. Hard-coded rather than derived,
    because every derivation of it so far has been a source of bugs: a bare origin
