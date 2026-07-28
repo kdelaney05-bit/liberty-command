@@ -1287,7 +1287,9 @@ function cardQuota(){
         <div class="qtick" style="left:${Math.round(W.pace/mx*100)}%" title="floor pace ${short(W.pace)}"></div>
       </div>
       <div class="tgt-cap">
-        <span>${r.pct}% of floor pace</span>
+        <span>${r.pct}% of floor pace${(c => c && c.d30.appts
+          ? ` · <b>close ${c.d30.close}%</b> (${c.d30.signed}/${c.d30.appts} · 30d)`
+          : '')(D.closeTrend && D.closeTrend.byId[String(r.id)])}</span>
         <span class="${r.band==='ok'?'hit':r.band==='bad'?'miss':''}">${r.band==='ok'?'making floor':r.band==='warn'?'closing on it':'below floor'}</span>
       </div>
     </div>`).join('')}
@@ -1613,12 +1615,20 @@ function cardCloseTrend(){
         <div class="sub">${t.w2.appts?`${t.w2.signed} of ${t.w2.appts} — ${t.d30.close!==null&&t.w2.close!==null?(t.w2.close>=t.d30.close?'ahead of':'behind'):'vs'} the 30-day pace`:'no appointments in 2 weeks'}</div></div>
     </div>
 
-    ${rows.length ? `
+    ${rows.length ? (() => {
+      const row = r => `<div class="ct-row" onclick="openRep('${esc(String(r.id))}')">
+        <div class="ct-nm">${esc(r.name)}${momBadge(r.momentum)}</div>
+        ${C.spans.map(s => cell(r[s.key])).join('')}
+      </div>`;
+      /* Kevin: "I don't need to see everybody's" — the board leads with the six
+         busiest-by-close and the rest wait behind one tap, names intact. */
+      const CAP = 6;
+      return `
     <div class="ct-head"><span>Rep</span>${C.spans.map(s=>`<span>${esc(s.label)}</span>`).join('')}</div>
-    ${rows.map(r => `<div class="ct-row" onclick="openRep('${esc(String(r.id))}')">
-      <div class="ct-nm">${esc(r.name)}${momBadge(r.momentum)}</div>
-      ${C.spans.map(s => cell(r[s.key])).join('')}
-    </div>`).join('')}` : '<div class="card-sub" style="margin:12px 0 0">No seller has run an appointment or signed in the last 60 days.</div>'}
+    ${rows.slice(0, CAP).map(row).join('')}
+    ${rows.length > CAP ? `<div id="ctrest" style="display:none">${rows.slice(CAP).map(row).join('')}</div>
+    <button type="button" class="linkbtn" onclick="const r=document.getElementById('ctrest');const open=r.style.display==='none';r.style.display=open?'':'none';this.textContent=open?'Show fewer':'Show all ${rows.length} sellers ›'">Show all ${rows.length} sellers ›</button>` : ''}`;
+    })() : '<div class="card-sub" style="margin:12px 0 0">No seller has run an appointment or signed in the last 60 days.</div>'}
 
     <div class="note">Trailing windows, not calendar ones: each looks back exactly that many days from today, so Monday never resets the board. Close stays CC-over-CC — a Billdu acceptance carries no CC appointment, so it is counted in signings nowhere here. A dash is a missing denominator, never a zero; <b>x/y</b> rides with every rate so a thin sample can be seen. The arrow only speaks when the 60-day baseline holds at least 5 appointments.</div>
   </div>`;
@@ -2810,13 +2820,19 @@ function render(){
          phone the page is one column, and sitting behind six cards put the
          actual revenue and the projection where nobody scrolled. Analysis
          reads top-down now — what happened, what it means, where it lands. */
-      cardActions(), cardAppointments(), cardStats(), cardTrending(),
+      cardActions(), cardAppointments(),
+      /* Closing momentum rides in the FIRST masonry tier, beside The month so
+         far and Trending to finish — Kevin (28 Jul): "there's a ton of room up
+         to the right… move that box up, and make sure it's closing
+         percentages." On a desktop this tier had two cards for three columns,
+         so the third column sat blank; the sellers' close rates are what he
+         wanted living in it. On a phone this simply reads right after the
+         money, which is the same statement of priority. */
+      cardStats(), cardTrending(), cardCloseTrend(),
       cardApptByCompany(), cardQuota(),
-      /* The salespeople, in the open flow — Kevin (28 Jul): "move them up…
-         we should have a closing percentage by every sales guy pretty much
-         all the time." Sales by rep and the momentum board sit with the
-         quota fleet so everything about the sellers reads as one block. */
-      cardReps(), cardCloseTrend(),
+      /* Sales by rep stays with the quota fleet so the sellers read as one
+         block; both tap through to the one-pager. */
+      cardReps(),
       cardApptTrends(),
       /* Leads by company — unfolded at Kevin's request ("break the lead sources
          by company"). It was buried in the quiet strip, which is why he could
@@ -3149,7 +3165,7 @@ addEventListener('resize', () => {
    server for hours while Kevin looked at yesterday's build and reported the bug
    as unfixed. That happened. The page now checks version.json on every load and
    reloads itself once if the deployed build is newer than the one running. */
-const BUILD = '2026-07-28T20:24Z-closing-momentum';
+const BUILD = '2026-07-28T20:47Z-momentum-top-right';
 const SB_URL = 'https://lzegjjbkfuecrhdvlvay.supabase.co';
 /* The one page that can finish a password reset. Hard-coded rather than derived,
    because every derivation of it so far has been a source of bugs: a bare origin
