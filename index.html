@@ -1609,11 +1609,21 @@ function cardMix(){
 }
 
 /* ── 6. sales by rep ──────────────────────────────────────────────────────── */
+let REPSWIN = 'month';
+function setRepsWin(k){ keepScroll(() => { REPSWIN = k; }); }
 function cardReps(){
-  const reps = w().reps, mx = Math.max(1, ...reps.map(r=>r.rev));
+  /* Kevin (28 Jul): "we click week, months and everything just shifts — super
+     useful, should be used anytime we can." So the sales box gets the same
+     window toggle the fleet has, instead of being frozen on MTD. */
+  const k = REPSWIN, W = D.windows[k] || {};
+  const reps = W.reps || [], mx = Math.max(1, ...reps.map(r=>r.rev));
+  const label = { day:'today', week:'this week', month:'this month', ytd:'this year' }[k];
   return `<div class="card">
-    <div class="card-title">Sales by rep · MTD<span class="feed-tag cc">live · cc</span></div>
-    <div class="card-sub">${reps.length? 'Ranked by signed contract value this month. Tap a name for their one-pager.' : 'No rep activity this month.'}</div>
+    <div class="card-title">Sales by rep<span class="feed-tag cc">live · cc</span></div>
+    <div class="seg" style="margin:8px 0 4px">
+      ${[['day','Day'],['week','Week'],['month','Month'],['ytd','YTD']].map(([kk,l])=>`<button class="${kk===k?'on':''}" onclick="setRepsWin('${kk}')">${l}</button>`).join('')}
+    </div>
+    <div class="card-sub">${reps.length? `Ranked by signed contract value ${label}. Tap a name for their one-pager.` : `No rep activity ${label}.`}</div>
     ${reps.map(r=>`<div class="rep-row${r.office?'':' acc'}" ${r.office?'style="opacity:.8"':`onclick="openRep('${esc(String(r.id))}')"`}>
       <div class="rep-head">
         <div class="nm">${esc(r.name)}${r.billdu?'<span class="tick">billdu</span>':''}${r.role&&r.role!=='sales'&&!r.office?`<span class="brand">${esc(r.role)}</span>`:''}</div>
@@ -3469,7 +3479,7 @@ addEventListener('resize', () => {
    server for hours while Kevin looked at yesterday's build and reported the bug
    as unfixed. That happened. The page now checks version.json on every load and
    reloads itself once if the deployed build is newer than the one running. */
-const BUILD = '2026-07-28T23:05Z-sales-first';
+const BUILD = '2026-07-28T23:20Z-sales-toggle';
 const SB_URL = 'https://lzegjjbkfuecrhdvlvay.supabase.co';
 /* The one page that can finish a password reset. Hard-coded rather than derived,
    because every derivation of it so far has been a source of bugs: a bare origin
