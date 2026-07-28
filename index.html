@@ -231,6 +231,9 @@
   /* appointments by company — one tile per company, count vs a measured typical,
      the tick marks typical. Three across where there is room, stacked on a phone. */
   .apco-tiles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 14px; }
+  .mini4 { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr); gap: 10px 12px; margin-top: 14px; border-top: 1px solid var(--line); padding-top: 12px; }
+  .mini4 .chart-wrap { min-width: 0; }
+  .mini4 .mini-cap { overflow: hidden; text-overflow: ellipsis; white-space: nowrap;  font-family: 'JetBrains Mono', monospace; font-size: 8px; letter-spacing: .1em; text-transform: uppercase; color: var(--text-dim); margin-bottom: 3px; }
   @media (max-width: 620px) { .apco-tiles { grid-template-columns: 1fr; } }
   .apco-tile { background: var(--bg-card-hi); border: 1px solid var(--line); border-radius: 12px; padding: 15px; }
   .apco-nm { display: flex; align-items: center; gap: 8px; font-size: 13.5px; font-weight: 500; margin-bottom: 10px; }
@@ -297,6 +300,18 @@
   /* ── SNAPSHOT strip. Four windows, each one a door into itself. ── */
   .snapgrid { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; }
   .hero1 { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; }
+  .bs-flex { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+  .bs-mix { width: 98px; height: 98px; flex-shrink: 0; position: relative; }
+  .bs-legend { display: flex; flex-wrap: wrap; gap: 3px 14px; margin-top: 8px;
+    font-family: 'JetBrains Mono', monospace; font-size: 9px; color: var(--text-dim); }
+  .bs-legend b { color: var(--text); font-weight: 600; }
+  .bs-dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-right: 5px; vertical-align: 0; }
+  .herotrend { margin-top: 9px; border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px 8px; background: var(--bg-card); text-align: left; }
+  .ht-cap { font-family: 'JetBrains Mono', monospace; font-size: 9px; letter-spacing: .1em; text-transform: uppercase; color: var(--text-dim); margin-bottom: 4px; }
+  .ht-row { padding: 5px 0; }
+  .ht-top { display: flex; justify-content: space-between; align-items: baseline; font-size: 12px; gap: 8px; }
+  .ht-v { font-family: 'Fraunces', serif; font-size: 14px; }
+  .ht-sub { font-family: 'JetBrains Mono', monospace; font-size: 9px; color: var(--text-dim); margin-top: 2px; }
   .hero1 .snap.bigsnap { grid-column: 1 / -1; }
   @media (min-width: 700px) { .snapgrid { grid-template-columns: repeat(4, 1fr); } }
   .snap { text-align: left; background: var(--bg-card); border: 1px solid var(--line);
@@ -962,6 +977,36 @@ function setHeroWin(k){ keepScroll(() => { HEROWIN = k; }); }
    signed and built both re-scope. A/R has no window and says so.
    Signed stays CC + Billdu union; built stays QuickBooks invoiced; the two
    are never added — same laws as the tiles this replaces. */
+/* Trending-to-finish, compressed into the hero — Kevin (29 Jul): "consolidate
+   trending to finish with the beginning totals boxes." Month window only:
+   a projection needs a month to project. Same shape-aware math as the full
+   card, which stays intact behind the fold. */
+function heroTrend(){
+  const W = flat('month'), SH = D.monthShape || {};
+  const elapsed = SH.elapsedDOM || W.prevSpanDays;
+  const days = SH.dim || new Date(new Date().getFullYear(), new Date().getMonth()+1, 0).getDate();
+  const rows = allBrands(W.brands).sort((a,b) => b.rev - a.rev);
+  if (!rows.length) return '';
+  return `<div class="herotrend">
+    <div class="ht-cap">Trending to finish · day ${elapsed} of ${days} · projected from each brand's own fill shape</div>
+    ${rows.map(b => {
+      const m = brandOf(b.id);
+      const linear = elapsed ? b.rev / elapsed * days : b.rev;
+      const sh = SH[b.id];
+      const shaped = (sh && sh.frac > 0 && sh.n >= 3) ? Math.round(b.rev / sh.frac) : null;
+      const proj = shaped != null ? shaped : linear;
+      const tgt = D.targets.monthly[b.id] || 0;
+      const hit = tgt && proj >= tgt;
+      const mx = Math.max(proj, tgt, 1);
+      return `<div class="ht-row">
+        <div class="ht-top"><span>${esc(m.s)}</span>
+          <span class="ht-v" style="color:${tgt?(hit?'var(--green-soft)':'var(--gold)'):'var(--text)'}">${short(proj)}</span></div>
+        <div class="meter"><div class="meter-fill" style="width:${Math.round(b.rev/mx*100)}%;background:${m.c}"></div></div>
+        <div class="ht-sub">${short(b.rev)} booked${tgt?` · ${hit?`clears goal ${short(tgt)}`:`short of goal ${short(tgt)}`}`:''} · ${shaped!=null?`shape from ${sh.n} mo`:'flat rate'}</div>
+      </div>`;}).join('')}
+  </div>`;
+}
+
 function hdr(){
   const k = HEROWIN, label = { day:'Today', week:'This week', month:'MTD', ytd:'YTD' }[k];
   const W = flat(k), pv = W.prev;
@@ -981,10 +1026,17 @@ function hdr(){
     </div>
     <div class="hero1">
       <button class="snap bigsnap" onclick="openWindow('${k}')" aria-label="Signed ${esc(label)} — open details">
-        <div class="snap-k" style="color:var(--green)">Signed · ${esc(label)}</div>
-        <div class="snap-v">${short(W.rev)}</div>
-        <div class="snap-s">${sub}</div>
-        <div class="snap-d ${d===null?'flat':d>=0?'up':'down'}">${d===null?'—':(d>=0?'▲':'▼')+' '+Math.abs(d)+'% vs '+esc(W.prevLabel)}</div>
+        <div class="bs-flex">
+          <div style="min-width:0">
+            <div class="snap-k" style="color:var(--green)">Signed · ${esc(label)}</div>
+            <div class="snap-v">${short(W.rev)}</div>
+            <div class="snap-s">${sub}</div>
+            <div class="snap-d ${d===null?'flat':d>=0?'up':'down'}">${d===null?'—':(d>=0?'▲':'▼')+' '+Math.abs(d)+'% vs '+esc(W.prevLabel)}</div>
+          </div>
+          <div class="bs-mix"><canvas id="cHeroMix"></canvas></div>
+        </div>
+        <div class="bs-legend">${(rs => rs.length ? rs.map(b => { const m = brandOf(b.id);
+          return `<span><span class="bs-dot" style="background:${m.c}"></span>${esc(m.s)} <b>${short(b.rev)}</b> · ${pct(b.rev, W.rev)}%</span>`; }).join('') : '')(allBrands(W.brands).filter(b => b.rev > 0))}</div>
         <div class="snap-go">details <span class="go-chev">›</span></div>
       </button>
       <button class="snap" onclick="openWindow('${k}')" aria-label="Built ${esc(label)} — open details">
@@ -1002,6 +1054,7 @@ function hdr(){
         <div class="snap-go">details ›</div>
       </button>
     </div>
+    ${k === 'month' ? heroTrend() : ''}
     <div class="snaphint">Signed = contract value · CC + Oasis via Billdu. Built = invoiced in QuickBooks. Two different events in two systems — never added together.</div>
   </div>`;
 }
@@ -1167,7 +1220,7 @@ function cardApptByCompany(){
   });
   const scale = Math.max(1, ...rows.map(r => Math.max(r.n, r.t)));
   const unknown = W.counts.unknown || 0;
-  const spanLabel = { day:'today', week:'this week', month:'this month' }[K];
+  const spanLabel = { day:'today', week:'this week', month:'this month', ytd:'year to date' }[K];
   return `<div class="card full apco-band">
     <div class="card-title">Appointments by company<span class="feed-tag cc">live · cc</span></div>
     <div class="card-sub">New appointments <b>booked</b> ${spanLabel}, by company, each against ${W.typLabel} — like for like, never a partial window against a finished one.</div>
@@ -1185,7 +1238,7 @@ function cardApptByCompany(){
     </div></div>
 
     <div class="seg">
-      ${[['day','Today'],['week','Week'],['month','Month']]
+      ${[['day','Today'],['week','Week'],['month','Month'],['ytd','YTD']]
         .map(([k,l])=>`<button class="${k===K?'on':''}" onclick="setApptCo('${k}')">${l}</button>`).join('')}
     </div>
 
@@ -1210,6 +1263,13 @@ function cardApptByCompany(){
         </div>
       </div>`;
     }).join('')}
+    </div>
+
+    <div class="mini4">
+      <div><div class="mini-cap" style="color:var(--green)">Set · by week</div><div class="chart-wrap" style="height:104px"><canvas id="cBookedWeek"></canvas></div></div>
+      <div><div class="mini-cap" style="color:var(--green)">Set · by month</div><div class="chart-wrap" style="height:104px"><canvas id="cBookedMonth"></canvas></div></div>
+      <div><div class="mini-cap" style="color:var(--blue)">Calendar · by week</div><div class="chart-wrap" style="height:104px"><canvas id="cApptWeek"></canvas></div></div>
+      <div><div class="mini-cap" style="color:var(--blue)">Calendar · by month</div><div class="chart-wrap" style="height:104px"><canvas id="cApptMonth"></canvas></div></div>
     </div>
 
     ${unknown?`<div class="apco-pending"><span class="d"></span><span>counting… <b>${unknown}</b> booked ${spanLabel} awaiting project sync — booked against projects the sync has not delivered yet, so not attributed to a company and not in the tiles above.</span></div>`:''}
@@ -3061,7 +3121,7 @@ function render(){
          Closing momentum table states in full. On a phone this order simply
          reads: money, then the sellers, which is the same statement of
          priority. */
-      cardStats(), cardTrending(),
+
       cardPipeline(),
       cardIntel(),
       /* Leads by company — unfolded at Kevin's request ("break the lead sources
@@ -3077,16 +3137,13 @@ function render(){
          opens it when he wants it. Booked-by-week/month and calendar load
          folded 28 Jul — Kevin: consolidate the abundance of appointment data;
          the main instrument and the by-company band carry the story. */
+      minor('monthsofar', 'signed · appts · built · A/R, month to date', cardStats()),
+      minor('trend', 'projected month finish, by brand, full detail', cardTrending()),
       minor('appt', `set today ${D.appointments?D.appointments.bookedToday:0} · on calendars ${D.appointments?D.appointments.today:0}`, cardAppointments()),
       minor('fleet', 'every rep against the employment floor', cardQuota()),
-      minor('appttrend', 'booked by week & month', cardApptTrends()),
-      cardCalendarLoad(),
       minor('review', 'housekeeping & data chores', cardActions()),
       minor('wow', `${short(_pv.rev)} → ${short(_Wk.rev)}${_d === null ? '' : ' · ' + (_d >= 0 ? '+' : '') + _d + '%'}`, cardWow()),
       minor('mix', `${short(_mixTot)} signed`, cardMix()),
-      minor('closing', (_ct => _ct && _ct.team.d30.appts
-        ? `team ${_ct.team.d30.close}% · 30 day (${_ct.team.d30.signed}/${_ct.team.d30.appts})`
-        : 'no appointments in 30 days')(D.closeTrend), cardCloseTrend()),
       minor('effort', `${_eT} touch${_eT === 1 ? '' : 'es'} · ${_eOn}/${_E.activeReps} reps on the board`, cardEffort()),
       minor('cadence', 'this week, by weekday', cardCadence()),
       minor('money', qbOK() ? `${short(qbw().invoiced)} invoiced · ${short(D.qb.arTotal)} open A/R` : 'withheld — not readable', cardMoney()),
@@ -3175,6 +3232,22 @@ function drawCharts(){
     }
     ctx.restore();
   } });
+
+  /* Hero mix donut — Kevin: "I love this circle graphic, squeeze it in the
+     beginning." Same brands, same colors, scoped to the hero's window. */
+  const hm = document.getElementById('cHeroMix');
+  if (hm) {
+    const HW = flat(HEROWIN);
+    const hrows = allBrands(HW.brands).filter(b => b.rev > 0);
+    if (hrows.length) charts.push(new Chart(hm.getContext('2d'), {
+      type:'doughnut',
+      data:{ labels:hrows.map(b=>brandOf(b.id).s),
+        datasets:[{ data:hrows.map(b=>b.rev), backgroundColor:hrows.map(b=>brandOf(b.id).c), borderWidth:0 }] },
+      options:{ responsive:true, maintainAspectRatio:false, cutout:'66%',
+        plugins:{ legend:{display:false}, tooltip:{...TIP, callbacks:{ label:c=>' '+c.label+' '+short(c.parsed) }} } }
+    }));
+    else hm.parentElement.style.display = 'none';
+  }
 
   /* Market intelligence: demand + money per trade, and the intel service's
      spread + margin charts when the payload is live. */
@@ -3465,7 +3538,7 @@ addEventListener('resize', () => {
    server for hours while Kevin looked at yesterday's build and reported the bug
    as unfixed. That happened. The page now checks version.json on every load and
    reloads itself once if the deployed build is newer than the one running. */
-const BUILD = '2026-07-29T00:40Z-appts-under-sales';
+const BUILD = '2026-07-29T01:38Z-donut-in-hero';
 const SB_URL = 'https://lzegjjbkfuecrhdvlvay.supabase.co';
 /* The one page that can finish a password reset. Hard-coded rather than derived,
    because every derivation of it so far has been a source of bugs: a bare origin
@@ -4178,6 +4251,15 @@ function buildData(raw){
           typ: Object.fromEntries(BRAND_ORDER.map(b => [b, priorMean(b, starts, elapsedMo)])),
         };
       })(),
+      /* YTD counts are real; a like-for-like baseline is NOT — appointment
+         history reaches 13 months back, which cannot cover last year's same
+         span. The baseline is declined rather than invented. */
+      ytd: {
+        typLabel: 'year to date — no like-for-like baseline, history reaches 13 months',
+        sampleLabel: 'no baseline', partial: true,
+        counts: bookedByBrandInRange(soy(T), winEnd),
+        typ: Object.fromEntries(BRAND_ORDER.map(b => [b, { mean: 0, vals: null }])),
+      },
     };
 
     // creation-basis series, alongside the calendar-load series
