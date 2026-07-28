@@ -173,14 +173,14 @@
      "each week should be a color code if they're hot or cold." The bands are
      his: 35%+ green, 30–35 yellow, under 30 red. A window with no
      appointments stays neutral — no denominator is not a cold streak. */
-  .ct-chips { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; margin-top: 8px; }
-  .ct-chip { border: 1px solid var(--line); border-radius: 8px; padding: 5px 4px 6px; text-align: center; min-width: 0; }
-  .ct-chip .k { font-family: 'JetBrains Mono', monospace; font-size: 8px; letter-spacing: .1em; text-transform: uppercase; color: var(--text-dim); }
-  .ct-chip .v { font-family: 'Fraunces', serif; font-size: 17px; font-weight: 500; line-height: 1.2; }
-  .ct-chip .n { font-family: 'JetBrains Mono', monospace; font-size: 8.5px; color: var(--text-dim); }
-  .ct-chip.hot  { border-color: rgba(108,194,139,.5);  background: rgba(108,194,139,.09); }  .ct-chip.hot .v  { color: var(--green); }
-  .ct-chip.warm { border-color: rgba(212,177,90,.5);   background: rgba(212,177,90,.09); }   .ct-chip.warm .v { color: var(--gold); }
-  .ct-chip.cold { border-color: rgba(217,106,94,.5);   background: rgba(217,106,94,.09); }   .ct-chip.cold .v { color: var(--red); }
+  .ct-chips { display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; margin-top: 6px; }
+  .ct-chip { border: 1px solid var(--line); border-radius: 6px; padding: 3px 3px 4px; text-align: center; min-width: 0; }
+  .ct-chip .k { font-family: 'JetBrains Mono', monospace; font-size: 7px; letter-spacing: .08em; text-transform: uppercase; color: var(--text-dim); }
+  .ct-chip .v { font-family: 'Fraunces', serif; font-size: 12.5px; font-weight: 500; line-height: 1.25; }
+  .ct-chip .n { font-family: 'JetBrains Mono', monospace; font-size: 7.5px; color: var(--text-dim); }
+  .ct-chip.hot  { border-color: rgba(108,194,139,.4);  background: rgba(108,194,139,.06); }  .ct-chip.hot .v  { color: var(--green); }
+  .ct-chip.warm { border-color: rgba(212,177,90,.4);   background: rgba(212,177,90,.06); }   .ct-chip.warm .v { color: var(--gold); }
+  .ct-chip.cold { border-color: rgba(217,106,94,.4);   background: rgba(217,106,94,.06); }   .ct-chip.cold .v { color: var(--red); }
   .ct-chip.none .v { color: var(--text-dim); font-weight: 400; }
   .ct-cell.hot b { color: var(--green); } .ct-cell.warm b { color: var(--gold); } .ct-cell.cold b { color: var(--red); }
   .bchip { display: inline-flex; align-items: center; gap: 5px; font-family: 'JetBrains Mono', monospace; font-size: 8px; letter-spacing: .1em; text-transform: uppercase; font-weight: 600; padding: 2px 8px; border-radius: 100px; border: 1px solid; }
@@ -3204,7 +3204,7 @@ addEventListener('resize', () => {
    server for hours while Kevin looked at yesterday's build and reported the bug
    as unfixed. That happened. The page now checks version.json on every load and
    reloads itself once if the deployed build is newer than the one running. */
-const BUILD = '2026-07-28T21:30Z-hot-cold-close-boxes';
+const BUILD = '2026-07-28T21:33Z-quieter-close-boxes';
 const SB_URL = 'https://lzegjjbkfuecrhdvlvay.supabase.co';
 /* The one page that can finish a password reset. Hard-coded rather than derived,
    because every derivation of it so far has been a source of bugs: a bare origin
