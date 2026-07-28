@@ -1172,6 +1172,18 @@ function cardApptByCompany(){
     <div class="card-title">Appointments by company<span class="feed-tag cc">live · cc</span></div>
     <div class="card-sub">New appointments <b>booked</b> ${spanLabel}, by company, each against ${W.typLabel} — like for like, never a partial window against a finished one.</div>
 
+    <div class="attn"><div class="stat-grid" style="grid-template-columns:repeat(3,1fr);gap:6px;margin:8px 0 2px">
+      <div class="stat-tile"><div class="lbl" style="color:var(--green)">Set today</div>
+        <div class="val">${A.bookedToday}</div>
+        <div class="sub">${A.bookedNormHour?`typ ${A.bookedNormHour}`:''}${D.apptWtd?` · WTD ${D.apptWtd.setNow}${D.apptWtd.setD!==null?` <b class="${D.apptWtd.setD>=0?'up':'dn'}">${D.apptWtd.setD>=0?'▲':'▼'}${Math.abs(D.apptWtd.setD)}%</b>`:''} · MTD ${D.apptWtd.setMtd}${D.apptWtd.setMtdD!==null?` <b class="${D.apptWtd.setMtdD>=0?'up':'dn'}">${D.apptWtd.setMtdD>=0?'▲':'▼'}${Math.abs(D.apptWtd.setMtdD)}%</b>`:''}`:''}</div></div>
+      <div class="stat-tile"><div class="lbl" style="color:var(--blue)">Happening today</div>
+        <div class="val">${A.today}</div>
+        <div class="sub">${A.yesterday} yest.${D.apptWtd?` · WTD ${D.apptWtd.ranNow} · MTD ${D.apptWtd.ranMtd}${D.apptWtd.ranMtdD!==null?` <b class="${D.apptWtd.ranMtdD>=0?'up':'dn'}">${D.apptWtd.ranMtdD>=0?'▲':'▼'}${Math.abs(D.apptWtd.ranMtdD)}%</b>`:''}`:''}</div></div>
+      <div class="stat-tile"><div class="lbl" style="color:var(--gold)">Next 7 days</div>
+        <div class="val">${A.next7}</div>
+        <div class="sub">${A.priorAvg?`typical ${A.priorAvg} · <b class="${A.vsPrior>=0?'up':'dn'}">${A.vsPrior>=0?'▲':'▼'}${Math.abs(A.vsPrior)}%</b>`:'booked to happen'}</div></div>
+    </div></div>
+
     <div class="seg">
       ${[['day','Today'],['week','Week'],['month','Month']]
         .map(([k,l])=>`<button class="${k===K?'on':''}" onclick="setApptCo('${k}')">${l}</button>`).join('')}
@@ -2339,20 +2351,6 @@ function cardAttention(){
   }
   return `<div class="card attn">
     <div class="card-title">Attention<span class="feed-tag cc">trends, not chores</span></div>
-    <div class="stat-grid" style="margin-top:8px">
-      <div class="stat-tile" style="cursor:pointer;border-left:2px solid var(--blue)" onclick="openWindow('week')"><div class="lbl" style="color:var(--blue)">Appts · set WTD</div>
-        <div class="val ${wtd&&wtd.setD!==null&&wtd.setD<0?'red':'green'}">${wtd?wtd.setNow:'—'}</div>
-        <div class="sub">${wtd&&wtd.setD!==null?`vs ${wtd.setPrev} same point last wk${arr(wtd.setD)}`:'no last-week base'}</div></div>
-      <div class="stat-tile" style="cursor:pointer;border-left:2px solid var(--green)" onclick="openWindow('month')"><div class="lbl" style="color:var(--green)">Sales · signed MTD</div>
-        <div class="val ${revD!==null&&revD<0?'red':'green'}">${mo.company?short(mo.company.rev):'—'}</div>
-        <div class="sub">${revD!==null?`vs same days last month${arr(revD)}`:''}</div></div>
-      <div class="stat-tile" style="cursor:pointer;border-left:2px solid var(--gold)" onclick="openWindow('month')"><div class="lbl" style="color:var(--gold)">Builds · completed MTD</div>
-        <div class="val ${builtD!==null&&builtD<0?'red':'green'}">${short(builtNow)}</div>
-        <div class="sub">${builtD!==null?`vs same days last month${arr(builtD)}`:`${mo.company?mo.company.completed:0} jobs completed`}</div></div>
-      <div class="stat-tile" style="cursor:pointer;border-left:2px solid var(--accent-soft)" onclick="toggleMinor('money');document.querySelector('[data-mk=money]')?.scrollIntoView({behavior:'smooth'})"><div class="lbl" style="color:var(--accent-soft)">Financial · open A/R</div>
-        <div class="val ${qbOK()&&D.qb.arTotal>0?'gold':''}">${qbOK()?short(D.qb.arTotal):'—'}</div>
-        <div class="sub">${qbOK()?'every open balance, as of now':'QB feed not readable'}</div></div>
-    </div>
     ${alerts.slice(0,5).map(a=>`<div class="intel-alert ${a.sev==='fire'?'fire':''}"${a.sev==='good'?' style="border-left-color:var(--green);background:rgba(108,194,139,.07)"':a.sev==='control'?' style="border-left-color:var(--blue);background:rgba(107,168,201,.07)"':''}><span class="tag"${a.sev==='good'?' style="color:var(--green)"':a.sev==='control'?' style="color:var(--blue)"':''}>${a.sev==='fire'?'ALARM':a.sev==='good'?'UP':a.sev==='control'?'CONTROL':'WATCH'}</span><span>${a.txt}</span></div>`).join('')}
     ${alerts.length?'':'<div class="nofires" style="margin-top:10px">Nothing trending off — bookings, sales and builds are inside their normal range.</div>'}
   </div>`;
@@ -3053,7 +3051,7 @@ function render(){
       /* THE sales box, directly under Attention and above Appointments —
          Kevin: "move sales above the appointments box, remove the double." */
       cardReps(),
-      cardAppointments(),
+      cardApptByCompany(),
       /* The QUOTA FLEET rides in the first masonry tier, beside The month so
          far and Trending to finish — Kevin (28 Jul): "there's a ton of room up
          to the right of where the sales guys are — move that box up." And the
@@ -3065,7 +3063,6 @@ function render(){
          priority. */
       cardStats(), cardTrending(),
       cardPipeline(),
-      cardApptByCompany(),
       cardIntel(),
       /* Leads by company — unfolded at Kevin's request ("break the lead sources
          by company"). It was buried in the quiet strip, which is why he could
@@ -3080,6 +3077,7 @@ function render(){
          opens it when he wants it. Booked-by-week/month and calendar load
          folded 28 Jul — Kevin: consolidate the abundance of appointment data;
          the main instrument and the by-company band carry the story. */
+      minor('appt', `set today ${D.appointments?D.appointments.bookedToday:0} · on calendars ${D.appointments?D.appointments.today:0}`, cardAppointments()),
       minor('fleet', 'every rep against the employment floor', cardQuota()),
       minor('appttrend', 'booked by week & month', cardApptTrends()),
       cardCalendarLoad(),
@@ -3467,7 +3465,7 @@ addEventListener('resize', () => {
    server for hours while Kevin looked at yesterday's build and reported the bug
    as unfixed. That happened. The page now checks version.json on every load and
    reloads itself once if the deployed build is newer than the one running. */
-const BUILD = '2026-07-29T00:02Z-hero-consolidated';
+const BUILD = '2026-07-29T00:40Z-appts-under-sales';
 const SB_URL = 'https://lzegjjbkfuecrhdvlvay.supabase.co';
 /* The one page that can finish a password reset. Hard-coded rather than derived,
    because every derivation of it so far has been a source of bugs: a bare origin
