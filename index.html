@@ -2226,13 +2226,24 @@ async function askRun(q){
     }
     let j = null;
     try { j = await r.json(); } catch(e){ j = null; }
+    /* 503 is the function's own "deployed but no Anthropic key yet". That is a
+       plumbing state like the 404, not a verdict on the question — it must wear
+       the not-switched-on wording, never "withheld". */
+    if (r.status === 503) {
+      ASK = { status:'offline', q, a:null,
+        msg:(j && (j.error || j.message)) || 'The ask service is deployed but not configured yet.' };
+      return render();
+    }
     if (!r.ok) {
       ASK = { status:'refused', q, a:null,
         msg:(j && (j.refusal || j.message || j.error)) || `The ask service answered ${r.status}.` };
       return render();
     }
     if (j && j.ok === false) {
-      ASK = { status:'refused', q, a:null, msg: j.refusal || 'I could not answer that reliably.' };
+      /* The deployed function says "message"; the original contract said
+         "refusal". Read both, so a real refusal never degrades to the generic
+         line — the specific wording is the product ("which fact is missing"). */
+      ASK = { status:'refused', q, a:null, msg: j.refusal || j.message || 'I could not answer that reliably.' };
       return render();
     }
     if (!j || (!j.headline && !Array.isArray(j.rows))) {
@@ -2281,6 +2292,61 @@ function askRows(a){
     ${rows.length > show.length ? `<div class="wfoot" style="margin-top:8px">+ ${rows.length-show.length} more rows returned</div>` : ''}`;
 }
 
+/* The function returns the headline as a TEMPLATE — "Palm Coast booked {value}
+   this week" — and this page substitutes the row values, so the prose cannot
+   disagree with the data. {name} resolves against the first row's columns;
+   {value} against its first numeric column; {count} against the row count. A
+   placeholder that cannot be resolved hides the whole headline rather than
+   shipping a literal "{value}" — the rows are the answer, the headline is only
+   a summary of them, and a broken summary is withheld like anything else. */
+function askHeadline(a){
+  const h = a && a.headline;
+  if (typeof h !== 'string' || !h) return '';
+  if (!h.includes('{')) return h;
+  const rows = Array.isArray(a.rows) ? a.rows : [];
+  const r0 = rows[0] || {};
+  const keys = Object.keys(r0);
+  const numKey = keys.find(k => r0[k] !== null && r0[k] !== '' && !isNaN(Number(r0[k])));
+  const out = h.replace(/\{([\w .%-]+)\}/g, (m, name) => {
+    const n = name.trim().toLowerCase();
+    if (n === 'count' || n === 'rows' || n === 'row_count') return String(a.row_count ?? rows.length);
+    const k = keys.find(x => x.toLowerCase() === n);
+    if (k !== undefined && r0[k] !== null && r0[k] !== undefined) return String(r0[k]);
+    if ((n === 'value' || n === 'n') && numKey !== undefined) return String(r0[numKey]);
+    return m;
+  });
+  return /\{[\w .%-]+\}/.test(out) ? '' : out;
+}
+
+/* Freshness arrives as the console_sync_status rows themselves — job, label,
+   freshness, minutes_since_ok, expected_every_minutes — read per answer, never
+   assumed. Collapsed here to one stamp: if any feed is stale the card warns
+   ABOVE the number with the worst offender named, per the spec; otherwise the
+   oldest successful sync becomes the "synced Xm ago" label. Older shapes
+   (a plain string, or {label,stale,warn}) still read, so the contract can move
+   without stranding either side. */
+function askFreshness(a){
+  const f = a && a.freshness;
+  if (typeof f === 'string') return { label:f, stale:false, warn:'' };
+  if (f && !Array.isArray(f) && typeof f === 'object')
+    return { label:f.label || '', stale:!!f.stale, warn:f.warn || '' };
+  if (Array.isArray(f) && f.length){
+    const known = f.filter(x => x && x.freshness && x.freshness !== 'never_run');
+    const mins = m => m == null ? '?' : (m >= 120 ? Math.round(m/60) + 'h' : m + 'm');
+    const stale = known.filter(x => x.freshness === 'stale');
+    if (stale.length){
+      const worst = stale.reduce((w,b) => (b.minutes_since_ok||0) > (w.minutes_since_ok||0) ? b : w);
+      return { label:`${stale.length} feed${stale.length === 1 ? '' : 's'} behind`, stale:true,
+        warn:`The ${worst.label || worst.job} feed last succeeded ${mins(worst.minutes_since_ok)} ago (expected every ${worst.expected_every_minutes}m). This answer is as of its last sync.` };
+    }
+    if (known.length){
+      const m = Math.max(...known.map(x => x.minutes_since_ok || 0));
+      return { label:`synced ${m < 1 ? 'just now' : mins(m) + ' ago'}`, stale:false, warn:'' };
+    }
+  }
+  return { label:'', stale:false, warn:'' };
+}
+
 function askAnswer(){
   const st = ASK.status;
   if (st === 'idle') return '';
@@ -2302,18 +2368,22 @@ function askAnswer(){
     const cls = k.includes('qb') ? 'qb' : k.includes('billdu') ? 'billdu' : k.includes('app') ? '' : 'cc';
     return `<span class="feed-tag ${cls}">${esc(String(b))}</span>`;
   }).join('');
-  const fresh = typeof a.freshness === 'string' ? a.freshness : (a.freshness && a.freshness.label) || '';
-  const stale = a.freshness && a.freshness.stale;
+  const F = askFreshness(a);
+  const head = askHeadline(a);
+  /* A low-confidence answer still renders — the rows are real — but it says so
+     first, in the caveat slot, so the doubt travels with the number. */
+  const caveats = (Array.isArray(a.caveats) ? a.caveats : []).slice();
+  if (a.confidence === 'low') caveats.unshift('The model marked this answer LOW confidence — treat it as directional and verify before acting on it.');
   return `${asked}<div class="card ask-card">
     <div class="ask-top">
       <div class="card-title" style="margin:0">${esc(a.scope || 'Answer')}${badges}</div>
-      ${fresh ? `<div class="ask-fresh${stale?' stale':''}"><span class="dot"></span>${esc(fresh)}</div>` : ''}
+      ${F.label ? `<div class="ask-fresh${F.stale?' stale':''}"><span class="dot"></span>${esc(F.label)}</div>` : ''}
     </div>
-    ${stale ? `<div class="ask-stale">⚠ ${esc(typeof a.freshness==='object' && a.freshness.warn ? a.freshness.warn : 'This feed is behind, so the answer is as of its last sync.')}</div>` : ''}
-    <div class="ask-head">${esc(a.headline || '')}</div>
+    ${F.stale ? `<div class="ask-stale">⚠ ${esc(F.warn || 'This feed is behind, so the answer is as of its last sync.')}</div>` : ''}
+    ${head ? `<div class="ask-head">${esc(head)}</div>` : ''}
     ${a.subhead ? `<div class="ask-scope">${esc(a.subhead)}</div>` : ''}
     ${askRows(a)}
-    ${(Array.isArray(a.caveats)?a.caveats:[]).map(c=>`<div class="ask-caveat">${esc(c)}</div>`).join('')}
+    ${caveats.map(c=>`<div class="ask-caveat">${esc(c)}</div>`).join('')}
     ${a.sql ? `<div class="chartbox" onclick="toggleBox(this)" style="margin-top:12px">
       <div class="cb-row">Show the math<span class="cb-sum">${a.cost_cents!=null?`${esc(String(a.cost_cents))}¢`:''}</span><span class="acc-chev">›</span></div>
       <div class="cb-body"><pre class="ask-sql">${esc(a.sql)}</pre></div>
