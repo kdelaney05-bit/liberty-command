@@ -169,19 +169,18 @@
   .ct-cell b { display: block; font-family: 'Fraunces', serif; font-size: 15px; font-weight: 500; }
   .ct-cell span { font-family: 'JetBrains Mono', monospace; font-size: 9px; color: var(--text-dim); }
   .ct-cell.dim b { color: var(--text-dim); font-weight: 400; }
-  /* The close trend under a rep's revenue bar, as color-banded boxes — Kevin:
-     "each week should be a color code if they're hot or cold." The bands are
-     his: 35%+ green, 30–35 yellow, under 30 red. A window with no
-     appointments stays neutral — no denominator is not a cold streak. */
-  .ct-chips { display: grid; grid-template-columns: repeat(5, 1fr); gap: 3px; margin-top: 4px; max-width: 340px; }
-  .ct-chip { border: 1px solid var(--line); border-radius: 5px; padding: 2px 2px 3px; text-align: center; min-width: 0; }
-  .ct-chip .k { font-family: 'JetBrains Mono', monospace; font-size: 6px; letter-spacing: .06em; text-transform: uppercase; color: var(--text-dim); }
-  .ct-chip .v { font-family: 'Fraunces', serif; font-size: 10.5px; font-weight: 500; line-height: 1.2; }
-  .ct-chip .n { font-family: 'JetBrains Mono', monospace; font-size: 6.5px; color: var(--text-dim); }
-  .ct-chip.hot  { border-color: rgba(108,194,139,.4);  background: rgba(108,194,139,.06); }  .ct-chip.hot .v  { color: var(--green); }
-  .ct-chip.warm { border-color: rgba(212,177,90,.4);   background: rgba(212,177,90,.06); }   .ct-chip.warm .v { color: var(--gold); }
-  .ct-chip.cold { border-color: rgba(217,106,94,.4);   background: rgba(217,106,94,.06); }   .ct-chip.cold .v { color: var(--red); }
-  .ct-chip.none .v { color: var(--text-dim); font-weight: 400; }
+  /* The close trend under a rep's revenue bar — one tiny mono line, tucked
+     under the start of the bar so the REVENUE stays the loud thing. The color
+     bands are still Kevin's rule: 35%+ green, 30–35 yellow, under 30 red. A
+     window with no appointments stays neutral — no denominator is not a cold
+     streak. Boxes → strip on his 29 Jul screenshot note: the boxes were
+     drowning the bars. */
+  .ct-strip { display: flex; align-items: baseline; gap: 7px; margin-top: 3px; width: fit-content; max-width: 100%;
+    font-family: 'JetBrains Mono', monospace; font-size: 8px; color: var(--text-dim); white-space: nowrap; }
+  .ct-strip .ct-cap { font-size: 6.5px; letter-spacing: .08em; text-transform: uppercase; opacity: .8; }
+  .ct-strip .ct-s b { font-weight: 600; font-size: 9.5px; font-family: 'JetBrains Mono', monospace; }
+  .ct-s.hot b { color: var(--green); } .ct-s.warm b { color: var(--gold); }
+  .ct-s.cold b { color: var(--red); } .ct-s.none b { color: var(--text-dim); font-weight: 400; }
   .ct-cell.hot b { color: var(--green); } .ct-cell.warm b { color: var(--gold); } .ct-cell.cold b { color: var(--red); }
   /* Attention board — compact on purpose: it flags, the cards below explain. */
   .attn .stat-grid { gap: 6px; }
@@ -1719,19 +1718,28 @@ const momBadge = m => m === null ? ''
    No appointments = no band — a missing denominator is not a cold streak. */
 const closeBand = c => !c || !c.appts ? 'none' : c.close >= 35 ? 'hot' : c.close >= 30 ? 'warm' : 'cold';
 
-/* The trailing-close boxes riding under a rep's revenue bar: four banded
-   windows plus the trend. Dash = no appointments to divide by, never a zero. */
+/* The trailing close read under a rep's revenue bar — compressed to ONE tiny
+   line. Kevin (29 Jul): the five boxes drowned the money — "the closing boxes
+   are too prominent and makes the rev not as obvious… shrink significantly so
+   it cutely sits inside under the first 1/3 of the sales graph. The cc data is
+   awesome cuz it really shows you how a sales guy is trending. So I want it
+   but just compressed." Same four trailing windows, same hot/cold bands, same
+   trend arrow; the x/y sample and wording live in each segment's title (long-
+   press on a phone) and in full on the one-pager, so nothing is lost — only
+   shrunk. Dash = no appointments to divide by, never a zero. */
 function closeMini(id){
   const ct = D.closeTrend && D.closeTrend.byId[String(id)];
   if (!ct) return '';
   const m = ct.momentum;
-  return `<div class="ct-chips">${D.closeTrend.spans.map(sp => { const c = ct[sp.key];
-    return `<div class="ct-chip ${closeBand(c)}"><div class="k">${esc(sp.label)}</div>
-      <div class="v">${c.appts?c.close+'%':'—'}</div>
-      <div class="n">${c.appts?`${c.signed}/${c.appts}`:(c.signed?c.signed+' signed':'no appts')}</div></div>`; }).join('')}
-    <div class="ct-chip ${m===null?'none':m>=8?'hot':m<=-8?'cold':''}"><div class="k">Trend</div>
-      <div class="v">${m===null?'—':m>=8?'▲':m<=-8?'▼':'→'}</div>
-      <div class="n">${m===null?'thin data':m>=8?'+'+m+' heating':m<=-8?'−'+Math.abs(m)+' cooling':'steady'}</div></div>
+  const segs = D.closeTrend.spans.map(sp => { const c = ct[sp.key];
+    const lbl = sp.label.replace(/\s+/g,'').replace('day','d').replace('wk','w');
+    const tip = `${sp.label} close — ${c.appts?`${c.close}% · ${c.signed} of ${c.appts} appts run`:(c.signed?`${c.signed} signed · no appts run`:'no appointments run')}`;
+    return `<span class="ct-s ${closeBand(c)}" title="${esc(tip)}">${esc(lbl)} <b>${c.appts?c.close:'–'}</b></span>`;
+  }).join('');
+  const mCls = m===null?'none':m>=8?'hot':m<=-8?'cold':'none';
+  const mTip = m===null?'trend: not enough appointments to call':m>=8?`heating — +${m} pts vs their own 60-day`:m<=-8?`cooling — ${Math.abs(m)} pts below their own 60-day`:'steady vs their own 60-day';
+  return `<div class="ct-strip">
+    <span class="ct-cap">close%</span>${segs}<span class="ct-s ${mCls}" title="${esc(mTip)}"><b>${m===null?'·':m>=8?'▲':m<=-8?'▼':'→'}</b></span>
   </div>`;
 }
 
@@ -3188,7 +3196,9 @@ function render(){
       /* THE sales box, directly under Attention and above Appointments —
          Kevin: "move sales above the appointments box, remove the double." */
       cardReps(),
-      cardApptByCompany(),
+      /* Appointments by company came OFF the surface — Kevin (29 Jul), red X
+         on the screenshot: "Don't need this." The card function stays defined
+         for the day he wants it back; nothing else reads it. */
       /* The QUOTA FLEET rides in the first masonry tier, beside The month so
          far and Trending to finish — Kevin (28 Jul): "there's a ton of room up
          to the right of where the sales guys are — move that box up." And the
