@@ -313,11 +313,11 @@
   .hero1 { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; }
   .bs-flex { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
   .bigsnap .alloc-chart { width: 200px; height: 200px; margin: 12px auto 16px; }
-  .bigsnap .alloc-center .big { font-size: 26px; }
+  .bigsnap .alloc-center .big { font-size: 40px; font-weight: 600; letter-spacing: -0.01em; }
   .bigsnap .alloc-center .lbl { font-size: 9px; }
   .bigsnap .alloc-legend { margin: 4px 0 10px; text-align: left; }
   .alloc-chart.mm { width: 112px; height: 112px; margin: 8px auto 10px; }
-  .mm .alloc-center .big { font-size: 14px; }
+  .mm .alloc-center .big { font-size: 19px; font-weight: 600; }
   .mm .alloc-center .lbl { font-size: 7px; }
   .alloc-legend.mml { gap: 5px; text-align: left; margin: 0 0 8px; }
   .mml .alloc-row { font-size: 11px; gap: 7px; }
@@ -2650,7 +2650,7 @@ function diveView(k){
   <div class="card full" style="margin-bottom:12px">
     <div class="card-title">Signed · ${esc(DIVE_TITLE[k].toLowerCase())}<span class="feed-tag cc">live · cc</span>${W.billdu?'<span class="feed-tag billdu">live · billdu</span>':''}${billduDown()?'<span class="feed-tag none">billdu unreadable</span>':''}</div>
     <div class="alloc-chart" style="width:180px;height:180px"><canvas id="cDiveMix"></canvas>
-      <div class="alloc-center"><div class="big" style="font-size:22px">${short(W.rev)}</div><div class="lbl">signed</div></div></div>
+      <div class="alloc-center"><div class="big" style="font-size:32px;font-weight:600">${short(W.rev)}</div><div class="lbl">signed</div></div></div>
     <div class="alloc-legend" style="margin-bottom:10px">${allBrands(W.brands).map(b => { const m = brandOf(b.id);
       return `<div class="alloc-row" ${b.rev?'':'style="opacity:.55"'}>
         <div class="alloc-dot" style="background:${m.c}"></div>
@@ -3527,7 +3527,7 @@ addEventListener('resize', () => {
    server for hours while Kevin looked at yesterday's build and reported the bug
    as unfixed. That happened. The page now checks version.json on every load and
    reloads itself once if the deployed build is newer than the one running. */
-const BUILD = '2026-07-29T04:40Z-dive-frontpage-format';
+const BUILD = '2026-07-29T04:52Z-bigger-totals';
 const SB_URL = 'https://lzegjjbkfuecrhdvlvay.supabase.co';
 /* The one page that can finish a password reset. Hard-coded rather than derived,
    because every derivation of it so far has been a source of bugs: a bare origin
