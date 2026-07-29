@@ -1264,7 +1264,15 @@ function cardApptByCompany(){
 
     ${(() => { const tn = rows.reduce((n,r)=>n+r.n,0), tt = rows.reduce((n,r)=>n+r.t,0);
       const tp = tt ? Math.round((tn-tt)/tt*100) : null;
-      return `<div class="note" style="margin:10px 0 0;font-size:12px;color:var(--text)"><b>All companies: ${tn} booked</b>${tt?` · ${Math.round(tt)} typical · <b class="${tp>=0?'up':'dn'}">${tp>=0?'▲':'▼'}${Math.abs(tp)}%</b>`:''}</div>`; })()}
+      const gap = tt ? tn - Math.round(tt) : null;
+      return `<div style="margin:14px 0 2px">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--text-dim)">All companies · ${spanLabel}</div>
+        <div style="display:flex;align-items:baseline;gap:12px">
+          <span style="font-family:'Fraunces',serif;font-size:44px;font-weight:600;line-height:1.1;color:var(--text)">${tn}</span>
+          ${tp!==null?`<span class="${tp>=0?'up':'dn'}" style="font-family:'JetBrains Mono',monospace;font-size:15px;font-weight:700">${tp>=0?'▲':'▼'} ${Math.abs(tp)}%</span>`:''}
+        </div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text-dim);margin-top:2px">${tn} booked${tt?` · <b style="color:var(--text)">${Math.round(tt)}</b> typical${gap!==null&&gap!==0?` · <b style="color:${gap>0?'var(--green)':'#d8997f'}">${Math.abs(gap)} ${gap>0?'ahead':'behind'}</b>`:''}`:' · no baseline'}</div>
+      </div>`; })()}
     <div class="apco-tiles">
     ${rows.map(r => {
       const arrow = r.dir==='up'?'▲':r.dir==='down'?'▼':'▬';
@@ -3597,7 +3605,7 @@ addEventListener('resize', () => {
    server for hours while Kevin looked at yesterday's build and reported the bug
    as unfixed. That happened. The page now checks version.json on every load and
    reloads itself once if the deployed build is newer than the one running. */
-const BUILD = '2026-07-29T04:40Z-dive-frontpage-format';
+const BUILD = '2026-07-29T05:05Z-appts-total-headline';
 const SB_URL = 'https://lzegjjbkfuecrhdvlvay.supabase.co';
 /* The one page that can finish a password reset. Hard-coded rather than derived,
    because every derivation of it so far has been a source of bugs: a bare origin
