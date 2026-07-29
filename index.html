@@ -1782,7 +1782,7 @@ function cardCloseTrend(){
     <button type="button" class="linkbtn" onclick="const r=document.getElementById('ctrest');const open=r.style.display==='none';r.style.display=open?'':'none';this.textContent=open?'Show fewer':'Show all ${rows.length} sellers ›'">Show all ${rows.length} sellers ›</button>` : ''}`;
     })() : '<div class="card-sub" style="margin:12px 0 0">No seller has run an appointment or signed in the last 60 days.</div>'}
 
-    <div class="note">Color is Kevin's hot/cold rule, the same everywhere on this page: <span style="color:var(--green)">35%+ green</span>, <span style="color:var(--gold)">30–35 yellow</span>, <span style="color:var(--red)">under 30 red</span>. Trailing windows, not calendar ones: each looks back exactly that many days from today, so Monday never resets the board. Close stays CC-over-CC — a Billdu acceptance carries no CC appointment, so it is counted in signings nowhere here. A dash is a missing denominator, never a zero; <b>x/y</b> rides with every rate so a thin sample can be seen. The arrow only speaks when the 60-day baseline holds at least 5 appointments.</div>
+    <div class="note">Color is Kevin's hot/cold rule, the same everywhere on this page: <span style="color:var(--green)">35%+ green</span>, <span style="color:var(--gold)">30–35 yellow</span>, <span style="color:var(--red)">under 30 red</span>. Trailing windows, not calendar ones: each looks back exactly that many days from today, so Monday never resets the board. Signings are the union: CC contracts plus Billdu acceptances CC has not recorded — never both for one deal. Appointments stay CC's calendar. A dash is a missing denominator, never a zero; <b>x/y</b> rides with every rate so a thin sample can be seen. The arrow only speaks when the 60-day baseline holds at least 5 appointments.</div>
   </div>`;
 }
 
@@ -3082,7 +3082,7 @@ function repView(id){
           <div class="sub">${c.appts?`${c.signed} of ${c.appts} appt${c.appts===1?'':'s'} run`:(c.signed?`${c.signed} signed · no appts run`:'no appointments run')}</div></div>`; }).join('')}
     </div>
     ${verdict}
-    <div class="note">Trailing windows ending today — the 30-day column is the last 30 days, whatever the calendar says. Same CC-over-CC close as everywhere on this page, and the counts stay beside every rate so a hot week on two appointments reads as exactly that.</div>
+    <div class="note">Trailing windows ending today — the 30-day column is the last 30 days, whatever the calendar says. Signings are CC contracts plus unrecorded Billdu acceptances (the same union the money uses), over CC appointments — and the counts stay beside every rate so a hot week on two appointments reads as exactly that.</div>
   </div>`; })() : '';
 
   const effortCard = `<div class="card full" style="margin-bottom:12px">
@@ -3630,7 +3630,7 @@ addEventListener('resize', () => {
    server for hours while Kevin looked at yesterday's build and reported the bug
    as unfixed. That happened. The page now checks version.json on every load and
    reloads itself once if the deployed build is newer than the one running. */
-const BUILD = '2026-07-29T03:50Z-title-search-attention';
+const BUILD = '2026-07-29T04:05Z-oasis-close-union';
 const SB_URL = 'https://lzegjjbkfuecrhdvlvay.supabase.co';
 /* The one page that can finish a password reset. Hard-coded rather than derived,
    because every derivation of it so far has been a source of bugs: a bare origin
@@ -5064,6 +5064,17 @@ function buildData(raw){
     };
     for (const x of appts) bump(x.rep_id, x.starts_at, 'appts');
     for (const j of jobs) bump(j.rep_id, j.contract_signed_at, 'signed');
+    /* Kevin (29 Jul): "only sold jobs go in Billdu — cross-reference appts in
+       CC." He's right: Oasis closes AS a Billdu acceptance, and counting only
+       CC signings starved Oasis numerators while their CC appointments filled
+       the denominator. Same union law as the money: an acceptance counts as a
+       signing ONLY where CC has not already recorded one — never both. */
+    if (billdu && billdu.feed) for (const r of billdu.feed) {
+      const rid = bRepOf[String(r.billdu_id)];
+      if (!rid || rid === OFFICE) continue;
+      if (r.job_id && ccSignedMap && ccSignedMap[r.job_id] === true) continue;
+      bump(rid, r.accepted_at, 'signed');
+    }
     const team = blank();
     for (const v of Object.values(by)) for (const [k] of SPANS) { team[k].appts += v[k].appts; team[k].signed += v[k].signed; }
     const rate = c => c.appts ? Math.round(c.signed / c.appts * 100) : null;
