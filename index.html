@@ -1245,6 +1245,9 @@ function cardApptByCompany(){
         .map(([k,l])=>`<button class="${k===K?'on':''}" onclick="setApptCo('${k}')">${l}</button>`).join('')}
     </div>
 
+    ${(() => { const tn = rows.reduce((n,r)=>n+r.n,0), tt = rows.reduce((n,r)=>n+r.t,0);
+      const tp = tt ? Math.round((tn-tt)/tt*100) : null;
+      return `<div class="note" style="margin:10px 0 0;font-size:12px;color:var(--text)"><b>All companies: ${tn} booked</b>${tt?` · ${Math.round(tt)} typical · <b class="${tp>=0?'up':'dn'}">${tp>=0?'▲':'▼'}${Math.abs(tp)}%</b>`:''}</div>`; })()}
     <div class="apco-tiles">
     ${rows.map(r => {
       const arrow = r.dir==='up'?'▲':r.dir==='down'?'▼':'▬';
@@ -1686,6 +1689,7 @@ function cardReps(){
       ${[['day','Day'],['week','Week'],['month','Month'],['ytd','YTD']].map(([kk,l])=>`<button class="${kk===k?'on':''}" onclick="setRepsWin('${kk}')">${l}</button>`).join('')}
     </div>
     <div class="card-sub">${reps.length? `Ranked by signed contract value ${label}. Tap a name for their one-pager.` : `No rep activity ${label}.`}</div>
+    ${all.length?`<div class="note" style="margin:2px 0 8px;font-size:12px;color:var(--text)"><b>All reps: ${short(all.reduce((n,r)=>n+r.rev,0))}</b> · ${all.reduce((n,r)=>n+r.jobs,0)} deals ${label}</div>`:''}
     ${reps.map((r,i)=>`<div class="rep-row${r.office?'':' acc'}"${i>=CORE?' data-extra="1" style="display:none"':''} ${r.office?'style="opacity:.8"':`onclick="openRep('${esc(String(r.id))}')"`}>
       <div class="rep-head">
         <div class="nm">${esc(r.name)}${r.billdu?'<span class="tick">billdu</span>':''}${r.role&&r.role!=='sales'&&!r.office?`<span class="brand">${esc(r.role)}</span>`:''}</div>
@@ -3141,17 +3145,7 @@ function render(){
          folded 28 Jul — Kevin: consolidate the abundance of appointment data;
          the main instrument and the by-company band carry the story. */
       minor('monthsofar', 'signed · appts · built · A/R, month to date', cardStats()),
-      minor('trend', 'projected month finish, by brand, full detail', cardTrending()),
       minor('appt', `set today ${D.appointments?D.appointments.bookedToday:0} · on calendars ${D.appointments?D.appointments.today:0}`, cardAppointments()),
-      minor('fleet', 'every rep against the employment floor', cardQuota()),
-      minor('review', 'housekeeping & data chores', cardActions()),
-      minor('wow', `${short(_pv.rev)} → ${short(_Wk.rev)}${_d === null ? '' : ' · ' + (_d >= 0 ? '+' : '') + _d + '%'}`, cardWow()),
-      minor('mix', `${short(_mixTot)} signed`, cardMix()),
-      minor('effort', `${_eT} touch${_eT === 1 ? '' : 'es'} · ${_eOn}/${_E.activeReps} reps on the board`, cardEffort()),
-      minor('cadence', 'this week, by weekday', cardCadence()),
-      minor('money', qbOK() ? `${short(qbw().invoiced)} invoiced · ${short(D.qb.arTotal)} open A/R` : 'withheld — not readable', cardMoney()),
-      minor('leadcats', `${_cats.length} channel${_cats.length === 1 ? '' : 's'}`, cardLeadCategories()),
-      minor('flags', 'caveats, not actions', cardFlags()),
     ].join('') + '</div>' +
     `<div class="foot">Trust the instrument, not the retelling<br/>
       Read ${new Date(D.generatedAt).toLocaleString('en-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'})} ·
@@ -3541,7 +3535,7 @@ addEventListener('resize', () => {
    server for hours while Kevin looked at yesterday's build and reported the bug
    as unfixed. That happened. The page now checks version.json on every load and
    reloads itself once if the deployed build is newer than the one running. */
-const BUILD = '2026-07-29T01:52Z-full-donut-hero';
+const BUILD = '2026-07-29T02:12Z-totals-and-cuts';
 const SB_URL = 'https://lzegjjbkfuecrhdvlvay.supabase.co';
 /* The one page that can finish a password reset. Hard-coded rather than derived,
    because every derivation of it so far has been a source of bugs: a bare origin
