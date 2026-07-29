@@ -173,6 +173,11 @@
      "each week should be a color code if they're hot or cold." The bands are
      his: 35%+ green, 30–35 yellow, under 30 red. A window with no
      appointments stays neutral — no denominator is not a cold streak. */
+  .ct-line { display: flex; gap: 9px; align-items: baseline; margin-top: 3px; max-width: 340px;
+    font-family: 'JetBrains Mono', monospace; font-size: 8.5px; color: var(--text-dim); white-space: nowrap; overflow: hidden; }
+  .ct-line i { font-style: normal; font-size: 6.5px; letter-spacing: .05em; text-transform: uppercase; color: var(--text-dim); margin-right: 1px; }
+  .ct-line em { font-style: normal; font-size: 7px; color: var(--text-dim); }
+  .ct-line .hot { color: var(--green); } .ct-line .warm { color: var(--gold); } .ct-line .cold { color: var(--red); } .ct-line .none { color: var(--text-dim); }
   .ct-chips { display: grid; grid-template-columns: repeat(5, 1fr); gap: 3px; margin-top: 4px; max-width: 340px; }
   .ct-chip { border: 1px solid var(--line); border-radius: 5px; padding: 2px 2px 3px; text-align: center; min-width: 0; }
   .ct-chip .k { font-family: 'JetBrains Mono', monospace; font-size: 6px; letter-spacing: .06em; text-transform: uppercase; color: var(--text-dim); }
@@ -1228,19 +1233,7 @@ function cardApptByCompany(){
     <div class="card-title">Appointments by company<span class="feed-tag cc">live · cc</span></div>
     <div class="card-sub">New appointments <b>booked</b> ${spanLabel}, by company, each against ${W.typLabel} — like for like, never a partial window against a finished one.</div>
 
-    <div class="attn"><div class="stat-grid" style="grid-template-columns:repeat(3,1fr);gap:6px;margin:8px 0 2px">
-      <div class="stat-tile"><div class="lbl" style="color:var(--green)">Set today</div>
-        <div class="val">${A.bookedToday}</div>
-        <div class="sub">${A.bookedNormHour?`typ ${A.bookedNormHour}`:''}${D.apptWtd?` · WTD ${D.apptWtd.setNow}${D.apptWtd.setD!==null?` <b class="${D.apptWtd.setD>=0?'up':'dn'}">${D.apptWtd.setD>=0?'▲':'▼'}${Math.abs(D.apptWtd.setD)}%</b>`:''} · MTD ${D.apptWtd.setMtd}${D.apptWtd.setMtdD!==null?` <b class="${D.apptWtd.setMtdD>=0?'up':'dn'}">${D.apptWtd.setMtdD>=0?'▲':'▼'}${Math.abs(D.apptWtd.setMtdD)}%</b>`:''}`:''}</div></div>
-      <div class="stat-tile"><div class="lbl" style="color:var(--blue)">Happening today</div>
-        <div class="val">${A.today}</div>
-        <div class="sub">${A.yesterday} yest.${D.apptWtd?` · WTD ${D.apptWtd.ranNow} · MTD ${D.apptWtd.ranMtd}${D.apptWtd.ranMtdD!==null?` <b class="${D.apptWtd.ranMtdD>=0?'up':'dn'}">${D.apptWtd.ranMtdD>=0?'▲':'▼'}${Math.abs(D.apptWtd.ranMtdD)}%</b>`:''}`:''}</div></div>
-      <div class="stat-tile"><div class="lbl" style="color:var(--gold)">Next 7 days</div>
-        <div class="val">${A.next7}</div>
-        <div class="sub">${A.priorAvg?`typical ${A.priorAvg} · <b class="${A.vsPrior>=0?'up':'dn'}">${A.vsPrior>=0?'▲':'▼'}${Math.abs(A.vsPrior)}%</b>`:'booked to happen'}</div></div>
-    </div></div>
-
-    <div class="seg">
+        <div class="seg">
       ${[['day','Today'],['week','Week'],['month','Month'],['ytd','YTD']]
         .map(([k,l])=>`<button class="${k===K?'on':''}" onclick="setApptCo('${k}')">${l}</button>`).join('')}
     </div>
@@ -1725,14 +1718,9 @@ function closeMini(id){
   const ct = D.closeTrend && D.closeTrend.byId[String(id)];
   if (!ct) return '';
   const m = ct.momentum;
-  return `<div class="ct-chips">${D.closeTrend.spans.map(sp => { const c = ct[sp.key];
-    return `<div class="ct-chip ${closeBand(c)}"><div class="k">${esc(sp.label)}</div>
-      <div class="v">${c.appts?c.close+'%':'—'}</div>
-      <div class="n">${c.appts?`${c.signed}/${c.appts}`:(c.signed?c.signed+' signed':'no appts')}</div></div>`; }).join('')}
-    <div class="ct-chip ${m===null?'none':m>=8?'hot':m<=-8?'cold':''}"><div class="k">Trend</div>
-      <div class="v">${m===null?'—':m>=8?'▲':m<=-8?'▼':'→'}</div>
-      <div class="n">${m===null?'thin data':m>=8?'+'+m+' heating':m<=-8?'−'+Math.abs(m)+' cooling':'steady'}</div></div>
-  </div>`;
+  return `<div class="ct-line">${D.closeTrend.spans.map(sp => { const c = ct[sp.key];
+    return `<span class="${closeBand(c)}" title="${c.signed} of ${c.appts} appts"><i>${esc(sp.label)}</i> ${c.appts?c.close+'%':'—'} <em>${c.appts?`${c.signed}/${c.appts}`:''}</em></span>`; }).join('')}${
+    m===null?'':`<span class="${m>=8?'hot':m<=-8?'cold':'none'}" style="margin-left:auto">${m>=8?'▲+'+m:m<=-8?'▼−'+Math.abs(m):'→'}</span>`}</div>`;
 }
 
 function cardCloseTrend(){
@@ -3535,7 +3523,7 @@ addEventListener('resize', () => {
    server for hours while Kevin looked at yesterday's build and reported the bug
    as unfixed. That happened. The page now checks version.json on every load and
    reloads itself once if the deployed build is newer than the one running. */
-const BUILD = '2026-07-29T02:12Z-totals-and-cuts';
+const BUILD = '2026-07-29T02:33Z-quiet-close-line';
 const SB_URL = 'https://lzegjjbkfuecrhdvlvay.supabase.co';
 /* The one page that can finish a password reset. Hard-coded rather than derived,
    because every derivation of it so far has been a source of bugs: a bare origin
