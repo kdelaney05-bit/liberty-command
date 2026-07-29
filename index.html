@@ -1028,6 +1028,12 @@ function heroTrend(){
   </div>`;
 }
 
+function hdrTitle(){
+  return `<div style="margin-bottom:14px">
+    <div class="eyebrow">Liberty · three companies</div>
+    <h1>Liberty <em>Command</em> Console</h1>
+  </div>`;
+}
 function hdr(){
   const k = HEROWIN, label = { day:'Today', week:'This week', month:'MTD', ytd:'YTD' }[k];
   const W = flat(k), pv = W.prev;
@@ -1040,8 +1046,6 @@ function hdr(){
       : (W.prevSpanDays >= spanOf(k) ? `${W.jobs} signed` : `pace ${short(paceOf(k))}`);
   const q = qbWinOf(k);
   return `<div class="hdr">
-    <div class="eyebrow">Liberty · three companies</div>
-    <h1>Liberty <em>Command</em> Console</h1>
     <div class="seg" style="margin:0 0 10px">
       ${[['day','Today'],['week','Week'],['month','MTD'],['ytd','YTD']].map(([kk,l])=>`<button class="${kk===k?'on':''}" onclick="setHeroWin('${kk}')">${l}</button>`).join('')}
     </div>
@@ -3112,7 +3116,7 @@ function render(){
   const _cats = D.leadSources.categories.filter(c => c.rev > 0);
 
   document.getElementById('app').innerHTML =
-    askBar() + hdr() + '<div class="stack">' + [
+    hdrTitle() + askBar() + cardAttention() + hdr() + '<div class="stack">' + [
       /* Order is a statement of what matters, and now so is what stays open.
          The cockpit at cruise: what needs him, the appointments his week turns
          on, and the money already on the board. The month so far and Trending
@@ -3120,9 +3124,6 @@ function render(){
          phone the page is one column, and sitting behind six cards put the
          actual revenue and the projection where nobody scrolled. Analysis
          reads top-down now — what happened, what it means, where it lands. */
-      /* Attention first — trends, not chores. The old housekeeping inbox
-         (What needs you) folds into the Review row at the bottom. */
-      cardAttention(),
       /* THE sales box, directly under Attention and above Appointments —
          Kevin: "move sales above the appointments box, remove the double." */
       cardReps(),
@@ -3559,7 +3560,7 @@ addEventListener('resize', () => {
    server for hours while Kevin looked at yesterday's build and reported the bug
    as unfixed. That happened. The page now checks version.json on every load and
    reloads itself once if the deployed build is newer than the one running. */
-const BUILD = '2026-07-29T03:35Z-ask-on-top';
+const BUILD = '2026-07-29T03:50Z-title-search-attention';
 const SB_URL = 'https://lzegjjbkfuecrhdvlvay.supabase.co';
 /* The one page that can finish a password reset. Hard-coded rather than derived,
    because every derivation of it so far has been a source of bugs: a bare origin
