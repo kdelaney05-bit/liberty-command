@@ -1,0 +1,1017 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
+<title>Liberty Command · Financials (design preview)</title>
+<meta name="theme-color" content="#0d1f17"/>
+<meta name="color-scheme" content="dark"/>
+<link rel="apple-touch-icon" href="apple-touch-icon.png"/>
+<link rel="icon" type="image/png" href="icon-1024.png"/>
+<meta name="robots" content="noindex"/>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,400;9..144,500;9..144,600&family=JetBrains+Mono:wght@400;500;600;700&family=Inter+Tight:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+/* ═══════════════════════════════════════════════════════════════════════════
+   FINANCIALS · design preview.
+
+   Nine candidate graphics for the money layer of the owner console, drawn in
+   the console's own language so they can be lifted straight in: same palette,
+   same three fonts, same card / stat-tile / meter / donut idioms, same
+   honesty conventions (feed badges, "withheld, not zero", a note under every
+   instrument saying where the figure came from).
+
+   Every token below is copied from index.html verbatim. Everything after the
+   ── FINANCIALS ── rule is new and is the only CSS that would need to move
+   across if a card here gets adopted.
+
+   THE NUMBERS ON THIS PAGE ARE INVENTED. This repository is public and holds
+   no business data; the figures here are a shape to look at, not a read of
+   Liberty's books. Every card says so on its face.
+   ═══════════════════════════════════════════════════════════════════════════ */
+  :root {
+    --bg-deep: #0d1f17; --bg-card: #15291f; --bg-card-hi: #1c3528;
+    --line: rgba(255,255,255,0.06); --text: #e8efe9; --text-dim: #8aa094;
+    --accent: #f0834a; --accent-soft: #f4a37a; --green: #6cc28b; --green-soft: #8fd5a8;
+    --red: #d96a5e; --gold: #d4b15a; --blue: #6ba8c9; --violet: #a98fd5;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  html { background: var(--bg-deep); }
+  html, body { width: 100%; overflow-x: hidden; }
+  body { font-family: 'Inter Tight', sans-serif; background: radial-gradient(ellipse at top, #1a3326 0%, #0d1f17 60%);
+    background-attachment: fixed; color: var(--text); min-height: 100vh; -webkit-font-smoothing: antialiased;
+    padding: calc(16px + env(safe-area-inset-top)) calc(16px + env(safe-area-inset-right)) calc(28px + env(safe-area-inset-bottom)) calc(16px + env(safe-area-inset-left)); }
+  .shell { width: 100%; max-width: 480px; margin: 0 auto; }
+  .hdr { margin-bottom: 20px; padding-bottom: 16px; border-bottom: 1px solid var(--line); }
+  .eyebrow { font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--accent); margin-bottom: 6px; }
+  .hdr h1 { font-family: 'Fraunces', serif; font-weight: 400; font-size: 28px; letter-spacing: -0.02em; line-height: 1.05; margin-bottom: 14px; }
+  .hdr h1 em { font-style: italic; color: var(--accent-soft); font-weight: 300; }
+  .stack { display: flex; flex-direction: column; gap: 12px; }
+  .card { background: var(--bg-card); border: 1px solid var(--line); border-radius: 14px; padding: 16px; }
+  .card-title { font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--text-dim); margin-bottom: 4px; }
+  .card-sub { font-size: 12px; color: var(--text-dim); margin-bottom: 12px; line-height: 1.5; }
+  .feed-tag { display: inline-block; margin-left: 6px; font-family: 'JetBrains Mono', monospace; font-size: 8px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--green); border: 1px solid rgba(108,194,139,0.3); border-radius: 100px; padding: 1px 6px; vertical-align: middle; }
+  .feed-tag.cc { color: var(--blue); border-color: rgba(107,168,201,0.3); }
+  .feed-tag.qb { color: var(--gold); border-color: rgba(212,177,90,0.3); }
+  .feed-tag.seed { color: var(--violet); border-color: rgba(169,143,213,0.35); }
+  .feed-tag.none { color: var(--text-dim); border-color: rgba(255,255,255,0.12); }
+  .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .stat-tile { background: var(--bg-card); border: 1px solid var(--line); border-radius: 12px; padding: 14px; }
+  .stat-tile .lbl { font-family: 'JetBrains Mono', monospace; font-size: 9px; letter-spacing: 0.15em; text-transform: uppercase; color: var(--text-dim); margin-bottom: 6px; }
+  .stat-tile .val { font-family: 'Fraunces', serif; font-size: 22px; font-weight: 500; letter-spacing: -0.01em; line-height: 1; }
+  .stat-tile .sub { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--text-dim); margin-top: 6px; }
+  .stat-tile .val.orange { color: var(--accent-soft); } .stat-tile .val.gold { color: var(--gold); }
+  .stat-tile .val.blue { color: var(--blue); } .stat-tile .val.green { color: var(--green-soft); } .stat-tile .val.red { color: var(--red); }
+  .stat-tile .delta { font-family: 'JetBrains Mono', monospace; font-size: 9px; margin-top: 6px; letter-spacing: 0.02em; }
+  .stat-tile .delta.up { color: var(--green-soft); } .stat-tile .delta.down { color: #d8997f; } .stat-tile .delta.flat { color: var(--text-dim); }
+  .chart-card { padding: 16px 12px 12px; }
+  .chart-card .card-title, .chart-card .card-sub { padding: 0 4px; }
+  .chart-wrap { height: 190px; margin-top: 8px; } .chart-wrap.tall { height: 230px; }
+  .alloc-chart { width: 140px; height: 140px; margin: 4px auto 14px; position: relative; }
+  .alloc-center { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; pointer-events: none; }
+  .alloc-center .big { font-family: 'Fraunces', serif; font-size: 18px; font-weight: 500; }
+  .alloc-center .lbl { font-family: 'JetBrains Mono', monospace; font-size: 8px; letter-spacing: 0.15em; color: var(--text-dim); text-transform: uppercase; }
+  .alloc-legend { display: flex; flex-direction: column; gap: 9px; }
+  .alloc-row { display: flex; align-items: center; gap: 10px; font-size: 13px; }
+  .alloc-dot { width: 10px; height: 10px; border-radius: 3px; flex-shrink: 0; }
+  .alloc-row .name { flex: 1; } .alloc-row .val { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--text-dim); }
+  .rep-row { margin-bottom: 12px; } .rep-row:last-child { margin-bottom: 0; }
+  .rep-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 5px; }
+  .rep-head .nm { font-size: 13px; font-weight: 500; }
+  .rep-head .nm .brand { font-family: 'JetBrains Mono', monospace; font-size: 8px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-dim); margin-left: 6px; }
+  .rep-head .amt { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--text); }
+  .rep-head .amt span { color: var(--text-dim); font-size: 10px; }
+  .meter { height: 7px; background: rgba(255,255,255,0.05); border-radius: 100px; overflow: hidden; }
+  .meter-fill { height: 100%; border-radius: 100px; }
+  .qmeter { position: relative; height: 8px; background: rgba(255,255,255,0.05); border-radius: 100px; margin-top: 6px; }
+  .qfill { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 100px; min-width: 2px; }
+  .qtick { position: absolute; top: -2px; bottom: -2px; width: 2px; background: var(--text); opacity: .75; border-radius: 2px; }
+  .tgt-cap { display: flex; justify-content: space-between; font-family: 'JetBrains Mono', monospace; font-size: 8px; color: var(--text-dim); margin-top: 5px; letter-spacing: 0.04em; }
+  .tgt-cap b { color: var(--text); font-weight: 600; }
+  .tgt-cap .hit { color: var(--green-soft); } .tgt-cap .miss { color: #d4b15a; }
+  .brand-tile { background: var(--bg-card-hi); border: 1px solid var(--line); border-radius: 12px; padding: 14px; margin-bottom: 10px; }
+  .brand-tile:last-child { margin-bottom: 0; }
+  .brand-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; }
+  .brand-top .nm { font-family: 'Fraunces', serif; font-size: 17px; font-weight: 500; }
+  .brand-top .nm .tag { font-family: 'JetBrains Mono', monospace; font-size: 8px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-dim); display: block; margin-top: 2px; }
+  .brand-top .mtd { text-align: right; }
+  .brand-top .mtd .v { font-family: 'Fraunces', serif; font-size: 20px; font-weight: 500; }
+  .brand-top .mtd .u { font-family: 'JetBrains Mono', monospace; font-size: 9px; color: var(--text-dim); margin-top: 2px; }
+  .intel-alert { display: flex; gap: 10px; align-items: flex-start; padding: 9px 12px; margin-top: 8px;
+    border-left: 2px solid var(--gold); background: rgba(212,177,90,.07); border-radius: 0 8px 8px 0;
+    font-size: 12px; line-height: 1.5; }
+  .intel-alert.fire { border-left-color: var(--red); background: rgba(217,106,94,.08); }
+  .intel-alert.good { border-left-color: var(--green); background: rgba(108,194,139,.07); }
+  .intel-alert .tag { font-family: 'JetBrains Mono', monospace; font-size: 9px; letter-spacing: .1em;
+    padding-top: 2px; color: var(--gold); flex-shrink: 0; }
+  .intel-alert.fire .tag { color: var(--red); } .intel-alert.good .tag { color: var(--green); }
+  .intel-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 12px; margin-top: 12px; }
+  .mini4 { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr); gap: 10px 12px; margin-top: 14px; border-top: 1px solid var(--line); padding-top: 12px; }
+  .mini4 .chart-wrap { min-width: 0; }
+  .mini-cap { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: 'JetBrains Mono', monospace; font-size: 8px; letter-spacing: .1em; text-transform: uppercase; color: var(--text-dim); margin-bottom: 3px; }
+  .withheld { background: rgba(212,177,90,0.05); border: 1px solid rgba(212,177,90,0.22); border-radius: 10px; padding: 12px; margin-top: 10px; }
+  .withheld .wt { font-family: 'JetBrains Mono', monospace; font-size: 9px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--gold); margin-bottom: 6px; }
+  .withheld .wx { font-size: 12px; line-height: 1.6; color: var(--text-dim); }
+  .note { font-family: 'JetBrains Mono', monospace; font-size: 9px; color: var(--text-dim);
+    line-height: 1.7; margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--line); }
+  .note b { color: var(--text); font-weight: 600; }
+  .foot { margin-top: 20px; padding-top: 14px; border-top: 1px solid var(--line); font-family: 'JetBrains Mono', monospace; font-size: 9px; color: var(--text-dim); letter-spacing: 0.1em; text-transform: uppercase; text-align: center; line-height: 1.7; }
+  .seg { display: flex; gap: 4px; background: rgba(0,0,0,0.22); border: 1px solid var(--line);
+    border-radius: 10px; padding: 3px; margin: 2px 0 14px; }
+  .seg button { flex: 1; font-family: 'JetBrains Mono', monospace; font-size: 9px; letter-spacing: 0.1em;
+    text-transform: uppercase; font-weight: 600; color: var(--text-dim); background: none; border: none;
+    border-radius: 8px; padding: 11px 4px; min-height: 44px; cursor: pointer; transition: background .15s, color .15s; }
+  .seg button.on { background: var(--accent); color: #17110c; }
+  .seg button:active { transform: scale(.97); }
+  .chart-head { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 0.03em; color: var(--text); font-weight: 600; display: flex; align-items: center; gap: 7px; margin-bottom: 7px; }
+  .chart-head .ch-dot { width: 9px; height: 9px; border-radius: 2px; flex-shrink: 0; }
+  .chart-head .ch-note { margin-left: auto; font-weight: 400; font-size: 9px; color: var(--text-dim); letter-spacing: 0.02em; }
+  .chartfail { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--gold); line-height: 1.6; padding: 22px 6px; text-align: center; }
+
+/* ═══════════════════ FINANCIALS ═══════════════════════════════════════════
+   New CSS. This is the whole of what a card below would bring with it.
+   ═════════════════════════════════════════════════════════════════════════ */
+
+  /* the preview banner. Loud on purpose — an invented number that looks like a
+     read of the books is the one failure this page could cause. */
+  .mockbar { border: 1px solid rgba(169,143,213,0.45); background: rgba(169,143,213,0.07);
+    border-radius: 12px; padding: 13px 15px; margin-bottom: 16px; }
+  .mockbar .mk { font-family: 'JetBrains Mono', monospace; font-size: 9px; letter-spacing: 0.16em;
+    text-transform: uppercase; color: var(--violet); font-weight: 700; margin-bottom: 5px; }
+  .mockbar .mx { font-size: 12.5px; line-height: 1.6; color: var(--text-dim); }
+  .mockbar .mx b { color: var(--text); font-weight: 600; }
+
+  /* a numbered label over each candidate, so they can be talked about by number */
+  .concept { display: flex; align-items: baseline; gap: 9px; margin-bottom: 3px; }
+  .concept .cn { font-family: 'JetBrains Mono', monospace; font-size: 9px; font-weight: 700;
+    letter-spacing: 0.1em; color: var(--accent); border: 1px solid rgba(240,131,74,0.4);
+    border-radius: 100px; padding: 2px 8px; flex-shrink: 0; }
+
+  /* ── THE P&L STATEMENT ────────────────────────────────────────────────────
+     One row per line, four columns: what it is, the dollars, its share of
+     revenue, and the move against last month. A thin bar under each cost line
+     draws that share, so the statement reads as a picture before it reads as
+     a table — the console's rule that the number lives on the graphic. */
+  .pl { margin-top: 4px; }
+  .plh { display: grid; grid-template-columns: minmax(0,1fr) 74px 44px 54px; gap: 8px;
+    font-family: 'JetBrains Mono', monospace; font-size: 8px; letter-spacing: 0.12em;
+    text-transform: uppercase; color: var(--text-dim); padding-bottom: 7px;
+    border-bottom: 1px solid rgba(255,255,255,0.09); }
+  .plh span:not(:first-child) { text-align: right; }
+  .plr { display: grid; grid-template-columns: minmax(0,1fr) 74px 44px 54px; gap: 8px;
+    align-items: baseline; padding: 9px 0 3px; }
+  .plr .k { font-size: 13px; color: var(--text-dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .plr .v { font-family: 'JetBrains Mono', monospace; font-size: 12px; text-align: right; color: var(--text); }
+  .plr .p { font-family: 'JetBrains Mono', monospace; font-size: 10px; text-align: right; color: var(--text-dim); }
+  .plr .d { font-family: 'JetBrains Mono', monospace; font-size: 10px; text-align: right; }
+  .plr .d.up { color: var(--green-soft); } .plr .d.down { color: #d8997f; } .plr .d.flat { color: var(--text-dim); }
+  /* a cost going UP is bad and a cost going DOWN is good — the opposite of a
+     revenue line, so cost rows carry their own colour rule rather than the
+     page-wide one. Getting this backwards would have every worsening cost
+     drawn green. */
+  .plr .d.badup { color: #d8997f; } .plr .d.gooddn { color: var(--green-soft); }
+  .plbar { grid-column: 1 / -1; height: 3px; border-radius: 100px; background: rgba(255,255,255,0.05);
+    overflow: hidden; margin-top: 5px; }
+  .plbar i { display: block; height: 100%; border-radius: 100px; }
+  .plr.sub .k { padding-left: 13px; font-size: 12.5px; }
+  .plr.sub .k::before { content: '·'; color: var(--text-dim); opacity: .5; margin-left: -9px; margin-right: 4px; }
+  .plr.tot { border-top: 1px solid rgba(255,255,255,0.12); margin-top: 6px; padding-top: 11px; }
+  .plr.tot .k { color: var(--text); font-weight: 600; font-size: 13.5px; }
+  .plr.tot .v { font-family: 'Fraunces', serif; font-size: 16px; font-weight: 500; }
+  .plr.tot .p { color: var(--text); font-weight: 600; }
+  .plr.net { border-top: 1px solid rgba(255,255,255,0.18); }
+  .plr.net .v { font-size: 19px; }
+  .plr.head-sec { padding-top: 15px; }
+  .plr.head-sec .k { font-family: 'JetBrains Mono', monospace; font-size: 8.5px; letter-spacing: 0.14em;
+    text-transform: uppercase; color: var(--text-dim); }
+
+  /* ── CENTS ON THE DOLLAR ──────────────────────────────────────────────────
+     One 100%-wide bar per company: every dollar of revenue split into the
+     things it paid for, profit last. Three of them stacked is the fastest
+     read on the page — you see which company keeps more of its dollar
+     without reading a single figure. */
+  .cod { margin-bottom: 16px; }
+  .cod:last-of-type { margin-bottom: 4px; }
+  .cod-h { display: flex; align-items: baseline; gap: 8px; margin-bottom: 7px; }
+  .cod-dot { width: 9px; height: 9px; border-radius: 3px; align-self: center; flex-shrink: 0; }
+  .cod-n { font-size: 13.5px; font-weight: 500; }
+  .cod-k { margin-left: auto; font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--text-dim); }
+  .cod-k b { font-weight: 700; }
+  .cod-bar { display: flex; height: 26px; border-radius: 7px; overflow: hidden; background: rgba(255,255,255,0.04); }
+  .cod-seg { display: flex; align-items: center; justify-content: center; min-width: 0;
+    font-family: 'JetBrains Mono', monospace; font-size: 9px; font-weight: 700; color: #0d1f17; }
+  .cod-leg { display: flex; flex-wrap: wrap; gap: 3px 13px; margin-top: 7px;
+    font-family: 'JetBrains Mono', monospace; font-size: 9px; color: var(--text-dim); }
+  .cod-leg b { color: var(--text); font-weight: 600; }
+  .cod-leg i { display: inline-block; width: 7px; height: 7px; border-radius: 2px; margin-right: 5px; font-style: normal; }
+
+  /* ── THE PROFIT LADDER ────────────────────────────────────────────────────
+     Companies ranked by the margin they keep, against the floor the business
+     runs to. Same qmeter + tick language as the quota fleet board, so a
+     margin floor reads exactly like a sales floor. */
+  .lad { padding: 12px 0 2px; border-bottom: 1px solid var(--line); }
+  .lad:last-of-type { border-bottom: none; }
+  .lad-t { display: flex; align-items: baseline; gap: 8px; }
+  .lad-n { font-size: 13.5px; font-weight: 500; }
+  .lad-v { margin-left: auto; font-family: 'Fraunces', serif; font-size: 20px; font-weight: 500; line-height: 1; }
+  .lad-s { font-family: 'JetBrains Mono', monospace; font-size: 9px; color: var(--text-dim); margin-top: 6px; letter-spacing: .03em; }
+  .lad-s b { color: var(--text); font-weight: 600; }
+
+  /* ── BREAK-EVEN DAY ───────────────────────────────────────────────────────
+     A month bar, one cell per day, dark until overhead is covered and lit
+     after. Answers a question a P&L table cannot: on what date did this
+     company start working for itself. */
+  .be { margin-bottom: 15px; } .be:last-of-type { margin-bottom: 2px; }
+  .be-h { display: flex; align-items: baseline; gap: 8px; margin-bottom: 8px; }
+  .be-n { font-size: 13.5px; font-weight: 500; }
+  .be-d { margin-left: auto; font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--text-dim); }
+  .be-d b { font-family: 'Fraunces', serif; font-size: 17px; font-weight: 500; }
+  .be-days { display: flex; gap: 2px; }
+  .be-day { flex: 1; height: 22px; border-radius: 2px; background: rgba(255,255,255,0.055); position: relative; }
+  .be-day.paid { background: rgba(255,255,255,0.10); }
+  .be-day.profit i { position: absolute; inset: 0; border-radius: 2px; }
+  .be-day.future { background: rgba(255,255,255,0.03); }
+  .be-day.mark { box-shadow: 0 0 0 1.5px var(--accent); z-index: 1; }
+  .be-cap { font-family: 'JetBrains Mono', monospace; font-size: 9px; color: var(--text-dim); margin-top: 7px; line-height: 1.6; }
+  .be-cap b { color: var(--text); font-weight: 600; }
+
+  /* ── THE CASH FUNNEL ──────────────────────────────────────────────────────
+     Signed → Built → Invoiced → Collected, with what fell out at each step.
+     The console already refuses to add signed and invoiced together; this is
+     the shape that shows the distance between them instead. */
+  .fn { margin-top: 4px; }
+  .fn-row { padding: 11px 0 0; }
+  .fn-top { display: flex; align-items: baseline; gap: 9px; }
+  .fn-k { font-family: 'JetBrains Mono', monospace; font-size: 9px; letter-spacing: 0.14em;
+    text-transform: uppercase; color: var(--text-dim); }
+  .fn-v { margin-left: auto; font-family: 'Fraunces', serif; font-size: 19px; font-weight: 500; line-height: 1; }
+  .fn-bar { height: 12px; border-radius: 4px; margin-top: 6px; }
+  .fn-gap { display: flex; align-items: center; gap: 7px; font-family: 'JetBrains Mono', monospace;
+    font-size: 9.5px; color: var(--text-dim); padding: 7px 0 0 2px; line-height: 1.5; }
+  .fn-gap .ar { color: var(--text-dim); opacity: .7; }
+  .fn-gap b { color: #d8997f; font-weight: 600; }
+  .fn-src { font-family: 'JetBrains Mono', monospace; font-size: 8px; letter-spacing: .08em;
+    text-transform: uppercase; color: var(--text-dim); }
+
+  /* ── A/R AGEING ───────────────────────────────────────────────────────────
+     Money already earned, sorted by how long it has been unpaid. The 60+
+     bucket is drawn red because it is the only bucket that is a decision. */
+  .ag { padding: 11px 0; border-bottom: 1px solid var(--line); }
+  .ag:last-of-type { border-bottom: none; }
+  .ag-h { display: flex; align-items: baseline; gap: 8px; margin-bottom: 7px; }
+  .ag-n { font-size: 13.5px; font-weight: 500; }
+  .ag-t { margin-left: auto; font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--text); }
+  .ag-bar { display: flex; height: 14px; border-radius: 4px; overflow: hidden; background: rgba(255,255,255,0.04); }
+  .ag-seg { min-width: 0; }
+  .ag-leg { display: flex; flex-wrap: wrap; gap: 2px 12px; margin-top: 6px;
+    font-family: 'JetBrains Mono', monospace; font-size: 9px; color: var(--text-dim); }
+  .ag-leg b { color: var(--text); font-weight: 600; }
+  .ag-leg i { display: inline-block; width: 7px; height: 7px; border-radius: 2px; margin-right: 5px; font-style: normal; }
+
+  /* ── UNIT ECONOMICS ───────────────────────────────────────────────────────
+     What one job is worth after cost. The number a P&L never states and every
+     pricing decision needs. */
+  .ue { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 4px; }
+  @media (max-width: 560px) { .ue { grid-template-columns: 1fr; } }
+  .ue-t { background: var(--bg-card-hi); border: 1px solid var(--line); border-radius: 12px; padding: 14px; border-top: 2px solid; }
+  .ue-n { font-family: 'JetBrains Mono', monospace; font-size: 9px; letter-spacing: .12em; text-transform: uppercase; color: var(--text-dim); }
+  .ue-v { font-family: 'Fraunces', serif; font-size: 26px; font-weight: 500; line-height: 1; margin-top: 7px; }
+  .ue-s { font-family: 'JetBrains Mono', monospace; font-size: 9.5px; color: var(--text-dim); margin-top: 7px; line-height: 1.6; }
+  .ue-s b { color: var(--text); font-weight: 600; }
+  .ue-split { display: flex; height: 6px; border-radius: 100px; overflow: hidden; margin-top: 9px; background: rgba(255,255,255,0.05); }
+
+  /* the "what this needs" footer on every concept — the point of a preview */
+  .needs { margin-top: 12px; padding: 10px 12px; border-radius: 0 8px 8px 0;
+    border-left: 2px solid rgba(107,168,201,0.5); background: rgba(107,168,201,0.055);
+    font-size: 11.5px; line-height: 1.6; color: var(--text-dim); }
+  .needs .nk { font-family: 'JetBrains Mono', monospace; font-size: 8.5px; letter-spacing: 0.14em;
+    text-transform: uppercase; color: var(--blue); display: block; margin-bottom: 4px; }
+  .needs b { color: var(--text); font-weight: 600; }
+
+  /* ── DESKTOP. Same masonry rule as the console: cards flow into the shortest
+        column and can never leave a hole. The two widest instruments span. ── */
+  @media (min-width: 900px) {
+    body { padding: 26px 26px 44px; }
+    .shell { max-width: 1180px; }
+    .hdr h1 { font-size: 36px; }
+    .stack { display: block; columns: 2; column-gap: 26px; }
+    .stack > * { break-inside: avoid; page-break-inside: avoid; -webkit-column-break-inside: avoid;
+                 display: block; width: 100%; margin: 0 0 26px; }
+    .stack > .full { column-span: all; margin-bottom: 26px; }
+    /* A card may span the width; its contents should not automatically. Seven
+       waterfall bars stretched across 1400px is the "gaps in space" the console's
+       desktop rules were written to kill — the bars end up further apart than
+       they are tall and the shape stops reading as a bridge. The card stays
+       wide, the drawing sits at a sane measure. Twelve months of line chart
+       genuinely wants the width, so the trend is left alone. */
+    .bridgewrap { max-width: 760px; margin-left: auto; margin-right: auto; }
+  }
+  @media (min-width: 1300px) {
+    .shell { max-width: 1480px; }
+    .stack { columns: 3; }
+  }
+  @media (min-width: 1700px) { .shell { max-width: 1560px; } }
+</style>
+</head>
+<body>
+<div class="shell">
+  <div class="hdr">
+    <div class="eyebrow">Liberty · financials · design preview</div>
+    <h1>The money layer, <em>drawn</em></h1>
+    <div class="mockbar">
+      <div class="mk">▲ Sample figures — not a read of the books</div>
+      <div class="mx">Nine candidate graphics for a financials section, in the console's own
+        palette, fonts and card language so any of them can be lifted straight into
+        <b>index.html</b>. Every number here is <b>invented</b> — this repository is public and
+        holds no business data. The shapes are the deliverable; the figures are placeholders
+        with a plausible contractor's shape so the graphics can be judged.
+        Each card ends with <b>what it would need</b> to go live.</div>
+    </div>
+  </div>
+  <div class="stack" id="stack"></div>
+  <div class="foot">Liberty Command Console · financials preview · sample data</div>
+</div>
+
+<script>
+/* ═══════════════════════════════════════════════════════════════════════════
+   SAMPLE BOOKS. Invented. Shaped like a specialty-trade contractor's month:
+   COGS in the high 60s, overhead in the low 20s, single-digit-to-low-teens net.
+   One company (Oasis) is deliberately drawn in trouble so every alarm state on
+   the page has something to fire on.
+   ═══════════════════════════════════════════════════════════════════════════ */
+const CO = [
+  { id:'fence',  n:'Liberty Fencing',  s:'Fencing', c:'#6cc28b' },
+  { id:'oasis',  n:'Oasis Landscapes', s:'Oasis',   c:'#6ba8c9' },
+  { id:'protec', n:'Pro-Tec Roofing',  s:'Pro-Tec', c:'#d4b15a' },
+];
+const coOf = id => CO.find(c => c.id === id);
+
+/* cost-line colours: one ramp for job cost, one for overhead, profit in the
+   company's own colour. Kept out of the brand palette so a cost segment can
+   never be mistaken for a brand. */
+/* Three steps of ONE hue rather than three hues: a cost segment must never be
+   mistakable for a brand colour, and the first draft's ramp was so tight that
+   materials and labour read as the same swatch in a 7px legend dot. */
+const CGO = ['#e07d70','#b8544a','#8a3d36'];              // materials, labour, equipment
+const OPX = ['#8d7bb5','#a98fd5','#b9a6de','#c7b8e6','#d5cbee','#e2dcf5']; // overhead ramp
+
+const BOOKS = {
+  fence: {
+    days: 29, daysInMonth: 31, jobs: 34, prevJobs: 31,
+    revenue: 412000, prevRevenue: 388000,
+    cogs: [ {k:'Materials', v:118000, p:112000}, {k:'Labour & subs', v:141000, p:126000}, {k:'Equipment & job costs', v:19000, p:17500} ],
+    opex: [ {k:'Payroll & admin', v:46000, p:44800, fixed:true}, {k:'Sales & marketing', v:18500, p:15200},
+            {k:'Vehicles & fuel', v:9200, p:8900}, {k:'Insurance', v:6400, p:6400, fixed:true},
+            {k:'Rent & utilities', v:5100, p:5100, fixed:true}, {k:'Other G&A', v:7300, p:6100} ],
+    gpSeries: [35.1,34.8,36.2,35.4,34.9,34.0,33.6,34.2,33.1,33.8,34.2,32.5],
+    npSeries: [12.8,12.2,13.6,12.9,12.1,11.4,11.0,11.6,10.4,11.2,11.9,10.1],
+    ar: [142000, 68000, 24000, 9000],
+  },
+  oasis: {
+    days: 29, daysInMonth: 31, jobs: 22, prevJobs: 26,
+    revenue: 186000, prevRevenue: 201000,
+    cogs: [ {k:'Materials', v:51000, p:55000}, {k:'Labour & subs', v:74000, p:76000}, {k:'Equipment & job costs', v:11000, p:10000} ],
+    opex: [ {k:'Payroll & admin', v:22000, p:21500, fixed:true}, {k:'Sales & marketing', v:9800, p:8200},
+            {k:'Vehicles & fuel', v:6100, p:5900}, {k:'Insurance', v:3200, p:3200, fixed:true},
+            {k:'Rent & utilities', v:2400, p:2400, fixed:true}, {k:'Other G&A', v:3900, p:3600} ],
+    gpSeries: [31.4,30.8,32.1,31.0,30.2,29.6,28.8,29.4,28.1,29.0,29.9,26.9],
+    npSeries: [9.8,9.1,10.4,9.2,8.4,7.8,6.9,7.4,6.0,6.8,7.6,1.4],
+    ar: [61000, 39000, 28000, 22000],
+  },
+  protec: {
+    days: 29, daysInMonth: 31, jobs: 19, prevJobs: 17,
+    revenue: 298000, prevRevenue: 262000,
+    cogs: [ {k:'Materials', v:96000, p:86000}, {k:'Labour & subs', v:92000, p:83000}, {k:'Equipment & job costs', v:8500, p:7600} ],
+    opex: [ {k:'Payroll & admin', v:31000, p:30200, fixed:true}, {k:'Sales & marketing', v:14200, p:11800},
+            {k:'Vehicles & fuel', v:7400, p:7100}, {k:'Insurance', v:5600, p:5600, fixed:true},
+            {k:'Rent & utilities', v:3300, p:3300, fixed:true}, {k:'Other G&A', v:5000, p:4400} ],
+    gpSeries: [30.2,31.0,30.4,31.8,32.2,31.6,32.9,33.1,32.0,33.4,32.6,34.1],
+    npSeries: [6.4,7.1,6.8,7.9,8.2,7.6,8.9,9.2,8.0,9.4,8.8,11.7],
+    ar: [118000, 44000, 12000, 3000],
+  },
+};
+const MONTHS = ['Aug','Sep','Oct','Nov','Dec','Jan','Feb','Mar','Apr','May','Jun','Jul'];
+/* the group cash funnel, month to date. Signed is contract value in CC+Billdu,
+   invoiced is QuickBooks face value — the console's two never-added figures,
+   here shown as two ends of one pipe. */
+/* `gap` describes what is STUCK between this step and the one above it — not
+   what this step means. Getting that round the wrong way was the first draft's
+   mistake and it made every shortfall read as a definition. */
+const FUNNEL = [
+  { k:'Signed',    v:1240000, src:'cc + billdu', c:'#f0834a', what:'contract value written this month' },
+  { k:'Produced',  v:1010000, src:'cc stage',    c:'#d4b15a', what:'work that reached "built"',
+    gap:'sold and not yet built — crews have not got to it, or it is part-finished' },
+  { k:'Invoiced',  v: 896000, src:'qb',          c:'#6cc28b', what:'billed when built',
+    gap:'built and not yet billed — the work is done and no invoice has been raised' },
+  { k:'Collected', v: 704000, src:'qb',          c:'#6ba8c9', what:'money actually in the bank',
+    gap:'billed and not yet paid — this is the A/R in card 09' },
+];
+/* the margin floor the business runs to — a real rep_targets-style row, one per
+   company, not a page-wide constant. */
+const GP_FLOOR = { fence: 34, oasis: 30, protec: 32 };
+const NET_FLOOR = 8;
+
+/* ── formatting, lifted from the console so a figure reads identically ────── */
+const short = n => { const a = Math.abs(n), s = n < 0 ? '−' : '';
+  return a >= 1e6 ? s+'$'+(a/1e6).toFixed(2)+'M' : a >= 1e3 ? s+'$'+Math.round(a/1e3)+'K' : s+'$'+Math.round(a); };
+const money = n => (n<0?'−$':'$') + Math.abs(Math.round(n)).toLocaleString('en-US');
+const pct1 = (a,b) => b ? +(a/b*100).toFixed(1) : 0;
+const esc = s => String(s??'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const ord = n => n + (n%100>=11&&n%100<=13 ? 'th' : ['th','st','nd','rd'][n%10] || 'th');
+const dpts = (a,b) => a==null||b==null ? null : +(a-b).toFixed(1);
+
+/* Derive a full P&L from the sample lines. Everything downstream reads this,
+   so there is exactly one place a subtotal is computed. */
+function pl(id){
+  const b = BOOKS[id];
+  const cogs  = b.cogs.reduce((n,r)=>n+r.v,0),  pcogs = b.cogs.reduce((n,r)=>n+r.p,0);
+  const opex  = b.opex.reduce((n,r)=>n+r.v,0),  popex = b.opex.reduce((n,r)=>n+r.p,0);
+  const gp = b.revenue - cogs,  pgp = b.prevRevenue - pcogs;
+  const net = gp - opex,        pnet = pgp - popex;
+  const fixed = b.opex.filter(r=>r.fixed).reduce((n,r)=>n+r.v,0);
+  const gpPct = pct1(gp, b.revenue), netPct = pct1(net, b.revenue);
+  return { ...b, co: coOf(id), cogs, pcogs, opex, popex, gp, pgp, net, pnet, fixed,
+    gpPct, pgpPct: pct1(pgp, b.prevRevenue), netPct, pnetPct: pct1(pnet, b.prevRevenue),
+    perJob: b.revenue / b.jobs, gpPerJob: gp / b.jobs };
+}
+const P = Object.fromEntries(CO.map(c => [c.id, pl(c.id)]));
+/* the group column: a sum of the three, never a fourth set of books */
+const G = (() => {
+  const s = k => CO.reduce((n,c)=>n+P[c.id][k],0);
+  const revenue = s('revenue'), prevRevenue = s('prevRevenue'), gp = s('gp'), net = s('net');
+  return { revenue, prevRevenue, cogs:s('cogs'), pcogs:s('pcogs'), opex:s('opex'), popex:s('popex'),
+    gp, pgp:s('pgp'), net, pnet:s('pnet'), jobs:s('jobs'), prevJobs:s('prevJobs'),
+    gpPct:pct1(gp,revenue), pgpPct:pct1(s('pgp'),prevRevenue),
+    netPct:pct1(net,revenue), pnetPct:pct1(s('pnet'),prevRevenue),
+    cogsLines: BOOKS.fence.cogs.map((r,i) => ({ k:r.k, v:CO.reduce((n,c)=>n+BOOKS[c.id].cogs[i].v,0), p:CO.reduce((n,c)=>n+BOOKS[c.id].cogs[i].p,0) })),
+    opexLines: BOOKS.fence.opex.map((r,i) => ({ k:r.k, v:CO.reduce((n,c)=>n+BOOKS[c.id].opex[i].v,0), p:CO.reduce((n,c)=>n+BOOKS[c.id].opex[i].p,0) })),
+    co: { n:'All three companies', s:'Group', c:'#f0834a' } };
+})();
+const bookOf = id => id === 'group' ? G : P[id];
+const linesOf = id => id === 'group'
+  ? { cogs: G.cogsLines, opex: G.opexLines }
+  : { cogs: BOOKS[id].cogs, opex: BOOKS[id].opex };
+
+/* ── card-scoped state ────────────────────────────────────────────────────── */
+let PLCO = 'fence';      // which company the P&L statement and bridge show
+let TRENDMODE = 'gp';    // gross or net margin on the trend chart
+const charts = [];
+
+/* ═══ 1 · THE HEADLINE ══════════════════════════════════════════════════════
+   The four figures an owner wants before anything else, group-level, each
+   against last month. Same stat-tile grid as "the month so far", so it lands
+   on the page as a sibling of a card he already reads. */
+function cardHeadline(){
+  const d = (a,b) => { const p = b ? Math.round((a-b)/Math.abs(b)*100) : null;
+    return p===null ? '<div class="delta flat">no prior</div>'
+      : `<div class="delta ${p>0?'up':p<0?'down':'flat'}">${p>=0?'▲':'▼'} ${Math.abs(p)}% vs last month</div>`; };
+  const gpMove = dpts(G.gpPct, G.pgpPct), netMove = dpts(G.netPct, G.pnetPct);
+  return `<div class="card full">
+    <div class="concept"><span class="cn">01</span><div class="card-title" style="margin:0">The month in five figures<span class="feed-tag qb">qb</span><span class="feed-tag seed">sample</span></div></div>
+    <div class="card-sub">All three companies, month to date, each against the same point last month.</div>
+    <div class="stat-grid" style="grid-template-columns:repeat(auto-fit,minmax(140px,1fr))">
+      <div class="stat-tile"><div class="lbl">Revenue</div>
+        <div class="val">${short(G.revenue)}</div>
+        <div class="sub">${G.jobs} jobs invoiced</div>${d(G.revenue,G.prevRevenue)}</div>
+      <div class="stat-tile"><div class="lbl">Gross profit</div>
+        <div class="val green">${short(G.gp)}</div>
+        <div class="sub">after ${short(G.cogs)} of job cost</div>${d(G.gp,G.pgp)}</div>
+      <div class="stat-tile"><div class="lbl">Gross margin</div>
+        <div class="val ${G.gpPct<31?'gold':''}">${G.gpPct}%</div>
+        <div class="sub">floor is ${GP_FLOOR.fence}–${GP_FLOOR.oasis}% by company</div>
+        <div class="delta ${gpMove>0?'up':gpMove<0?'down':'flat'}">${gpMove>=0?'▲':'▼'} ${Math.abs(gpMove)} pts</div></div>
+      <div class="stat-tile"><div class="lbl">Overhead</div>
+        <div class="val orange">${short(G.opex)}</div>
+        <div class="sub">${pct1(G.opex,G.revenue)}% of revenue</div>${d(G.opex,G.popex)}</div>
+      <div class="stat-tile"><div class="lbl">Net income</div>
+        <div class="val ${G.net<0?'red':'green'}">${short(G.net)}</div>
+        <div class="sub">${G.netPct}% net margin</div>
+        <div class="delta ${netMove>0?'up':netMove<0?'down':'flat'}">${netMove>=0?'▲':'▼'} ${Math.abs(netMove)} pts</div></div>
+    </div>
+    ${netMove < 0 ? `<div class="intel-alert fire"><span class="tag">ALARM</span><span>Revenue is
+      <b>${Math.round((G.revenue-G.prevRevenue)/G.prevRevenue*100)}% up</b> and net is
+      <b>${Math.abs(netMove)} points down</b>. The month got bigger and less profitable — that is a
+      pricing or a job-cost problem, not a sales problem.</span></div>` : ''}
+    <div class="needs"><span class="nk">To go live</span>A QuickBooks P&amp;L read per company —
+      income, COGS and expense totals by account class — for the current month and the same
+      days last month. Nothing here needs job-level detail.</div>
+  </div>`;
+}
+
+/* ═══ 2 · THE MONEY BRIDGE ══════════════════════════════════════════════════
+   A waterfall from revenue down to net. This is the flagship: it is the P&L
+   as one picture, and it is the only shape that shows SIZE of each deduction
+   rather than a column of numbers that all look alike. */
+function cardBridge(){
+  const b = bookOf(PLCO);
+  return `<div class="card chart-card full">
+    <div class="concept" style="padding:0 4px"><span class="cn">02</span><div class="card-title" style="margin:0">The money bridge<span class="feed-tag qb">qb</span><span class="feed-tag seed">sample</span></div></div>
+    <div class="card-sub">Every dollar invoiced, and what it ran into on the way to the bottom line.</div>
+    ${segCo()}
+    <div class="chart-wrap tall bridgewrap" style="height:250px"><canvas id="cBridge"></canvas></div>
+    <div class="chart-head" style="margin-top:12px;padding:0 4px">
+      <span class="ch-dot" style="background:${b.co.c}"></span>${esc(b.co.n)}
+      <span class="ch-note">${short(b.revenue)} in · ${short(b.net)} kept · ${b.netPct}%</span></div>
+    <div class="needs" style="margin:12px 4px 0"><span class="nk">To go live</span>The same P&amp;L read
+      as card 01, split one level deeper: <b>materials</b>, <b>labour &amp; subs</b> and
+      <b>equipment</b> under COGS. If QuickBooks classes are not that clean, the bridge collapses
+      to one COGS bar and still works.</div>
+  </div>`;
+}
+function segCo(){
+  const tabs = [...CO.map(c=>({id:c.id,l:c.s})), {id:'group',l:'All three'}];
+  return `<div class="seg" style="margin-left:4px;margin-right:4px">${tabs.map(t =>
+    `<button class="${PLCO===t.id?'on':''}" onclick="setCo('${t.id}')">${esc(t.l)}</button>`).join('')}</div>`;
+}
+function setCo(id){ PLCO = id; render(); }
+
+/* ═══ 3 · THE P&L ITSELF ════════════════════════════════════════════════════
+   The statement, per company. Four columns and a share-of-revenue bar under
+   every line — so the eye finds the fat line before it reads a single figure.
+   This is the "simple P&L for each company" in its plainest form. */
+function cardStatement(){
+  const b = bookOf(PLCO), L = linesOf(PLCO);
+  const R = b.revenue, PR = b.prevRevenue;
+  /* a cost line's move is stated in POINTS OF REVENUE, not in dollars: a cost
+     that grew slower than revenue got cheaper, and a dollar delta hides that. */
+  const costRow = (r, colour, cls) => {
+    const sh = pct1(r.v, R), psh = pct1(r.p, PR), mv = dpts(sh, psh);
+    return `<div class="plr ${cls||'sub'}">
+      <div class="k">${esc(r.k)}</div>
+      <div class="v">${money(r.v)}</div>
+      <div class="p">${sh}%</div>
+      <div class="d ${mv>0?'badup':mv<0?'gooddn':'flat'}">${mv>0?'+':''}${mv} pt</div>
+      <div class="plbar"><i style="width:${Math.min(100,sh)}%;background:${colour}"></i></div>
+    </div>`; };
+  /* `cost:true` flips the colour rule: overhead climbing a point is a worse
+     month, not a better one, and the subtotal must not contradict the six
+     lines above it that already say so. */
+  const totRow = (k, v, p, cls, colour, cost) => {
+    const sh = pct1(v, R), psh = pct1(p, PR), mv = dpts(sh, psh);
+    const good = cost ? mv < 0 : mv > 0;
+    return `<div class="plr tot ${cls||''}">
+      <div class="k">${esc(k)}</div>
+      <div class="v" ${colour?`style="color:${colour}"`:''}>${money(v)}</div>
+      <div class="p">${sh}%</div>
+      <div class="d ${mv===0?'flat':good?'up':'down'}">${mv>0?'+':''}${mv} pt</div>
+    </div>`; };
+  const revMove = PR ? Math.round((R-PR)/PR*100) : null;
+  return `<div class="card">
+    <div class="concept"><span class="cn">03</span><div class="card-title" style="margin:0">P&amp;L · ${esc(b.co.s)}<span class="feed-tag qb">qb</span><span class="feed-tag seed">sample</span></div></div>
+    <div class="card-sub">Month to date. The right column is the move in <b>points of revenue</b>,
+      not dollars — a cost that grew slower than revenue actually got cheaper, and a dollar
+      figure hides that. On cost lines, green is down.</div>
+    ${segCo()}
+    <div class="pl">
+      <div class="plh"><span>Line</span><span>MTD</span><span>% rev</span><span>vs LM</span></div>
+      <div class="plr tot" style="border-top:none;margin-top:0;padding-top:11px">
+        <div class="k">Revenue</div>
+        <div class="v">${money(R)}</div><div class="p">100%</div>
+        <div class="d ${revMove>0?'up':revMove<0?'down':'flat'}">${revMove>0?'+':''}${revMove}%</div>
+      </div>
+      <div class="plr head-sec"><div class="k">Cost of work</div><div></div><div></div><div></div></div>
+      ${L.cogs.map((r,i)=>costRow(r, CGO[i%CGO.length])).join('')}
+      ${totRow('Gross profit', b.gp, b.pgp, '', 'var(--green-soft)')}
+      <div class="plr head-sec"><div class="k">Overhead</div><div></div><div></div><div></div></div>
+      ${L.opex.map((r,i)=>costRow(r, OPX[i%OPX.length])).join('')}
+      ${totRow('Total overhead', b.opex, b.popex, '', '', true)}
+      ${totRow('Net income', b.net, b.pnet, 'net', b.net<0?'var(--red)':'var(--green-soft)')}
+    </div>
+    <div class="note">Face value from QuickBooks, never recomputed from lines. A line at <b>$0</b>
+      would mean nothing was spent; a line that is <b>absent</b> means the account is not mapped —
+      the two are drawn differently and never blended.</div>
+    <div class="needs"><span class="nk">To go live</span>One <b>ProfitAndLoss</b> report call per
+      company per period. The account → line mapping (which QB accounts are "materials", which are
+      "overhead") is a config table you sign off once, not a guess the page makes.</div>
+  </div>`;
+}
+
+/* ═══ 4 · CENTS ON THE DOLLAR ═══════════════════════════════════════════════
+   Three companies, three unit-width bars. Comparison without arithmetic: you
+   can see who keeps more of a dollar from across the room. */
+function cardDollar(){
+  const seg = (label, v, R, colour) => {
+    const p = v / R * 100;
+    return { label, p, colour, show: p >= 7 ? Math.round(p) + '¢' : '' };
+  };
+  return `<div class="card">
+    <div class="concept"><span class="cn">04</span><div class="card-title" style="margin:0">Where the dollar goes<span class="feed-tag qb">qb</span><span class="feed-tag seed">sample</span></div></div>
+    <div class="card-sub">Every bar is one dollar of revenue. Profit is the piece on the right.</div>
+    ${CO.map(c => { const b = P[c.id], R = b.revenue;
+      const segs = [
+        ...BOOKS[c.id].cogs.map((r,i) => seg(r.k, r.v, R, CGO[i%CGO.length])),
+        seg('Overhead', b.opex, R, OPX[1]),
+        seg('Profit', Math.max(0,b.net), R, c.c),
+      ];
+      return `<div class="cod">
+        <div class="cod-h"><span class="cod-dot" style="background:${c.c}"></span>
+          <span class="cod-n">${esc(c.n)}</span>
+          <span class="cod-k">keeps <b style="color:${b.netPct<3?'var(--red)':b.netPct<8?'var(--gold)':'var(--green-soft)'}">${Math.round(b.netPct)}¢</b></span></div>
+        <div class="cod-bar">${segs.map(s =>
+          `<div class="cod-seg" style="width:${s.p}%;background:${s.colour}" title="${esc(s.label)} ${s.p.toFixed(1)}¢">${s.show}</div>`).join('')}</div>
+        <div class="cod-leg">${segs.map(s =>
+          `<span><i style="background:${s.colour}"></i>${esc(s.label)} <b>${s.p.toFixed(1)}¢</b></span>`).join('')}</div>
+      </div>`; }).join('')}
+    <div class="intel-alert fire"><span class="tag">ALARM</span><span><b>Oasis keeps
+      ${Math.round(P.oasis.netPct)}¢ on the dollar.</b> Labour &amp; subs alone take
+      ${Math.round(BOOKS.oasis.cogs[1].v/P.oasis.revenue*100)}¢ — ${Math.round(BOOKS.oasis.cogs[1].v/P.oasis.revenue*100) - Math.round(BOOKS.fence.cogs[1].v/P.fence.revenue*100)}¢
+      more than Fencing pays for the same line.</span></div>
+    <div class="needs"><span class="nk">To go live</span>Nothing beyond card 03 — this is the same
+      P&amp;L drawn as a proportion instead of a table. Cheapest card on this page to ship.</div>
+  </div>`;
+}
+
+/* ═══ 5 · MARGIN TREND ══════════════════════════════════════════════════════
+   Twelve months, three companies, one chart. A margin problem is almost never
+   visible in one month's figure and is obvious in twelve. */
+function cardTrend(){
+  const key = TRENDMODE === 'gp' ? 'gpPct' : 'netPct';
+  return `<div class="card chart-card full">
+    <div class="concept" style="padding:0 4px"><span class="cn">05</span><div class="card-title" style="margin:0">Margin, twelve months<span class="feed-tag qb">qb</span><span class="feed-tag seed">sample</span></div></div>
+    <div class="card-sub">One line per company. The shaded band is the floor each one is run to — below it, the job is priced wrong or the cost got away.</div>
+    <div class="seg" style="margin-left:4px;margin-right:4px">
+      <button class="${TRENDMODE==='gp'?'on':''}" onclick="setTrend('gp')">Gross margin</button>
+      <button class="${TRENDMODE==='np'?'on':''}" onclick="setTrend('np')">Net margin</button>
+    </div>
+    <div class="chart-wrap tall"><canvas id="cTrend"></canvas></div>
+    <div class="mini4">
+      ${CO.map(c => { const b = P[c.id], series = TRENDMODE==='gp'?b.gpSeries:b.npSeries;
+        const now = series[series.length-1], yr = series[0], mv = dpts(now, yr);
+        return `<div><div class="mini-cap">${esc(c.s)} · vs a year ago</div>
+          <div style="display:flex;align-items:baseline;gap:8px">
+            <span style="font-family:'Fraunces',serif;font-size:22px;font-weight:500;color:${mv<0?'#d8997f':'var(--green-soft)'}">${now}%</span>
+            <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--text-dim)">${mv>=0?'▲':'▼'} ${Math.abs(mv)} pts from ${yr}%</span>
+          </div></div>`; }).join('')}
+      <div><div class="mini-cap">Group · this month</div>
+        <div style="display:flex;align-items:baseline;gap:8px">
+          <span style="font-family:'Fraunces',serif;font-size:22px;font-weight:500">${TRENDMODE==='gp'?G.gpPct:G.netPct}%</span>
+          <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--text-dim)">weighted by revenue</span>
+        </div></div>
+    </div>
+    <div class="note" style="margin-left:4px;margin-right:4px">A margin is a ratio, so the group line is
+      <b>weighted by revenue</b> and is not the average of the three. Averaging three companies of
+      different sizes would let the smallest one move the headline.</div>
+    <div class="needs" style="margin:12px 4px 0"><span class="nk">To go live</span>Twelve monthly P&amp;L
+      reads per company, cached — this is the one card that wants history, so it is the one worth
+      backfilling into a table rather than fetching live every paint.</div>
+  </div>`;
+}
+function setTrend(m){ TRENDMODE = m; render(); }
+
+/* ═══ 6 · THE PROFIT LADDER ═════════════════════════════════════════════════
+   Companies ranked by what they keep, each against its own floor. Same meter
+   and tick as the sales quota board — a margin floor should read exactly like
+   a sales floor, because to an owner it is the same kind of promise. */
+function cardLadder(){
+  const rows = CO.map(c => ({ c, b: P[c.id], floor: GP_FLOOR[c.id] }))
+                 .sort((x,y) => y.b.netPct - x.b.netPct);
+  const scale = Math.max(...rows.map(r => Math.max(r.b.gpPct, r.floor))) * 1.15;
+  return `<div class="card">
+    <div class="concept"><span class="cn">06</span><div class="card-title" style="margin:0">The profit ladder<span class="feed-tag qb">qb</span><span class="feed-tag seed">sample</span></div></div>
+    <div class="card-sub">Gross margin against each company's own floor. The tick is the floor; the bar is where it landed.</div>
+    ${rows.map(r => { const hit = r.b.gpPct >= r.floor;
+      return `<div class="lad">
+        <div class="lad-t">
+          <span class="cod-dot" style="background:${r.c.c}"></span>
+          <span class="lad-n">${esc(r.c.n)}</span>
+          <span class="lad-v" style="color:${hit?'var(--green-soft)':'var(--gold)'}">${r.b.gpPct}%</span>
+        </div>
+        ${''/* The fill stays the COMPANY's colour and carries hit/miss in its
+             opacity instead. Colouring a miss gold was wrong here: Pro-Tec's
+             brand colour is already gold, so a clearing Pro-Tec and a missing
+             Fencing drew the same bar. The identity of the bar and the verdict
+             on it have to be two separate channels. */}
+        <div class="qmeter">
+          <div class="qfill" style="width:${Math.round(r.b.gpPct/scale*100)}%;background:${r.c.c};opacity:${hit?1:.4}"></div>
+          <div class="qtick" style="left:${Math.round(r.floor/scale*100)}%"></div>
+        </div>
+        <div class="tgt-cap">
+          <span>${short(r.b.gp)} gross on ${short(r.b.revenue)}</span>
+          <span class="${hit?'hit':'miss'}">${hit?'clears':'under'} floor <b>${r.floor}%</b>${hit?'':` by ${Math.abs(dpts(r.b.gpPct,r.floor))} pts`}</span>
+        </div>
+        <div class="lad-s">Net <b style="color:${r.b.netPct<3?'var(--red)':''}">${r.b.netPct}%</b> ·
+          ${short(r.b.net)} after ${short(r.b.opex)} of overhead ·
+          ${r.b.netPct>=NET_FLOOR?'above':'below'} the ${NET_FLOOR}% net floor</div>
+      </div>`; }).join('')}
+    <div class="needs"><span class="nk">To go live</span>The P&amp;L read plus a
+      <b>margin_targets</b> row per company (gross floor, net floor). The console already has the
+      pattern — this is <code>rep_targets</code> for a business instead of a person.</div>
+  </div>`;
+}
+
+/* ═══ 7 · BREAK-EVEN DAY ════════════════════════════════════════════════════
+   The date each company stopped paying for itself and started earning. A P&L
+   cannot say this, and it is the single most intuitive money graphic there is:
+   dark days are the days you worked for the landlord. */
+function cardBreakeven(){
+  return `<div class="card">
+    <div class="concept"><span class="cn">07</span><div class="card-title" style="margin:0">The day the month turned<span class="feed-tag qb">qb</span><span class="feed-tag seed">sample</span></div></div>
+    <div class="card-sub">Dark days paid for fixed overhead. Lit days are profit. Where the month turns is worth more than the percentage it turned by.</div>
+    ${CO.map(c => { const b = P[c.id];
+      const beRev = b.gpPct > 0 ? b.fixed / (b.gpPct/100) : Infinity;
+      const perDay = b.revenue / b.days;
+      const beDay = perDay > 0 ? Math.ceil(beRev / perDay) : null;
+      const made = beDay && beDay <= b.days;
+      const cells = [];
+      for (let i = 1; i <= b.daysInMonth; i++){
+        const future = i > b.days;
+        const profit = made && i > beDay && !future;
+        cells.push(`<div class="be-day ${future?'future':profit?'profit':'paid'} ${i===beDay?'mark':''}" title="${ord(i)}">${profit?`<i style="background:${c.c};opacity:${0.35 + 0.5*Math.min(1,(i-beDay)/8)}"></i>`:''}</div>`);
+      }
+      return `<div class="be">
+        <div class="be-h"><span class="cod-dot" style="background:${c.c}"></span>
+          <span class="be-n">${esc(c.n)}</span>
+          <span class="be-d">turned <b style="color:${made?c.c:'var(--gold)'}">${made?ord(beDay):'not yet'}</b></span></div>
+        <div class="be-days">${cells.join('')}</div>
+        <div class="be-cap">${short(b.fixed)} of fixed overhead ÷ ${b.gpPct}% gross margin =
+          <b>${short(beRev)}</b> of revenue to break even${made
+            ? ` · cleared on the <b>${ord(beDay)}</b>, ${b.days-beDay} earning days since`
+            : ` · <b style="color:var(--gold)">${short(beRev-b.revenue)} short</b> with ${b.daysInMonth-b.days} days left`}</div>
+      </div>`; }).join('')}
+    <div class="note">Fixed overhead is payroll &amp; admin, insurance and rent — the lines that do not
+      move with volume. Marketing, fuel and G&amp;A flex with the work and are left in the variable side,
+      so this bar is a floor, not the whole cost.</div>
+    <div class="needs"><span class="nk">To go live</span>The P&amp;L read, plus one flag per expense
+      account saying <b>fixed</b> or <b>variable</b>. That flag is a one-time decision and it is what
+      makes this card honest rather than clever.</div>
+  </div>`;
+}
+
+/* ═══ 8 · THE CASH FUNNEL ═══════════════════════════════════════════════════
+   Signed → produced → invoiced → collected. The console is careful never to
+   ADD signed and invoiced, because they are different events in different
+   systems. This is the shape that shows the DISTANCE between them instead —
+   which is where the cash actually is. */
+function cardFunnel(){
+  const top = FUNNEL[0].v, last = FUNNEL[FUNNEL.length-1];
+  /* the worst step is measured, not asserted — a hand-written "the biggest gap
+     is X" goes stale the first time the data moves */
+  const gaps = FUNNEL.slice(1).map((f,i) => ({ f, prev:FUNNEL[i], drop:FUNNEL[i].v - f.v }));
+  const worst = gaps.reduce((a,b) => b.drop > a.drop ? b : a);
+  return `<div class="card">
+    <div class="concept"><span class="cn">08</span><div class="card-title" style="margin:0">Signed to banked<span class="feed-tag cc">cc</span><span class="feed-tag qb">qb</span><span class="feed-tag seed">sample</span></div></div>
+    <div class="card-sub">Four different events in three systems, in the order money passes through them. Never added — measured against each other.</div>
+    <div class="fn">${FUNNEL.map((f,i) => {
+      const prev = i ? FUNNEL[i-1] : null;
+      const drop = prev ? prev.v - f.v : 0;
+      const dropPct = prev ? Math.round(drop/prev.v*100) : 0;
+      return `${prev ? `<div class="fn-gap"><span class="ar">└▸</span><span><b>${short(drop)}</b> (${dropPct}%) ${esc(f.gap)}</span></div>` : ''}
+        <div class="fn-row">
+          <div class="fn-top"><span class="fn-k">${esc(f.k)}</span>
+            <span class="fn-src">${esc(f.src)}</span>
+            <span class="fn-v" style="color:${f.c}">${short(f.v)}</span></div>
+          <div class="fn-bar" style="width:${Math.round(f.v/top*100)}%;background:${f.c};opacity:.85"></div>
+          <div class="fn-gap" style="padding-top:5px">${esc(f.what)}</div>
+        </div>`; }).join('')}
+    </div>
+    <div class="intel-alert"><span class="tag">WATCH</span><span>
+      <b>${short(FUNNEL[0].v - last.v)}</b> of this month's signed work is somewhere between the
+      contract and the bank — ${Math.round((FUNNEL[0].v-last.v)/FUNNEL[0].v*100)}% of what was sold.
+      The widest single step is <b>${esc(worst.prev.k.toLowerCase())} → ${esc(worst.f.k.toLowerCase())}</b>
+      at ${short(worst.drop)}: ${esc(worst.f.gap)}.</span></div>
+    <div class="needs"><span class="nk">To go live</span>Signed and produced from Contractors Cloud
+      (the page already reads both), invoiced and collected from QuickBooks. The only new figure is
+      <b>collected</b> — payments received, which is a second QB call.</div>
+  </div>`;
+}
+
+/* ═══ 9 · A/R AGEING ════════════════════════════════════════════════════════
+   Money already earned, sorted by how long it has been unpaid. The console
+   already shows an A/R total; a total cannot tell you which company has a
+   collections problem. */
+function cardAgeing(){
+  const BUCKETS = [
+    { k:'Current',  c:'#6cc28b' },
+    { k:'1–30 days',c:'#d4b15a' },
+    { k:'31–60',    c:'#e08a5e' },
+    { k:'60+ days', c:'#d96a5e' },
+  ];
+  const totals = BUCKETS.map((_,i) => CO.reduce((n,c)=>n+BOOKS[c.id].ar[i],0));
+  const grand = totals.reduce((a,b)=>a+b,0);
+  return `<div class="card">
+    <div class="concept"><span class="cn">09</span><div class="card-title" style="margin:0">A/R ageing<span class="feed-tag qb">qb</span><span class="feed-tag seed">sample</span></div></div>
+    <div class="card-sub">Billed and not yet paid, by how old it is. A total says how much is owed; this says how worried to be.</div>
+    <div class="alloc-chart"><canvas id="cAge"></canvas>
+      <div class="alloc-center"><div class="big">${short(grand)}</div><div class="lbl">open</div></div></div>
+    <div class="alloc-legend">${BUCKETS.map((bk,i) => `
+      <div class="alloc-row"><div class="alloc-dot" style="background:${bk.c}"></div>
+        <div class="name">${esc(bk.k)}</div>
+        <div class="val">${short(totals[i])} · ${Math.round(totals[i]/grand*100)}%</div></div>`).join('')}
+    </div>
+    <div style="margin-top:14px;border-top:1px solid var(--line);padding-top:6px">
+    ${CO.map(c => { const a = BOOKS[c.id].ar, t = a.reduce((x,y)=>x+y,0), bad = a[2]+a[3];
+      return `<div class="ag">
+        <div class="ag-h"><span class="cod-dot" style="background:${c.c}"></span>
+          <span class="ag-n">${esc(c.n)}</span><span class="ag-t">${short(t)}</span></div>
+        <div class="ag-bar">${a.map((v,i)=>`<div class="ag-seg" style="width:${v/t*100}%;background:${BUCKETS[i].c}" title="${esc(BUCKETS[i].k)} ${short(v)}"></div>`).join('')}</div>
+        <div class="ag-leg">
+          <span><i style="background:${BUCKETS[3].c}"></i>60+ <b style="color:${bad/t>0.2?'var(--red)':''}">${short(a[3])}</b></span>
+          <span>over 30 days <b>${Math.round(bad/t*100)}%</b> of the book</span>
+        </div>
+      </div>`; }).join('')}
+    </div>
+    ${(() => { const o = BOOKS.oasis.ar, t = BOOKS.protec.ar;
+      const sum = a => a.reduce((x,y)=>x+y,0);
+      return `<div class="intel-alert fire"><span class="tag">ALARM</span><span><b>Oasis has
+        ${short(o[3])} sitting past 60 days</b> — ${Math.round(o[3]/sum(o)*100)}% of its open book
+        in that one bucket, against ${Math.round(t[3]/sum(t)*100)}% at Pro-Tec in the same bucket.
+        Same trade, same payment terms, different collections.</span></div>`; })()}
+    <div class="needs"><span class="nk">To go live</span>QuickBooks <b>AgedReceivableDetail</b> per
+      company. The console already reads an A/R total, so this is a widening of a call it makes today,
+      not a new integration.</div>
+  </div>`;
+}
+
+/* ═══ 10 · UNIT ECONOMICS ═══════════════════════════════════════════════════
+   What one job is worth after cost. A P&L never says this, and it is the
+   figure that decides whether a company should chase more work or better work. */
+function cardUnit(){
+  return `<div class="card full">
+    <div class="concept"><span class="cn">10</span><div class="card-title" style="margin:0">What one job is worth<span class="feed-tag qb">qb</span><span class="feed-tag cc">cc</span><span class="feed-tag seed">sample</span></div></div>
+    <div class="card-sub">Revenue per invoiced job, and the part of it the business actually keeps. More work and better work are different decisions.</div>
+    <div class="ue">${CO.map(c => { const b = P[c.id];
+      const jobMove = b.prevJobs ? Math.round((b.jobs-b.prevJobs)/b.prevJobs*100) : null;
+      return `<div class="ue-t" style="border-top-color:${c.c}">
+        <div class="ue-n">${esc(c.n)}</div>
+        <div class="ue-v">${money(Math.round(b.perJob))}</div>
+        <div class="ue-s">per job · <b>${b.jobs}</b> invoiced${jobMove!==null?` · ${jobMove>=0?'▲':'▼'} ${Math.abs(jobMove)}% vs last month`:''}</div>
+        <div class="ue-split">
+          <div style="width:${b.gpPct}%;background:${c.c}"></div>
+          <div style="width:${100-b.gpPct}%;background:rgba(217,106,94,0.55)"></div>
+        </div>
+        <div class="ue-s"><b style="color:${c.c}">${money(Math.round(b.gpPerJob))}</b> gross per job ·
+          ${money(Math.round(b.perJob-b.gpPerJob))} of it is cost</div>
+      </div>`; }).join('')}
+    </div>
+    <div class="intel-alert"><span class="tag">READ</span><span>Pro-Tec turns
+      <b>${money(Math.round(P.protec.gpPerJob))}</b> of gross on ${P.protec.jobs} jobs; Oasis turns
+      <b>${money(Math.round(P.oasis.gpPerJob))}</b> on ${P.oasis.jobs}. Oasis is running
+      ${Math.round(P.oasis.jobs/P.protec.jobs*100-100)}% more jobs for
+      ${Math.round((1 - (P.oasis.gp/P.protec.gp))*100)}% less gross profit — a size-of-job problem, not an effort problem.</span></div>
+    <div class="needs"><span class="nk">To go live</span>Invoice count per company per month —
+      already in the QuickBooks read the console makes today. Pairing it with gross profit is the
+      whole card.</div>
+  </div>`;
+}
+
+/* ═══ WHAT IT WOULD TAKE ════════════════════════════════════════════════════ */
+function cardPlan(){
+  return `<div class="card full">
+    <div class="card-title">If you want these built</div>
+    <div class="card-sub">Ranked by value against effort, on the same honesty rules the rest of the console follows.</div>
+    <div class="intel-alert good"><span class="tag">FIRST</span><span><b>Cards 01, 03 and 04</b> —
+      the headline, the statement and the dollar bars — all come off <b>one</b> QuickBooks
+      ProfitAndLoss call per company. That single integration is the whole money layer's foundation,
+      and it lights three cards at once.</span></div>
+    <div class="intel-alert"><span class="tag">THEN</span><span><b>Cards 06 and 07</b> — the ladder and
+      the break-even day — need two small config tables you sign off once: a margin floor per company,
+      and a fixed/variable flag per expense account. No new feed.</span></div>
+    <div class="intel-alert"><span class="tag">THEN</span><span><b>Cards 02, 05, 09, 10</b> — the
+      bridge, the trend, the ageing and the unit economics — each want one more thing: a COGS split,
+      twelve months of history, an ageing report, an invoice count.</span></div>
+    <div class="intel-alert"><span class="tag">LAST</span><span><b>Card 08</b>, the funnel, is the only
+      one that crosses systems. It needs Contractors Cloud and QuickBooks lined up on the same month,
+      and a "collected" figure the console does not read today.</span></div>
+    <div class="note">Every card above obeys the page's existing rules: a figure that cannot be read is
+      <b>withheld, not zero</b>; a signed figure and an invoiced figure are never added; and every
+      instrument says on its face which feed it came from. Sample numbers here are marked
+      <b>sample</b> in violet, the same badge the console uses for a typed figure — so a placeholder
+      can never be mistaken for a measurement.</div>
+  </div>`;
+}
+
+/* ── render ───────────────────────────────────────────────────────────────── */
+function render(){
+  document.getElementById('stack').innerHTML = [
+    cardHeadline(), cardBridge(), cardStatement(), cardDollar(), cardTrend(),
+    cardLadder(), cardBreakeven(), cardFunnel(), cardAgeing(), cardUnit(), cardPlan(),
+  ].join('');
+  drawCharts();
+}
+
+function drawCharts(){
+  while (charts.length) { try { charts.pop().destroy(); } catch(e){} }
+  if (typeof Chart === 'undefined') {
+    document.querySelectorAll('.chart-wrap, .alloc-chart').forEach(el => {
+      el.innerHTML = '<div class="chartfail">Chart library did not load.<br/>The numbers on this page are unaffected — only the drawing is missing.</div>';
+      el.style.height = 'auto';
+    });
+    return;
+  }
+  Chart.defaults.color = '#8aa094';
+  Chart.defaults.borderColor = 'rgba(255,255,255,0.05)';
+  const MONO = "'JetBrains Mono', monospace";
+  const TIP = { backgroundColor:'#1c3528', borderColor:'rgba(255,255,255,0.1)', borderWidth:1, padding:8,
+                titleFont:{family:MONO,size:10}, bodyFont:{family:MONO,size:10} };
+
+  /* ── the waterfall. Floating bars: each step is drawn from where the last one
+     left off, so the deduction's SIZE is the bar's height. Totals sit on the
+     floor; deductions hang between. ── */
+  const wf = document.getElementById('cBridge');
+  if (wf) {
+    const b = bookOf(PLCO), L = linesOf(PLCO);
+    /* Seven ticks on a 400px phone is about 55px each, so the axis carries a
+       SHORT label and the tooltip carries the full one. "Labour & subs" set
+       under a bar that wide overprints its neighbours. */
+    const SHORT_TICK = { 'Materials':'Mat’l', 'Labour & subs':'Labour', 'Equipment & job costs':'Equip',
+                         'Gross profit':['Gross','profit'], 'Net income':['Net','income'] };
+    const steps = [];
+    let run = b.revenue;
+    steps.push({ label:'Revenue', from:0, to:b.revenue, delta:b.revenue, kind:'total', c:b.co.c });
+    L.cogs.forEach((r,i) => { steps.push({ label:r.k, from:run-r.v, to:run, delta:-r.v, kind:'down', c:CGO[i%CGO.length] }); run -= r.v; });
+    steps.push({ label:'Gross profit', from:0, to:b.gp, delta:b.gp, kind:'total', c:'#6cc28b' });
+    steps.push({ label:'Overhead', from:b.gp-b.opex, to:b.gp, delta:-b.opex, kind:'down', c:OPX[1] });
+    steps.push({ label:'Net income', from:0, to:b.net, delta:b.net, kind:'total', c:b.net<0?'#d96a5e':'#8fd5a8' });
+
+    /* the value rides ON the bar — the console's rule. Deductions are drawn as
+       a negative so a cost can never be read as an addition. */
+    const bridgeLabels = { id:'bridgeLabels', afterDatasetsDraw(chart){
+      const ctx = chart.ctx; ctx.save(); ctx.textAlign = 'center';
+      chart.getDatasetMeta(0).data.forEach((bar, i) => {
+        const s = steps[i]; if (!s) return;
+        ctx.font = `700 9px ${MONO}`;
+        ctx.fillStyle = s.kind === 'total' ? '#e8efe9' : '#d8997f';
+        const top = Math.min(bar.y, bar.base);
+        ctx.fillText((s.delta<0?'−':'')+short(Math.abs(s.delta)).replace('−',''), bar.x, top - 6);
+        if (s.kind === 'total'){
+          ctx.font = `600 7px ${MONO}`; ctx.fillStyle = '#8aa094';
+          ctx.fillText(pct1(s.delta, b.revenue)+'% of rev', bar.x, top - 17);
+        }
+      });
+      ctx.restore();
+    }};
+    charts.push(new Chart(wf.getContext('2d'), {
+      type:'bar',
+      data:{ labels: steps.map(s => SHORT_TICK[s.label] || s.label),
+        datasets:[{ data: steps.map(s => [s.from, s.to]),
+          backgroundColor: steps.map(s => s.kind==='total' ? s.c : s.c+'cc'),
+          borderRadius: 3, borderSkipped: false }] },
+      options:{ responsive:true, maintainAspectRatio:false, layout:{padding:{top:26}},
+        plugins:{ legend:{display:false}, tooltip:{...TIP, callbacks:{
+          title: c => steps[c[0].dataIndex].label,   // the axis is abbreviated; the tooltip is not
+          label: c => { const s = steps[c.dataIndex];
+            return ' ' + (s.delta<0?'−':'') + short(Math.abs(s.delta)) + '  ·  ' + pct1(Math.abs(s.delta), b.revenue) + '% of revenue'; } }} },
+        scales:{ x:{ grid:{display:false}, ticks:{ font:{family:MONO,size:8.5}, maxRotation:0, autoSkip:false } },
+                 y:{ display:false, beginAtZero:true, grace:'8%' } } }
+      , plugins:[bridgeLabels]
+    }));
+  }
+
+  /* ── margin trend. Three lines and a floor band. ── */
+  const tr = document.getElementById('cTrend');
+  if (tr) {
+    const gp = TRENDMODE === 'gp';
+    const floorBand = { id:'floorBand', beforeDatasetsDraw(chart){
+      const { ctx, chartArea:a, scales:{ y } } = chart;
+      const lo = gp ? Math.min(...Object.values(GP_FLOOR)) : NET_FLOOR;
+      const yTop = y.getPixelForValue(lo);
+      if (!isFinite(yTop)) return;
+      ctx.save();
+      ctx.fillStyle = 'rgba(217,106,94,0.07)';
+      ctx.fillRect(a.left, yTop, a.right-a.left, a.bottom-yTop);
+      ctx.strokeStyle = 'rgba(217,106,94,0.35)'; ctx.setLineDash([4,4]); ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(a.left, yTop); ctx.lineTo(a.right, yTop); ctx.stroke();
+      ctx.setLineDash([]); ctx.font = "600 8px 'JetBrains Mono', monospace";
+      ctx.fillStyle = 'rgba(217,106,94,0.8)'; ctx.textAlign = 'left';
+      ctx.fillText('floor ' + lo + '%', a.left + 4, yTop + 11);
+      ctx.restore();
+    }};
+    charts.push(new Chart(tr.getContext('2d'), {
+      type:'line',
+      data:{ labels: MONTHS, datasets: CO.map(c => ({
+        label: c.s, data: (gp ? BOOKS[c.id].gpSeries : BOOKS[c.id].npSeries),
+        borderColor: c.c, backgroundColor: c.c, borderWidth: 2,
+        pointRadius: (ctx2) => ctx2.dataIndex === MONTHS.length-1 ? 4 : 0,
+        pointHoverRadius: 4, tension: .28, fill: false })) },
+      options:{ responsive:true, maintainAspectRatio:false, interaction:{mode:'index',intersect:false},
+        plugins:{ legend:{display:true, labels:{font:{family:MONO,size:9}, boxWidth:10, usePointStyle:true, pointStyle:'rectRounded'}},
+                  tooltip:{...TIP, callbacks:{ label: c2 => ' ' + c2.dataset.label + '  ' + c2.parsed.y + '%' }} },
+        scales:{ x:{ grid:{display:false}, ticks:{font:{family:MONO,size:9}} },
+                 y:{ ticks:{ font:{family:MONO,size:9}, callback: v => v+'%' },
+                     grid:{ color:'rgba(255,255,255,0.04)' }, beginAtZero: !gp } } },
+      plugins:[floorBand]
+    }));
+  }
+
+  /* ── A/R ageing donut. Same cutout and tooltip as every donut on the console. ── */
+  const ag = document.getElementById('cAge');
+  if (ag) {
+    const BC = ['#6cc28b','#d4b15a','#e08a5e','#d96a5e'];
+    const totals = [0,1,2,3].map(i => CO.reduce((n,c)=>n+BOOKS[c.id].ar[i],0));
+    charts.push(new Chart(ag.getContext('2d'), {
+      type:'doughnut',
+      data:{ labels:['Current','1–30 days','31–60','60+ days'],
+        datasets:[{ data: totals, backgroundColor: BC, borderWidth: 0 }] },
+      options:{ responsive:true, maintainAspectRatio:false, cutout:'66%',
+        plugins:{ legend:{display:false}, tooltip:{...TIP, callbacks:{ label:c=>' '+c.label+' '+short(c.parsed) }} } }
+    }));
+  }
+}
+
+render();
+addEventListener('resize', () => { clearTimeout(window.__rz); window.__rz = setTimeout(drawCharts, 180); });
+</script>
+</body>
+</html>
