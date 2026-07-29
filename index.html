@@ -301,6 +301,10 @@
   .snapgrid { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; }
   .hero1 { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; }
   .bs-flex { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+  .bigsnap .alloc-chart { width: 200px; height: 200px; margin: 12px auto 16px; }
+  .bigsnap .alloc-center .big { font-size: 26px; }
+  .bigsnap .alloc-center .lbl { font-size: 9px; }
+  .bigsnap .alloc-legend { margin: 4px 0 10px; text-align: left; }
   .bs-mix { width: 98px; height: 98px; flex-shrink: 0; position: relative; }
   .bs-legend { display: flex; flex-wrap: wrap; gap: 3px 14px; margin-top: 8px;
     font-family: 'JetBrains Mono', monospace; font-size: 9px; color: var(--text-dim); }
@@ -1026,17 +1030,16 @@ function hdr(){
     </div>
     <div class="hero1">
       <button class="snap bigsnap" onclick="openWindow('${k}')" aria-label="Signed ${esc(label)} — open details">
-        <div class="bs-flex">
-          <div style="min-width:0">
-            <div class="snap-k" style="color:var(--green)">Signed · ${esc(label)}</div>
-            <div class="snap-v">${short(W.rev)}</div>
-            <div class="snap-s">${sub}</div>
-            <div class="snap-d ${d===null?'flat':d>=0?'up':'down'}">${d===null?'—':(d>=0?'▲':'▼')+' '+Math.abs(d)+'% vs '+esc(W.prevLabel)}</div>
-          </div>
-          <div class="bs-mix"><canvas id="cHeroMix"></canvas></div>
-        </div>
-        <div class="bs-legend">${(rs => rs.length ? rs.map(b => { const m = brandOf(b.id);
-          return `<span><span class="bs-dot" style="background:${m.c}"></span>${esc(m.s)} <b>${short(b.rev)}</b> · ${pct(b.rev, W.rev)}%</span>`; }).join('') : '')(allBrands(W.brands).filter(b => b.rev > 0))}</div>
+        <div class="snap-k" style="color:var(--green)">Signed · ${esc(label)}</div>
+        <div class="alloc-chart"><canvas id="cHeroMix"></canvas>
+          <div class="alloc-center"><div class="big">${short(W.rev)}</div><div class="lbl">signed</div></div></div>
+        <div class="alloc-legend">${allBrands(W.brands).map(b => { const m = brandOf(b.id);
+          return `<div class="alloc-row" ${b.rev?'':'style="opacity:.55"'}>
+            <div class="alloc-dot" style="background:${m.c}"></div>
+            <div class="name">${esc(m.n)}${b.billdu?'<span class="tick">billdu</span>':''}</div>
+            <div class="val">${b.rev?`${short(b.rev)} · ${pct(b.rev, W.rev)}%`:'$0'}</div></div>`; }).join('')}</div>
+        <div class="snap-s">${sub}</div>
+        <div class="snap-d ${d===null?'flat':d>=0?'up':'down'}">${d===null?'—':(d>=0?'▲':'▼')+' '+Math.abs(d)+'% vs '+esc(W.prevLabel)}</div>
         <div class="snap-go">details <span class="go-chev">›</span></div>
       </button>
       <button class="snap" onclick="openWindow('${k}')" aria-label="Built ${esc(label)} — open details">
@@ -1242,6 +1245,9 @@ function cardApptByCompany(){
         .map(([k,l])=>`<button class="${k===K?'on':''}" onclick="setApptCo('${k}')">${l}</button>`).join('')}
     </div>
 
+    ${(() => { const tn = rows.reduce((n,r)=>n+r.n,0), tt = rows.reduce((n,r)=>n+r.t,0);
+      const tp = tt ? Math.round((tn-tt)/tt*100) : null;
+      return `<div class="note" style="margin:10px 0 0;font-size:12px;color:var(--text)"><b>All companies: ${tn} booked</b>${tt?` · ${Math.round(tt)} typical · <b class="${tp>=0?'up':'dn'}">${tp>=0?'▲':'▼'}${Math.abs(tp)}%</b>`:''}</div>`; })()}
     <div class="apco-tiles">
     ${rows.map(r => {
       const arrow = r.dir==='up'?'▲':r.dir==='down'?'▼':'▬';
@@ -1683,6 +1689,7 @@ function cardReps(){
       ${[['day','Day'],['week','Week'],['month','Month'],['ytd','YTD']].map(([kk,l])=>`<button class="${kk===k?'on':''}" onclick="setRepsWin('${kk}')">${l}</button>`).join('')}
     </div>
     <div class="card-sub">${reps.length? `Ranked by signed contract value ${label}. Tap a name for their one-pager.` : `No rep activity ${label}.`}</div>
+    ${all.length?`<div class="note" style="margin:2px 0 8px;font-size:12px;color:var(--text)"><b>All reps: ${short(all.reduce((n,r)=>n+r.rev,0))}</b> · ${all.reduce((n,r)=>n+r.jobs,0)} deals ${label}</div>`:''}
     ${reps.map((r,i)=>`<div class="rep-row${r.office?'':' acc'}"${i>=CORE?' data-extra="1" style="display:none"':''} ${r.office?'style="opacity:.8"':`onclick="openRep('${esc(String(r.id))}')"`}>
       <div class="rep-head">
         <div class="nm">${esc(r.name)}${r.billdu?'<span class="tick">billdu</span>':''}${r.role&&r.role!=='sales'&&!r.office?`<span class="brand">${esc(r.role)}</span>`:''}</div>
@@ -3138,17 +3145,7 @@ function render(){
          folded 28 Jul — Kevin: consolidate the abundance of appointment data;
          the main instrument and the by-company band carry the story. */
       minor('monthsofar', 'signed · appts · built · A/R, month to date', cardStats()),
-      minor('trend', 'projected month finish, by brand, full detail', cardTrending()),
       minor('appt', `set today ${D.appointments?D.appointments.bookedToday:0} · on calendars ${D.appointments?D.appointments.today:0}`, cardAppointments()),
-      minor('fleet', 'every rep against the employment floor', cardQuota()),
-      minor('review', 'housekeeping & data chores', cardActions()),
-      minor('wow', `${short(_pv.rev)} → ${short(_Wk.rev)}${_d === null ? '' : ' · ' + (_d >= 0 ? '+' : '') + _d + '%'}`, cardWow()),
-      minor('mix', `${short(_mixTot)} signed`, cardMix()),
-      minor('effort', `${_eT} touch${_eT === 1 ? '' : 'es'} · ${_eOn}/${_E.activeReps} reps on the board`, cardEffort()),
-      minor('cadence', 'this week, by weekday', cardCadence()),
-      minor('money', qbOK() ? `${short(qbw().invoiced)} invoiced · ${short(D.qb.arTotal)} open A/R` : 'withheld — not readable', cardMoney()),
-      minor('leadcats', `${_cats.length} channel${_cats.length === 1 ? '' : 's'}`, cardLeadCategories()),
-      minor('flags', 'caveats, not actions', cardFlags()),
     ].join('') + '</div>' +
     `<div class="foot">Trust the instrument, not the retelling<br/>
       Read ${new Date(D.generatedAt).toLocaleString('en-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'})} ·
@@ -3538,7 +3535,7 @@ addEventListener('resize', () => {
    server for hours while Kevin looked at yesterday's build and reported the bug
    as unfixed. That happened. The page now checks version.json on every load and
    reloads itself once if the deployed build is newer than the one running. */
-const BUILD = '2026-07-29T01:38Z-donut-in-hero';
+const BUILD = '2026-07-29T02:12Z-totals-and-cuts';
 const SB_URL = 'https://lzegjjbkfuecrhdvlvay.supabase.co';
 /* The one page that can finish a password reset. Hard-coded rather than derived,
    because every derivation of it so far has been a source of bugs: a bare origin
