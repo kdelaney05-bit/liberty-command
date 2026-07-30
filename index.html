@@ -816,8 +816,8 @@
      unauthenticated visitor can ever see. -->
 <div class="gate" id="gate" style="display:none">
   <div class="gatebox">
-    <div class="eyebrow">Liberty · owner access</div>
-    <h1>Liberty <em>Command</em> Console</h1>
+    <div class="eyebrow">TruReview · owner access</div>
+    <h1>TruReview <em>Autopilot</em></h1>
     <form id="loginform" autocomplete="on">
       <div class="field">
         <label for="em">Email</label>
@@ -1030,8 +1030,8 @@ function heroTrend(){
 
 function hdrTitle(){
   return `<div style="margin-bottom:14px">
-    <div class="eyebrow">Liberty · three companies</div>
-    <h1>Liberty <em>Command</em> Console</h1>
+    <div class="eyebrow">TruReview · three companies</div>
+    <h1>TruReview <em>Autopilot</em></h1>
   </div>`;
 }
 function hdr(){
@@ -3616,7 +3616,7 @@ addEventListener('resize', () => {
    server for hours while Kevin looked at yesterday's build and reported the bug
    as unfixed. That happened. The page now checks version.json on every load and
    reloads itself once if the deployed build is newer than the one running. */
-const BUILD = '2026-07-30T01:12Z-trureview-owner-icon';
+const BUILD = '2026-07-30T01:20Z-trureview-everywhere';
 const SB_URL = 'https://lzegjjbkfuecrhdvlvay.supabase.co';
 /* The one page that can finish a password reset. Hard-coded rather than derived,
    because every derivation of it so far has been a source of bugs: a bare origin
@@ -5538,8 +5538,8 @@ document.querySelectorAll('.pweye').forEach(eye => eye.addEventListener('click',
   catch(e){
     if (/expired|not signed in|401/i.test(e.message)) { sess.clear(); showGate('Session expired — sign in again.'); }
     else {
-      appEl.innerHTML = `<div class="hdr"><div class="eyebrow">Liberty · owner access</div>
-        <h1>Liberty <em>Command</em> Console</h1></div>
+      appEl.innerHTML = `<div class="hdr"><div class="eyebrow">TruReview · owner access</div>
+        <h1>TruReview <em>Autopilot</em></h1></div>
         <div class="card"><div class="card-title">Could not load</div>
         <div class="card-sub">${esc(e.message)}</div>
         <div class="note">Nothing is shown rather than something stale.
