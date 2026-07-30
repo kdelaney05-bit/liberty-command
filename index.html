@@ -1420,7 +1420,7 @@ function cardQuota(){
       ${closeMini(r.id)}
     </div>`).join('')}
 
-    <div class="note">The floor is uniform — <b>${short(Q.daily)}/day signed, every rep</b>, prorated to the same point in ${label}. Signed value is Contractors Cloud contract value plus each rep's own Billdu invoices (Oasis money reads entirely from Billdu), attributed the same way the rep board is; office-sent deals stay unattributed here too. The tick on each bar marks the floor. This is stated as a floor because that is what it is — not a target anyone may or may not choose to hit.</div>
+    <div class="note">The floor is uniform — <b>${short(Q.daily)}/day signed, every rep</b>, prorated to the same point in ${label}. Signed value is Contractors Cloud contract value plus each rep's own Billdu invoices (Oasis money reads entirely from Billdu), attributed the same way the rep board is, Oasis office-default included — the boards and this floor read one rule. The tick on each bar marks the floor. This is stated as a floor because that is what it is — not a target anyone may or may not choose to hit.</div>
   </div>`;
 }
 
@@ -3938,8 +3938,14 @@ function buildData(raw){
      counted in BOTH feeds. So Oasis is no longer CC-with-a-Billdu-additive —
      the whole Oasis figure reads from invoices, dated by issue_date, and the
      Oasis CC entries are EXCLUDED from money (slice() below). Attribution
-     is CC-evidence-first (linked job → same customer); office_default stays
-     UNATTRIBUTED here, per "unattributed stays unattributed everywhere". */
+     is CC-evidence-first (linked job → same customer), then the Oasis
+     office-default (Mike) — the SAME rule the app board uses. This page first
+     shipped holding office_default rows out as unattributed (the old
+     "unattributed stays unattributed" convention), which put Mike ~$106K
+     under the board and under Kevin's own Billdu export; Kevin flagged it
+     within the hour (2026-07-30, "it is one seventy"). One rule everywhere:
+     the attributed rep_id is taken as given, and only basis='unattributed'
+     (no rule matched at all) stays unowned. */
   const bInvoices = (billdu && billdu.invoices) || null;
   const billduAdd = (a, b) => {
     if (!bInvoices) return null;
@@ -3948,8 +3954,7 @@ function buildData(raw){
       .filter(r => { const d = String(r.issue_date).slice(0,10); return d >= A && d < B; })
       .map(r => ({ billdu_id: r.billdu_id, client_name: r.client_name,
                    accepted_value: Number(r.total_price||0),
-                   repId: (r.rep_id && r.attribution_basis !== 'office_default'
-                           && r.attribution_basis !== 'unattributed') ? r.rep_id : null }));
+                   repId: r.rep_id || null }));
     // per-rep split of the money, so leaderboards can inherit it
     const byRep = {};
     for (const r of rows) {
@@ -4590,7 +4595,7 @@ function buildData(raw){
      measured against the same prorated pace. Signed value is the same union the
      rep board shows — CC contract value plus each rep's own Billdu invoices
      (Oasis money reads entirely from Billdu, migration 096), attributed
-     CC-evidence-first, so office-sent stays unattributed here too. Managers who sell (Oasis runs that way) carry it; managers who do
+     CC-evidence-first with the Oasis office-default, same as the rep board. Managers who sell (Oasis runs that way) carry it; managers who do
      not are only shown if they signed. A rep at zero is not hidden — the whole
      point of a floor board is that it shows who is under it. */
   const quotaBoard = (() => {
