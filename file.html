@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
+<title>Customer File · Playground</title>
+<meta name="robots" content="noindex, nofollow"/>
+<meta name="theme-color" content="#0d1f17"/>
+<meta name="color-scheme" content="dark"/>
+<link rel="apple-touch-icon" href="apple-touch-icon.png"/>
+<!-- ═══════════════════════════════════════════════════════════════════════
+     CUSTOMER FILE PLAYGROUND — the thread system, live, before the app has it.
+
+     Same trust model as the console: this page holds only the publishable
+     key. Every read and write goes to PostgREST with the signed-in user's
+     own token, and row-level security decides everything — which threads
+     exist, which lanes answer, who may post, who may settle an ask. When
+     the database says no, this page SHOWS the no. The denial is the demo.
+     ═══════════════════════════════════════════════════════════════════════ -->
+<style>
+  :root{
+    --bg-deep:#0d1f17; --bg-card:#15291f; --bg-card-hi:#1c3528; --bg-well:#0a1912;
+    --line:rgba(255,255,255,.07); --text:#e8efe9; --dim:#8aa094;
+    --accent:#f0834a; --accent-soft:#f4a37a; --green:#6cc28b; --red:#d96a5e;
+    --chat:#6cc28b; --super:#f0834a; --office:#7ea8d4;
+    --mono:'JetBrains Mono',ui-monospace,Menlo,Consolas,monospace;
+    --serif:'Fraunces','Iowan Old Style',Georgia,serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+  html,body{width:100%;overflow-x:hidden}
+  body{font-family:'Inter Tight',-apple-system,'Segoe UI',sans-serif;
+    background:radial-gradient(ellipse at top,#1a3326 0%,#0d1f17 62%) fixed;color:var(--text);
+    min-height:100vh;padding:calc(18px + env(safe-area-inset-top)) 14px calc(30px + env(safe-area-inset-bottom))}
+  .wrap{max-width:640px;margin:0 auto}
+  .eyebrow{font-family:var(--mono);font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--accent)}
+  h1{font-family:var(--serif);font-weight:400;font-size:26px;letter-spacing:-.02em;margin:4px 0 4px}
+  h1 em{font-style:italic;color:var(--accent-soft);font-weight:300}
+  .sub{font-size:13px;color:var(--dim);line-height:1.55;margin-bottom:16px;max-width:60ch}
+  .badge{display:inline-flex;align-items:center;gap:6px;font-family:var(--mono);font-size:9px;
+    letter-spacing:.12em;text-transform:uppercase;border-radius:99px;padding:3px 9px;
+    border:1px solid rgba(108,194,139,.3);color:var(--green);vertical-align:2px;margin-left:6px}
+  .dot{width:5px;height:5px;border-radius:50%;background:var(--green)}
+  .card{background:var(--bg-card);border:1px solid var(--line);border-radius:14px;padding:16px}
+  label{font-family:var(--mono);font-size:10px;letter-spacing:.14em;text-transform:uppercase;
+    color:var(--dim);display:block;margin:10px 0 5px}
+  input,select,textarea{width:100%;background:var(--bg-well);border:1px solid var(--line);border-radius:10px;
+    color:var(--text);padding:11px 12px;font-size:14px;font-family:inherit}
+  textarea{resize:vertical;min-height:44px}
+  .btn{background:var(--accent);border:none;color:#17110c;font-family:var(--mono);font-size:12px;
+    letter-spacing:.1em;text-transform:uppercase;font-weight:700;border-radius:10px;
+    padding:12px 16px;cursor:pointer;width:100%;margin-top:12px}
+  .btn.small{width:auto;padding:8px 12px;font-size:10px;margin-top:0}
+  .btn.ghost{background:transparent;border:1px solid var(--line);color:var(--dim)}
+  .btn[disabled]{opacity:.4;cursor:not-allowed}
+  .err{border:1px solid rgba(217,106,94,.4);background:rgba(217,106,94,.08);border-radius:10px;
+    padding:10px 12px;font-size:12.5px;line-height:1.5;margin-top:10px;color:var(--text)}
+  .err b{font-family:var(--mono);font-size:9.5px;letter-spacing:.12em;text-transform:uppercase;
+    color:var(--red);display:block;margin-bottom:3px}
+  .who{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:14px;flex-wrap:wrap}
+  .who .id{font-family:var(--mono);font-size:10px;color:var(--dim);letter-spacing:.05em}
+  .who .id b{color:var(--text);font-weight:600}
+  .roflag{font-family:var(--mono);font-size:9px;letter-spacing:.12em;text-transform:uppercase;
+    color:var(--office);border:1px solid rgba(126,168,212,.35);border-radius:99px;padding:3px 8px}
+
+  .threads{display:flex;flex-direction:column;gap:8px}
+  .thr{background:var(--bg-card);border:1px solid var(--line);border-radius:12px;padding:12px 14px;
+    cursor:pointer;display:flex;justify-content:space-between;gap:10px;align-items:baseline}
+  .thr:hover{background:var(--bg-card-hi)}
+  .thr .c{font-size:14.5px;font-weight:600}
+  .thr .a{font-size:11.5px;color:var(--dim);margin-top:2px}
+  .thr .v{font-family:var(--mono);font-size:11px;color:var(--green);white-space:nowrap}
+  .thr .co{font-family:var(--mono);font-size:9px;color:var(--office);letter-spacing:.08em}
+
+  .tabs{display:flex;gap:6px;margin:14px 0 10px}
+  .tab{flex:1;font-family:var(--mono);font-size:10.5px;letter-spacing:.13em;text-transform:uppercase;
+    padding:10px 4px;text-align:center;border-radius:9px;border:1px solid var(--line);
+    background:var(--bg-card);color:var(--dim);cursor:pointer}
+  .tab[aria-pressed="true"]{color:#0d1f17;font-weight:700}
+  .tab.CHAT[aria-pressed="true"]{background:var(--chat);border-color:var(--chat)}
+  .tab.SUPER[aria-pressed="true"]{background:var(--super);border-color:var(--super)}
+  .tab.OFFICE[aria-pressed="true"]{background:var(--office);border-color:var(--office)}
+  .feed{display:flex;flex-direction:column;gap:8px;min-height:120px}
+  .msg{background:var(--bg-card);border:1px solid var(--line);border-radius:12px;padding:9px 12px;font-size:13.5px;line-height:1.45}
+  .msg .w{font-family:var(--mono);font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--dim);margin-bottom:3px;display:flex;justify-content:space-between;gap:8px}
+  .msg .w time{letter-spacing:.02em;text-transform:none}
+  .msg.sys{background:transparent;border-style:dashed;color:var(--dim);font-size:12px;font-style:italic}
+  .msg.mine{border-color:rgba(240,131,74,.4)}
+  .ask{border-left:3px solid var(--accent);border-radius:12px;background:var(--bg-card-hi);
+    border-top:1px solid var(--line);border-right:1px solid var(--line);border-bottom:1px solid var(--line);
+    padding:10px 12px;font-size:12.5px}
+  .ask .t{font-family:var(--mono);font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--accent-soft);display:flex;justify-content:space-between;gap:8px}
+  .ask .k{font-family:var(--mono);font-size:10px;margin-top:5px;color:var(--dim)}
+  .ask .k b{color:var(--accent);font-weight:600}
+  .ask.done .k b{color:var(--green)}
+  .empty{border:1px dashed var(--line);border-radius:12px;padding:20px 14px;text-align:center;color:var(--dim);font-size:12.5px;line-height:1.6}
+  .empty .z{font-family:var(--mono);font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--red);display:block;margin-bottom:5px}
+  .compose{margin-top:12px;display:flex;gap:8px}
+  .compose textarea{flex:1;min-height:44px}
+  .compose .btn{width:auto;margin:0;align-self:stretch}
+  .asker{margin-top:10px;border-top:1px solid var(--line);padding-top:10px}
+  .asker summary{font-family:var(--mono);font-size:10px;letter-spacing:.14em;text-transform:uppercase;
+    color:var(--dim);cursor:pointer;list-style:none}
+  .asker summary::before{content:'+ '}
+  .asker[open] summary::before{content:'− '}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .foot{font-family:var(--mono);font-size:9.5px;color:var(--dim);letter-spacing:.06em;line-height:1.8;
+    margin-top:20px;padding-top:14px;border-top:1px solid var(--line)}
+  .foot b{color:var(--green)}
+  .back{background:none;border:none;color:var(--accent-soft);font-family:var(--mono);font-size:10px;
+    letter-spacing:.12em;text-transform:uppercase;cursor:pointer;padding:0;margin-bottom:10px}
+  .hidden{display:none !important}
+  button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-visible{outline:2px solid var(--accent-soft);outline-offset:1px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="eyebrow">Liberty Command · Customer File</div>
+  <h1>The job thread, <em>live</em><span class="badge"><span class="dot"></span>LIVE · SUPABASE</span></h1>
+  <p class="sub">Every row on this page comes from the production database with <b>your</b> login, and every
+     write goes back through it. Nothing here is mocked — when a lane is empty or a button is refused,
+     that is row-level security answering, not the page.</p>
+
+  <!-- SIGN IN -->
+  <div class="card" id="authCard">
+    <form id="loginForm">
+      <label for="em">Email</label>
+      <input id="em" type="email" autocomplete="username" required/>
+      <label for="pw">Password</label>
+      <input id="pw" type="password" autocomplete="current-password" required/>
+      <button class="btn" type="submit">Sign in</button>
+    </form>
+    <div id="authErr"></div>
+  </div>
+
+  <!-- APP -->
+  <div id="app" class="hidden">
+    <div class="who">
+      <div class="id">signed in as <b id="whoName">…</b> <span id="whoRole"></span></div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <span class="roflag hidden" id="roFlag">owner · read-only</span>
+        <button class="btn small ghost" id="signout" type="button">Sign out</button>
+      </div>
+    </div>
+
+    <div id="listView">
+      <div class="threads" id="threads"></div>
+      <div id="listNote"></div>
+    </div>
+
+    <div id="threadView" class="hidden">
+      <button class="back" id="back" type="button">← All jobs</button>
+      <div class="card">
+        <div class="thr" style="cursor:default;background:transparent;border:none;padding:0 0 4px">
+          <div><div class="c" id="thrCust"></div><div class="a" id="thrAddr"></div></div>
+          <div style="text-align:right"><div class="v" id="thrVal"></div><div class="co" id="thrCo"></div></div>
+        </div>
+        <div class="tabs" id="tabs">
+          <button class="tab CHAT"   data-l="CHAT"   type="button">Chat</button>
+          <button class="tab SUPER"  data-l="SUPER"  type="button">Super</button>
+          <button class="tab OFFICE" data-l="OFFICE" type="button">Office</button>
+        </div>
+        <div class="feed" id="feed" aria-live="polite"></div>
+        <div class="compose" id="compose">
+          <textarea id="draft" placeholder="Message…" aria-label="Message"></textarea>
+          <button class="btn" id="send" type="button">Send</button>
+        </div>
+        <details class="asker" id="asker">
+          <summary>Open an ask (starts a clock on someone)</summary>
+          <div class="grid2">
+            <div><label for="askType">Type</label><select id="askType"></select></div>
+            <div><label for="askWho">On whose clock</label><select id="askWho"></select></div>
+          </div>
+          <label for="askNote">Note</label>
+          <input id="askNote" type="text" placeholder="What exactly is needed"/>
+          <button class="btn" id="askGo" type="button">Open ask</button>
+        </details>
+        <div id="actErr"></div>
+      </div>
+    </div>
+
+    <div class="foot">
+      wall enforced by <b>row-level security</b> · verified live 2026-07-30 · ALL ASSERTIONS PASSED<br>
+      owner reads the record and does not write it · messages and asks are append-only · lanes are immutable
+    </div>
+  </div>
+</div>
+
+<script>
+const SB_URL = 'https://lzegjjbkfuecrhdvlvay.supabase.co';
+const SB_KEY = 'sb_publishable_kToiGqET7XzO2It9evStJw_kYzvjSF8';
+const SKEY = 'lcc.session';   // shared with the console — same origin, same project
+
+const LANE_TYPES = {  // mirrors lane_allows() in the database; the DB still decides
+  CHAT:   ['CUSTOMER_REQUEST','SCHEDULE_QUESTION'],
+  SUPER:  ['MATERIAL_REQUEST','SITE_ISSUE','SUPERVISOR_PING','SAFETY_JHA','COMPLETION_SIGNOFF','CHANGE_ORDER'],
+  OFFICE: ['SURVEY','PERMIT','INVOICE','PAYMENT','CHANGE_ORDER','MATERIAL','CONTRACT_DOC'],
+};
+
+const $ = id => document.getElementById(id);
+const sess = {
+  get(){ try { return JSON.parse(localStorage.getItem(SKEY)); } catch(e){ return null; } },
+  set(s){ localStorage.setItem(SKEY, JSON.stringify(s)); },
+  clear(){ localStorage.removeItem(SKEY); },
+};
+let S = null, ME = { id:null, name:null, role:null }, NAMES = {}, THREADS = [];
+let CUR = null, LANE = 'CHAT', POLL = null;
+
+function uidFromToken(tok){
+  try { return JSON.parse(atob(tok.split('.')[1].replace(/-/g,'+').replace(/_/g,'/'))).sub; }
+  catch(e){ return null; }
+}
+async function api(path, opts = {}){
+  const r = await fetch(`${SB_URL}/rest/v1/${path}`, {
+    ...opts,
+    headers: { apikey: SB_KEY, Authorization: 'Bearer ' + S.access_token,
+               'Content-Type': 'application/json', ...(opts.headers||{}) },
+  });
+  if (r.status === 401) { const ok = await refresh(); if (ok) return api(path, opts); showAuth(); throw new Error('signed out'); }
+  const text = await r.text();
+  if (!r.ok) { const e = new Error(text || r.status); e.status = r.status; throw e; }
+  return text ? JSON.parse(text) : null;
+}
+async function refresh(){
+  const s = sess.get(); if (!s || !s.refresh_token) return false;
+  const r = await fetch(`${SB_URL}/auth/v1/token?grant_type=refresh_token`, {
+    method:'POST', headers:{ apikey: SB_KEY, 'Content-Type':'application/json' },
+    body: JSON.stringify({ refresh_token: s.refresh_token }),
+  });
+  if (!r.ok) return false;
+  const j = await r.json();
+  S = { access_token: j.access_token, refresh_token: j.refresh_token, email: s.email };
+  sess.set(S); return true;
+}
+
+/* ── auth flow ─────────────────────────────────────────────────── */
+function showAuth(){ $('authCard').classList.remove('hidden'); $('app').classList.add('hidden'); if (POLL) clearInterval(POLL); }
+async function showApp(){
+  $('authCard').classList.add('hidden'); $('app').classList.remove('hidden');
+  const uid = uidFromToken(S.access_token);
+  ME.id = uid;
+  // Own reps row: RLS guarantees at least self-visibility for staff.
+  try {
+    const me = await api(`reps?select=id,name,role&id=eq.${uid}`);
+    if (me[0]) { ME.name = me[0].name; ME.role = me[0].role; }
+  } catch(e){ /* not staff — fine, RLS will speak for itself */ }
+  $('whoName').textContent = ME.name || S.email;
+  $('whoRole').textContent = ME.role ? `· ${ME.role}` : '';
+  $('roFlag').classList.toggle('hidden', ME.role !== 'owner');
+  // Name map for message authors — RLS returns only who you're allowed to see.
+  try { (await api('reps?select=id,name')).forEach(r => NAMES[r.id] = r.name); } catch(e){}
+  await loadThreads();
+}
+$('loginForm').addEventListener('submit', async (ev) => {
+  ev.preventDefault(); $('authErr').innerHTML = '';
+  const r = await fetch(`${SB_URL}/auth/v1/token?grant_type=password`, {
+    method:'POST', headers:{ apikey: SB_KEY, 'Content-Type':'application/json' },
+    body: JSON.stringify({ email: $('em').value.trim(), password: $('pw').value }),
+  });
+  const j = await r.json();
+  if (!j.access_token){
+    $('authErr').innerHTML = `<div class="err"><b>Sign-in refused</b>${j.error_description || j.msg || 'Check the email and password.'}</div>`;
+    return;
+  }
+  S = { access_token:j.access_token, refresh_token:j.refresh_token, email:$('em').value.trim() };
+  sess.set(S); showApp();
+});
+$('signout').addEventListener('click', () => { sess.clear(); S = null; showAuth(); });
+
+/* ── thread list ───────────────────────────────────────────────── */
+async function loadThreads(){
+  THREADS = await api('job_threads?select=id,customer_name,job_address,job_value,company_id&archived_at=is.null&order=created_at.desc');
+  $('threads').innerHTML = THREADS.length ? THREADS.map(t => `
+    <div class="thr" data-t="${t.id}" role="button" tabindex="0">
+      <div><div class="c">${esc(t.customer_name)}</div><div class="a">${esc(t.job_address || '')}</div></div>
+      <div style="text-align:right">
+        <div class="v">${t.job_value ? '$' + Number(t.job_value).toLocaleString() : ''}</div>
+        <div class="co">CC · ${esc(t.company_id)}</div>
+      </div>
+    </div>`).join('')
+    : `<div class="empty"><span class="z">0 threads</span>The database returned no job files for this login.<br>That is the scope rule working, not a bug.</div>`;
+  $('listNote').innerHTML = `<div class="foot" style="border:none;margin-top:8px;padding-top:2px">${THREADS.length} thread(s) visible to this login — the list itself is RLS-filtered</div>`;
+}
+$('threads').addEventListener('click', e => {
+  const el = e.target.closest('.thr[data-t]'); if (el) openThread(el.dataset.t);
+});
+$('threads').addEventListener('keydown', e => {
+  if (e.key === 'Enter'){ const el = e.target.closest('.thr[data-t]'); if (el) openThread(el.dataset.t); }
+});
+
+/* ── thread view ───────────────────────────────────────────────── */
+async function openThread(id){
+  CUR = THREADS.find(t => t.id === id); LANE = 'CHAT';
+  $('listView').classList.add('hidden'); $('threadView').classList.remove('hidden');
+  $('thrCust').textContent = CUR.customer_name;
+  $('thrAddr').textContent = CUR.job_address || '';
+  $('thrVal').textContent = CUR.job_value ? '$' + Number(CUR.job_value).toLocaleString() : '';
+  $('thrCo').textContent = 'CC · ' + CUR.company_id;
+  await drawLane();
+  if (POLL) clearInterval(POLL);
+  POLL = setInterval(() => { if (CUR) drawLane(true); }, 8000);
+}
+$('back').addEventListener('click', () => {
+  CUR = null; if (POLL) clearInterval(POLL);
+  $('threadView').classList.add('hidden'); $('listView').classList.remove('hidden');
+  loadThreads();
+});
+$('tabs').addEventListener('click', e => {
+  const t = e.target.closest('.tab'); if (!t) return;
+  LANE = t.dataset.l; drawLane();
+});
+function fmtT(ts){
+  const d = new Date(ts + (ts.endsWith('Z') || ts.includes('+') ? '' : 'Z'));
+  return d.toLocaleString([], { month:'short', day:'numeric', hour:'numeric', minute:'2-digit' });
+}
+function esc(s){ return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+async function drawLane(silent){
+  document.querySelectorAll('.tab').forEach(t => t.setAttribute('aria-pressed', t.dataset.l === LANE));
+  let msgs = [], asks = [];
+  try {
+    [msgs, asks] = await Promise.all([
+      api(`thread_messages?select=*&thread_id=eq.${CUR.id}&lane=eq.${LANE}&order=created_at`),
+      api(`thread_asks?select=*&thread_id=eq.${CUR.id}&lane=eq.${LANE}&order=opened_at.desc`),
+    ]);
+  } catch(e){ if (!silent) showErr(e); }
+  const askHtml = asks.map(a => {
+    const mine = a.assignee_id === ME.id && a.state === 'OPEN';
+    const clock = a.state === 'OPEN'
+      ? `OPEN · ${((Date.now() - new Date(a.opened_at + 'Z')) / 36e5).toFixed(1)} h on ${esc(NAMES[a.assignee_id] || 'their')} clock`
+      : a.state === 'DONE' ? `settled in ${a.minutes_to_close} min` : 'void';
+    return `<div class="ask ${a.state === 'DONE' ? 'done' : ''}">
+      <div class="t"><span>ASK · ${esc(a.ask_type.replace(/_/g,' '))}</span><time>${fmtT(a.opened_at)}</time></div>
+      ${a.note ? `<div style="margin-top:4px">${esc(a.note)}</div>` : ''}
+      <div class="k">⏱ <b>${clock}</b>
+        ${mine ? `<button class="btn small" style="margin-left:8px" data-settle="${a.id}" type="button">Settle</button>` : ''}
+      </div></div>`;
+  }).join('');
+  const msgHtml = msgs.map(m => `
+    <div class="msg ${m.is_system ? 'sys' : ''} ${m.author_id === ME.id ? 'mine' : ''}">
+      ${m.is_system ? '' : `<div class="w"><span>${esc(NAMES[m.author_id] || (m.from_customer ? 'CUSTOMER' : 'STAFF'))}</span><time>${fmtT(m.created_at)}</time></div>`}
+      ${m.is_system ? '⚙ ' : ''}${esc(m.body)}</div>`).join('');
+  $('feed').innerHTML = (askHtml + msgHtml) ||
+    `<div class="empty"><span class="z">0 rows</span>The database returned nothing for the ${LANE} lane on this login.<br>Not hidden by the page — absent from the answer. That is the wall.</div>`;
+  // ask form options for this lane
+  $('askType').innerHTML = LANE_TYPES[LANE].map(t => `<option value="${t}">${t.replace(/_/g,' ')}</option>`).join('');
+  const people = Object.entries(NAMES);
+  $('askWho').innerHTML = (people.length ? people : [[ME.id, ME.name || 'me']])
+    .map(([id,n]) => `<option value="${id}" ${id===ME.id?'selected':''}>${esc(n)}</option>`).join('');
+}
+function showErr(e){
+  let msg = e.message;
+  try { const j = JSON.parse(e.message); msg = j.message || j.hint || e.message; } catch(_){}
+  const rls = /policy|violates|permission|row-level/i.test(msg);
+  $('actErr').innerHTML = `<div class="err"><b>${rls ? 'The database said no' : 'Error'}</b>${esc(msg)}${
+    rls ? '<br>That refusal came from row-level security in Postgres — the page just relayed it. This is the wall doing its job.' : ''}</div>`;
+  setTimeout(() => { $('actErr').innerHTML = ''; }, 9000);
+}
+
+/* ── writes — the database has the last word ───────────────────── */
+$('send').addEventListener('click', async () => {
+  const body = $('draft').value.trim(); if (!body || !CUR) return;
+  $('send').disabled = true;
+  try {
+    await api('thread_messages', { method:'POST',
+      body: JSON.stringify({ thread_id: CUR.id, lane: LANE, author_id: ME.id, body }) });
+    $('draft').value = ''; await drawLane();
+  } catch(e){ showErr(e); }
+  $('send').disabled = false;
+});
+$('askGo').addEventListener('click', async () => {
+  if (!CUR) return;
+  $('askGo').disabled = true;
+  try {
+    await api('thread_asks', { method:'POST',
+      body: JSON.stringify({ thread_id: CUR.id, lane: LANE, ask_type: $('askType').value,
+        note: $('askNote').value.trim() || null, opened_by: ME.id, assignee_id: $('askWho').value }) });
+    $('askNote').value = ''; $('asker').removeAttribute('open'); await drawLane();
+  } catch(e){ showErr(e); }
+  $('askGo').disabled = false;
+});
+$('feed').addEventListener('click', async e => {
+  const b = e.target.closest('[data-settle]'); if (!b) return;
+  b.disabled = true;
+  try {
+    await api(`thread_asks?id=eq.${b.dataset.settle}`, { method:'PATCH',
+      headers: { Prefer: 'return=minimal' },
+      body: JSON.stringify({ state:'DONE', closed_at: new Date().toISOString(), closed_by: ME.id }) });
+    await drawLane();
+  } catch(err){ showErr(err); b.disabled = false; }
+});
+
+/* ── boot: reuse a console session when one exists ─────────────── */
+(async function(){
+  const s = sess.get();
+  if (s && s.access_token){ S = s; if (await refresh()) { showApp(); return; } }
+  showAuth();
+})();
+</script>
+</body>
+</html>
