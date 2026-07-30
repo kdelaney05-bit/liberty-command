@@ -1420,7 +1420,7 @@ function cardQuota(){
       ${closeMini(r.id)}
     </div>`).join('')}
 
-    <div class="note">The floor is uniform — <b>${short(Q.daily)}/day signed, every rep</b>, prorated to the same point in ${label}. Signed value is Contractors Cloud contract value plus each rep's own Billdu acceptances, attributed the same way the rep board is; office-sent deals stay unattributed here too. The tick on each bar marks the floor. This is stated as a floor because that is what it is — not a target anyone may or may not choose to hit.</div>
+    <div class="note">The floor is uniform — <b>${short(Q.daily)}/day signed, every rep</b>, prorated to the same point in ${label}. Signed value is Contractors Cloud contract value plus each rep's own Billdu invoices (Oasis money reads entirely from Billdu), attributed the same way the rep board is; office-sent deals stay unattributed here too. The tick on each bar marks the floor. This is stated as a floor because that is what it is — not a target anyone may or may not choose to hit.</div>
   </div>`;
 }
 
@@ -1801,7 +1801,7 @@ function cardCloseTrend(){
     <button type="button" class="linkbtn" onclick="const r=document.getElementById('ctrest');const open=r.style.display==='none';r.style.display=open?'':'none';this.textContent=open?'Show fewer':'Show all ${rows.length} sellers ›'">Show all ${rows.length} sellers ›</button>` : ''}`;
     })() : '<div class="card-sub" style="margin:12px 0 0">No seller has run an appointment or signed in the last 60 days.</div>'}
 
-    <div class="note">Color is Kevin's hot/cold rule, the same everywhere on this page: <span style="color:var(--green)">35%+ green</span>, <span style="color:var(--gold)">30–35 yellow</span>, <span style="color:var(--red)">under 30 red</span>. Trailing windows, not calendar ones: each looks back exactly that many days from today, so Monday never resets the board. Signings are the union: CC contracts plus Billdu acceptances CC has not recorded — never both for one deal. Appointments stay CC's calendar. A dash is a missing denominator, never a zero; <b>x/y</b> rides with every rate so a thin sample can be seen. The arrow only speaks when the 60-day baseline holds at least 5 appointments.</div>
+    <div class="note">Color is Kevin's hot/cold rule, the same everywhere on this page: <span style="color:var(--green)">35%+ green</span>, <span style="color:var(--gold)">30–35 yellow</span>, <span style="color:var(--red)">under 30 red</span>. Trailing windows, not calendar ones: each looks back exactly that many days from today, so Monday never resets the board. Signings are the union: CC contracts for the other brands plus Billdu invoices for all of Oasis — never both for one deal. Appointments stay CC's calendar. A dash is a missing denominator, never a zero; <b>x/y</b> rides with every rate so a thin sample can be seen. The arrow only speaks when the 60-day baseline holds at least 5 appointments.</div>
   </div>`;
 }
 
@@ -2751,12 +2751,12 @@ function diveView(k){
           money missing — it was in the total, but the total did not say so, and
           the only place the split appeared was further down. A headline that is
           a union has to declare itself a union at the point of reading. */''}
-    ${W.billdu ? `<div class="hero-incl">incl. <b>${short(W.billdu)}</b> <span class="feed-tag billdu">live · billdu</span> not yet in CC</div>` : ''}
-    ${billduDown() ? `<div class="hero-incl warn">Contractors Cloud only — the Billdu feed is unreadable, so any Oasis work signed in Billdu is <b>missing from this figure</b>, not absent from the day.</div>` : ''}
+    ${W.billdu ? `<div class="hero-incl">incl. <b>${short(W.billdu)}</b> <span class="feed-tag billdu">live · billdu</span> — Oasis reads from Billdu invoices</div>` : ''}
+    ${billduDown() ? `<div class="hero-incl warn">Contractors Cloud only — the Billdu feed is unreadable, so Oasis sales (which read from Billdu invoices) are <b>missing from this figure</b>, not absent from the day.</div>` : ''}
     ${W.billdu ? `<div class="seam">
-      <span><b>${short(W.ccRev)}</b> signed in Contractors Cloud · ${W.jobs} contract${W.jobs===1?'':'s'}</span>
-      <span><b>${short(W.billdu)}</b> accepted in Billdu, ${W.billduCount} Oasis deal${W.billduCount===1?'':'s'} CC has not recorded yet</span>
-      ${W.suppressed?`<span class="muted">${short(W.suppressed)} of Billdu activity is already inside the CC figure and is not added again</span>`:''}
+      <span><b>${short(W.ccRev)}</b> signed in Contractors Cloud · ${W.jobs - (W.billduCount||0)} contract${(W.jobs - (W.billduCount||0))===1?'':'s'}</span>
+      <span><b>${short(W.billdu)}</b> invoiced in Billdu · ${W.billduCount} Oasis deal${W.billduCount===1?'':'s'} — the whole Oasis figure, per Kevin's go-off-of-Billdu ruling</span>
+      ${W.suppressed?`<span class="muted">${short(W.suppressed)} of Contractors Cloud's own Oasis entries are superseded by the Billdu invoices and are not counted</span>`:''}
     </div>` : ''}
     <div class="card-sub" style="margin:10px 0 0">${W.appts} appointments · ${W.completed} completed in CC${W.close===null?'':' · '+W.close+'% close on CC work'}</div>
   </div>
@@ -3065,7 +3065,7 @@ function repView(id){
           <div class="sub">${c.appts?`${c.signed} of ${c.appts} appt${c.appts===1?'':'s'} run`:(c.signed?`${c.signed} signed · no appts run`:'no appointments run')}</div></div>`; }).join('')}
     </div>
     ${verdict}
-    <div class="note">Trailing windows ending today — the 30-day column is the last 30 days, whatever the calendar says. Signings are CC contracts plus unrecorded Billdu acceptances (the same union the money uses), over CC appointments — and the counts stay beside every rate so a hot week on two appointments reads as exactly that.</div>
+    <div class="note">Trailing windows ending today — the 30-day column is the last 30 days, whatever the calendar says. Signings are CC contracts plus unrecorded Billdu acceptances, over CC appointments — and the counts stay beside every rate so a hot week on two appointments reads as exactly that.</div>
   </div>`; })() : '';
 
   const effortCard = `<div class="card full" style="margin-bottom:12px">
@@ -3110,7 +3110,7 @@ function repView(id){
       <div class="big">${short(S.rev)}</div>
       <div class="side">${S.deals} deal${S.deals===1?'':'s'}${avg?`<br/>avg <b>${short(avg)}</b>`:''}</div>
     </div>
-    ${S.billdu?`<div class="hero-incl">incl. <b>${short(S.billdu)}</b> <span class="feed-tag billdu">live · billdu</span> — ${S.billduCount} acceptance${S.billduCount===1?'':'s'} CC has not recorded yet</div>`:''}
+    ${S.billdu?`<div class="hero-incl">incl. <b>${short(S.billdu)}</b> <span class="feed-tag billdu">live · billdu</span> — ${S.billduCount} Oasis invoice${S.billduCount===1?'':'s'}; Oasis reads from Billdu</div>`:''}
     ${billduDown()?`<div class="hero-incl warn">Contractors Cloud only — the Billdu feed is unreadable, so any of this rep's Billdu-signed work is <b>missing from this figure</b>, not absent from the window.</div>`:''}
   </div>
 
@@ -3904,28 +3904,47 @@ function buildData(raw){
      title is blank the receipt says so rather than inventing one. */
   const custName = t => { if (!t) return null; const s = String(t).split(' — ')[0].trim(); return s || null; };
 
+  /* ── OASIS MONEY = BILLDU INVOICES (migration 096, Kevin 2026-07-30) ──────
+     His Billdu export IS "the actual amount of sales that we have sold this
+     month", and the old CC-jobs + accepted-estimates union ran ~$95K over it:
+     CC carries amounts drifted from the invoice (a $40,717 CC entry vs a $6,400
+     invoice), duplicate CC projects with no invoice at all, and four deals
+     counted in BOTH feeds. So Oasis is no longer CC-with-a-Billdu-additive —
+     the whole Oasis figure reads from invoices, dated by issue_date, and the
+     Oasis CC entries are EXCLUDED from money (slice() below). Attribution
+     is CC-evidence-first (linked job → same customer); office_default stays
+     UNATTRIBUTED here, per "unattributed stays unattributed everywhere". */
+  const bInvoices = (billdu && billdu.invoices) || null;
   const billduAdd = (a, b) => {
-    if (!bFeed) return null;
+    if (!bInvoices) return null;
     const A = ymdOf(a), B = ymdOf(b);
-    const rows = bFeed.filter(r => { const d = String(r.signed_date_et).slice(0,10); return d >= A && d < B; });
-    const add = rows.filter(r => !r.job_id || ccSignedMap[r.job_id] !== true);
-    // per-rep split of the additive money, so leaderboards can inherit it
+    const rows = bInvoices
+      .filter(r => { const d = String(r.issue_date).slice(0,10); return d >= A && d < B; })
+      .map(r => ({ billdu_id: r.billdu_id, client_name: r.client_name,
+                   accepted_value: Number(r.total_price||0),
+                   repId: (r.rep_id && r.attribution_basis !== 'office_default'
+                           && r.attribution_basis !== 'unattributed') ? r.rep_id : null }));
+    // per-rep split of the money, so leaderboards can inherit it
     const byRep = {};
-    for (const r of add) {
-      const rid = bRepOf[String(r.billdu_id)] || OFFICE;
+    for (const r of rows) {
+      const rid = r.repId || OFFICE;
       (byRep[rid] ??= { value:0, count:0 });
-      byRep[rid].value += Number(r.accepted_value||0);
+      byRep[rid].value += r.accepted_value;
       byRep[rid].count++;
     }
-    return { value: add.reduce((n,r)=>n+Number(r.accepted_value||0),0),
-             count: add.length,
-             suppressed: rows.filter(r => r.job_id && ccSignedMap[r.job_id] === true)
-                             .reduce((n,r)=>n+Number(r.accepted_value||0),0),
-             byRep, rows: add };
+    return { value: rows.reduce((n,r)=>n+r.accepted_value,0),
+             count: rows.length,
+             byRep, rows };
   };
 
   function slice(a,b){
-    const js = jobs.filter(j => inR(j.contract_signed_at,a,b));
+    /* Oasis CC entries are OUT of the money side — their amounts drift from the
+       invoice truth and the invoice feed (billduAdd) now carries all of Oasis.
+       They stay in `done` below: production/built is CC's own event. */
+    const jsAll = jobs.filter(j => inR(j.contract_signed_at,a,b));
+    const js = jsAll.filter(j => String(j.cc_company_id) !== OASIS);
+    const ccOasisSuperseded = jsAll.filter(j => String(j.cc_company_id) === OASIS)
+                                   .reduce((n,j)=>n+Number(j.fin_sold_amount||0),0);
     const as = appts.filter(x => inR(x.starts_at,a,b));
     const done = jobs.filter(j => inR(j.completed_at,a,b));
     const rev = js.reduce((n,j)=>n+Number(j.fin_sold_amount||0),0);
@@ -3963,9 +3982,9 @@ function buildData(raw){
       brands[OASIS].jobs += bd.count;
       brands[OASIS].billdu = bd.value;
       brands[OASIS].billduCount = bd.count;
-      // individual acceptances feed the per-rep and per-brand lists…
+      // individual invoices feed the per-rep and per-brand lists…
       for (const r of bd.rows) {
-        const rid = bRepOf[String(r.billdu_id)] || OFFICE;
+        const rid = r.repId || OFFICE;
         const row = { cust: r.client_name || null, brand: OASIS, resolved: true,
                       amount: Number(r.accepted_value||0), src:'billdu',
                       office: rid === OFFICE,
@@ -4024,7 +4043,7 @@ function buildData(raw){
       // rev is the COMPANY figure — both systems. ccRev keeps the seam readable.
       company:{ jobs:js.length, rev: unionRev, ccRev: rev,
                 billdu: bd ? bd.value : 0, billduCount: bd ? bd.count : 0,
-                suppressed: bd ? bd.suppressed : 0,
+                suppressed: ccOasisSuperseded,
                 deals: js.length + (bd ? bd.count : 0),
                 appts:as.length, completed:done.length,
                 /* Built = CC project_completed_at landed in this window. The
@@ -4518,9 +4537,9 @@ function buildData(raw){
 
      The floor is uniform and firm: one annual number, one daily rate, every rep
      measured against the same prorated pace. Signed value is the same union the
-     rep board shows — CC contract value plus each rep's own Billdu acceptances,
-     attributed through the one sellerOf rule, so office-sent stays unattributed
-     here too. Managers who sell (Oasis runs that way) carry it; managers who do
+     rep board shows — CC contract value plus each rep's own Billdu invoices
+     (Oasis money reads entirely from Billdu, migration 096), attributed
+     CC-evidence-first, so office-sent stays unattributed here too. Managers who sell (Oasis runs that way) carry it; managers who do
      not are only shown if they signed. A rep at zero is not hidden — the whole
      point of a floor board is that it shows who is under it. */
   const quotaBoard = (() => {
@@ -5332,8 +5351,13 @@ async function loadAll(){
   // if the feed is not readable the console simply does not make the claim.
   let billdu = null, leakError = null;
   try {
-    const [fresh, docs, signings, feed] = await Promise.all([
+    const [fresh, invoices, docs, signings, feed] = await Promise.all([
       qp('console_billdu_freshness?select=*'),
+      /* Migration 096: Oasis money reads from Billdu INVOICES, attributed
+         CC-evidence-first. This is Kevin's 2026-07-30 ruling — "we're gonna go
+         off of Billdu until we migrate everything over" — after his export
+         proved the CC+acceptances blend ran ~$95K over what was actually sold. */
+      qp('billdu_invoice_attributed?select=billdu_id,client_name,rep_id,attribution_basis,issue_date,total_price'),
       // rep_id is the backend's OWN mapping of a Billdu author to a rep. It is
       // set for sellers who send their own estimates and deliberately NULL for
       // the office accounts, so an office-sent deal is never credited to a
@@ -5378,7 +5402,7 @@ async function loadAll(){
     try {
       leak = await qp('console_billdu_import_leak?select=billdu_id,client_name,client_city,accepted_value,billdu_author,sent_by_display,sent_by_is_selling_rep,issue_date,accepted_at,days_since_accepted,days_since_issued,category,in_current_process,actionable');
     } catch(e) { leak = []; leakError = e.status ? `${e.status}` : (e.message || 'unreadable'); }
-    billdu = { fresh: fresh[0] || null, docs, signings, feed, leak, leakError,
+    billdu = { fresh: fresh[0] || null, docs, signings, feed, invoices, leak, leakError,
                ccSigned: Object.fromEntries(oasisJobs.map(j => [j.id, !!j.contract_signed_at])) };
   } catch(e){ billdu = null; }
   let qbInv = [], qbError = null;
