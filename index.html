@@ -1732,8 +1732,9 @@ function cardReps(){
         <div class="amt">${short(r.rev)} <span>· ${r.jobs} deal${r.jobs===1?'':'s'}</span>${r.office?'':'<span class="acc-chev">›</span>'}</div>
       </div>
       <div class="meter"><div class="meter-fill" style="width:${Math.round(r.rev/mx*100)}%;background:${r.office?'#8aa094':(r.rev===mx?'#6cc28b':'#6ba8c9')}"></div></div>
-      ${r.billdu?`<div class="tgt-cap"><span>${r.office?'sent from the office account — seller not recorded':`${short(r.rev-r.billdu)} CC + ${short(r.billdu)} Billdu`}</span></div>`:''}
+      ${repCap(r)}
       ${r.office?'':closeMini(r.id)}
+      ${r.office?'':bankMini(r.id)}
     </div>`).join('')}
     ${reps.length>CORE?`<button type="button" class="linkbtn" onclick="const x=[...this.parentElement.querySelectorAll('[data-extra]')];const open=x[0].style.display==='none';x.forEach(e=>e.style.display=open?'':'none');this.textContent=open?'Show fewer':'Show all ${reps.length} ›'">Show all ${reps.length} ›</button>`:''}
     ${reps.length?`<div class="note">Rep is read from the job's own <b>rep_id</b>. <b>${D.coverage.apptsWithRep.toLocaleString()} of ${D.coverage.appts.toLocaleString()}</b> appointments carry a rep, so close rates below that coverage are unknown rather than assumed.</div>`:''}
@@ -1757,6 +1758,31 @@ const closeBand = c => !c || !c.appts ? 'none' : c.close >= 35 ? 'hot' : c.close
 
 /* The trailing-close boxes riding under a rep's revenue bar: four banded
    windows plus the trend. Dash = no appointments to divide by, never a zero. */
+/* The seam caption under a rep's bar, all three systems named. A figure that
+   quietly includes unconfirmed money is the bug class every badge on this page
+   exists to kill: CC is booked truth, Billdu is invoice truth, a bell ring is
+   the rep's own claim with the 7-business-day clock on it. */
+function repCap(r){
+  if (r.office) return r.billdu?`<div class="tgt-cap"><span>sent from the office account — seller not recorded</span></div>`:'';
+  if (!r.billdu && !r.rung) return '';
+  const parts = [`${short(r.rev-(r.billdu||0)-(r.rung||0))} CC`];
+  if (r.billdu) parts.push(`${short(r.billdu)} Billdu`);
+  if (r.rung) parts.push(`${short(r.rung)} rung 🛎️ pending CC`);
+  return `<div class="tgt-cap"><span>${parts.join(' + ')}</span></div>`;
+}
+
+/* Commission intel under the close chips — Kevin (30 Jul): "that's not a
+   competition thing. I just want to know everything about my sales guys."
+   Bank beside production reads motivation: cleared money waiting = one kind of
+   Monday, empty bank = another. Same chip language as the close row, no
+   redesign. Owner console only — the app's RLS keeps reps out of each other's
+   pay regardless of what this page renders. */
+function bankMini(id){
+  const b = D.bank && D.bank[String(id)];
+  if (!b) return '';
+  return `<div class="ct-line"><span class="none"><i>bank</i> ${short(b.banked)}</span><span class="none"><i>coming</i> ${short(b.coming)}</span><span class="none"><i>paid ytd</i> ${short(b.paidYtd)}</span></div>`;
+}
+
 function closeMini(id){
   const ct = D.closeTrend && D.closeTrend.byId[String(id)];
   if (!ct) return '';
@@ -2614,7 +2640,7 @@ function jobRowsHtml(list, count, rest, { showBrand = true, showRep = false } = 
       <div class="jobl-meta">
         ${showBrand ? brandChip(r.brand, r.resolved) : ''}
         ${showRep ? `<span class="jobl-rep${r.repId?' tapname':''}"${r.repId?` onclick="event.stopPropagation();openRep('${esc(String(r.repId))}')"`:''}>${r.rep ? esc(r.rep) : (r.office ? 'office · unattributed' : 'no rep recorded')}</span>` : ''}
-        <span class="feed-tag ${r.src==='billdu'?'billdu':'cc'}">live · ${r.src}</span>
+        <span class="feed-tag ${r.src==='cc'?'cc':'billdu'}">${r.src==='bell'?'rung · pending cc':'live · '+r.src}</span>
       </div>
     </div>`).join('')}
     ${count > list.length ? `<div class="wfoot" style="margin-top:8px">+ ${count-list.length} more${rest?` totaling ${short(rest)}`:''} — the ${list.length} largest are listed.</div>` : ''}`;
@@ -2789,7 +2815,7 @@ function diveView(k){
         <div class="jobl-meta">
           ${brandChip(r.brand, r.resolved)}
           <span class="jobl-rep">${r.reason==='office'?'office-sent · no seller':'no rep on the contract'}</span>
-          <span class="feed-tag ${r.src==='billdu'?'billdu':'cc'}">live · ${r.src}</span>
+          <span class="feed-tag ${r.src==='cc'?'cc':'billdu'}">${r.src==='bell'?'rung · pending cc':'live · '+r.src}</span>
         </div>
       </div>`).join('')}
       ${u.length>10 ? `<div class="chartbox" onclick="toggleBox(this)" style="margin-top:10px">
@@ -2826,7 +2852,7 @@ function diveView(k){
           <div class="amt">${short(r.rev)} <span>· ${r.jobs} deal${r.jobs===1?'':'s'}</span>${tap?'<span class="acc-chev">›</span>':''}</div>
         </div>
         <div class="meter"><div class="meter-fill" style="width:${Math.round(r.rev/mx*100)}%;background:${r.office?'#8aa094':(r.rev===mx?'#6cc28b':'#6ba8c9')}"></div></div>
-        ${r.billdu?`<div class="tgt-cap"><span>${r.office?'sent from the office account — seller not recorded':`${short(r.rev-r.billdu)} CC + ${short(r.billdu)} Billdu`}</span></div>`:''}
+        ${repCap(r)}
         ${r.office?'':closeMini(r.id)}
         ${tap && !pager?`<div class="acc-body lazy" data-src="rep:${esc(String(r.id))}"></div>`:''}
       </div>`}).join('')}
@@ -3616,7 +3642,7 @@ addEventListener('resize', () => {
    server for hours while Kevin looked at yesterday's build and reported the bug
    as unfixed. That happened. The page now checks version.json on every load and
    reloads itself once if the deployed build is newer than the one running. */
-const BUILD = '2026-07-30T01:20Z-trureview-everywhere';
+const BUILD = '2026-07-30T21:30Z-bell-on-board-bank-under-reps';
 const SB_URL = 'https://lzegjjbkfuecrhdvlvay.supabase.co';
 /* The one page that can finish a password reset. Hard-coded rather than derived,
    because every derivation of it so far has been a source of bugs: a bare origin
@@ -3799,7 +3825,7 @@ async function q(path, { retry = true, onPage } = {}){
 /* ── aggregation. Mirrors console/build-console.mjs so the figures on the
       phone are the same figures, computed the same way, just client-side. ── */
 function buildData(raw){
-  const { jobs: allJobs, appts, reps: allReps, touches, repTargets, playComponents, leadNames, qbInv, qbError, billdu } = raw;
+  const { jobs: allJobs, appts, reps: allReps, touches, repTargets, playComponents, leadNames, qbInv, qbError, billdu, claims, bank } = raw;
 
   /* PHANTOM REPS OUT FIRST. Migration 011 tagged the roster the same way 009
      tagged jobs: a rep linked to a real Contractors Cloud user is source='cc';
@@ -4005,6 +4031,30 @@ function buildData(raw){
         byRep[rid].billduCount = (byRep[rid].billduCount || 0) + v.count;
       }
     }
+
+    /* BELL CLAIMS — the board's pending layer, 086's rule verbatim: count
+       pending/warned/flagged only; exclude anything CC has already booked
+       (cc_already_counted) or linked (job_linked) — those dollars are in the CC
+       jobs above and adding them again is the $1.6M double-count class. Folded
+       into the REP rows only: a claim is a rep's board credit, not company
+       revenue — the money cards stay CC + Billdu until CC confirms. This is
+       why Jared rang four sales and his board read $0 · 0 deals. */
+    for (const c of (claims || [])) {
+      if (!['pending','warned','flagged'].includes(c.status)) continue;
+      if (c.cc_already_counted || c.cc_state === 'job_linked') continue;
+      const d = String(c.signed_on || '').slice(0,10);
+      if (d < ymdOf(a) || d >= ymdOf(b)) continue;
+      const rid = c.rep_id; if (!rid || !repById[rid]) continue;
+      const amt = Number(c.claimed_amount || 0);
+      (byRep[rid] ??= { jobs:0, rev:0, appts:0, list:[] });
+      byRep[rid].rev += amt; byRep[rid].jobs++;
+      byRep[rid].rung = (byRep[rid].rung || 0) + amt;
+      byRep[rid].rungCount = (byRep[rid].rungCount || 0) + 1;
+      byRep[rid].list.push({ cust: c.customer_name || null,
+        brand: rollup(c.cc_company_id || 'unknown'), resolved: !!c.cc_company_id,
+        amount: amt, src:'bell',
+        rep: repById[rid]?.name || 'Unknown', repId: rid });
+    }
     const unionRev = rev + (bd ? bd.value : 0);
 
     /* Each rep and each brand carries its own job list, capped and sorted by
@@ -4063,8 +4113,9 @@ function buildData(raw){
         role: id === OFFICE ? 'office-sent' : (repById[id]?.role ?? 'sales'),
         office: id === OFFICE,
         ...capped(v),
-        // close rate is CC-over-CC; a Billdu deal carries no CC appointment
-        close: v.appts ? Math.round((v.jobs - (v.billduCount||0))/v.appts*100) : null,
+        // close rate is CC-over-CC; a Billdu deal or a bell claim carries no CC
+        // appointment, and mixing either in would inflate it
+        close: v.appts ? Math.round((v.jobs - (v.billduCount||0) - (v.rungCount||0))/v.appts*100) : null,
       })).filter(r=>r.rev>0||r.appts>0).sort((x,y)=>y.rev-x.rev),
     };
   }
@@ -5231,6 +5282,13 @@ function buildData(raw){
     // sells flag travel together so the pager never re-derives who someone is
     roster: Object.fromEntries(reps.map(r =>
       [r.id, { name:r.name, initials:r.initials, role:r.role, sells:!!r.sells, active:!!r.active }])),
+    /* Per-rep money position for the bank line, straight off my_commission_summary
+       (086/088). Absent rows stay absent — a rep with no imported ledger gets no
+       line, never a $0 that reads as "no money owed". */
+    bank: Object.fromEntries((bank || []).map(b => [String(b.rep_id), {
+      banked: Number(b.banked || 0),
+      coming: Number(b.earned_awaiting_collection || 0),
+      paidYtd: Number(b.paid_ytd || 0) }])),
     coverage: { jobs: jobs.length, appts: appts.length,
       apptsWithRep: appts.filter(a=>a.rep_id).length, touches: touches.length,
       // Coverage of the field every dollar on this page is actually built from.
