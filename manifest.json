@@ -1,6 +1,6 @@
 {
-  "name": "Liberty Command",
-  "short_name": "Command",
+  "name": "TruReview Autopilot",
+  "short_name": "TruReview",
   "description": "Three companies, one instrument. Sales, pace, lead sources and team effort — read live, sign-in required.",
   "start_url": "./index.html",
   "scope": "./",
