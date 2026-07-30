@@ -188,7 +188,13 @@
 <script>
 const SB_URL = 'https://lzegjjbkfuecrhdvlvay.supabase.co';
 const SB_KEY = 'sb_publishable_kToiGqET7XzO2It9evStJw_kYzvjSF8';
-const SKEY = 'lcc.session';   // shared with the console — same origin, same project
+/* OWN key, never the console's. v1 shared 'lcc.session' so a signed-in console
+   user landed here without typing a password — and the first time Kevin signed
+   into the playground as a demo user, the demo session overwrote the console's
+   and his dashboard went dark (RLS honestly showing Demo Rep nothing). The
+   convenience is not worth a page that can sign the owner out of his own
+   console. The playground signs in on its own, in its own slot. */
+const SKEY = 'lcc.file.session';
 
 const LANE_TYPES = {  // mirrors lane_allows() in the database; the DB still decides
   CHAT:   ['CUSTOMER_REQUEST','SCHEDULE_QUESTION'],
@@ -388,8 +394,15 @@ $('feed').addEventListener('click', async e => {
   } catch(err){ showErr(err); b.disabled = false; }
 });
 
-/* ── boot: reuse a console session when one exists ─────────────── */
+/* ── boot ──────────────────────────────────────────────────────── */
 (async function(){
+  // Repair v1's damage: if the CONSOLE's slot is holding a playground demo
+  // session (the overwrite bug), clear it so the dashboard's own sign-in
+  // flow takes over cleanly next time it loads.
+  try {
+    const c = JSON.parse(localStorage.getItem('lcc.session'));
+    if (c && /@playground\.liberty$/i.test(c.email || '')) localStorage.removeItem('lcc.session');
+  } catch(e){}
   const s = sess.get();
   if (s && s.access_token){ S = s; if (await refresh()) { showApp(); return; } }
   showAuth();
