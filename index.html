@@ -1718,6 +1718,13 @@ function cardReps(){
       const tot2 = all.reduce((n,r)=>n+r.rev,0), deals2 = all.reduce((n,r)=>n+r.jobs,0);
       const pAll = ((W.prev||{}).reps)||[], pTot = pAll.reduce((n,r)=>n+r.rev,0);
       const dp = pTot ? Math.round((tot2-pTot)/pTot*100) : null;
+      /* The board total counts rung 🛎️ claims (a rep's credit the moment they
+         ring, per the 086 fold) — the Signed hero does not, because a claim is
+         not company money until CC books it. Kevin read "$217K" up top and
+         "$312K" here (31 Jul) and rightly called it a discrepancy: two honest
+         numbers, zero explanation. So the seam is stated on the face of the
+         total — confirmed vs rung — instead of leaving him to reconcile it. */
+      const rung2 = all.reduce((n,r)=>n+(r.rung||0),0);
       return `<div style="margin:6px 0 10px">
         <div style="font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--text-dim)">All reps · ${label}</div>
         <div style="display:flex;align-items:baseline;gap:12px">
@@ -1725,6 +1732,7 @@ function cardReps(){
           ${dp!==null?`<span class="${dp>=0?'up':'dn'}" style="font-family:'JetBrains Mono',monospace;font-size:15px;font-weight:700">${dp>=0?'▲':'▼'} ${Math.abs(dp)}%</span>`:''}
         </div>
         <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text-dim);margin-top:2px">${deals2} deal${deals2===1?'':'s'}${dp!==null?` · vs <b style="color:var(--text)">${short(pTot)}</b> ${esc(W.prevLabel||'')}`:''}</div>
+        ${rung2?`<div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text-dim);margin-top:4px">= <b style="color:var(--text)">${short(tot2-rung2)}</b> confirmed · cc + billdu (the Signed figure up top) + <b style="color:var(--text)">${short(rung2)}</b> rung 🛎️ pending CC — board credit, not company money yet</div>`:''}
       </div>`; })()}
     ${reps.map((r,i)=>`<div class="rep-row${r.office?'':' acc'}"${i>=CORE?' data-extra="1" style="display:none"':''} ${r.office?'style="opacity:.8"':`onclick="openRep('${esc(String(r.id))}')"`}>
       <div class="rep-head">
@@ -3673,7 +3681,7 @@ addEventListener('resize', () => {
    server for hours while Kevin looked at yesterday's build and reported the bug
    as unfixed. That happened. The page now checks version.json on every load and
    reloads itself once if the deployed build is newer than the one running. */
-const BUILD = '2026-07-30T22:05Z-rings-count-in-close-rate';
+const BUILD = '2026-07-31T16:00Z-all-reps-total-states-rung-seam';
 const SB_URL = 'https://lzegjjbkfuecrhdvlvay.supabase.co';
 /* The one page that can finish a password reset. Hard-coded rather than derived,
    because every derivation of it so far has been a source of bugs: a bare origin
