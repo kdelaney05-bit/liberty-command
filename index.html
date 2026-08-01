@@ -402,6 +402,31 @@
   .wn-t { font-size: 12.5px; line-height: 1.55; color: var(--text-dim); }
   .wn-t b { color: var(--text); font-weight: 600; }
 
+  /* ── the month time machine ── a pager on the MTD view, and a banner that
+     makes "you are looking at July" impossible to miss — a shifted page that
+     looks like the live page is the misread this exists to prevent */
+  .mnav { display: flex; align-items: center; gap: 8px; margin: 0 0 10px; }
+  .mnav .mn-btn { font-family: 'JetBrains Mono', monospace; font-size: 14px; line-height: 1;
+    padding: 5px 12px; border-radius: 8px; border: 1px solid var(--line2);
+    background: transparent; color: var(--text); cursor: pointer; }
+  .mnav .mn-btn:disabled { opacity: .3; cursor: default; }
+  .mnav .mn-cur { font-family: 'JetBrains Mono', monospace; font-size: 11px;
+    letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-dim); }
+  .mnav .mn-cur.back { color: var(--gold); }
+  .mnav .mn-now { font-family: 'JetBrains Mono', monospace; font-size: 10px;
+    letter-spacing: 0.1em; text-transform: uppercase; padding: 5px 10px;
+    border-radius: 8px; border: 1px solid rgba(212,177,90,0.45);
+    background: rgba(212,177,90,0.08); color: var(--gold); cursor: pointer; }
+  .mbanner { display: flex; flex-wrap: wrap; align-items: center; gap: 10px;
+    margin: 0 0 14px; padding: 10px 14px; border-radius: 10px;
+    background: rgba(212,177,90,0.08); border-left: 3px solid var(--gold);
+    font-size: 12.5px; line-height: 1.55; color: var(--text-dim); }
+  .mbanner b { color: var(--text); font-weight: 600; }
+  .mbanner button { font-family: 'JetBrains Mono', monospace; font-size: 10px;
+    letter-spacing: 0.1em; text-transform: uppercase; padding: 4px 10px;
+    border-radius: 8px; border: 1px solid rgba(212,177,90,0.45);
+    background: transparent; color: var(--gold); cursor: pointer; margin-left: auto; }
+
   /* ── NOTICE → DO ── every signal states what is off and what to do about it */
   .acts.hasfire { border-color: rgba(217,106,94,0.35); }
   .acts.haswatch { border-color: rgba(212,177,90,0.3); }
@@ -900,6 +925,39 @@ function allBrands(rows){
 }
 
 let D = null;
+/* ── THE MONTH TIME MACHINE ─────────────────────────────────────────────────
+   Kevin (1 Aug): "we don't have anything that shows previous months data. Like
+   I can't see last month at all." He asked on the exact morning the problem is
+   worst — August 1, when MTD resets and all of July vanishes from the page.
+
+   MONTHOFF is how many months back the MONTH window is anchored: 0 = the live
+   month, 1 = last month, … capped at 12 (appointments are only fetched 13
+   months back, so beyond that the appointment tiles would silently read low —
+   the cap keeps every shifted surface honest rather than mostly-honest).
+
+   The shift is applied where the month window is BUILT (WINS in buildData), so
+   every month-scoped card inherits it at once — hero, month so far, sales by
+   rep, quota fleet, appointments by company, lead sources, the month dive.
+   That is Kevin's own ruling applied again: "we click week, months and
+   everything just shifts — super useful, should be used anytime we can."
+   Day / week / YTD stay anchored to now — a banner states the split. */
+let MONTHOFF = 0;
+let RAW = null;   // the fetched rows, kept so a month shift can rebuild D without refetching
+const MNAMES = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+function setMonthOff(n){
+  MONTHOFF = Math.max(0, Math.min(12, n));
+  if (!RAW) return;
+  keepScroll(() => { D = buildData(RAW); });
+}
+/* The banner riding above any shifted page. Projections and "pace" language
+   disappear while it is up (a closed month has no pace); this is the one
+   loud thing that explains why. */
+function monthBanner(){
+  if (!MONTHOFF) return '';
+  const nowName = MNAMES[new Date().getMonth()];
+  return `<div class="mbanner"><span>Viewing <b>${esc(D.windows.month.label)}</b> — every month-scoped card on this page is showing ${esc(D.windows.month.label)}. Today, week and YTD figures stay live as always.</span>
+    <button onclick="setMonthOff(0)">back to ${esc(nowName)}</button></div>`;
+}
 // Card-scoped windows. The page as a whole stays MTD per the model; only the
 // scoreboard and the lead-source table carry their own range.
 let EFFWIN = 'month', LEADWIN = 'month', LEADTRADE = '1461';
@@ -925,6 +983,10 @@ const flat = k => ({ ...D.windows[k], ...D.windows[k].company });
 const billduDown = () => !D.oasisLag;
 const w  = () => flat('month');
 const wk = () => flat('week');
+/* The month window's span label, time-machine-aware: "this month" only while
+   the page is on the live month — a shifted page saying "this month" over
+   July's numbers is the misread the banner exists to kill. */
+const mSpan = () => MONTHOFF ? D.windows.month.label : 'this month';
 const qbOK = () => D.qb && !D.qb.unavailable;
 const qbw = () => qbOK() ? D.qb.windows.month : null;
 const qbWinOf = k => qbOK() ? D.qb.windows[k] : null;
@@ -979,7 +1041,9 @@ function spanOf(k){
   const n = new Date();
   if (k === 'day')  return 1;
   if (k === 'week') return 7;
-  if (k === 'month') return new Date(n.getFullYear(), n.getMonth()+1, 0).getDate();
+  // the VIEWED month's own length — with the time machine on, "the month" may
+  // be February, and pace math against the live month's 31 days would lie
+  if (k === 'month') return new Date(n.getFullYear(), n.getMonth() - MONTHOFF + 1, 0).getDate();
   const eoy = new Date(n.getFullYear(), 11, 31);
   return Math.round((eoy - new Date(n.getFullYear(),0,1)) / 86400000) + 1;
 }
@@ -1003,6 +1067,7 @@ function setHeroWin(k){ keepScroll(() => { HEROWIN = k; }); }
    a projection needs a month to project. Same shape-aware math as the full
    card, which stays intact behind the fold. */
 function heroTrend(){
+  if (MONTHOFF) return '';   // a closed month has no "trending to finish" — it finished
   const W = flat('month'), SH = D.monthShape || {};
   const elapsed = SH.elapsedDOM || W.prevSpanDays;
   const days = SH.dim || new Date(new Date().getFullYear(), new Date().getMonth()+1, 0).getDate();
@@ -1035,7 +1100,8 @@ function hdrTitle(){
   </div>`;
 }
 function hdr(){
-  const k = HEROWIN, label = { day:'Today', week:'This week', month:'MTD', ytd:'YTD' }[k];
+  const mBtn = MONTHOFF ? MNAMES[new Date(new Date().getFullYear(), new Date().getMonth() - MONTHOFF, 1).getMonth()].slice(0,3) : 'MTD';
+  const k = HEROWIN, label = { day:'Today', week:'This week', month: MONTHOFF ? D.windows.month.label : 'MTD', ytd:'YTD' }[k];
   const W = flat(k), pv = W.prev;
   const d = pv.rev ? Math.round((W.rev - pv.rev)/pv.rev*100) : null;
   const wr = k === 'week' ? weekReset() : null;
@@ -1046,9 +1112,16 @@ function hdr(){
       : (W.prevSpanDays >= spanOf(k) ? `${W.jobs} signed` : `pace ${short(paceOf(k))}`);
   const q = qbWinOf(k);
   return `<div class="hdr">
+    ${monthBanner()}
     <div class="seg" style="margin:0 0 10px">
-      ${[['day','Today'],['week','Week'],['month','MTD'],['ytd','YTD']].map(([kk,l])=>`<button class="${kk===k?'on':''}" onclick="setHeroWin('${kk}')">${l}</button>`).join('')}
+      ${[['day','Today'],['week','Week'],['month',mBtn],['ytd','YTD']].map(([kk,l])=>`<button class="${kk===k?'on':''}" onclick="setHeroWin('${kk}')">${l}</button>`).join('')}
     </div>
+    ${k === 'month' ? `<div class="mnav">
+      <button class="mn-btn" ${MONTHOFF>=12?'disabled':''} onclick="setMonthOff(MONTHOFF+1)" aria-label="Previous month">‹</button>
+      <span class="mn-cur${MONTHOFF?' back':''}">${MONTHOFF ? esc(D.windows.month.label) : 'This month'}</span>
+      <button class="mn-btn" ${MONTHOFF?'':'disabled'} onclick="setMonthOff(MONTHOFF-1)" aria-label="Next month">›</button>
+      ${MONTHOFF?`<button class="mn-now" onclick="setMonthOff(0)">back to now</button>`:''}
+    </div>` : ''}
     <div class="hero1">
       <button class="snap bigsnap" onclick="openWindow('${k}')" aria-label="Signed ${esc(label)} — open details">
         <div class="snap-k" style="color:var(--green)">Signed · ${esc(label)}</div>
@@ -1252,7 +1325,7 @@ function cardApptByCompany(){
   });
   const scale = Math.max(1, ...rows.map(r => Math.max(r.n, r.t)));
   const unknown = W.counts.unknown || 0;
-  const spanLabel = { day:'today', week:'this week', month:'this month', ytd:'year to date' }[K];
+  const spanLabel = { day:'today', week:'this week', month:mSpan(), ytd:'year to date' }[K];
   return `<div class="card full apco-band">
     <div class="card-title">Appointments by company<span class="feed-tag cc">live · cc</span></div>
     <div class="card-sub">New appointments <b>booked</b> ${spanLabel}, by company, each against ${W.typLabel} — like for like, never a partial window against a finished one.</div>
@@ -1371,7 +1444,7 @@ function toggleMinor(k){
 function cardQuota(){
   const Q = D.quotaBoard; if (!Q || !Q.carriers.length) return '';
   const K = QUOTAWIN, W = Q.wins[K];
-  const label = { week:'this week', month:'this month', ytd:'year to date' }[K];
+  const label = { week:'this week', month:mSpan(), ytd:'year to date' }[K];
   /* A seller at zero stays — showing who is under the floor is the point.
      A non-seller (owner, non-selling manager) appears only in windows where
      they actually signed; their $0 weeks are not a floor miss, they are a
@@ -1514,13 +1587,13 @@ function cardStats(){
      card, and a 49px sliver holding nothing but a sentence. Together they are a
      card like every other. */
   return `<div class="card">
-    <div class="card-title">The month so far<span class="feed-tag cc">live · cc</span>${qbOK()?'<span class="feed-tag qb">live · qb</span>':''}</div>
+    <div class="card-title">${MONTHOFF ? esc(W.label) + ' — closed month' : 'The month so far'}<span class="feed-tag cc">live · cc</span>${qbOK()?'<span class="feed-tag qb">live · qb</span>':''}</div>
     <div class="stat-grid" style="margin-top:10px">
-    <div class="stat-tile"><div class="lbl">Signed MTD</div>
+    <div class="stat-tile"><div class="lbl">Signed${MONTHOFF?'':' MTD'}</div>
       <div class="val green">${short(W.rev)}</div><div class="sub">${W.jobs} contracts · cc</div>${dl(W.rev,pv.rev)}</div>
     <div class="stat-tile"><div class="lbl">Appts scheduled</div>
       <div class="val blue">${W.appts}</div><div class="sub">${W.close===null?'no close rate':W.close+'% closed'}</div>${dl(W.appts,pv.appts)}</div>
-    <div class="stat-tile"><div class="lbl">Built MTD</div>
+    <div class="stat-tile"><div class="lbl">Built${MONTHOFF?'':' MTD'}</div>
       ${q ? `<div class="val gold">${short(q.invoiced)}</div><div class="sub">${q.count} invoice${q.count===1?'':'s'} · billed when built · qb</div>${dl(q.invoiced,q.prev.invoiced)}`
           : `<div class="val" style="color:var(--text-dim)">—</div><div class="sub">not readable</div><div class="delta flat">see note below</div>`}</div>
     <div class="stat-tile"><div class="lbl">Open A/R</div>
@@ -1548,6 +1621,37 @@ function cardStats(){
    a number the team committed to. ─────────────────────────────────────────── */
 function cardTrending(){
   const W = w();
+  /* Time machine: a closed month gets a RESULT, not a forecast. Same tiles,
+     same goal chips, but the headline is what the month actually closed at —
+     projecting a finished month would be the exact "faked actual" the data
+     honesty law bans. */
+  if (MONTHOFF) {
+    const rows0 = allBrands(W.brands).sort((a,b) => b.rev - a.rev);
+    return `<div class="card">
+      <div class="card-title">Against goal · ${esc(W.label)}<span class="feed-tag cc">live · cc</span><span class="feed-tag seed">goal · auto-set</span></div>
+      <div class="card-sub">${esc(W.label)} is closed — what each brand finished at, against its auto-set goal. History, not a forecast.</div>
+      ${rows0.length ? rows0.map(b => {
+        const m = brandOf(b.id);
+        const tgt = D.targets.monthly[b.id] || 0;
+        const hit = tgt && b.rev >= tgt;
+        const mx = Math.max(b.rev, tgt, 1);
+        return `<div class="brand-tile">
+          <div class="brand-top"><div class="nm">${esc(m.n)}<span class="tag">${b.jobs} signed${m.unmapped?' · unmapped id':''}</span></div></div>
+          <div class="proj-head">
+            <div class="proj-v" style="color:${tgt ? (hit?'var(--green-soft)':'var(--gold)') : 'var(--text)'}">${short(b.rev)}</div>
+            <div class="proj-u">closed at<br/><span>${tgt?`goal was ${short(tgt)}`:'no goal set'}</span></div>
+          </div>
+          <div class="pace-bar">
+            <div class="pace-proj" style="width:${Math.round(tgt/mx*100)}%;background:${m.c};opacity:.25"></div>
+            <div class="pace-solid" style="width:${Math.round(b.rev/mx*100)}%;background:${m.c}"></div>
+          </div>
+          <div class="tgt-cap">${tgt
+            ? `<span class="${hit?'hit':'miss'}">${hit?'cleared':'missed'} goal <b>${short(tgt)}</b> · ${pct(b.rev,tgt)}%</span>`
+            : '<span>no goal set</span>'}</div>
+        </div>`; }).join('') : `<div class="card-sub" style="margin:0">Nothing signed in ${esc(W.label)}.</div>`}
+      <div class="note">Goals are auto-set from each brand's recent average, not committed to — and they are today's goals applied backwards, not what the goal was at the time. ${esc(D.targets.note || '')}</div>
+    </div>`;
+  }
   const SH = D.monthShape || {};
   const elapsed = SH.elapsedDOM || W.prevSpanDays;
   const days = SH.dim || new Date(new Date().getFullYear(), new Date().getMonth()+1, 0).getDate();
@@ -1707,7 +1811,7 @@ function cardReps(){
   const core0 = all.filter(r => (D.roster[String(r.id)]||{}).sells || /\bgio\b/i.test(r.name||''));
   const rest0 = all.filter(r => !core0.includes(r));
   const reps = [...core0, ...rest0], CORE = core0.length, mx = Math.max(1, ...all.map(r=>r.rev));
-  const label = { day:'today', week:'this week', month:'this month', ytd:'this year' }[k];
+  const label = { day:'today', week:'this week', month:mSpan(), ytd:'this year' }[k];
   return `<div class="card">
     <div class="card-title">Sales by rep<span class="feed-tag cc">live · cc</span></div>
     <div class="seg" style="margin:8px 0 4px">
@@ -1983,7 +2087,7 @@ function cardMoney(){
 function cardEffort(){
   const E = D.effort;
   const K = EFFWIN, span = E.spans[K] || 1;
-  const label = { day:'today', week:'this week', month:'this month', year:'this year' }[K];
+  const label = { day:'today', week:'this week', month:mSpan(), year:'this year' }[K];
   const live = E.rows.some(r => r[K].t > 0);
   // Ranked by touches in the window, points breaking ties. Reps who logged
   // nothing still appear — a scoreboard that hides its zeros is not a scoreboard.
@@ -2039,54 +2143,6 @@ function cardEffort(){
   </div>`;
 }
 
-/* ── 9b. EFFORT INTEL (31 Jul — Kevin: "put all those on their scoreboard and
-      mine"). Three feeds from migration 108's definer functions, fetched after
-      first paint so a missing migration can never block the page. Each block
-      renders only when its feed answered with data — absent, never fake. ── */
-let EFF_INTEL = null;
-async function loadEffortIntel(){
-  const win = EFFWIN === 'day' ? 'day' : EFFWIN === 'month' ? 'month' : 'week';
-  const [mix, close, hits] = await Promise.all([
-    q(`rpc/touch_board?p_win=${win}`).catch(() => null),
-    q('rpc/touch_close_stats').catch(() => null),
-    q('rpc/touch_hit_rates').catch(() => null),
-  ]);
-  EFF_INTEL = { mix, close, hits, win };
-  render();
-}
-function cardEffortIntel(){
-  const I = EFF_INTEL; if (!I) return '';
-  const CH = { call:'#6cc28b', text:'#6ba8c9', email:'#d9b96a' };
-  const mix = (I.mix||[]).filter(r => +r.touches > 0);
-  const close = (I.close||[]).filter(r => r.avg_touches_to_close != null);
-  const hits = (I.hits||[]).filter(r => +r.scored > 0);
-  if (!mix.length && !close.length && !hits.length) return '';
-  const mixRows = mix.map(r => {
-    const tot = Math.max(1, +r.touches);
-    const seg = ['call','text','email'].map(c => {
-      const n = +(r[c+'s']||0);
-      return n ? `<div style="height:9px;width:${Math.round(100*n/tot)}%;background:${CH[c]}"></div>` : '';
-    }).join('');
-    return `<div class="rep-row"><div class="rep-head"><div class="nm">${esc(r.name)}</div>
-      <div class="amt">${+r.calls||0}c · ${+r.texts||0}t · ${+r.emails||0}e</div></div>
-      <div class="meter" style="display:flex;overflow:hidden">${seg}</div></div>`;
-  }).join('');
-  const closeRows = close.map(r =>
-    `<div class="rep-row"><div class="rep-head"><div class="nm">${esc(r.name)}</div>
-      <div class="amt">${(+r.avg_touches_to_close).toFixed(1)} <span>touches/close · ${r.closes_with_touches} of ${r.closes_90d} closes</span></div></div></div>`).join('');
-  const hitTiles = hits.map(r =>
-    `<div class="stat-tile"><div class="lbl">${esc(r.channel)}s that hit</div>
-      <div class="val ${+r.engaged_pct>=25?'green':''}">${r.engaged_pct!=null?Math.round(+r.engaged_pct)+'%':'—'}</div>
-      <div class="sub">${r.scored} scored of ${r.touches}</div></div>`).join('');
-  return `<div class="card full">
-    <div class="card-title">Effort · intel<span class="feed-tag">live · db</span></div>
-    <div class="card-sub">Channel mix for the window above, touches-per-close over the last 90 days, and response rate where outcomes were tapped. Thin data reads thin; nothing is inferred.</div>
-    ${mix.length ? `<div class="note" style="margin:4px 0 8px">Channel mix — <b style="color:${CH.call}">calls</b> · <b style="color:${CH.text}">texts</b> · <b style="color:${CH.email}">emails</b></div>${mixRows}` : ''}
-    ${close.length ? `<div class="note" style="margin:14px 0 8px"><b>Touches per close</b> — the 4-Touch Autopilot proof number. Only closes carrying touch history count.</div>${closeRows}` : ''}
-    ${hits.length ? `<div class="stat-grid" style="margin-top:14px">${hitTiles}</div>` : ''}
-  </div>`;
-}
-
 /* ── LEAD SOURCES · MARKETING. The ids are complete on every job; the names are
       what CC will not return. Shown by id rather than withheld, because which
       ids carry the revenue is exactly what decides which ones are worth
@@ -2098,7 +2154,7 @@ function cardLeads(){
   const T = L.byTrade[LEADTRADE] || { allTime:[], windows:{}, distinct:0, namedIds:0, namedRevShare:0, jobs:0 };
   const m = brandOf(LEADTRADE);
   const rows = (T.windows[LEADWIN] || []).slice(0, 12);
-  const label = { day:'today', week:'this week', month:'this month', ytd:'year to date' }[LEADWIN];
+  const label = { day:'today', week:'this week', month:mSpan(), ytd:'year to date' }[LEADWIN];
   const tot = rows.reduce((n,r) => n + r.rev, 0);
   const mx = Math.max(1, ...rows.map(r => r.rev));
   /* Unmapped share for THIS company, all-time, by signed value. The map now
@@ -2664,6 +2720,11 @@ function cardActions(){
    resolution, the brand split, the like-for-like comparison, and who signed it.
    ═════════════════════════════════════════════════════════════════════════ */
 const DIVE_TITLE = { day:'Today', week:'This week', month:'This month', ytd:'Year to date' };
+/* Time-machine-aware dive titles: the month dive is titled by the month it
+   actually shows. diveLow is the mid-sentence form — a month NAME stays
+   capitalised ("Signed · July"), the relative labels lowercase as before. */
+const diveTitle = k => (k === 'month' && MONTHOFF) ? D.windows.month.label : DIVE_TITLE[k];
+const diveLow = k => (k === 'month' && MONTHOFF) ? D.windows.month.label : DIVE_TITLE[k].toLowerCase();
 const DIVE_SERIES = { day:'daily', week:'daily', month:'weeks', ytd:'monthly' };
 const DIVE_SERIES_LABEL = { day:'Last 14 days', week:'Last 14 days', month:'Last 3 weeks', ytd:'Last 13 months' };
 
@@ -2748,7 +2809,7 @@ function toggleBox(el){
    of faking one. */
 function diveBuilt(k){
   const W = flat(k);
-  const label = DIVE_TITLE[k].toLowerCase();
+  const label = diveLow(k);
   if (!qbOK()) return `<div class="card full" style="margin-bottom:12px">
     <div class="card-title">Built · ${esc(label)}<span class="feed-tag none">not readable</span></div>
     <div class="card-sub">What was billed — a job is billed when it is built, so the invoice is the built record.</div>
@@ -2807,9 +2868,10 @@ function diveView(k){
   return `
   <div class="backbar">
     <button class="backbtn" onclick="closeWindow()">‹ Back</button>
-    <div class="dive-h">${esc(DIVE_TITLE[k])}</div>
+    <div class="dive-h">${esc(diveTitle(k))}</div>
   </div>
 
+  ${k === 'month' ? monthBanner() : ''}
   ${k === 'week' ? weekResetNote() : ''}
 
   ${(()=>{ const s = sigFor('dive:'+k);
@@ -2819,7 +2881,7 @@ function diveView(k){
     </div>` : ''; })()}
 
   <div class="card full" style="margin-bottom:12px">
-    <div class="card-title">Signed · ${esc(DIVE_TITLE[k].toLowerCase())}<span class="feed-tag cc">live · cc</span>${W.billdu?'<span class="feed-tag billdu">live · billdu</span>':''}${billduDown()?'<span class="feed-tag none">billdu unreadable</span>':''}</div>
+    <div class="card-title">Signed · ${esc(diveLow(k))}<span class="feed-tag cc">live · cc</span>${W.billdu?'<span class="feed-tag billdu">live · billdu</span>':''}${billduDown()?'<span class="feed-tag none">billdu unreadable</span>':''}</div>
     <div class="alloc-chart" style="width:180px;height:180px"><canvas id="cDiveMix"></canvas>
       <div class="alloc-center"><div class="big" style="font-size:22px">${short(W.rev)}</div><div class="lbl">signed</div></div></div>
     <div class="alloc-legend" style="margin-bottom:10px">${allBrands(W.brands).map(b => { const m = brandOf(b.id);
@@ -2882,11 +2944,14 @@ function diveView(k){
     </div>`; })()}
 
   <div class="stack dive">
-    <div class="card chart-card full">
+    ${/* The recent-history chart is anchored to NOW (last 3 weeks / 14 days),
+          so under the time machine it would show weeks that have nothing to do
+          with the month on screen — dropped rather than mislabelled. */''}
+    ${(k === 'month' && MONTHOFF) ? '' : `<div class="card chart-card full">
       <div class="card-title">${esc(DIVE_SERIES_LABEL[k])}<span class="feed-tag cc">live · cc</span></div>
       <div class="card-sub">Signed value, so this window sits in its own recent history.</div>
       <div class="chart-wrap"><canvas id="cDive"></canvas></div>
-    </div>
+    </div>`}
 
     ${(W.brands.find(b=>String(b.id)==='1560')?.rev) ? '' : oasisNote(k)}
 
@@ -2943,7 +3008,7 @@ function diveView(k){
 function diveAppointments(k){
   const A = D.appointments; if (!A || !A.perWindow) return '';
   const p = A.perWindow[k], W = flat(k);
-  const label = { day:'today', week:'this week', month:'this month', ytd:'year to date' }[k];
+  const label = { day:'today', week:'this week', month:mSpan(), ytd:'year to date' }[k];
   const dl = (a,b) => b ? Math.round((a-b)/b*100) : null;
   const dB = dl(p.booked, p.bookedPrev), dH = dl(p.held, p.heldPrev);
   const bookedRows = Object.entries(p.bookedByBrand).sort((a,b)=>b[1]-a[1]);
@@ -3001,7 +3066,7 @@ function diveAppointments(k){
 function diveMarketing(k){
   const L = D.leadSources; if (!L) return '';
   const rows = (L.windows[k] || []).slice(0, 8);
-  const label = { day:'today', week:'this week', month:'this month', ytd:'year to date' }[k];
+  const label = { day:'today', week:'this week', month:mSpan(), ytd:'year to date' }[k];
   const tot = rows.reduce((n,r)=>n+r.rev,0);
   const mx = Math.max(1, ...rows.map(r=>r.rev));
   return `<div class="card full">
@@ -3085,7 +3150,7 @@ function repStats(id, k){
 
 function repView(id){
   const k = REPWIN, S = repStats(id, k);
-  const label = DIVE_TITLE[k].toLowerCase();
+  const label = diveLow(k);
   const Y = k === 'ytd' ? S : repStats(id, 'ytd');
   const avg = S.deals ? Math.round(S.rev / S.deals) : 0;
 
@@ -3310,16 +3375,6 @@ function render(){
          in the open flow rather than behind a click at the bottom. */
       cardLeads(),
 
-      /* EFFORT · TOUCHES — written for v1 but never wired into this stack;
-         found 31 Jul when Kevin asked why touches were "not on my dashboard"
-         while the card sat here complete and uninvoked. Placed open (not
-         folded), ranked by touches: his words — "mine, in order of touches."
-         cardEffortIntel rides under it: channel mix, touches-per-close and
-         hit-rates from the 108 rpc functions, each honestly absent until its
-         feed answers. */
-      cardEffort(),
-      cardEffortIntel(),
-
       /* Everything below folds, and folds together, so they land as one quiet
          strip rather than as short rows scattered through the columns. None of
          it is less true — it is the working rather than the reading, and he
@@ -3342,7 +3397,7 @@ function keepScroll(fn){
   fn(); render();
   window.scrollTo({ top: y });
 }
-function setEff(k){ keepScroll(() => { EFFWIN = k; }); loadEffortIntel(); }
+function setEff(k){ keepScroll(() => { EFFWIN = k; }); }
 function setApptCo(k){ keepScroll(() => { APPTCOWIN = k; }); }
 function setQuota(k){ keepScroll(() => { QUOTAWIN = k; }); }
 function setLead(k){ keepScroll(() => { LEADWIN = k; }); }
@@ -3739,7 +3794,7 @@ addEventListener('resize', () => {
    server for hours while Kevin looked at yesterday's build and reported the bug
    as unfixed. That happened. The page now checks version.json on every load and
    reloads itself once if the deployed build is newer than the one running. */
-const BUILD = '2026-08-01T05:30Z-effort-on-the-dash';
+const BUILD = '2026-08-01T15:00Z-month-time-machine';
 const SB_URL = 'https://lzegjjbkfuecrhdvlvay.supabase.co';
 /* The one page that can finish a password reset. Hard-coded rather than derived,
    because every derivation of it so far has been a source of bugs: a bare origin
@@ -3963,10 +4018,17 @@ function buildData(raw){
     const [y,m,d] = s.slice(0,10).split('-').map(Number);
     const t = new Date(y, m-1, d).getTime(); return t >= a.getTime() && t < b.getTime(); };
 
+  /* The month window honours MONTHOFF (the time machine). A shifted month is
+     labelled by NAME, never "This month" — the label is the data's honesty
+     badge, and it flows to every card and dive that renders W.label. The year
+     is appended only when it differs from the current one. */
+  const mFrom = addM(som(NOW), -MONTHOFF);
+  const mName = d => MNAMES[d.getMonth()] + (d.getFullYear() === NOW.getFullYear() ? '' : ' ' + d.getFullYear());
   const WINS = {
     day:  { label:'Today',        from:sod(NOW), to:addD(sod(NOW),1), pFrom:addD(sod(NOW),-1), pTo:sod(NOW), pLabel:'yesterday' },
     week: { label:'This week',    from:sow(NOW), to:addD(sow(NOW),7), pFrom:addD(sow(NOW),-7), pTo:sow(NOW), pLabel:'last week' },
-    month:{ label:'This month',   from:som(NOW), to:addM(som(NOW),1), pFrom:addM(som(NOW),-1), pTo:som(NOW), pLabel:'last month' },
+    month:{ label: MONTHOFF ? mName(mFrom) : 'This month', from:mFrom, to:addM(mFrom,1),
+            pFrom:addM(mFrom,-1), pTo:mFrom, pLabel: MONTHOFF ? mName(addM(mFrom,-1)) : 'last month' },
     ytd:  { label:'Year to date', from:soy(NOW), to:addD(sod(NOW),1), pFrom:soy(addM(soy(NOW),-1)), pTo:addM(sod(NOW),-12), pLabel:'same point last year' },
   };
   const elapsedDays = w => Math.max(1, Math.ceil((Math.min(NOW.getTime(), w.to.getTime()) - w.from.getTime()) / D_));
@@ -4709,7 +4771,10 @@ function buildData(raw){
       const bd = billduAdd(wv.from, wv.to);
       if (bd) for (const [rid, v] of Object.entries(bd.byRep))
         if (rid !== OFFICE) sig[rid] = (sig[rid] || 0) + v.value;
-      const el = elapsedCal(wv.from);
+      /* capped at the window's own span: under the time machine a closed month's
+         "elapsed" would otherwise keep counting into today and inflate the floor */
+      const el = Math.min(elapsedCal(wv.from),
+                          Math.max(1, Math.round((wv.to - wv.from) / 86400000)));
       wins[k] = { elapsed: el, pace: Math.round(DAILY * el), sig };
     }
     const producers = new Set();
@@ -5614,10 +5679,12 @@ async function loadAll(){
       qp('my_commission_summary?select=rep_id,banked,banked_deals,earned_awaiting_collection,jobs_not_built_value,paid_ytd'),
     ]);
   } catch(e){ claims = []; bank = []; }
-  D = buildData({ jobs, appts, reps, touches, repTargets, playComponents,
-    leadNames, qbInv, qbError, billdu, claims, bank });
+  /* RAW is kept so the month time machine can rebuild every window client-side
+     — a shift is a re-slice of rows already in memory, never a refetch. */
+  RAW = { jobs, appts, reps, touches, repTargets, playComponents,
+    leadNames, qbInv, qbError, billdu, claims, bank };
+  D = buildData(RAW);
   render();
-  loadEffortIntel();   // after first paint — a missing 108 can never block the page
 }
 
 /* Reload once if the server has a newer build than the one running. Guarded by a
