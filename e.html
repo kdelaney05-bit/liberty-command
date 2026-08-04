@@ -1,0 +1,45 @@
+<!doctype html><html lang="en"><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Your Estimate</title>
+<style>
+  html,body{margin:0;min-height:100%;background:#f4f2ec;color:#22281f;
+    font:16px/1.5 -apple-system,system-ui,sans-serif}
+  header{background:#1c3055;color:#fff;padding:14px 16px;display:flex;
+    justify-content:space-between;align-items:center;gap:12px}
+  h1{font-size:15px;margin:0;font-weight:700;letter-spacing:.06em}
+  a.dl{font-size:13px;color:#ffd58a;text-decoration:none;font-weight:600}
+  .wrap{padding:14px;max-width:760px;margin:0 auto}
+  .wrap img{width:100%;height:auto;display:block;border-radius:10px;
+    box-shadow:0 2px 18px rgba(20,30,50,.25);background:#fff}
+  iframe{border:0;width:100%;height:82vh;background:#fff;border-radius:10px}
+  .folder{display:block;text-align:center;background:#1e6b3a;color:#fff;text-decoration:none;
+    font-weight:700;letter-spacing:.05em;border-radius:12px;padding:15px 16px;margin:16px 0 30px}
+</style>
+<header><h1>YOUR ESTIMATE</h1><a class="dl" id="dl" href="#" download>Download</a></header>
+<div class="wrap" id="wrap"></div>
+<script>
+  var q=new URLSearchParams(location.search);
+  var t=q.get('t'), m=q.get('m')||'i', f=q.get('f');
+  var src='https://lzegjjbkfuecrhdvlvay.supabase.co/functions/v1/estimate-view/'+t+'/pdf';
+  document.getElementById('dl').href=src;
+  var w=document.getElementById('wrap');
+  if(!t){ w.innerHTML='<p style="text-align:center;color:#8a8f85;padding:40px 10px">This estimate isn\u2019t available. Please contact your rep for a new link.</p>'; }
+  else {
+    w.innerHTML=(m==='p'?'<iframe src="'+src+'" title="Estimate"></iframe>'
+                        :'<img src="'+src+'" alt="Your estimate">')
+      +(f?'<a class="folder" href="https://lzegjjbkfuecrhdvlvay.supabase.co/functions/v1/folder/'+f+'?e='+t+'">BROWSE OUR DESIGN FOLDER \u2192</a>':'');
+  }
+</script>
+<script>
+  var viewId=q.get('v')||null, seconds=0, timer=null;
+  function beat(){ if(!viewId||!t) return;
+    fetch('https://lzegjjbkfuecrhdvlvay.supabase.co/functions/v1/estimate-view/'+t+'/beat',{method:'POST',headers:{'content-type':'application/json'},
+      body:JSON.stringify({viewId:viewId,seconds:seconds})}).catch(function(){}); }
+  function start(){ if(timer) return; timer=setInterval(function(){ seconds+=15; beat(); },15000); }
+  function stop(){ if(timer){ clearInterval(timer); timer=null; beat(); } }
+  document.addEventListener('visibilitychange',function(){ document.hidden?stop():start(); });
+  window.addEventListener('pagehide',stop);
+  start();
+</script>
+</html>

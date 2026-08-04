@@ -1,0 +1,72 @@
+<!doctype html><html lang="en"><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex">
+<title>PRO-TECH ROOFING — Project Folder</title>
+<style>
+  :root{--accent:#8a1f1f}
+  html,body{margin:0;background:#faf8f2;color:#22281f;
+    font:16px/1.55 -apple-system,system-ui,"Segoe UI",sans-serif}
+  header{background:var(--accent);color:#fff;text-align:center;padding:34px 16px 26px}
+  header h1{margin:0;font-size:24px;letter-spacing:.18em;font-weight:800}
+  header p{margin:8px 0 0;opacity:.92;font-size:14px;letter-spacing:.04em}
+  main{max-width:760px;margin:0 auto;padding:18px 12px 8px}
+  .pg{margin:0 0 26px}
+  .pg h2{font-size:13px;letter-spacing:.12em;text-transform:uppercase;color:var(--accent);
+    margin:0 0 8px 4px;font-weight:700}
+  .pg img{width:100%;height:auto;display:block;border-radius:10px;
+    box-shadow:0 2px 14px rgba(30,50,30,.14);background:#fff}
+  .fin{background:#fff;border-radius:12px;box-shadow:0 2px 14px rgba(30,50,30,.14);
+    padding:26px 20px;margin:0 0 26px}
+  .fin h2{margin:0 0 4px;font-size:22px;color:var(--accent)}
+  .fin .lead{margin:0 0 18px;color:#5a614f;font-size:14px}
+  .plan{border:1.5px solid #e4e1d4;border-radius:10px;padding:16px;margin:0 0 12px}
+  .plan.hot{border-color:var(--accent);background:#f4f8f0;position:relative}
+  .plan.hot .tag{position:absolute;top:-10px;right:14px;background:var(--accent);color:#fff;
+    font-size:11px;font-weight:700;letter-spacing:.08em;padding:3px 10px;border-radius:99px}
+  .plan h3{margin:0 0 4px;font-size:17px}
+  .plan p{margin:0;font-size:14px;color:#4a5040}
+  .ex{display:flex;gap:10px;margin-top:10px;flex-wrap:wrap}
+  .ex span{background:#f4f2e9;border-radius:8px;padding:7px 11px;font-size:13px;color:#3c4234}
+  .fine{font-size:11.5px;color:#8b917f;margin:14px 0 0;line-height:1.5}
+  footer{text-align:center;color:#8b917f;font-size:13px;padding:10px 16px 40px}</style>
+<header><h1>PRO-TECH ROOFING</h1><p>Your Roofing Project Folder</p></header>
+<main>
+  <section class="pg"><h2>The Pro-Tech Process</h2><img src="https://lzegjjbkfuecrhdvlvay.supabase.co/storage/v1/object/public/folder-content/protech/protech-02.jpg" alt="The Pro-Tech Process" loading="lazy"></section>
+  <section class="pg"><h2>The Completed Job</h2><img src="https://lzegjjbkfuecrhdvlvay.supabase.co/storage/v1/object/public/folder-content/protech/protech-03.jpg" alt="The Completed Job" loading="lazy"></section>
+  <section class="pg"><h2>The Owens Corning System</h2><img src="https://lzegjjbkfuecrhdvlvay.supabase.co/storage/v1/object/public/folder-content/protech/protech-05.jpg" alt="The Owens Corning System" loading="lazy"></section>
+  <section class="pg"><h2>Warranty Protection</h2><img src="https://lzegjjbkfuecrhdvlvay.supabase.co/storage/v1/object/public/folder-content/protech/protech-06.jpg" alt="Warranty Protection" loading="lazy"></section>
+  <section class="pg"><h2>Shingle Colors</h2><img src="https://lzegjjbkfuecrhdvlvay.supabase.co/storage/v1/object/public/folder-content/protech/protech-07.jpg" alt="Shingle Colors" loading="lazy"></section>
+  <section class="pg"><h2>5V Metal — The Key West Look</h2><img src="https://lzegjjbkfuecrhdvlvay.supabase.co/storage/v1/object/public/folder-content/protech/protech-08.jpg" alt="5V Metal — The Key West Look" loading="lazy"></section>
+  <section class="pg"><h2>Standing Seam Metal</h2><img src="https://lzegjjbkfuecrhdvlvay.supabase.co/storage/v1/object/public/folder-content/protech/protech-09.jpg" alt="Standing Seam Metal" loading="lazy"></section>
+
+  <section class="fin">
+    <h2>Easy Payment Options</h2>
+    <p class="lead">Make your project affordable &mdash; most customers finance.</p>
+    <div class="plan hot"><span class="tag">MOST POPULAR</span>
+      <h3>18 Months &middot; No Interest</h3>
+      <p>Same-as-cash. Pay it off within 18 months and pay zero interest.</p></div>
+    <div class="plan">
+      <h3>Low Monthly Payments &middot; 9.99% APR</h3>
+      <p>Spread it out with payments that are typically just 1.2&ndash;1.8% of your project per month.</p>
+      <div class="ex"><span>$10,000 &rarr; from ~$120/mo</span><span>$25,000 &rarr; from ~$300/mo</span></div></div>
+    <div class="plan"><h3>Cards, Cash or Check</h3>
+      <p>Credit cards accepted with no processing fees.</p></div>
+    <p class="fine">With approved credit, through our lending partners. Programs change &mdash;
+    your representative will confirm today&rsquo;s exact terms and monthly payment.</p>
+  </section>
+</main>
+<footer>Prepared for you by your representative.</footer>
+
+<script>
+  var q=new URLSearchParams(location.search), viewId=q.get('v')||null;
+  var seconds=0, timer=null;
+  function beat(){ if(!viewId) return;
+    fetch('https://lzegjjbkfuecrhdvlvay.supabase.co/functions/v1/folder/protech/beat',{method:'POST',headers:{'content-type':'application/json'},
+      body:JSON.stringify({viewId:viewId,seconds:seconds})}).catch(function(){}); }
+  function start(){ if(timer) return; timer=setInterval(function(){ seconds+=15; beat(); },15000); }
+  function stop(){ if(timer){ clearInterval(timer); timer=null; beat(); } }
+  document.addEventListener('visibilitychange',function(){ document.hidden?stop():start(); });
+  window.addEventListener('pagehide',stop);
+  start();
+</script>
+</html>
