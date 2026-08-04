@@ -50,3 +50,24 @@ These are load-bearing, not decoration:
 - Targets that nobody set are badged as seeded, so a typed number never wears a
   measured number's badge.
 - Excluded records are counted out loud rather than quietly dropped.
+
+## Looking at it as a phone, from a desktop
+
+`preview.html` puts the live page inside a phone-sized frame so the mobile
+layout can be worked on without picking up a phone:
+
+**https://kdelaney05-bit.github.io/liberty-command/preview.html**
+
+It is an iframe, not a mock. Media queries read the viewport of the document
+they live in, and an iframe has its own — so a frame set to 393px makes the
+console evaluate every breakpoint exactly the way an iPhone does. The zoom
+control scales with a CSS transform, which does not change the layout viewport,
+so a preview shrunk to fit a laptop is still a truthful 393px render.
+
+Same origin, so the sign-in carries into the frame: real numbers, real feeds.
+Device presets, rotate, a `+ desktop` toggle for the two renders side by side,
+and a readout of which of the console's three layout bands (under 900px, 900px,
+1300px) the current width lands in. `r` rotates, `d` toggles the desktop, `f`
+refits.
+
+Edit `index.html`, push, then hit **↻ reload** in the bar.
