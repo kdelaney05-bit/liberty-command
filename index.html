@@ -1331,9 +1331,19 @@ function cardApptByCompany(){
     <div class="card-sub">New appointments <b>booked</b> ${spanLabel}, by company, each against ${W.typLabel} — like for like, never a partial window against a finished one.</div>
 
         <div class="seg">
-      ${[['day','Today'],['week','Week'],['month','Month'],['ytd','YTD']]
+      ${[['day','Today'],['week','Week'],['month', MONTHOFF ? MNAMES[new Date(new Date().getFullYear(), new Date().getMonth() - MONTHOFF, 1).getMonth()].slice(0,3) : 'Month'],['ytd','YTD']]
         .map(([k,l])=>`<button class="${k===K?'on':''}" onclick="setApptCo('${k}')">${l}</button>`).join('')}
     </div>
+
+    ${/* the month pager lives ON this card too — Kevin asked for other months
+          from HERE, and a pager he has to find on the hero first is a pager he
+          does not have. Same MONTHOFF, so the whole page shifts together. */''}
+    ${K === 'month' ? `<div class="mnav" style="margin-top:10px">
+      <button class="mn-btn" ${MONTHOFF>=12?'disabled':''} onclick="setMonthOff(MONTHOFF+1)" aria-label="Previous month">‹</button>
+      <span class="mn-cur${MONTHOFF?' back':''}">${MONTHOFF ? esc(D.windows.month.label) : 'This month'}</span>
+      <button class="mn-btn" ${MONTHOFF?'':'disabled'} onclick="setMonthOff(MONTHOFF-1)" aria-label="Next month">›</button>
+      ${MONTHOFF?`<button class="mn-now" onclick="setMonthOff(0)">back to now</button>`:''}
+    </div>` : ''}
 
     ${(() => { const tn = rows.reduce((n,r)=>n+r.n,0), tt = rows.reduce((n,r)=>n+r.t,0);
       const tp = tt ? Math.round((tn-tt)/tt*100) : null;
@@ -2140,6 +2150,63 @@ function cardEffort(){
       ${silent} of ${E.activeReps} active rep${silent===1?' has':'s have'} logged nothing ${esc(label)}${logged.length?'':' — and nobody has'}. Touch logging begins when reps go live: <b>zeros are real</b>, not a broken feed. Nothing is back-filled from sales activity, so a rep who closed work but logged no touches ranks at zero, because that is what the effort data says.</div></div>` : ''}
 
     <div class="note">Goal is <b>rep_targets.daily_touch_goal</b>, a real row per rep — all ${E.activeReps} currently sit at the company default of <b>${E.defaultGoal}/day</b>${E.goalsAllDefault?', none set their own yet':''}. Points are each play's own weight in <b>score_components</b> (${E.plays.map(p=>esc(p.title)).join(', ')} — ${E.plays[0]?.weight} each); Until Yes repeats, so its repeats count again. Goals are scaled by working days, not calendar days, or a Monday would read as a whole week missed.</div>
+  </div>`;
+}
+
+/* ── 9b. EFFORT INTEL (31 Jul — Kevin: "put all those on their scoreboard and
+      mine"). Three feeds from migration 108's definer functions, fetched after
+      first paint so a missing migration can never block the page. Each block
+      renders only when its feed answered with data — absent, never fake.
+      (Restored 5 Aug: the 1 Aug time-machine edit was written against a
+      pre-effort snapshot of this file and wiped this whole section plus both
+      render() call sites — the dash showed no touch data at all while the reps'
+      touches kept landing. The concurrent-session clobber the mirror rule
+      warns about, reconciled here.) ── */
+let EFF_INTEL = null;
+async function loadEffortIntel(){
+  const win = EFFWIN === 'day' ? 'day' : EFFWIN === 'month' ? 'month' : 'week';
+  const [mix, close, hits] = await Promise.all([
+    q(`rpc/touch_board?p_win=${win}`).catch(() => null),
+    q('rpc/touch_close_stats').catch(() => null),
+    q('rpc/touch_hit_rates').catch(() => null),
+  ]);
+  EFF_INTEL = { mix, close, hits, win };
+  render();
+}
+function cardEffortIntel(){
+  const I = EFF_INTEL; if (!I) return '';
+  const CH = { call:'#6cc28b', text:'#6ba8c9', email:'#d9b96a' };
+  /* touch_board answers for the LIVE month only — under the time machine its
+     mix would sit beside a shifted scoreboard and read as that month's. Dropped
+     rather than mislabelled, the same rule the dive chart follows. */
+  const mixOK = !(MONTHOFF && I.win === 'month');
+  const mix = mixOK ? (I.mix||[]).filter(r => +r.touches > 0) : [];
+  const close = (I.close||[]).filter(r => r.avg_touches_to_close != null);
+  const hits = (I.hits||[]).filter(r => +r.scored > 0);
+  if (!mix.length && !close.length && !hits.length) return '';
+  const mixRows = mix.map(r => {
+    const tot = Math.max(1, +r.touches);
+    const seg = ['call','text','email'].map(c => {
+      const n = +(r[c+'s']||0);
+      return n ? `<div style="height:9px;width:${Math.round(100*n/tot)}%;background:${CH[c]}"></div>` : '';
+    }).join('');
+    return `<div class="rep-row"><div class="rep-head"><div class="nm">${esc(r.name)}</div>
+      <div class="amt">${+r.calls||0}c · ${+r.texts||0}t · ${+r.emails||0}e</div></div>
+      <div class="meter" style="display:flex;overflow:hidden">${seg}</div></div>`;
+  }).join('');
+  const closeRows = close.map(r =>
+    `<div class="rep-row"><div class="rep-head"><div class="nm">${esc(r.name)}</div>
+      <div class="amt">${(+r.avg_touches_to_close).toFixed(1)} <span>touches/close · ${r.closes_with_touches} of ${r.closes_90d} closes</span></div></div></div>`).join('');
+  const hitTiles = hits.map(r =>
+    `<div class="stat-tile"><div class="lbl">${esc(r.channel)}s that hit</div>
+      <div class="val ${+r.engaged_pct>=25?'green':''}">${r.engaged_pct!=null?Math.round(+r.engaged_pct)+'%':'—'}</div>
+      <div class="sub">${r.scored} scored of ${r.touches}</div></div>`).join('');
+  return `<div class="card full">
+    <div class="card-title">Effort · intel<span class="feed-tag">live · db</span></div>
+    <div class="card-sub">Channel mix for the window above, touches-per-close over the last 90 days, and response rate where outcomes were tapped. Thin data reads thin; nothing is inferred.</div>
+    ${mix.length ? `<div class="note" style="margin:4px 0 8px">Channel mix — <b style="color:${CH.call}">calls</b> · <b style="color:${CH.text}">texts</b> · <b style="color:${CH.email}">emails</b></div>${mixRows}` : ''}
+    ${close.length ? `<div class="note" style="margin:14px 0 8px"><b>Touches per close</b> — the 4-Touch Autopilot proof number. Only closes carrying touch history count.</div>${closeRows}` : ''}
+    ${hits.length ? `<div class="stat-grid" style="margin-top:14px">${hitTiles}</div>` : ''}
   </div>`;
 }
 
@@ -3375,6 +3442,16 @@ function render(){
          in the open flow rather than behind a click at the bottom. */
       cardLeads(),
 
+      /* EFFORT · TOUCHES — wired 31 Jul when Kevin asked why touches were "not
+         on my dashboard" while the card sat here complete and uninvoked; wiped
+         again 1 Aug when the time-machine edit was written over it, and restored
+         5 Aug. Placed open (not folded), ranked by touches: his words — "mine,
+         in order of touches." cardEffortIntel rides under it: channel mix,
+         touches-per-close and hit-rates from the 108 rpc functions, each
+         honestly absent until its feed answers. */
+      cardEffort(),
+      cardEffortIntel(),
+
       /* Everything below folds, and folds together, so they land as one quiet
          strip rather than as short rows scattered through the columns. None of
          it is less true — it is the working rather than the reading, and he
@@ -3397,7 +3474,7 @@ function keepScroll(fn){
   fn(); render();
   window.scrollTo({ top: y });
 }
-function setEff(k){ keepScroll(() => { EFFWIN = k; }); }
+function setEff(k){ keepScroll(() => { EFFWIN = k; }); loadEffortIntel(); }
 function setApptCo(k){ keepScroll(() => { APPTCOWIN = k; }); }
 function setQuota(k){ keepScroll(() => { QUOTAWIN = k; }); }
 function setLead(k){ keepScroll(() => { LEADWIN = k; }); }
@@ -3794,7 +3871,7 @@ addEventListener('resize', () => {
    server for hours while Kevin looked at yesterday's build and reported the bug
    as unfixed. That happened. The page now checks version.json on every load and
    reloads itself once if the deployed build is newer than the one running. */
-const BUILD = '2026-08-01T15:00Z-month-time-machine';
+const BUILD = '2026-08-05T16:00Z-touches-back-appts-ride-the-time-machine';
 const SB_URL = 'https://lzegjjbkfuecrhdvlvay.supabase.co';
 /* The one page that can finish a password reset. Hard-coded rather than derived,
    because every derivation of it so far has been a source of bugs: a bare origin
@@ -4557,6 +4634,28 @@ function buildData(raw){
         };
       })(),
       month: (() => {
+        /* The month tab rides the time machine. Live month: first-N-days
+           against the same first-N-days of the prior 3 months — the week-reset
+           discipline. A shifted month is CLOSED: the whole month against the
+           prior 3 whole months, each measured at its own full length, because
+           "first 5 days of July" is nobody's question once July is over. */
+        if (MONTHOFF) {
+          const mFrom = addM(som(T), -MONTHOFF), mTo = addM(mFrom, 1);
+          const starts = [1,2,3].map(m => addM(mFrom, -m));
+          const typ = Object.fromEntries(BRAND_ORDER.map(b => {
+            const vals = starts.map(s => { let n = 0;
+              for (let d = new Date(s), e = addM(s,1); d < e; d = addD(d,1))
+                n += createdOn(ymdL(d))
+                       .filter(r => (projBrand[String(r.cc_project_id)]||'unknown') === b).length;
+              return n; });
+            return [b, { vals, mean: vals.length ? vals.reduce((a,c)=>a+c,0)/vals.length : 0 }];
+          }));
+          return {
+            typLabel: 'the prior 3 full months — a closed month reads whole against whole',
+            sampleLabel: 'prior 3 months', partial: false,
+            counts: bookedByBrandInRange(mFrom, mTo), typ,
+          };
+        }
         const starts = [1,2,3].map(m => new Date(T.getFullYear(), T.getMonth()-m, 1));
         return {
           typLabel: `the same ${elapsedMo} day${elapsedMo===1?'':'s'} of the prior 3 months`,
@@ -4795,7 +4894,10 @@ function buildData(raw){
     const goals = Object.fromEntries(repTargets.map(t=>[t.rep_id,t]));
     const todayA = sod(NOW), todayB = addD(todayA,1);
     const weekA = sow(NOW), weekB = addD(weekA,7);
-    const monthA = som(NOW), monthB = addM(monthA,1);
+    /* the month bucket honours the time machine — the card's month label
+       already reads the shifted month (mSpan), so the data must be that
+       month's or the label lies over live numbers */
+    const monthA = addM(som(NOW), -MONTHOFF), monthB = addM(monthA,1);
     const yearA = soy(NOW), yearB = addD(sod(NOW),1);
     const blank = () => ({ day:{t:0,p:0}, week:{t:0,p:0}, month:{t:0,p:0}, year:{t:0,p:0}, all:0, plays:{} });
     const byRep = {};
@@ -5685,6 +5787,7 @@ async function loadAll(){
     leadNames, qbInv, qbError, billdu, claims, bank };
   D = buildData(RAW);
   render();
+  loadEffortIntel();   // after first paint — a missing 108 can never block the page
 }
 
 /* Reload once if the server has a newer build than the one running. Guarded by a
