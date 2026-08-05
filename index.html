@@ -705,6 +705,40 @@
     line-height: 1.7; margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--line); }
   .note b { color: var(--text); font-weight: 600; }
 
+  /* ── the touch suite (5 Aug — "touch data no different than sales data") ── */
+  /* The branded band above the effort cards. This page gets filmed for the
+     owner film, so the effort section carries the product lockup — gold
+     treatment borrowed from .mbanner so it reads native, not as an ad. */
+  .prodband { border: 1px solid rgba(212,177,90,0.35); border-radius: 14px;
+    padding: 16px; margin-bottom: 4px; break-inside: avoid;
+    background: linear-gradient(135deg, rgba(212,177,90,0.08), rgba(240,131,74,0.05)); }
+  .prodband .pb-e { font-family: 'JetBrains Mono', monospace; font-size: 9px;
+    letter-spacing: 0.2em; text-transform: uppercase; color: var(--gold); }
+  .prodband .pb-t { font-family: 'Fraunces', serif; font-size: 21px; margin-top: 5px; }
+  .prodband .pb-t em { font-style: italic; color: var(--accent-soft); }
+  .prodband .pb-s { font-family: 'JetBrains Mono', monospace; font-size: 9px;
+    letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-dim); margin-top: 6px; }
+  /* 4-Touch Light traffic bar: green/yellow/red segments with 2px gaps, and
+     the counts always ride in text beside it — never color alone. */
+  .lightbar { display: flex; height: 12px; border-radius: 4px; overflow: hidden;
+    gap: 2px; margin: 7px 0 4px; background: rgba(255,255,255,0.04); }
+  .lightbar i { display: block; height: 100%; }
+  /* Effort × Results quadrant — positioned initials dots over median axes. */
+  .quad { position: relative; height: 260px; background: var(--bg-card-hi);
+    border-radius: 12px; margin-top: 12px; overflow: hidden; }
+  .quad .qx, .quad .qy { position: absolute; background: rgba(255,255,255,0.10); }
+  .quad .qx { left: 4%; right: 4%; height: 1px; }
+  .quad .qy { top: 6%; bottom: 6%; width: 1px; }
+  .quad .qtag { position: absolute; font-family: 'JetBrains Mono', monospace;
+    font-size: 8px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-dim); }
+  .quad .qdot { position: absolute; width: 30px; height: 30px; margin: -15px 0 0 -15px;
+    border-radius: 50%; display: flex; align-items: center; justify-content: center;
+    font-family: 'JetBrains Mono', monospace; font-size: 9px; font-weight: 700;
+    color: #0d1f17; box-shadow: 0 0 0 2px var(--bg-card-hi); cursor: pointer; }
+  .quad-cap { display: flex; justify-content: space-between;
+    font-family: 'JetBrains Mono', monospace; font-size: 8px; letter-spacing: 0.08em;
+    text-transform: uppercase; color: var(--text-dim); margin-top: 6px; }
+
   /* ── login. The only thing a logged-out visitor ever sees. Carries no
         business data of any kind — no names, no numbers, no brands. ── */
   .gate { min-height: 100vh; display: flex; align-items: center; justify-content: center;
@@ -1136,6 +1170,7 @@ function hdr(){
         <div class="snap-d ${d===null?'flat':d>=0?'up':'down'}">${d===null?'—':(d>=0?'▲':'▼')+' '+Math.abs(d)+'% vs '+esc(W.prevLabel)}</div>
         <div class="snap-go">details <span class="go-chev">›</span></div>
       </button>
+      ${heroTouch(k)}
       <button class="snap" onclick="openWindow('${k}')" aria-label="Built ${esc(label)} — open details">
         <div class="snap-k" style="color:var(--gold)">Built · ${esc(label)}</div>
         ${q && q.invoiced ? `<div class="alloc-chart mm"><canvas id="cHeroBuilt"></canvas>
@@ -1162,6 +1197,54 @@ function hdr(){
     ${k === 'month' ? heroTrend() : ''}
     <div class="snaphint">Signed = contract value · CC + Oasis via Billdu. Built = invoiced in QuickBooks. Two different events in two systems — never added together.</div>
   </div>`;
+}
+
+/* ── TEAM TOUCHES · the hero tile (5 Aug — Kevin: "I want touch data to be no
+      different than sales data, marketing data on the dashboard"). Prominence
+      starts at the top: sales gets a hero tile, so effort gets one, full
+      width, directly under Signed. Reads the same D.effort the board below
+      reads, so tile and board can never disagree. Tapping it scrolls to the
+      effort board rather than opening a dive — the board IS the details. ── */
+function heroTouch(k){
+  const E = D.effort;
+  const ek = { day:'day', week:'week', month:'month', ytd:'year' }[k] || 'day';
+  const t = E.rows.reduce((n, r) => n + r[ek].t, 0);
+  const span = E.spans[ek] || 1;
+  const teamGoal = (E.defaultGoal || 0) * span * E.activeReps;
+  const leader = [...E.rows].sort((a, b) => b[ek].t - a[ek].t)[0];
+  const onStd = E.rows.filter(r => (r.goal ?? E.defaultGoal) * span > 0
+    && r[ek].t >= (r.goal ?? E.defaultGoal) * span).length;
+  /* Pace verdict for the day window only — the app's own vocabulary, against
+     the 8am–6pm workday in ET. Longer windows state the fraction instead. */
+  let verdict = '';
+  if (ek === 'day') {
+    const et = new Date(new Date().toLocaleString('en-US', { timeZone:'America/New_York' }));
+    const through = Math.min(1, Math.max(0, (et.getHours() + et.getMinutes()/60 - 8) / 10));
+    verdict = t === 0 ? 'DAY NOT STARTED'
+      : t >= teamGoal ? 'STANDARD MET'
+      : t >= Math.round(teamGoal * through) ? 'ON TARGET' : 'BEHIND PACE';
+  }
+  /* The month time machine does not reach touches: D.effort is always the
+     live month (touch history re-slicing is a next-pass item), so a shifted
+     month says so instead of wearing a stale label. Honest beats silent. */
+  const shifted = ek === 'month' && typeof MONTHOFF !== 'undefined' && MONTHOFF > 0;
+  const label = { day:'Today', week:'This week', month:'This month', year:'YTD' }[ek];
+  const live = t > 0;
+  return `<button class="snap bigsnap" onclick="scrollToEffort()" aria-label="Team touches — jump to the effort board">
+    <div class="snap-k" style="color:var(--accent-soft)">Team touches · ${esc(label)}${shifted ? ' (live)' : ''}</div>
+    <div class="snap-v">${t}${teamGoal ? ` <span style="font-size:16px;color:var(--text-dim)">of ${teamGoal}</span>` : ''}</div>
+    <div class="snap-s">${shifted
+      ? 'touch history doesn’t time-travel yet — this is the live month'
+      : live
+        ? [verdict, leader && leader[ek].t ? `led by ${esc(leader.name.split(' ')[0])} · ${leader[ek].t}` : '',
+           `${onStd} of ${E.activeReps} on standard`].filter(Boolean).join(' · ')
+        : `no touches logged ${esc(label.toLowerCase())} — a real zero, not a broken feed`}</div>
+    <div class="snap-go">the effort board <span class="go-chev">›</span></div>
+  </button>`;
+}
+function scrollToEffort(){
+  const el = document.getElementById('effort-anchor');
+  if (el) el.scrollIntoView({ behavior:'smooth', block:'start' });
 }
 
 /* ── APPOINTMENTS · the thing he actually worries about ─────────────────────
@@ -2097,19 +2180,27 @@ function cardMoney(){
 function cardEffort(){
   const E = D.effort;
   const K = EFFWIN, span = E.spans[K] || 1;
-  const label = { day:'today', week:'this week', month:mSpan(), year:'this year' }[K];
+  /* Month label is always 'this month': touch history does not ride the month
+     time machine (D.effort is live-month only), and a July label over August
+     data would be a lie. The hero tile states the same limit out loud. */
+  const label = { day:'today', week:'this week', month:'this month', year:'this year' }[K];
   const live = E.rows.some(r => r[K].t > 0);
-  // Ranked by touches in the window, points breaking ties. Reps who logged
-  // nothing still appear — a scoreboard that hides its zeros is not a scoreboard.
-  const ranked = [...E.rows].sort((a,b) => b[K].t - a[K].t || b[K].p - a[K].p || a.name.localeCompare(b.name));
+  /* Ranked by touches in the window, all-time touches breaking ties. Points
+     are gone from every surface — counts only, never points (Kevin's law,
+     b31, migration 048). Reps who logged nothing still appear — a scoreboard
+     that hides its zeros is not a scoreboard. */
+  const ranked = [...E.rows].sort((a,b) => b[K].t - a[K].t || b.all - a.all || a.name.localeCompare(b.name));
   const logged = ranked.filter(r => r[K].t > 0);
   const silent = ranked.length - logged.length;
   const teamT = ranked.reduce((n,r) => n + r[K].t, 0);
-  const teamP = ranked.reduce((n,r) => n + r[K].p, 0);
+  const onStd = ranked.filter(r => (r.goal ?? E.defaultGoal) * span > 0 && r[K].t >= (r.goal ?? E.defaultGoal) * span).length;
+  const streaks = (EFF_INTEL && EFF_INTEL.streaks) || null;
+  const streakOf = id => { const s = streaks && streaks.find(x => String(x.rep_id) === String(id)); return s ? +s.streak : 0; };
+  const bestStreak = streaks ? [...streaks].sort((a,b) => +b.streak - +a.streak)[0] : null;
   const goalEach = (E.defaultGoal||0) * span;
-  return `<div class="card full">
-    <div class="card-title">Effort · scoreboard<span class="feed-tag ${live?'':'none'}">${live?'live · app':'awaiting logging'}</span></div>
-    <div class="card-sub">Touches logged in the field app, ranked. Meter is each rep against their own goal for ${label} — ${span} working day${span===1?'':'s'} at ${E.defaultGoal}/day. Tap a name for their one-pager.</div>
+  return `<div class="card full" id="effort-anchor">
+    <div class="card-title">The Effort Board · touches<span class="feed-tag ${live?'':'none'}">${live?'live · app':'awaiting logging'}</span></div>
+    <div class="card-sub">Every call, text and email through the app, ranked. Meter is each rep against their own goal for ${label} — ${span} working day${span===1?'':'s'} at ${E.defaultGoal}/day. Tap a name for their one-pager.</div>
 
     <div class="seg">
       ${[['day','Day'],['week','Week'],['month','Month'],['year','Year']]
@@ -2121,25 +2212,27 @@ function cardEffort(){
       <div class="stat-tile"><div class="lbl">Touches ${esc(label)}</div>
         <div class="val ${teamT?'green':''}">${teamT}</div>
         <div class="sub">team goal ${goalEach*E.activeReps}</div></div>
-      <div class="stat-tile"><div class="lbl">Production points</div>
-        <div class="val ${teamP?'gold':''}">${teamP}</div>
-        <div class="sub">${E.plays[0]?.weight||25} per play</div></div>
+      <div class="stat-tile"><div class="lbl">On standard</div>
+        <div class="val ${onStd?'gold':''}">${onStd}<span style="font-size:14px;color:var(--text-dim)"> / ${E.activeReps}</span></div>
+        <div class="sub">hit their goal ${esc(label)}</div></div>
       <div class="stat-tile"><div class="lbl">Reps on the board</div>
         <div class="val ${logged.length?'blue':''}">${logged.length}<span style="font-size:14px;color:var(--text-dim)"> / ${E.activeReps}</span></div>
         <div class="sub">logged ${esc(label)}</div></div>
-      <div class="stat-tile"><div class="lbl">Team goal hit</div>
-        <div class="val ${goalEach&&teamT>=goalEach*E.activeReps?'green':''}">${goalEach?Math.round(teamT/(goalEach*E.activeReps)*100):0}%</div>
-        <div class="sub">of ${goalEach*E.activeReps} expected</div></div>
+      <div class="stat-tile"><div class="lbl">${bestStreak && +bestStreak.streak > 0 ? 'Streak leader' : 'Team goal hit'}</div>
+        ${bestStreak && +bestStreak.streak > 0
+          ? `<div class="val gold">${+bestStreak.streak}d 🔥</div><div class="sub">${esc(String(bestStreak.name||'').split(' ')[0])} · days on standard</div>`
+          : `<div class="val ${goalEach&&teamT>=goalEach*E.activeReps?'green':''}">${goalEach?Math.round(teamT/(goalEach*E.activeReps)*100):0}%</div><div class="sub">of ${goalEach*E.activeReps} expected</div>`}</div>
     </div>
 
     ${logged.map((r,i) => {
       const goal = (r.goal||0) * span;
       const p = goal ? Math.min(100, Math.round(r[K].t / goal * 100)) : 0;
       const pager = D.roster && D.roster[String(r.id)];
+      const st = streakOf(r.id);
       return `<div class="rep-row${pager?' acc':''}"${pager?` onclick="openRep('${esc(String(r.id))}')"`:''}>
         <div class="rep-head">
-          <div class="nm"><span class="rk ${i===0?'top':''}">${i+1}</span>${esc(r.name)}${r.role&&r.role!=='sales'?`<span class="brand">${esc(r.role)}</span>`:''}</div>
-          <div class="amt">${r[K].t} <span>· ${r[K].p} pts</span>${pager?'<span class="acc-chev">›</span>':''}</div>
+          <div class="nm"><span class="rk ${i===0?'top':''}">${i+1}</span>${esc(r.name)}${r.role&&r.role!=='sales'?`<span class="brand">${esc(r.role)}</span>`:''}${st>=2?` <span style="font-size:10px;color:var(--accent-soft)">🔥${st}d</span>`:''}</div>
+          <div class="amt">${r[K].t} <span>· touches</span>${pager?'<span class="acc-chev">›</span>':''}</div>
         </div>
         <div class="meter"><div class="meter-fill" style="width:${p}%;background:${p>=100?'#6cc28b':'#6ba8c9'}"></div></div>
         <div class="tgt-cap"><span>${r[K].t} of ${goal} goal</span>
@@ -2149,64 +2242,330 @@ function cardEffort(){
     ${silent ? `<div class="withheld"><div class="wt">${logged.length?'Not on the board':'Honest zero'}</div><div class="wx">
       ${silent} of ${E.activeReps} active rep${silent===1?' has':'s have'} logged nothing ${esc(label)}${logged.length?'':' — and nobody has'}. Touch logging begins when reps go live: <b>zeros are real</b>, not a broken feed. Nothing is back-filled from sales activity, so a rep who closed work but logged no touches ranks at zero, because that is what the effort data says.</div></div>` : ''}
 
-    <div class="note">Goal is <b>rep_targets.daily_touch_goal</b>, a real row per rep — all ${E.activeReps} currently sit at the company default of <b>${E.defaultGoal}/day</b>${E.goalsAllDefault?', none set their own yet':''}. Points are each play's own weight in <b>score_components</b> (${E.plays.map(p=>esc(p.title)).join(', ')} — ${E.plays[0]?.weight} each); Until Yes repeats, so its repeats count again. Goals are scaled by working days, not calendar days, or a Monday would read as a whole week missed.</div>
+    <div class="note">LIVE · logged in-app · <b>counts are binary touches, never points</b> (Kevin's law, b31, migration 048). Goal is <b>rep_targets.daily_touch_goal</b>, a real row per rep — all ${E.activeReps} currently sit at the company default of <b>${E.defaultGoal}/day</b>${E.goalsAllDefault?', none set their own yet':''}. Until Yes repeats, so its repeats count again. Goals are scaled by working days, not calendar days, or a Monday would read as a whole week missed. Streaks are counted by the server (migration 119) so the whole team sees them, not just each rep's own phone.</div>
   </div>`;
 }
 
-/* ── 9b. EFFORT INTEL (31 Jul — Kevin: "put all those on their scoreboard and
-      mine"). Three feeds from migration 108's definer functions, fetched after
-      first paint so a missing migration can never block the page. Each block
-      renders only when its feed answered with data — absent, never fake.
-      (Restored 5 Aug: the 1 Aug time-machine edit was written against a
-      pre-effort snapshot of this file and wiped this whole section plus both
-      render() call sites — the dash showed no touch data at all while the reps'
-      touches kept landing. The concurrent-session clobber the mirror rule
-      warns about, reconciled here.) ── */
+/* ── 9b. THE TOUCH SUITE (5 Aug — Kevin: "I want touch data to be no different
+      than sales data, marketing data on the dashboard… Let's put them all in").
+      The canon effort-board mock's cards (ROADMAP 31 Jul, "keep them ALL"),
+      restored after the 1 Aug month-time-machine edit clobbered the original
+      effort-intel wiring (d10a653 — this file was edited from a pre-effort
+      copy; reconcile, never clobber). Seven feeds — three from migration 108,
+      four from 119 — fetched after first paint so a missing migration can
+      never block the page. Every card renders honest absence when its feed
+      has not answered: absent, never fake. ─────────────────────────────── */
 let EFF_INTEL = null;
 async function loadEffortIntel(){
   const win = EFFWIN === 'day' ? 'day' : EFFWIN === 'month' ? 'month' : 'week';
-  const [mix, close, hits] = await Promise.all([
+  const [mix, close, hits, light, streaks, cover, speed] = await Promise.all([
     q(`rpc/touch_board?p_win=${win}`).catch(() => null),
     q('rpc/touch_close_stats').catch(() => null),
     q('rpc/touch_hit_rates').catch(() => null),
+    q('rpc/touch_light_board').catch(() => null),
+    q('rpc/touch_streaks').catch(() => null),
+    q('rpc/book_coverage').catch(() => null),
+    q('rpc/first_touch_speed').catch(() => null),
   ]);
-  EFF_INTEL = { mix, close, hits, win };
+  EFF_INTEL = { mix, close, hits, light, streaks, cover, speed, win };
   render();
 }
-function cardEffortIntel(){
-  const I = EFF_INTEL; if (!I) return '';
-  const CH = { call:'#6cc28b', text:'#6ba8c9', email:'#d9b96a' };
-  /* touch_board answers for the LIVE month only — under the time machine its
-     mix would sit beside a shifted scoreboard and read as that month's. Dropped
-     rather than mislabelled, the same rule the dive chart follows. */
-  const mixOK = !(MONTHOFF && I.win === 'month');
-  const mix = mixOK ? (I.mix||[]).filter(r => +r.touches > 0) : [];
-  const close = (I.close||[]).filter(r => r.avg_touches_to_close != null);
-  const hits = (I.hits||[]).filter(r => +r.scored > 0);
-  if (!mix.length && !close.length && !hits.length) return '';
-  const mixRows = mix.map(r => {
-    const tot = Math.max(1, +r.touches);
-    const seg = ['call','text','email'].map(c => {
-      const n = +(r[c+'s']||0);
-      return n ? `<div style="height:9px;width:${Math.round(100*n/tot)}%;background:${CH[c]}"></div>` : '';
-    }).join('');
-    return `<div class="rep-row"><div class="rep-head"><div class="nm">${esc(r.name)}</div>
-      <div class="amt">${+r.calls||0}c · ${+r.texts||0}t · ${+r.emails||0}e</div></div>
-      <div class="meter" style="display:flex;overflow:hidden">${seg}</div></div>`;
-  }).join('');
-  const closeRows = close.map(r =>
-    `<div class="rep-row"><div class="rep-head"><div class="nm">${esc(r.name)}</div>
-      <div class="amt">${(+r.avg_touches_to_close).toFixed(1)} <span>touches/close · ${r.closes_with_touches} of ${r.closes_90d} closes</span></div></div></div>`).join('');
-  const hitTiles = hits.map(r =>
-    `<div class="stat-tile"><div class="lbl">${esc(r.channel)}s that hit</div>
-      <div class="val ${+r.engaged_pct>=25?'green':''}">${r.engaged_pct!=null?Math.round(+r.engaged_pct)+'%':'—'}</div>
-      <div class="sub">${r.scored} scored of ${r.touches}</div></div>`).join('');
+/* A feed that errored (missing migration, offline) says so in the card's own
+   skin instead of vanishing — Kevin asked for these cards by name, so an
+   empty slot would read as "not built" when the truth is "no feed". */
+function effAwait(title, why){
   return `<div class="card full">
-    <div class="card-title">Effort · intel<span class="feed-tag">live · db</span></div>
-    <div class="card-sub">Channel mix for the window above, touches-per-close over the last 90 days, and response rate where outcomes were tapped. Thin data reads thin; nothing is inferred.</div>
-    ${mix.length ? `<div class="note" style="margin:4px 0 8px">Channel mix — <b style="color:${CH.call}">calls</b> · <b style="color:${CH.text}">texts</b> · <b style="color:${CH.email}">emails</b></div>${mixRows}` : ''}
-    ${close.length ? `<div class="note" style="margin:14px 0 8px"><b>Touches per close</b> — the 4-Touch Autopilot proof number. Only closes carrying touch history count.</div>${closeRows}` : ''}
-    ${hits.length ? `<div class="stat-grid" style="margin-top:14px">${hitTiles}</div>` : ''}
+    <div class="card-title">${title}<span class="feed-tag none">no feed yet</span></div>
+    <div class="withheld"><div class="wt">Withheld</div><div class="wx">${why}</div></div>
+  </div>`;
+}
+
+/* The branded band above the effort cards. This page is the owner film
+   ("Take the Blindfold Off") and the product is being sold to other
+   contractors — the engine's name belongs on the owner's own screen.
+   TruScore Technology™ is the user-visible name, never the codename. */
+function prodBand(){
+  return `<div class="prodband">
+    <div class="pb-e">The Effort Game</div>
+    <div class="pb-t">The 4-Touch <em>Autopilot</em>™</div>
+    <div class="pb-s">powered by TruScore Technology™ · U.S. patent pending</div>
+  </div>`;
+}
+
+/* TOUCHES PER CLOSE — Kevin, 5 Aug: "touches per close, humongous. That's a
+   great one." The 4-Touch Autopilot proof number gets the biggest figure on
+   the page below the hero: effort connected to money in one number. */
+function cardTouchProof(){
+  if (!EFF_INTEL) return '';
+  const close = EFF_INTEL.close;
+  if (!close) return effAwait('Touches per close · the Autopilot proof',
+    'The touches-per-close feed (migration 108, <b>touch_close_stats</b>) did not answer. Nothing is estimated in its place.');
+  const rows = close.filter(r => r.avg_touches_to_close != null);
+  const totC = rows.reduce((n,r) => n + (+r.closes_with_touches||0), 0);
+  const team = totC ? rows.reduce((n,r) => n + (+r.avg_touches_to_close)*(+r.closes_with_touches||0), 0) / totC : null;
+  const noTouch = close.filter(r => r.avg_touches_to_close == null);
+  return `<div class="card full">
+    <div class="card-title">Touches per close · the Autopilot proof<span class="feed-tag">live · db</span></div>
+    <div class="card-sub">The 4-Touch Autopilot proof number — how many logged touches the average signed deal took, last 90 days. Only closes carrying touch history count; nothing is inferred.</div>
+    ${team != null ? `<div style="text-align:left;margin:14px 0 4px">
+      <div style="font-family:'Fraunces',serif;font-size:56px;line-height:1;color:var(--accent-soft)">${team.toFixed(1)}</div>
+      <div style="font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--text-dim);margin-top:6px">avg touches to a signed deal · ${totC} close${totC===1?'':'s'} with touch history</div>
+    </div>` : `<div class="withheld"><div class="wt">Honestly absent</div><div class="wx">No close in the last 90 days carries touch history yet. The number appears the moment one does — never before.</div></div>`}
+    ${rows.sort((a,b)=>+a.avg_touches_to_close-+b.avg_touches_to_close).map(r => {
+      const pager = D.roster && D.roster[String(r.rep_id)];
+      return `<div class="rep-row${pager?' acc':''}"${pager?` onclick="openRep('${esc(String(r.rep_id))}')"`:''}>
+        <div class="rep-head"><div class="nm">${esc(r.name)}</div>
+        <div class="amt">${(+r.avg_touches_to_close).toFixed(1)} <span>· ${r.closes_with_touches} of ${r.closes_90d} closes touched</span>${pager?'<span class="acc-chev">›</span>':''}</div></div>
+      </div>`; }).join('')}
+    ${noTouch.length ? `<div class="note" style="margin-top:8px">${noTouch.map(r=>esc(r.name)).join(', ')} — closes in the window, none with touch history: honestly absent, never a fake zero.</div>` : ''}
+    <div class="note">From <b>touch_close_stats()</b> (108): every signed sale in <b>sale_fact</b> over 90 days, counting the rep's real touches on that customer up to the sale. Money from CC + Billdu, touches from the app — provenance stated, sources never blended.</div>
+  </div>`;
+}
+
+/* CHANNEL MIX · WHO DIALS, WHO HIDES — the app Score tab's card at owner
+   scale. Counts ride in text on every row; the bar is the shape, never the
+   only encoding (green/blue sit close for colorblind readers). */
+function cardChannelMix(){
+  if (!EFF_INTEL) return '';
+  const mix = EFF_INTEL.mix;
+  if (!mix) return effAwait('Channel mix · who dials, who hides',
+    'The channel-mix feed (migration 108, <b>touch_board</b>) did not answer.');
+  const CH = { call:'#6cc28b', text:'#6ba8c9', email:'#d9b96a' };
+  const rows = mix.filter(r => +r.touches > 0);
+  const winLabel = { day:'today', week:'this week', month:'this month' }[EFF_INTEL.win] || EFF_INTEL.win;
+  if (!rows.length) return `<div class="card full">
+    <div class="card-title">Channel mix · who dials, who hides<span class="feed-tag none">awaiting logging</span></div>
+    <div class="withheld"><div class="wt">Honest zero</div><div class="wx">No touches logged ${esc(winLabel)} — a real zero, not a broken feed.</div></div></div>`;
+  return `<div class="card full">
+    <div class="card-title">Channel mix · who dials, who hides<span class="feed-tag">live · db</span></div>
+    <div class="card-sub">How each rep's touches split across channels ${esc(winLabel)} (follows the effort board's window toggle). A rep who never calls shows up instantly.</div>
+    <div class="note" style="margin:8px 0 4px;border-top:none;padding-top:0">
+      <b style="color:${CH.call}">calls</b> · <b style="color:${CH.text}">texts</b> · <b style="color:${CH.email}">emails</b></div>
+    ${rows.map(r => {
+      const tot = Math.max(1, +r.touches);
+      const seg = ['call','text','email'].map(c => {
+        const n = +(r[c+'s']||0);
+        return n ? `<div style="height:9px;width:${Math.round(100*n/tot)}%;background:${CH[c]};margin-right:2px"></div>` : '';
+      }).join('');
+      const pager = D.roster && D.roster[String(r.rep_id)];
+      return `<div class="rep-row${pager?' acc':''}"${pager?` onclick="openRep('${esc(String(r.rep_id))}')"`:''}>
+        <div class="rep-head"><div class="nm">${esc(r.name)}</div>
+          <div class="amt">${r.touches} <span>· ${+r.calls||0} call · ${+r.texts||0} text · ${+r.emails||0} email</span>${pager?'<span class="acc-chev">›</span>':''}</div></div>
+        <div class="meter" style="display:flex;overflow:hidden">${seg}</div>
+      </div>`; }).join('')}
+    <div class="note">From <b>touch_board()</b> (108) — binary touches by channel, real-only (demo touches never count), days bucketed America/New_York.</div>
+  </div>`;
+}
+
+/* TOUCHES THAT HIT · BY CHANNEL — engagement where outcome chips were tapped.
+   Chips are optional for reps, so the scored count rides beside every rate:
+   thin data reads thin, not as a verdict. */
+function cardHitRates(){
+  if (!EFF_INTEL) return '';
+  const hits = EFF_INTEL.hits;
+  if (!hits) return effAwait('Touches that hit · by channel',
+    'The hit-rate feed (migration 108, <b>touch_hit_rates</b>) did not answer.');
+  const rows = hits.filter(r => +r.scored > 0);
+  const CH = { call:'#6cc28b', text:'#6ba8c9', email:'#d9b96a', in_person:'#a98fd5' };
+  if (!rows.length) return `<div class="card full">
+    <div class="card-title">Touches that hit · by channel<span class="feed-tag none">awaiting outcomes</span></div>
+    <div class="withheld"><div class="wt">Honest zero</div><div class="wx">No outcome chips tapped yet. The rate appears when the field starts scoring calls and replies — never before.</div></div></div>`;
+  return `<div class="card full">
+    <div class="card-title">Touches that hit · by channel<span class="feed-tag">live · db</span></div>
+    <div class="card-sub">Engaged = spoke or replied, per the outcome chips the reps tap after a touch. All time, team-wide.</div>
+    ${rows.map(r => `<div class="rep-row">
+      <div class="rep-head"><div class="nm" style="text-transform:capitalize">${esc(r.channel)}s</div>
+        <div class="amt">${r.engaged_pct!=null?Math.round(+r.engaged_pct)+'%':'—'} <span>engaged · ${r.scored} scored of ${r.touches}</span></div></div>
+      <div class="meter"><div class="meter-fill" style="width:${Math.min(100,Math.round(+r.engaged_pct||0))}%;background:${CH[r.channel]||'#8aa094'}"></div></div>
+    </div>`).join('')}
+    <div class="note">This measures engagement among touches that were <b>scored</b>, not the close rate of a channel — a customer who got a call and a text credits both (the 003 caveat). Outcome chips are optional; the rate firms up as the habit does.</div>
+  </div>`;
+}
+
+/* THE 4-TOUCH LIGHT · WHO FINISHES THE PLAYS — Kevin, 31 Jul (verbatim): "we
+   should have a green, yellow, red on who makes it to 4 touches. That's a
+   huge deal. And if guys close sooner … it should count as all touches made."
+   Counts only on the red tap-through — the NAMED stalled list for another
+   rep's book is an open ruling for this console; nothing here shows a
+   customer name until Kevin says names. */
+function cardTouchLight(){
+  if (!EFF_INTEL) return '';
+  const light = EFF_INTEL.light;
+  if (!light) return effAwait('The 4-Touch Light · who finishes the plays',
+    'The play-grades feed (migration 119, <b>touch_light_board</b>) did not answer.');
+  const rows = light.filter(r => +r.book > 0);
+  if (!rows.length) return `<div class="card full">
+    <div class="card-title">The 4-Touch Light · who finishes the plays<span class="feed-tag none">no live book</span></div>
+    <div class="withheld"><div class="wt">Honest zero</div><div class="wx">No seller carries live customers in the appointment-derived book yet.</div></div></div>`;
+  const tG = rows.reduce((n,r)=>n+ +r.green,0), tY = rows.reduce((n,r)=>n+ +r.yellow,0), tR = rows.reduce((n,r)=>n+ +r.red,0);
+  const tB = tG + tY + tR;
+  return `<div class="card full">
+    <div class="card-title">The 4-Touch Light · who finishes the plays<span class="feed-tag">live · db</span></div>
+    <div class="card-sub">Every live customer graded. Green — all four plays done, <b>or signed</b>: a close counts as all touches made, speed is never punished. Red — plays overdue with no decision. Yellow — mid-cadence, gates still open.</div>
+    <div class="stat-grid" style="margin-bottom:14px">
+      <div class="stat-tile"><div class="lbl">Book at green</div>
+        <div class="val ${tB&&tG/tB>=.5?'green':''}">${tB?Math.round(100*tG/tB):0}%</div>
+        <div class="sub">team · ${tB} live customer${tB===1?'':'s'}</div></div>
+      <div class="stat-tile"><div class="lbl">Stalled · red</div>
+        <div class="val ${tR?'red':''}">${tR}</div>
+        <div class="sub">plays overdue right now</div></div>
+    </div>
+    ${rows.map(r => {
+      const b = Math.max(1, +r.book);
+      const pctG = Math.round(100*+r.green/b);
+      const pager = D.roster && D.roster[String(r.rep_id)];
+      return `<div class="rep-row${pager?' acc':''}"${pager?` onclick="openRep('${esc(String(r.rep_id))}')"`:''}>
+        <div class="rep-head"><div class="nm">${esc(r.name)}</div>
+          <div class="amt"><span style="font-family:'Fraunces',serif;font-size:15px;color:${pctG>=50?'var(--green)':pctG>=30?'var(--gold)':'var(--red)'}">${pctG}%</span> <span>green · ${r.book} live</span>${pager?'<span class="acc-chev">›</span>':''}</div></div>
+        <div class="lightbar">
+          ${+r.green?`<i style="width:${100*+r.green/b}%;background:var(--green)"></i>`:''}
+          ${+r.yellow?`<i style="width:${100*+r.yellow/b}%;background:var(--gold)"></i>`:''}
+          ${+r.red?`<i style="width:${100*+r.red/b}%;background:var(--red)"></i>`:''}
+        </div>
+        <div class="tgt-cap"><span>${r.green} green · ${r.yellow} yellow · <b style="color:var(--red)">${r.red} red</b></span><span></span></div>
+      </div>`; }).join('')}
+    <div class="note">From <b>touch_light_board()</b> (119): the appointment-derived book (120 days), graded against the app's own gates — Thank You and Digital Estimate ~1 day after the anchor, Forgot 48h and Until Yes 72h after the estimate. Red is heavy today because play logging just began — that is the honest picture this card exists to show. Counts only, no customer names: the named stalled list awaits Kevin's ruling.</div>
+  </div>`;
+}
+
+/* CONSISTENCY · STREAKS & STANDARD — server-side streaks so the whole team
+   sees them, not just each rep's own phone. Standard = each rep's own goal. */
+function cardConsistency(){
+  if (!EFF_INTEL) return '';
+  const st = EFF_INTEL.streaks;
+  if (!st) return effAwait('Consistency · streaks & standard',
+    'The streak feed (migration 119, <b>touch_streaks</b>) did not answer.');
+  const rows = [...st].sort((a,b)=>+b.streak-+a.streak || +b.week_hits-+a.week_hits || String(a.name).localeCompare(String(b.name)));
+  const any = rows.some(r => +r.streak > 0 || +r.week_hits > 0);
+  return `<div class="card full">
+    <div class="card-title">Consistency · streaks &amp; standard<span class="feed-tag ${any?'':'none'}">${any?'live · db':'awaiting logging'}</span></div>
+    <div class="card-sub">Days on standard, counted by the server — working days only, ET buckets, each rep against their own goal. An unfinished today never breaks a streak; it just doesn't count yet.</div>
+    ${rows.map(r => {
+      const wd = Math.max(1, +r.week_days);
+      const p = Math.min(100, Math.round(100*+r.week_hits/wd));
+      const pager = D.roster && D.roster[String(r.rep_id)];
+      return `<div class="rep-row${pager?' acc':''}"${pager?` onclick="openRep('${esc(String(r.rep_id))}')"`:''}>
+        <div class="rep-head"><div class="nm">${esc(r.name)}${+r.streak>=2?` <span style="font-size:10px;color:var(--accent-soft)">🔥${r.streak}d streak</span>`:''}</div>
+          <div class="amt">${r.week_hits} of ${r.week_days} <span>· days on standard this week</span>${pager?'<span class="acc-chev">›</span>':''}</div></div>
+        <div class="meter"><div class="meter-fill" style="width:${p}%;background:${p>=80?'#6cc28b':p>=40?'#d4b15a':'#8aa094'}"></div></div>
+        <div class="tgt-cap"><span>goal ${r.goal}/day</span><span class="${p>=80?'hit':'miss'}">${p}%</span></div>
+      </div>`; }).join('')}
+    <div class="note">From <b>touch_streaks()</b> (119). The app's streak ring lives on each rep's own device; this is the official team-visible count, same rules — hit your own goal, working days only.</div>
+  </div>`;
+}
+
+/* BOOK COVERAGE · GOING COLD — where money quietly dies. Counts only, no
+   dollar figure: nothing in the schema carries an estimate amount, and a
+   guessed value would violate the actuals law. */
+function cardCoverage(){
+  if (!EFF_INTEL) return '';
+  const cov = EFF_INTEL.cover;
+  if (!cov) return effAwait('Book coverage · going cold',
+    'The coverage feed (migration 119, <b>book_coverage</b>) did not answer.');
+  const rows = cov.filter(r => +r.book > 0);
+  if (!rows.length) return `<div class="card full">
+    <div class="card-title">Book coverage · going cold<span class="feed-tag none">no live book</span></div>
+    <div class="withheld"><div class="wt">Honest zero</div><div class="wx">No seller carries open customers in the appointment-derived book.</div></div></div>`;
+  const tB = rows.reduce((n,r)=>n+ +r.book,0), tT = rows.reduce((n,r)=>n+ +r.touched_7d,0), tC = rows.reduce((n,r)=>n+ +r.cold,0);
+  return `<div class="card full">
+    <div class="card-title">Book coverage · going cold<span class="feed-tag">live · db</span></div>
+    <div class="card-sub">Share of each rep's open book touched in the last 7 days — and customers going cold: 7+ days untouched, no decision either way. Signed and lost customers are out; this is live pipeline only.</div>
+    <div class="stat-grid" style="margin-bottom:14px">
+      <div class="stat-tile"><div class="lbl">Going cold · team</div>
+        <div class="val ${tC?'red':''}">${tC}</div>
+        <div class="sub">open customers 7+ days untouched</div></div>
+      <div class="stat-tile"><div class="lbl">Book touched · 7d</div>
+        <div class="val ${tB&&tT/tB>=.3?'blue':''}">${tB?Math.round(100*tT/tB):0}%</div>
+        <div class="sub">of ${tB} open customer${tB===1?'':'s'}</div></div>
+    </div>
+    ${rows.map(r => {
+      const b = Math.max(1, +r.book);
+      const p = Math.round(100*+r.touched_7d/b);
+      const pager = D.roster && D.roster[String(r.rep_id)];
+      return `<div class="rep-row${pager?' acc':''}"${pager?` onclick="openRep('${esc(String(r.rep_id))}')"`:''}>
+        <div class="rep-head"><div class="nm">${esc(r.name)}</div>
+          <div class="amt">${p}% <span>touched · </span><b style="color:var(--red)">${r.cold} cold</b>${pager?'<span class="acc-chev">›</span>':''}</div></div>
+        <div class="meter"><div class="meter-fill" style="width:${p}%;background:${p>=60?'#6cc28b':p>=30?'#6ba8c9':'#d4b15a'}"></div></div>
+        <div class="tgt-cap"><span>${r.touched_7d} of ${r.book} open book</span><span></span></div>
+      </div>`; }).join('')}
+    <div class="note">From <b>book_coverage()</b> (119): the appointment-derived book, minus signed CC jobs and set dispositions. "Cold" falls straight out of touch timestamps — no new logging needed. Counts only, no customer names, pending Kevin's ruling on the named list. No dollar figure: nothing carries an estimate amount, and absent beats faked.</div>
+  </div>`;
+}
+
+/* SPEED TO FIRST TOUCH — the cadence's front door. The Thank-You gate says
+   same day; this is the only surface that will ever say whether the field
+   honors it. */
+function cardSpeed(){
+  if (!EFF_INTEL) return '';
+  const sp = EFF_INTEL.speed;
+  if (!sp) return effAwait('Speed to first touch',
+    'The first-touch feed (migration 119, <b>first_touch_speed</b>) did not answer.');
+  const rows = sp.filter(r => +r.appts > 0);
+  if (!rows.length) return `<div class="card full">
+    <div class="card-title">Speed to first touch<span class="feed-tag none">no new appointments</span></div>
+    <div class="withheld"><div class="wt">Honest zero</div><div class="wx">No first-appointments in the last 30 days.</div></div></div>`;
+  const touched = rows.filter(r => r.avg_hours != null);
+  const tN = touched.reduce((n,r)=>n+ +r.touched,0);
+  const team = tN ? touched.reduce((n,r)=>n+ +r.avg_hours*+r.touched,0)/tN : null;
+  const mx = Math.max(1, ...touched.map(r=>+r.avg_hours));
+  return `<div class="card full">
+    <div class="card-title">Speed to first touch<span class="feed-tag">live · db</span></div>
+    <div class="card-sub">Hours from a customer's first appointment to the rep's first logged touch, last 30 days. The Thank-You gate says same day — this shows who actually does it. Shorter bar = faster.</div>
+    ${team != null ? `<div class="stat-grid" style="margin-bottom:14px;grid-template-columns:1fr">
+      <div class="stat-tile"><div class="lbl">Team average</div>
+        <div class="val ${team<=24?'green':'gold'}" style="font-size:28px">${team.toFixed(1)}h</div>
+        <div class="sub">appointment → first touch · ${tN} customer${tN===1?'':'s'} touched</div></div>
+    </div>` : `<div class="withheld"><div class="wt">Honestly absent</div><div class="wx">First-appointments exist, but none have a logged touch yet — there is no speed to average. The untouched counts below are the story.</div></div>`}
+    ${rows.sort((a,b)=>(+a.avg_hours||1e9)-(+b.avg_hours||1e9)).map(r => {
+      const pager = D.roster && D.roster[String(r.rep_id)];
+      const has = r.avg_hours != null;
+      return `<div class="rep-row${pager?' acc':''}"${pager?` onclick="openRep('${esc(String(r.rep_id))}')"`:''}>
+        <div class="rep-head"><div class="nm">${esc(r.name)}</div>
+          <div class="amt">${has?(+r.avg_hours).toFixed(1)+'h':'—'} <span>· ${r.touched} of ${r.appts} touched${+r.untouched_48h?` · <b style="color:var(--gold)">${r.untouched_48h} untouched 48h+</b>`:''}</span>${pager?'<span class="acc-chev">›</span>':''}</div></div>
+        ${has?`<div class="meter"><div class="meter-fill" style="width:${Math.max(4,Math.round(100*+r.avg_hours/mx))}%;background:${+r.avg_hours<=24?'#6cc28b':+r.avg_hours<=72?'#6ba8c9':'#d4b15a'}"></div></div>`:''}
+      </div>`; }).join('')}
+    <div class="note">From <b>first_touch_speed()</b> (119): CC appointment times joined to app touches. "—" means no touch ever followed — honestly absent, and the untouched count says how often. 48h grace before an appointment counts as untouched, so this morning's appointment is not an accusation.</div>
+  </div>`;
+}
+
+/* EFFORT × RESULTS · THE QUADRANT — touches against signed dollars, one dot
+   per seller, this month. Presentation only: both feeds already live. */
+function cardQuadrant(){
+  const E = D.effort;
+  const reps = (D.windows.month && D.windows.month.reps) || [];
+  const rows = E.rows
+    .filter(r => D.roster && D.roster[String(r.id)] && D.roster[String(r.id)].sells)
+    .map(r => { const w = reps.find(x => String(x.id) === String(r.id));
+      return { id:r.id, name:r.name, initials:r.initials||r.name.slice(0,2).toUpperCase(),
+        t:r.month.t, rev:w?w.rev:0 }; });
+  if (!rows.length || !rows.some(r => r.t > 0)) return `<div class="card full">
+    <div class="card-title">Effort × results · the quadrant<span class="feed-tag none">awaiting logging</span></div>
+    <div class="withheld"><div class="wt">Withheld</div><div class="wx">The quadrant needs touch volume to mean anything. It lights up as the field logs — signed dollars are already flowing on the vertical.</div></div></div>`;
+  const mxT = Math.max(1, ...rows.map(r=>r.t)) * 1.15;
+  const mxR = Math.max(1, ...rows.map(r=>r.rev)) * 1.15;
+  const med = a => { const s=[...a].sort((x,y)=>x-y); return s.length%2?s[(s.length-1)/2]:(s[s.length/2-1]+s[s.length/2])/2; };
+  const medT = med(rows.map(r=>r.t)), medR = med(rows.map(r=>r.rev));
+  const X = v => 6 + 88 * v / mxT, Y = v => 94 - 88 * v / mxR;
+  const colorOf = r => r.t>=medT && r.rev>=medR ? 'var(--green)'
+    : r.t<medT && r.rev>=medR ? 'var(--gold)'
+    : r.t>=medT ? 'var(--blue)' : '#8aa094';
+  return `<div class="card full">
+    <div class="card-title">Effort × results · the quadrant<span class="feed-tag cc">live · cc</span><span class="feed-tag">live · app</span></div>
+    <div class="card-sub">This month. Right = more touches, up = more signed. Axes sit at the team median. Tap a dot for the rep's one-pager.</div>
+    <div class="quad">
+      <div class="qx" style="top:${Y(medR)}%"></div>
+      <div class="qy" style="left:${X(medT)}%"></div>
+      <div class="qtag" style="top:8px;right:10px">model — clone it</div>
+      <div class="qtag" style="top:8px;left:10px">luck? — will it repeat</div>
+      <div class="qtag" style="bottom:8px;right:10px">coach — effort's there</div>
+      <div class="qtag" style="bottom:8px;left:10px">the talk</div>
+      ${rows.map(r => {
+        const pager = D.roster && D.roster[String(r.id)];
+        return `<div class="qdot" style="left:${X(r.t)}%;top:${Y(r.rev)}%;background:${colorOf(r)}"
+          title="${esc(r.name)} — ${r.t} touches, ${short(r.rev)}"${pager?` onclick="openRep('${esc(String(r.id))}')"`:''}>${esc(String(r.initials).slice(0,3))}</div>`; }).join('')}
+    </div>
+    <div class="quad-cap"><span>← fewer touches</span><span>more touches →</span></div>
+    <div class="note">${rows.sort((a,b)=>b.rev-a.rev).map(r=>`<b>${esc(r.name.split(' ')[0])}</b> ${r.t} · ${short(r.rev)}`).join(' &nbsp; ')}<br/>Money from CC + Billdu (the month's signed board), touches from the app — provenance named, sources never blended. Position is the shape; these numbers are the fact.</div>
   </div>`;
 }
 
@@ -3210,7 +3569,7 @@ function repStats(id, k){
     close: r ? r.close : null,
     jobList: (r && r.jobList) || [], jobCount: (r && r.jobCount) || 0, jobRest: (r && r.jobRest) || 0,
     pace: q ? q.pace : null, elapsed: q ? q.elapsed : null,
-    touches: e ? e.t : 0, touchPts: e ? e.p : 0,
+    touches: e ? e.t : 0,
     goal: eff ? eff.goal : null,
   };
 }
@@ -3289,12 +3648,10 @@ function repView(id){
     <div class="stat-grid" style="margin:12px 0 0">
       <div class="stat-tile"><div class="lbl">Touches</div>
         <div class="val ${S.touches?'blue':''}">${S.touches}</div><div class="sub">logged in the app</div></div>
-      <div class="stat-tile"><div class="lbl">Points</div>
-        <div class="val">${S.touchPts}</div><div class="sub">by play weight</div></div>
       <div class="stat-tile"><div class="lbl">Goal</div>
         <div class="val">${S.goal ?? '—'}</div><div class="sub">per day${S.goal?'':' — none set'}</div></div>
     </div>
-    <div class="note">Nothing is back-filled from sales: effort is what was logged, and <b>zeros are real</b>. A rep who closed work but logged nothing reads zero here because that is what the effort data says.</div>
+    <div class="note">Counts are binary touches, never points (Kevin's law, b31, migration 048 — the points-by-play-weight tile that used to sit here was the number that ruling rules out). Nothing is back-filled from sales: effort is what was logged, and <b>zeros are real</b>. A rep who closed work but logged nothing reads zero here because that is what the effort data says.</div>
   </div>`;
 
   const ytdStrip = k === 'ytd' ? '' : `<div class="card full" style="margin-bottom:12px">
@@ -3425,6 +3782,25 @@ function render(){
       /* THE sales box, directly under Attention and above Appointments —
          Kevin: "move sales above the appointments box, remove the double." */
       cardReps(),
+
+      /* THE TOUCH SUITE — directly under sales, Kevin 5 Aug: "all the touch
+         data of who's doing what needs to be underneath sales… I want touch
+         data to be no different than sales data, marketing data on the
+         dashboard… Let's put them all in. Blend them in, and then we'll edit
+         it from there." Order: the branded band (this page gets filmed), the
+         board, the humongous proof number, then the working set. Every card
+         renders honest absence until its feed answers. */
+      prodBand(),
+      cardEffort(),
+      cardTouchProof(),
+      cardChannelMix(),
+      cardHitRates(),
+      cardTouchLight(),
+      cardConsistency(),
+      cardCoverage(),
+      cardSpeed(),
+      cardQuadrant(),
+
       cardApptByCompany(),
       /* The QUOTA FLEET rides in the first masonry tier, beside The month so
          far and Trending to finish — Kevin (28 Jul): "there's a ton of room up
@@ -3441,16 +3817,6 @@ function render(){
          not find it; it is a sibling of Appointments by company, so it sits high
          in the open flow rather than behind a click at the bottom. */
       cardLeads(),
-
-      /* EFFORT · TOUCHES — wired 31 Jul when Kevin asked why touches were "not
-         on my dashboard" while the card sat here complete and uninvoked; wiped
-         again 1 Aug when the time-machine edit was written over it, and restored
-         5 Aug. Placed open (not folded), ranked by touches: his words — "mine,
-         in order of touches." cardEffortIntel rides under it: channel mix,
-         touches-per-close and hit-rates from the 108 rpc functions, each
-         honestly absent until its feed answers. */
-      cardEffort(),
-      cardEffortIntel(),
 
       /* Everything below folds, and folds together, so they land as one quiet
          strip rather than as short rows scattered through the columns. None of
@@ -3871,7 +4237,7 @@ addEventListener('resize', () => {
    server for hours while Kevin looked at yesterday's build and reported the bug
    as unfixed. That happened. The page now checks version.json on every load and
    reloads itself once if the deployed build is newer than the one running. */
-const BUILD = '2026-08-05T16:00Z-touches-back-appts-ride-the-time-machine';
+const BUILD = '2026-08-05T22:45Z-touch-suite-and-appts-time-machine';
 const SB_URL = 'https://lzegjjbkfuecrhdvlvay.supabase.co';
 /* The one page that can finish a password reset. Hard-coded rather than derived,
    because every derivation of it so far has been a source of bugs: a bare origin
@@ -4894,10 +5260,7 @@ function buildData(raw){
     const goals = Object.fromEntries(repTargets.map(t=>[t.rep_id,t]));
     const todayA = sod(NOW), todayB = addD(todayA,1);
     const weekA = sow(NOW), weekB = addD(weekA,7);
-    /* the month bucket honours the time machine — the card's month label
-       already reads the shifted month (mSpan), so the data must be that
-       month's or the label lies over live numbers */
-    const monthA = addM(som(NOW), -MONTHOFF), monthB = addM(monthA,1);
+    const monthA = som(NOW), monthB = addM(monthA,1);
     const yearA = soy(NOW), yearB = addD(sod(NOW),1);
     const blank = () => ({ day:{t:0,p:0}, week:{t:0,p:0}, month:{t:0,p:0}, year:{t:0,p:0}, all:0, plays:{} });
     const byRep = {};
@@ -5787,7 +6150,7 @@ async function loadAll(){
     leadNames, qbInv, qbError, billdu, claims, bank };
   D = buildData(RAW);
   render();
-  loadEffortIntel();   // after first paint — a missing 108 can never block the page
+  loadEffortIntel();   // after first paint — a missing 108/119 can never block the page
 }
 
 /* Reload once if the server has a newer build than the one running. Guarded by a
