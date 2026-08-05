@@ -623,6 +623,31 @@
   .apptmini { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--text-dim); margin-top: 8px; }
   .apptmini b { color: var(--text); font-weight: 600; }
 
+  /* daily · weekly · monthly · yearly, side by side. Every tile carries the
+     days it counted, because two windows reading the same number is a fact
+     about the calendar far more often than it is a fault in the page. */
+  .awin { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin: 4px 0 14px; }
+  @media (max-width: 620px) { .awin { grid-template-columns: 1fr 1fr; } }
+  .awin-t { background: var(--bg-card-hi); border: 1px solid var(--line); border-radius: 12px; padding: 12px 12px 11px; }
+  .awin-t.back { border-color: rgba(212,177,90,0.45); }
+  .awin-t.quiet { opacity: 0.78; }
+  .awin-k { font-family: 'JetBrains Mono', monospace; font-size: 9px; letter-spacing: 0.13em;
+    text-transform: uppercase; color: var(--text-dim); font-weight: 700; }
+  .awin-t.back .awin-k { color: var(--gold); }
+  .awin-span { font-family: 'JetBrains Mono', monospace; font-size: 9.5px; color: var(--text-dim); margin-top: 3px; opacity: 0.85; }
+  .awin-v { font-family: 'Fraunces', serif; font-size: 32px; font-weight: 500; line-height: 1;
+    letter-spacing: -0.02em; margin-top: 8px; color: var(--green-soft); }
+  .awin-d { font-family: 'JetBrains Mono', monospace; font-size: 9.5px; color: var(--text-dim); margin-top: 6px; line-height: 1.45; }
+  .awin-d b.up { color: var(--green-soft); } .awin-d b.dn { color: #d8997f; }
+  .awin-s { font-family: 'JetBrains Mono', monospace; font-size: 9.5px; color: var(--text-dim);
+    margin-top: 5px; padding-top: 5px; border-top: 1px solid var(--line); line-height: 1.45; }
+  .awin-s b { color: var(--blue); font-weight: 600; }
+  /* the seam that explains an honest match rather than leaving him to doubt it */
+  .awin-seam { font-family: 'JetBrains Mono', monospace; font-size: 10.5px; line-height: 1.6;
+    color: var(--text-dim); margin: -6px 0 12px; padding: 9px 12px; border-radius: 10px;
+    background: rgba(255,255,255,0.02); border-left: 3px solid var(--line2); }
+  .awin-seam b { color: var(--text); font-weight: 600; }
+
   .apptrow { display: grid; grid-template-columns: 1fr 1.35fr; gap: 10px; margin: 12px 0 4px; }
   .apptbig { background: var(--bg-card-hi); border: 1px solid var(--line); border-radius: 12px; padding: 13px 14px; }
   .apptbig .k { font-family: 'JetBrains Mono', monospace; font-size: 8.5px; letter-spacing: 0.14em;
@@ -1228,6 +1253,69 @@ function bookedBrandRows(A){
   </div>`;
 }
 
+/* ── DAILY · WEEKLY · MONTHLY · YEARLY, IN ONE ROW ──────────────────────────
+   Kevin (5 Aug): "with appointments on the owner dashboard, it needs to read
+   daily, weekly, monthly, and then yearly… I need to be able to also go back
+   into other months and see total number of appointments as well."
+
+   Three things were missing and one thing was misread.
+
+   Missing: the card led with today and buried week and month as two grey lines
+   of small print inside a tile, and it had no yearly figure at all. Missing:
+   the month here never moved when the page's month pager moved, so July's
+   appointment total was genuinely unreachable — his exact complaint. Missing:
+   nothing said which DAYS a window covered.
+
+   Misread: "week was the same as month." Both were right. On Wednesday 5
+   August the month's trading days ARE the week's trading days — the extra two
+   are a Saturday and a Sunday, and setting runs Monday to Friday. The tiles now
+   print their own spans and the seam below says so in words, so a true match
+   reads as the calendar rather than as a broken toggle.
+
+   Booked (set date) is the number he watches for stress, so it is the big one.
+   What sat on the calendar rides underneath, never added to it. ───────────── */
+function apptWindowStrip(){
+  const A = D.appointments; if (!A || !A.perWindow) return '';
+  const dl = (a,b) => b ? Math.round((a-b)/b*100) : null;
+  const WINL = [
+    ['day',   'Daily'],
+    ['week',  'Weekly'],
+    ['month', MONTHOFF ? esc(D.windows.month.label) : 'Monthly'],
+    ['ytd',   'Yearly'],
+  ];
+  const tiles = WINL.map(([k,label]) => {
+    const p = A.perWindow[k]; if (!p) return '';
+    const d = dl(p.booked, p.bookedPrev);
+    const prev = esc(D.windows[k].prevLabel || 'the window before');
+    const shifted = k === 'month' && MONTHOFF;
+    return `<div class="awin-t${k==='ytd'?' quiet':''}${shifted?' back':''}">
+      <div class="awin-k">${label}</div>
+      <div class="awin-span">${esc(p.span)} · ${p.days} day${p.days===1?'':'s'}</div>
+      <div class="awin-v">${p.booked}</div>
+      <div class="awin-d" title="${p.prevCovered ? `Compared like for like — the same ${p.days} day${p.days===1?'':'s'} of ${esc(D.windows[k].prevLabel||'the window before')}, never a partial window against a finished one.` : 'Appointment history reaches 13 months, which cannot cover the same span a year ago — so no comparison is made.'}">booked${
+        !p.prevCovered ? ' · no like-for-like baseline — history reaches 13 months'
+        : d===null ? ' · no prior baseline'
+        : d===0    ? ` · <b>level</b> with ${prev}`
+        : ` · <b class="${d>0?'up':'dn'}">${d>0?'▲':'▼'}${Math.abs(d)}%</b> vs ${prev}`}</div>
+      <div class="awin-s"><b>${p.heldToDate}</b> ran on the calendar${
+        p.heldAhead?` · ${p.heldAhead} still ahead in this window`:''}</div>
+    </div>`;
+  }).join('');
+  /* The explanation, printed only when the match is actually there to explain.
+     A note that fires every day is a note nobody reads by Thursday. */
+  const wk = A.perWindow.week, mo = A.perWindow.month, seam = A.monthWeekSeam;
+  const same = !MONTHOFF && wk && mo && wk.booked === mo.booked && seam;
+  return `<div class="awin">${tiles}</div>
+    ${same ? `<div class="awin-seam">Weekly and monthly read the same <b>${mo.booked}</b> because they cover the same trading days.
+      The month has ${seam.days.length} day${seam.days.length===1?'':'s'} the week does not — ${seam.days.map(d=>`${esc(d.label)} <b>${d.n}</b>`).join(' · ')} — and ${seam.n ? `they add ${seam.n}` : 'they booked nothing'}. Setting runs Monday to Friday, so this is the calendar, not a stuck toggle.</div>` : ''}
+    <div class="mnav" style="margin:0 0 12px">
+      <button class="mn-btn" ${MONTHOFF>=12?'disabled':''} onclick="setMonthOff(MONTHOFF+1)" aria-label="Previous month">‹</button>
+      <span class="mn-cur${MONTHOFF?' back':''}">${MONTHOFF ? esc(D.windows.month.label) + ' · closed month' : 'Monthly = this month'}</span>
+      <button class="mn-btn" ${MONTHOFF?'':'disabled'} onclick="setMonthOff(MONTHOFF-1)" aria-label="Next month">›</button>
+      ${MONTHOFF?`<button class="mn-now" onclick="setMonthOff(0)">back to now</button>`:''}
+    </div>`;
+}
+
 function cardAppointments(){
   const A = D.appointments; if (!A) return '';
   const v = apptVerdict(A);
@@ -1237,7 +1325,9 @@ function cardAppointments(){
   const stale = A.staleHours != null && A.staleHours >= 6;
   return `<div class="card full appt">
     <div class="card-title">Appointments<span class="feed-tag cc">live · cc</span></div>
-    <div class="card-sub">What ran, and what is on the books ahead.</div>
+    <div class="card-sub">New appointments <b>booked</b> across every window, then today in detail and what is on the books ahead. The big number in each tile is what the setters produced; the calendar line under it is what the crews drove to.</div>
+
+    ${apptWindowStrip()}
 
     <div class="appt-tiles">
       <div class="appt-tile">
@@ -1328,7 +1418,9 @@ function cardApptByCompany(){
   const spanLabel = { day:'today', week:'this week', month:mSpan(), ytd:'year to date' }[K];
   return `<div class="card full apco-band">
     <div class="card-title">Appointments by company<span class="feed-tag cc">live · cc</span></div>
-    <div class="card-sub">New appointments <b>booked</b> ${spanLabel}, by company, each against ${W.typLabel} — like for like, never a partial window against a finished one.</div>
+    <div class="card-sub">New appointments <b>booked</b> ${spanLabel}, by company, each against ${W.typLabel} — like for like, never a partial window against a finished one.${
+      MONTHOFF && K === 'month' ? ` <b>${esc(D.windows.month.label)} is closed</b>, so this is the whole month against the three whole months before it — no elapsed-span trimming, because a finished month has no elapsed span to match.` : ''}${
+      MONTHOFF && K !== 'month' ? ` Today, Week and YTD stay live even while the page is showing ${esc(D.windows.month.label)} — only Month moves with the pager.` : ''}</div>
 
         <div class="seg">
       ${[['day','Today'],['week','Week'],['month','Month'],['ytd','YTD']]
@@ -2140,6 +2232,61 @@ function cardEffort(){
       ${silent} of ${E.activeReps} active rep${silent===1?' has':'s have'} logged nothing ${esc(label)}${logged.length?'':' — and nobody has'}. Touch logging begins when reps go live: <b>zeros are real</b>, not a broken feed. Nothing is back-filled from sales activity, so a rep who closed work but logged no touches ranks at zero, because that is what the effort data says.</div></div>` : ''}
 
     <div class="note">Goal is <b>rep_targets.daily_touch_goal</b>, a real row per rep — all ${E.activeReps} currently sit at the company default of <b>${E.defaultGoal}/day</b>${E.goalsAllDefault?', none set their own yet':''}. Points are each play's own weight in <b>score_components</b> (${E.plays.map(p=>esc(p.title)).join(', ')} — ${E.plays[0]?.weight} each); Until Yes repeats, so its repeats count again. Goals are scaled by working days, not calendar days, or a Monday would read as a whole week missed.</div>
+  </div>`;
+}
+
+/* ── 9b RESTORED (5 Aug) ────────────────────────────────────────────────────
+   This block and cardEffort()'s call site were both wiped by the month
+   time-machine commit — a stale copy of index.html pasted over a newer one, the
+   same clobber CLAUDE.md warns about and the second time it has cost this repo
+   a shipped card (see b6c69c6). cardEffort() has been defined-but-uninvoked and
+   the intel block absent from the live owner dash since 1 Aug. Re-read before
+   overwriting; reconcile, never clobber. ─────────────────────────────────── */
+/* ── 9b. EFFORT INTEL (31 Jul — Kevin: "put all those on their scoreboard and
+      mine"). Three feeds from migration 108's definer functions, fetched after
+      first paint so a missing migration can never block the page. Each block
+      renders only when its feed answered with data — absent, never fake. ── */
+let EFF_INTEL = null;
+async function loadEffortIntel(){
+  const win = EFFWIN === 'day' ? 'day' : EFFWIN === 'month' ? 'month' : 'week';
+  const [mix, close, hits] = await Promise.all([
+    q(`rpc/touch_board?p_win=${win}`).catch(() => null),
+    q('rpc/touch_close_stats').catch(() => null),
+    q('rpc/touch_hit_rates').catch(() => null),
+  ]);
+  EFF_INTEL = { mix, close, hits, win };
+  render();
+}
+function cardEffortIntel(){
+  const I = EFF_INTEL; if (!I) return '';
+  const CH = { call:'#6cc28b', text:'#6ba8c9', email:'#d9b96a' };
+  const mix = (I.mix||[]).filter(r => +r.touches > 0);
+  const close = (I.close||[]).filter(r => r.avg_touches_to_close != null);
+  const hits = (I.hits||[]).filter(r => +r.scored > 0);
+  if (!mix.length && !close.length && !hits.length) return '';
+  const mixRows = mix.map(r => {
+    const tot = Math.max(1, +r.touches);
+    const seg = ['call','text','email'].map(c => {
+      const n = +(r[c+'s']||0);
+      return n ? `<div style="height:9px;width:${Math.round(100*n/tot)}%;background:${CH[c]}"></div>` : '';
+    }).join('');
+    return `<div class="rep-row"><div class="rep-head"><div class="nm">${esc(r.name)}</div>
+      <div class="amt">${+r.calls||0}c · ${+r.texts||0}t · ${+r.emails||0}e</div></div>
+      <div class="meter" style="display:flex;overflow:hidden">${seg}</div></div>`;
+  }).join('');
+  const closeRows = close.map(r =>
+    `<div class="rep-row"><div class="rep-head"><div class="nm">${esc(r.name)}</div>
+      <div class="amt">${(+r.avg_touches_to_close).toFixed(1)} <span>touches/close · ${r.closes_with_touches} of ${r.closes_90d} closes</span></div></div></div>`).join('');
+  const hitTiles = hits.map(r =>
+    `<div class="stat-tile"><div class="lbl">${esc(r.channel)}s that hit</div>
+      <div class="val ${+r.engaged_pct>=25?'green':''}">${r.engaged_pct!=null?Math.round(+r.engaged_pct)+'%':'—'}</div>
+      <div class="sub">${r.scored} scored of ${r.touches}</div></div>`).join('');
+  return `<div class="card full">
+    <div class="card-title">Effort · intel<span class="feed-tag">live · db</span></div>
+    <div class="card-sub">Channel mix for the window above, touches-per-close over the last 90 days, and response rate where outcomes were tapped. Thin data reads thin; nothing is inferred.</div>
+    ${mix.length ? `<div class="note" style="margin:4px 0 8px">Channel mix — <b style="color:${CH.call}">calls</b> · <b style="color:${CH.text}">texts</b> · <b style="color:${CH.email}">emails</b></div>${mixRows}` : ''}
+    ${close.length ? `<div class="note" style="margin:14px 0 8px"><b>Touches per close</b> — the 4-Touch Autopilot proof number. Only closes carrying touch history count.</div>${closeRows}` : ''}
+    ${hits.length ? `<div class="stat-grid" style="margin-top:14px">${hitTiles}</div>` : ''}
   </div>`;
 }
 
@@ -3010,13 +3157,17 @@ function diveAppointments(k){
   const p = A.perWindow[k], W = flat(k);
   const label = { day:'today', week:'this week', month:mSpan(), ytd:'year to date' }[k];
   const dl = (a,b) => b ? Math.round((a-b)/b*100) : null;
-  const dB = dl(p.booked, p.bookedPrev), dH = dl(p.held, p.heldPrev);
+  /* The calendar delta compares elapsed against elapsed. It used to put the
+     whole window against an elapsed prior one, which on a Wednesday read a
+     full Mon–Sun calendar against three days of last week and called the
+     difference a rise. */
+  const dB = dl(p.booked, p.bookedPrev), dH = dl(p.heldToDate, p.heldPrev);
   const bookedRows = Object.entries(p.bookedByBrand).sort((a,b)=>b[1]-a[1]);
   const bookedTot = bookedRows.reduce((n,[,c])=>n+c,0);
   const av = apptVerdict(A);
   return `<div class="card full">
     <div class="card-title">Appointments · ${esc(label)}<span class="feed-tag cc">live · cc</span></div>
-    <div class="card-sub">What the team <b>set</b> in this window, and what sat on the calendar during it. Two different questions.</div>
+    <div class="card-sub">What the team <b>set</b> in this window, and what sat on the calendar during it. Two different questions. Counting <b>${esc(p.span)}</b> — ${p.days} day${p.days===1?'':'s'}.</div>
 
     <div class="stat-grid" style="margin-bottom:12px">
       <div class="stat-tile"><div class="lbl">Booked · set date</div>
@@ -3024,8 +3175,8 @@ function diveAppointments(k){
         <div class="sub">marketing output</div>
         ${dB===null?'<div class="delta flat">no prior baseline</div>':`<div class="delta ${dB>=0?'up':'down'}">${dB>=0?'▲':'▼'} ${Math.abs(dB)}% vs ${esc(W.prevLabel)}</div>`}</div>
       <div class="stat-tile"><div class="lbl">On the calendar</div>
-        <div class="val blue">${p.held}</div>
-        <div class="sub">appointment date</div>
+        <div class="val blue">${p.heldToDate}</div>
+        <div class="sub">appointment date${p.heldAhead?` · ${p.heldAhead} still ahead`:''}</div>
         ${dH===null?'<div class="delta flat">no prior baseline</div>':`<div class="delta ${dH>=0?'up':'down'}">${dH>=0?'▲':'▼'} ${Math.abs(dH)}% vs ${esc(W.prevLabel)}</div>`}</div>
       <div class="stat-tile"><div class="lbl">Close on run</div>
         <div class="val ${W.close===null?'':'gold'}">${W.close===null?'—':W.close+'%'}</div>
@@ -3375,6 +3526,17 @@ function render(){
          in the open flow rather than behind a click at the bottom. */
       cardLeads(),
 
+      /* EFFORT · TOUCHES — written for v1 but never wired into this stack;
+         found 31 Jul when Kevin asked why touches were "not on my dashboard"
+         while the card sat here complete and uninvoked. Placed open (not
+         folded), ranked by touches: his words — "mine, in order of touches."
+         cardEffortIntel rides under it: channel mix, touches-per-close and
+         hit-rates from the 108 rpc functions, each honestly absent until its
+         feed answers. Both call sites were lost again to the 1 Aug clobber and
+         restored 5 Aug — the card was defined and never drawn for four days. */
+      cardEffort(),
+      cardEffortIntel(),
+
       /* Everything below folds, and folds together, so they land as one quiet
          strip rather than as short rows scattered through the columns. None of
          it is less true — it is the working rather than the reading, and he
@@ -3397,7 +3559,7 @@ function keepScroll(fn){
   fn(); render();
   window.scrollTo({ top: y });
 }
-function setEff(k){ keepScroll(() => { EFFWIN = k; }); }
+function setEff(k){ keepScroll(() => { EFFWIN = k; }); loadEffortIntel(); }
 function setApptCo(k){ keepScroll(() => { APPTCOWIN = k; }); }
 function setQuota(k){ keepScroll(() => { QUOTAWIN = k; }); }
 function setLead(k){ keepScroll(() => { LEADWIN = k; }); }
@@ -3794,7 +3956,7 @@ addEventListener('resize', () => {
    server for hours while Kevin looked at yesterday's build and reported the bug
    as unfixed. That happened. The page now checks version.json on every load and
    reloads itself once if the deployed build is newer than the one running. */
-const BUILD = '2026-08-01T15:00Z-month-time-machine';
+const BUILD = '2026-08-05T18:30Z-appts-four-windows';
 const SB_URL = 'https://lzegjjbkfuecrhdvlvay.supabase.co';
 /* The one page that can finish a password reset. Hard-coded rather than derived,
    because every derivation of it so far has been a source of bugs: a bare origin
@@ -4383,6 +4545,29 @@ function buildData(raw){
     }).length;
 
     const T = sod(NOW);
+    const tomorrowMid = addD(T, 1);
+
+    /* ── EVERY WINDOW NAMES ITS OWN DAYS ────────────────────────────────────
+       Kevin (5 Aug): "week was the same as month. Year was different, but month
+       wasn't." Both numbers were right. He looked on Wednesday 5 August, when
+       the month's trading days were Mon 3 · Tue 4 · Wed 5 and the only days the
+       month had that the week did not were Saturday and Sunday, which book
+       nothing. Two windows covering the same trading days MUST print the same
+       number; the defect was that neither said which days it covered, so an
+       honest match was indistinguishable from a stuck toggle.
+
+       The end is clamped to today: a live window is labelled by what it has
+       actually counted, never by where it will eventually end. "Aug 1–31" over
+       five days of data is the overstatement this page exists to refuse. */
+    const MON3 = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    const spanText = (x, y) => {
+      const last = addD(new Date(Math.min(y.getTime(), tomorrowMid.getTime())), -1);
+      const a = `${MON3[x.getMonth()]} ${x.getDate()}`;
+      if (last <= x) return a;
+      const b = last.getMonth() === x.getMonth()
+        ? `${last.getDate()}` : `${MON3[last.getMonth()]} ${last.getDate()}`;
+      return `${a}–${b}`;
+    };
 
     /* ── BOOKED TODAY · the setters' output ────────────────────────────────
        Kevin: "Liked booked today is my key indicator. I check my marketing
@@ -4534,6 +4719,20 @@ function buildData(raw){
       });
       return { vals, mean: vals.length ? vals.reduce((a,c)=>a+c,0)/vals.length : 0 };
     };
+    /* Same idea as priorMean, but with explicit [from,to) spans rather than a
+       shared length. A CLOSED month is compared against whole prior months, and
+       whole months are not the same length — measuring February with January's
+       31 days would quietly flatter it. */
+    const priorMeanSpans = (b, spans) => {
+      const vals = spans.map(([x,y]) => {
+        let n = 0;
+        for (let d = new Date(x); d < y; d = addD(d,1))
+          n += createdOn(ymdL(d))
+                 .filter(r => (projBrand[String(r.cc_project_id)]||'unknown') === b).length;
+        return n;
+      });
+      return { vals, mean: vals.length ? vals.reduce((a,c)=>a+c,0)/vals.length : 0 };
+    };
     const elapsedWk = ((T.getDay()+6)%7) + 1;   // days Mon..today inclusive
     const elapsedMo = T.getDate();              // days 1..today inclusive
     const winEnd = addD(T, 1);
@@ -4556,7 +4755,33 @@ function buildData(raw){
           typ: Object.fromEntries(BRAND_ORDER.map(b => [b, priorMean(b, starts, elapsedWk)])),
         };
       })(),
+      /* ── THE TIME MACHINE REACHES THIS CARD (5 Aug) ────────────────────────
+         Kevin: "I need to be able to also go back into other months and see
+         total number of appointments as well. It currently doesn't show that."
+
+         He was right and this was the gap. The month time machine (1 Aug) was
+         built where WINS is built, so every window-driven surface inherited it
+         — but this card never read WINS. It anchored itself on som(T), the LIVE
+         month, so paging back to July moved the whole page and left the
+         appointments tiles sitting on August. A page where one card silently
+         disagrees with the banner above it is worse than a page with no time
+         machine at all.
+
+         A closed month is also measured differently from a live one: the whole
+         month against the three WHOLE months before it, no elapsed-span
+         trimming, because a finished month has no elapsed span to match. */
       month: (() => {
+        const shifted = MONTHOFF > 0;
+        const from = mFrom, to = addM(mFrom, 1);
+        if (shifted) {
+          const spans = [1,2,3].map(m => [addM(from,-m), addM(from,-m+1)]);
+          return {
+            typLabel: 'the three whole months before it',
+            sampleLabel: 'prior 3 months', partial: false,
+            counts: bookedByBrandInRange(from, to),
+            typ: Object.fromEntries(BRAND_ORDER.map(b => [b, priorMeanSpans(b, spans)])),
+          };
+        }
         const starts = [1,2,3].map(m => new Date(T.getFullYear(), T.getMonth()-m, 1));
         return {
           typLabel: `the same ${elapsedMo} day${elapsedMo===1?'':'s'} of the prior 3 months`,
@@ -4675,13 +4900,59 @@ function buildData(raw){
           return { n, by }; };
         const heldBy = byBrandWin(wv.from, wv.to);
         const [pa,pb] = prevRange(wv);
-        const b = bookedIn(wv.from, wv.to), pbk = bookedIn(pa, pb);
+        /* ── ELAPSED, NOT WHOLE, ON BOTH SIDES ──────────────────────────────
+           The calendar figure used to compare the WHOLE window against an
+           elapsed prior one: on a Wednesday that put Mon-to-Sunday against last
+           Mon-to-Wednesday and printed the gap as a rise. The prior side was
+           already elapsed-trimmed by prevRange; only the current side was not.
+
+           Both bases are now clamped to today, which also makes the span label
+           below true by construction rather than by luck. Booked came out right
+           anyway on real data — Contractors Cloud does not create appointments
+           on days that have not happened — but a window that PRINTS "Aug 1–5"
+           must count Aug 1–5, not silently count whatever the month holds. What
+           is still ahead inside the window is carried separately and named. */
+        const upto = new Date(Math.min(wv.to.getTime(), tomorrowMid.getTime()));
+        const b = bookedIn(wv.from, upto), pbk = bookedIn(pa, pb);
+        const held = count(wv.from, wv.to), heldToDate = count(wv.from, upto);
+        /* ── A BASELINE THE FETCH CANNOT COVER IS DECLINED, NOT PRINTED ─────
+           Appointments are read APPT_SINCE — 13 months. The YTD window's prior
+           period is last year's Jan-to-today, nearly all of which is outside
+           that fetch, so a "vs same point last year" delta would compare a full
+           year against the two months of it we happen to hold and print a
+           triumphant rise every time. byCompany already declines its YTD
+           baseline for exactly this reason; the window layer now does the same,
+           and the tile says why rather than showing a flattering number. */
+        const prevCovered = pa >= new Date(`${APPT_SINCE}T00:00:00`);
         return [k, {
-          booked: b.n, bookedByBrand: b.by, bookedPrev: pbk.n,
-          held: count(wv.from, wv.to), heldByBrand: heldBy,
-          heldPrev: count(pa, pb),
+          booked: b.n, bookedByBrand: b.by,
+          bookedPrev: prevCovered ? pbk.n : null,
+          prevCovered,
+          held, heldByBrand: heldBy, heldToDate,
+          heldAhead: held - heldToDate,
+          heldPrev: prevCovered ? count(pa, pb) : null,
+          /* Which days this number actually covers. Kevin (5 Aug) read the week
+             and the month as the same figure and reasonably called it broken —
+             on 5 August they cover the same trading days. A window that names
+             its own span can be checked instead of doubted. */
+          span: spanText(wv.from, wv.to),
+          days: Math.max(1, Math.round((upto - wv.from) / D_)),
         }];
       })),
+      /* Why week and month can legitimately print the same number: the days the
+         month has that the week does not, and what they booked. Null once the
+         month no longer starts inside the current week, or on a shifted month. */
+      monthWeekSeam: (() => {
+        if (MONTHOFF) return null;
+        const mf = som(T), wf = sow(T);
+        if (mf > wf) return null;              // month began mid-week — spans differ by nothing
+        const days = [];
+        for (let d = new Date(mf); d < wf; d = addD(d,1))
+          days.push({ label: `${DOWFULL[d.getDay()].slice(0,3)} ${d.getDate()}`,
+                      n: createdOn(ymdL(d)).length });
+        if (!days.length) return null;         // month started on this week's Monday
+        return { days, n: days.reduce((n,d)=>n+d.n,0) };
+      })(),
       leadMedianDays: 3,
       coverage: { total: appts.length, dated: live.length,
                   withProject: live.filter(a=>projBrand[String(a.cc_project_id)]).length },
@@ -5685,6 +5956,7 @@ async function loadAll(){
     leadNames, qbInv, qbError, billdu, claims, bank };
   D = buildData(RAW);
   render();
+  loadEffortIntel();   // after first paint — a missing 108 can never block the page
 }
 
 /* Reload once if the server has a newer build than the one running. Guarded by a
