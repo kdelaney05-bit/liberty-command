@@ -2258,7 +2258,7 @@ function cardEffort(){
 let EFF_INTEL = null;
 async function loadEffortIntel(){
   const win = EFFWIN === 'day' ? 'day' : EFFWIN === 'month' ? 'month' : 'week';
-  const [mix, close, hits, light, streaks, cover, speed] = await Promise.all([
+  const [mix, close, hits, light, streaks, cover, speed, est] = await Promise.all([
     q(`rpc/touch_board?p_win=${win}`).catch(() => null),
     q('rpc/touch_close_stats').catch(() => null),
     q('rpc/touch_hit_rates').catch(() => null),
@@ -2266,8 +2266,9 @@ async function loadEffortIntel(){
     q('rpc/touch_streaks').catch(() => null),
     q('rpc/book_coverage').catch(() => null),
     q('rpc/first_touch_speed').catch(() => null),
+    q(`rpc/estimate_board?p_win=${win}`).catch(() => null),
   ]);
-  EFF_INTEL = { mix, close, hits, light, streaks, cover, speed, win };
+  EFF_INTEL = { mix, close, hits, light, streaks, cover, speed, est, win };
   render();
 }
 /* A feed that errored (missing migration, offline) says so in the card's own
@@ -2425,6 +2426,52 @@ function cardTouchLight(){
         <div class="tgt-cap"><span>${r.green} green · ${r.yellow} yellow · <b style="color:var(--red)">${r.red} red</b></span><span></span></div>
       </div>`; }).join('')}
     <div class="note">From <b>touch_light_board()</b> (119): the appointment-derived book (120 days), graded against the app's own gates — Thank You and Digital Estimate ~1 day after the anchor, Forgot 48h and Until Yes 72h after the estimate. Red is heavy today because play logging just began — that is the honest picture this card exists to show. Counts only, no customer names: the named stalled list awaits Kevin's ruling.</div>
+  </div>`;
+}
+
+/* ESTIMATES ON FILE — Kevin, 6 Aug: "I need to make sure all estimate numbers
+   get put in the customer files — did they happen today, and how can we make
+   them do it better?" This card IS the daily answer. Before migration 122 it
+   could not exist: the blink-red capture (build 57) saved the amount to each
+   rep's phone only, and 121's coverage card had to decline a dollar figure
+   for exactly that reason. Now the app posts every capture to the server
+   (offline-queued, backfilled from device storage), and this board reads it:
+   appointments that RAN in the window, who captured, for how much, and —
+   the enforcement number — which appointments still have no estimate on the
+   customer's file. Missing should read zero by evening; a red count here is
+   the list Kevin works the phones with. */
+function cardEstimates(){
+  if (!EFF_INTEL) return '';
+  const est = EFF_INTEL.est;
+  const label = EFF_INTEL.win === 'day' ? 'today' : EFF_INTEL.win === 'month' ? 'this month' : 'this week';
+  if (!est) return effAwait('Estimates on file · the numbers in the customer files',
+    'The estimate feed (migration 122, <b>estimate_board</b>) did not answer. Until 122 is applied and the field is on the build that posts amounts, estimate numbers exist only on each rep’s own phone — nothing is estimated in their place.');
+  const rows = est.filter(r => +r.appts > 0 || +r.quoted > 0);
+  const tQ = rows.reduce((n,r)=>n+ +r.quoted,0), tA = rows.reduce((n,r)=>n+ +r.appts,0);
+  const tM = rows.reduce((n,r)=>n+ +r.missing,0), t$ = rows.reduce((n,r)=>n+ +r.dollars,0);
+  if (!rows.length) return `<div class="card full">
+    <div class="card-title">Estimates on file · the numbers in the customer files<span class="feed-tag none">quiet ${esc(label)}</span></div>
+    <div class="withheld"><div class="wt">Honest zero</div><div class="wx">No appointments ran and no estimates were captured ${esc(label)}. The moment a rep saves an amount it lands here — server-counted, never from a phone summary.</div></div></div>`;
+  return `<div class="card full">
+    <div class="card-title">Estimates on file · the numbers in the customer files<span class="feed-tag">live · db</span></div>
+    <div class="card-sub">The mandatory number (4 Aug ruling: "after each estimate they have to publish the estimate amount — must be done on every job"), now on the server file, not just the rep’s phone. Quoted can exceed appointments — backfilled paper estimates count, by ruling.</div>
+    <div class="stat-grid" style="margin-bottom:14px">
+      <div class="stat-tile"><div class="lbl">Quoted ${esc(label)}</div>
+        <div class="val">${money(t$)}</div>
+        <div class="sub">${tQ} customer${tQ===1?'':'s'} · latest amount per file</div></div>
+      <div class="stat-tile"><div class="lbl">Missing an estimate</div>
+        <div class="val ${tM?'red':'green'}">${tM}</div>
+        <div class="sub">of ${tA} appt${tA===1?'':'s'} that ran ${esc(label)}</div></div>
+    </div>
+    ${rows.map(r => {
+      const pager = D.roster && D.roster[String(r.rep_id)];
+      const miss = +r.missing;
+      return `<div class="rep-row${pager?' acc':''}"${pager?` onclick="openRep('${esc(String(r.rep_id))}')"`:''}>
+        <div class="rep-head"><div class="nm">${esc(r.name)}</div>
+          <div class="amt">${money(+r.dollars)} <span>· ${r.quoted} quoted of ${r.appts} ran</span>${pager?'<span class="acc-chev">›</span>':''}</div></div>
+        <div class="tgt-cap"><span>${miss?`<b style="color:var(--red)">${miss} appt${miss===1?'':'s'} with no estimate on file</b>`:'every run appointment has its number'}</span><span>${r.last_at?`last capture ${new Date(r.last_at).toLocaleString('en-US',{timeZone:'America/New_York',hour:'numeric',minute:'2-digit',month:'short',day:'numeric'})}`:''}</span></div>
+      </div>`; }).join('')}
+    <div class="note">From <b>estimate_board()</b> (122): appointments from the CC feed, amounts from the app’s capture — an appointment is covered by an estimate dated its day or later, so a next-morning backfill clears yesterday honestly. Counts and totals only, sources never blended; a missing number reads missing, never guessed.</div>
   </div>`;
 }
 
@@ -3796,6 +3843,9 @@ function render(){
       cardChannelMix(),
       cardHitRates(),
       cardTouchLight(),
+      /* ESTIMATES ON FILE rides with the accountability set — Kevin, 6 Aug:
+         "make sure all estimate numbers get put in the customer files." */
+      cardEstimates(),
       cardConsistency(),
       cardCoverage(),
       cardSpeed(),
@@ -4237,7 +4287,7 @@ addEventListener('resize', () => {
    server for hours while Kevin looked at yesterday's build and reported the bug
    as unfixed. That happened. The page now checks version.json on every load and
    reloads itself once if the deployed build is newer than the one running. */
-const BUILD = '2026-08-05T22:45Z-touch-suite-and-appts-time-machine';
+const BUILD = '2026-08-06T00:00Z-estimates-on-file-board';
 const SB_URL = 'https://lzegjjbkfuecrhdvlvay.supabase.co';
 /* The one page that can finish a password reset. Hard-coded rather than derived,
    because every derivation of it so far has been a source of bugs: a bare origin
