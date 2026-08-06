@@ -1,0 +1,66 @@
+<!doctype html><html lang="en"><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Hurricane Season Roof Checklist — Pro-Tech Roofing</title>
+<style>
+  :root{--accent:#24409A}
+  html,body{margin:0;background:#faf8f2;color:#22281f;
+    font:16px/1.55 -apple-system,system-ui,"Segoe UI",sans-serif}
+  header{background:var(--accent);color:#fff;text-align:center;padding:34px 16px 26px}
+  header h1{margin:0;font-size:24px;letter-spacing:.18em;font-weight:800}
+  header p{margin:8px 0 0;opacity:.92;font-size:14px;letter-spacing:.04em}
+  main{max-width:680px;margin:0 auto;padding:22px 16px 8px}
+  h2{font-size:20px;color:var(--accent);margin:26px 0 8px}
+  p{margin:0 0 14px}
+  .card{background:#fff;border-radius:12px;box-shadow:0 2px 14px rgba(20,30,70,.14);
+    padding:18px 18px 12px;margin:0 0 16px}
+  .card h3{margin:0 0 4px;font-size:17px;color:var(--accent)}
+  .card p{margin:0 0 8px;font-size:14.5px;color:#4a5040}
+  .tip{background:#f2f5f0;border-left:4px solid var(--accent);border-radius:8px;
+    padding:12px 14px;font-size:14.5px;color:#3c4234;margin:0 0 16px}
+  .fine{font-size:12px;color:#8a8f9b;margin:14px 0 0;line-height:1.5}
+  footer{text-align:center;color:#8b917f;font-size:13px;padding:16px 16px 40px}
+</style>
+<header><h1>PRO-TECH ROOFING</h1><p>Hurricane Season Roof Checklist</p></header>
+<main>
+  <p>The best time to think about your roof and a storm is before there's a
+  storm. This checklist takes an afternoon, and most of it costs nothing.</p>
+
+  <div class="card"><h3>Photograph everything now</h3>
+    <p>Walk the outside and shoot your roof from all four sides, plus every
+    ceiling inside. If a storm ever damages your home, before-photos make an
+    insurance claim dramatically smoother.</p></div>
+  <div class="card"><h3>Trim what hangs over the roof</h3>
+    <p>Overhanging limbs are the most common cause of storm roof damage.
+    If it could reach the roof when it falls, trim it.</p></div>
+  <div class="card"><h3>Clear gutters and downspouts</h3>
+    <p>A storm drops a lot of water fast. Gutters full of debris send it under
+    the roof edge and down your walls instead of away from the house.</p></div>
+  <div class="card"><h3>Look up from the ground</h3>
+    <p>From the yard, scan for shingles that look lifted, cracked or out of
+    line. Anything loose before a storm is a hole after one. No ladder —
+    that's our job.</p></div>
+  <div class="card"><h3>After the storm</h3>
+    <p>Do the same ground-level scan, check ceilings for new stains, and get a
+    professional inspection if anything looks off. And be careful with
+    door-knockers who "happened to be in the area" — work with a local,
+    licensed contractor you can call back next year.</p></div>
+
+  <p>Want us to put professional eyes on your roof before the season winds up?
+  Reply to the message that brought you here and we'll set it up.</p>
+</main>
+<footer>Prepared for you by your representative &middot; Pro-Tech Roofing</footer>
+
+<script>
+  var q=new URLSearchParams(location.search), viewId=q.get('v')||null;
+  var seconds=0, timer=null;
+  function beat(){ if(!viewId) return;
+    fetch('https://lzegjjbkfuecrhdvlvay.supabase.co/functions/v1/folder/protech/beat',{method:'POST',headers:{'content-type':'application/json'},
+      body:JSON.stringify({viewId:viewId,seconds:seconds})}).catch(function(){}); }
+  function start(){ if(timer) return; timer=setInterval(function(){ seconds+=15; beat(); },15000); }
+  function stop(){ if(timer){ clearInterval(timer); timer=null; beat(); } }
+  document.addEventListener('visibilitychange',function(){ document.hidden?stop():start(); });
+  window.addEventListener('pagehide',stop);
+  start();
+</script>
+</html>

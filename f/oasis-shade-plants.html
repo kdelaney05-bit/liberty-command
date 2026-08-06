@@ -1,0 +1,74 @@
+<!doctype html><html lang="en"><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Plants That Love Florida Shade — Oasis Landscapes</title>
+<style>
+  :root{--accent:#1e6b3a}
+  html,body{margin:0;background:#faf8f2;color:#22281f;
+    font:16px/1.55 -apple-system,system-ui,"Segoe UI",sans-serif}
+  header{background:var(--accent);color:#fff;text-align:center;padding:34px 16px 26px}
+  header h1{margin:0;font-size:24px;letter-spacing:.18em;font-weight:800}
+  header p{margin:8px 0 0;opacity:.92;font-size:14px;letter-spacing:.04em}
+  main{max-width:680px;margin:0 auto;padding:22px 16px 8px}
+  h2{font-size:20px;color:var(--accent);margin:26px 0 8px}
+  p{margin:0 0 14px}
+  .card{background:#fff;border-radius:12px;box-shadow:0 2px 14px rgba(30,50,30,.14);
+    padding:18px 18px 12px;margin:0 0 16px}
+  .card h3{margin:0 0 4px;font-size:17px;color:var(--accent)}
+  .card p{margin:0 0 8px;font-size:14.5px;color:#4a5040}
+  .tip{background:#f4f8f0;border-left:4px solid var(--accent);border-radius:8px;
+    padding:12px 14px;font-size:14.5px;color:#3c4234;margin:0 0 16px}
+  footer{text-align:center;color:#8b917f;font-size:13px;padding:16px 16px 40px}
+</style>
+<header><h1>OASIS LANDSCAPES</h1><p>Plants That Love Florida Shade</p></header>
+<main>
+  <p>Got a spot the sun barely reaches — under oaks, along a north wall, beside
+  the lanai? That's not a problem corner. Some of the best-looking plants in
+  Florida actually prefer it there. Here are the ones we reach for again and
+  again.</p>
+
+  <h2>Our shade favorites</h2>
+  <div class="card"><h3>Cast Iron Plant</h3>
+    <p>The name says it. Deep-green leaves, thrives in dense shade where almost
+    nothing else will, and shrugs off dry spells once established.</p></div>
+  <div class="card"><h3>Ferns — Foxtail &amp; Macho</h3>
+    <p>Full, feathery texture that fills shady beds fast. Macho ferns get big
+    and dramatic; foxtails stay tidy and sculptural.</p></div>
+  <div class="card"><h3>Caladiums</h3>
+    <p>Shade is where their color turns on — whites, pinks and reds that
+    brighten dark corners better than flowers do.</p></div>
+  <div class="card"><h3>Crotons (dappled shade)</h3>
+    <p>Bold striped color that handles filtered light under trees. A little
+    morning sun deepens the reds and golds.</p></div>
+  <div class="card"><h3>Peace Lily &amp; Ti Plant</h3>
+    <p>Tropical looks for covered entries and lanai beds — lush foliage, easy
+    care, happy out of direct sun.</p></div>
+
+  <div class="tip">💡 <strong>The trick with shade:</strong> layer it. Tall
+  ferns at the back, color from caladiums or ti plants in the middle, cast iron
+  plant holding the low edge. Shade beds read as designed, not dark.</div>
+
+  <h2>What about grass?</h2>
+  <p>Turf struggles in deep shade — that's why bare patches keep coming back
+  under trees. Often the better move is to stop fighting it: a bed of
+  shade-lovers with mulch or rock looks intentional and stays that way.</p>
+
+  <p>Want us to look at your shady spots and sketch what would work? That's
+  exactly the kind of visit we love — just reply to the message that brought
+  you here.</p>
+</main>
+<footer>Prepared for you by your representative &middot; Oasis Landscapes</footer>
+
+<script>
+  var q=new URLSearchParams(location.search), viewId=q.get('v')||null;
+  var seconds=0, timer=null;
+  function beat(){ if(!viewId) return;
+    fetch('https://lzegjjbkfuecrhdvlvay.supabase.co/functions/v1/folder/oasis/beat',{method:'POST',headers:{'content-type':'application/json'},
+      body:JSON.stringify({viewId:viewId,seconds:seconds})}).catch(function(){}); }
+  function start(){ if(timer) return; timer=setInterval(function(){ seconds+=15; beat(); },15000); }
+  function stop(){ if(timer){ clearInterval(timer); timer=null; beat(); } }
+  document.addEventListener('visibilitychange',function(){ document.hidden?stop():start(); });
+  window.addEventListener('pagehide',stop);
+  start();
+</script>
+</html>
