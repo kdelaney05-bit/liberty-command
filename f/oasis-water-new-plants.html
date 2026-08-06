@@ -1,0 +1,68 @@
+<!doctype html><html lang="en"><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Watering New Plants — Oasis Landscapes</title>
+<style>
+  :root{--accent:#1e6b3a}
+  html,body{margin:0;background:#faf8f2;color:#22281f;
+    font:16px/1.55 -apple-system,system-ui,"Segoe UI",sans-serif}
+  header{background:var(--accent);color:#fff;text-align:center;padding:34px 16px 26px}
+  header h1{margin:0;font-size:24px;letter-spacing:.18em;font-weight:800}
+  header p{margin:8px 0 0;opacity:.92;font-size:14px;letter-spacing:.04em}
+  main{max-width:680px;margin:0 auto;padding:22px 16px 8px}
+  h2{font-size:20px;color:var(--accent);margin:26px 0 8px}
+  p{margin:0 0 14px}
+  .card{background:#fff;border-radius:12px;box-shadow:0 2px 14px rgba(30,50,30,.14);
+    padding:18px 18px 12px;margin:0 0 16px}
+  .card h3{margin:0 0 4px;font-size:17px;color:var(--accent)}
+  .card p{margin:0 0 8px;font-size:14.5px;color:#4a5040}
+  .tip{background:#f2f5f0;border-left:4px solid var(--accent);border-radius:8px;
+    padding:12px 14px;font-size:14.5px;color:#3c4234;margin:0 0 16px}
+  .fine{font-size:12px;color:#8a8f9b;margin:14px 0 0;line-height:1.5}
+  footer{text-align:center;color:#8b917f;font-size:13px;padding:16px 16px 40px}
+</style>
+<header><h1>OASIS LANDSCAPES</h1><p>Watering New Plants — The First 60 Days</p></header>
+<main>
+  <p>Here's the secret nobody tells you: how a new plant does in its first 60
+  days decides how it does for years. And the whole game is watering.</p>
+
+  <div class="card"><h3>Why new plants are different</h3>
+    <p>A just-planted palm or shrub is living out of the small root ball it
+    arrived with. Until its roots reach into your soil, it can't find water on
+    its own — even in a yard that gets irrigation.</p></div>
+  <div class="card"><h3>Deep beats daily</h3>
+    <p>A slow, thorough soak that reaches the whole root ball does more than a
+    quick daily sprinkle that wets the surface. Deep watering teaches roots to
+    grow down, and that's what makes a plant tough later.</p></div>
+  <div class="card"><h3>Morning is the right time</h3>
+    <p>Water in the morning and the plant carries it through the heat of the
+    day. Evening watering leaves foliage damp overnight — which Florida fungus
+    loves.</p></div>
+  <div class="card"><h3>Read the plant</h3>
+    <p>A little midday droop in summer heat is normal. Drooping at sunrise
+    means thirsty. Yellowing lower leaves with soggy soil means the opposite —
+    ease up.</p></div>
+
+  <div class="tip">💡 <strong>Keep the mulch ring.</strong> The mulch basin we
+  leave around new plantings isn't decoration — it holds water over the root
+  ball where the plant can actually use it.</div>
+
+  <p>Everything we plant comes with its own watering schedule — if you're ever
+  unsure, just reply to the message that brought you here and we'll walk it
+  with you.</p>
+</main>
+<footer>Prepared for you by your representative &middot; Oasis Landscapes</footer>
+
+<script>
+  var q=new URLSearchParams(location.search), viewId=q.get('v')||null;
+  var seconds=0, timer=null;
+  function beat(){ if(!viewId) return;
+    fetch('https://lzegjjbkfuecrhdvlvay.supabase.co/functions/v1/folder/oasis/beat',{method:'POST',headers:{'content-type':'application/json'},
+      body:JSON.stringify({viewId:viewId,seconds:seconds})}).catch(function(){}); }
+  function start(){ if(timer) return; timer=setInterval(function(){ seconds+=15; beat(); },15000); }
+  function stop(){ if(timer){ clearInterval(timer); timer=null; beat(); } }
+  document.addEventListener('visibilitychange',function(){ document.hidden?stop():start(); });
+  window.addEventListener('pagehide',stop);
+  start();
+</script>
+</html>

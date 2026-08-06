@@ -1,0 +1,79 @@
+<!doctype html><html lang="en"><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Fence Safety for Pools &amp; Pets — Liberty Fencing</title>
+<style>
+  :root{--accent:#1c3055}
+  html,body{margin:0;background:#faf8f2;color:#22281f;
+    font:16px/1.55 -apple-system,system-ui,"Segoe UI",sans-serif}
+  header{background:var(--accent);color:#fff;text-align:center;padding:34px 16px 26px}
+  header h1{margin:0;font-size:24px;letter-spacing:.18em;font-weight:800}
+  header p{margin:8px 0 0;opacity:.92;font-size:14px;letter-spacing:.04em}
+  main{max-width:680px;margin:0 auto;padding:22px 16px 8px}
+  h2{font-size:20px;color:var(--accent);margin:26px 0 8px}
+  p{margin:0 0 14px}
+  .card{background:#fff;border-radius:12px;box-shadow:0 2px 14px rgba(20,30,55,.14);
+    padding:18px 18px 12px;margin:0 0 16px}
+  .card h3{margin:0 0 4px;font-size:17px;color:var(--accent)}
+  .card p{margin:0 0 8px;font-size:14.5px;color:#454b58}
+  .tip{background:#eef2f8;border-left:4px solid var(--accent);border-radius:8px;
+    padding:12px 14px;font-size:14.5px;color:#39404e;margin:0 0 16px}
+  .fine{font-size:12px;color:#8a8f9b;margin:14px 0 0;line-height:1.5}
+  footer{text-align:center;color:#8a8f9b;font-size:13px;padding:16px 16px 40px}
+</style>
+<header><h1>LIBERTY FENCING</h1><p>Fence Safety for Pools &amp; Pets</p></header>
+<main>
+  <p>A fence is the part of pool and pet safety that works even when nobody is
+  watching. Here's what matters when the fence has a real job to do — and what
+  we build for.</p>
+
+  <h2>If you have a pool</h2>
+  <div class="card"><h3>Florida requires a barrier</h3>
+    <p>Florida's Residential Swimming Pool Safety Act requires new residential
+    pools to have a safety barrier. A properly built fence is the most common
+    way to meet it — and the one that also looks like part of your yard.</p></div>
+  <div class="card"><h3>What a pool-smart fence looks like</h3>
+    <p>Tall enough that it can't be stepped over. Pickets spaced so a small
+    child can't squeeze through. No horizontal rails on the outside that work
+    like a ladder. Gates that open away from the pool and close and latch
+    themselves, with the latch up high.</p></div>
+  <div class="tip">💡 <strong>The gate is the whole game.</strong> Most pool
+  incidents involve a gate that was propped open or didn't latch. Self-closing,
+  self-latching hardware isn't an upgrade — it's the point.</div>
+
+  <h2>If you have pets</h2>
+  <div class="card"><h3>Diggers</h3>
+    <p>For dogs that tunnel, the fix is at the bottom: tight ground clearance
+    and a straight, well-set bottom rail. PVC privacy panels leave no gap to
+    start on.</p></div>
+  <div class="card"><h3>Jumpers &amp; climbers</h3>
+    <p>Height plus a smooth face. A 6-foot privacy panel gives an athletic dog
+    nothing to grip and nothing to see chase-worthy on the other side —
+    half the jumping urge is visual.</p></div>
+  <div class="card"><h3>Small escape artists</h3>
+    <p>Picket spacing matters for small breeds the same way it does for
+    toddlers. Aluminum styles come with narrow spacing options built in.</p></div>
+
+  <p>Every yard is different — we'll walk yours, flag the weak spots, and quote
+  a fence that handles them. Just reply to the message that brought you
+  here.</p>
+
+  <p class="fine">General information, not legal advice — barrier requirements
+  depend on your pool, county and situation. Your Liberty representative will
+  go over what applies to your property.</p>
+</main>
+<footer>Prepared for you by your representative &middot; Liberty Fencing</footer>
+
+<script>
+  var q=new URLSearchParams(location.search), viewId=q.get('v')||null;
+  var seconds=0, timer=null;
+  function beat(){ if(!viewId) return;
+    fetch('https://lzegjjbkfuecrhdvlvay.supabase.co/functions/v1/folder/fencing/beat',{method:'POST',headers:{'content-type':'application/json'},
+      body:JSON.stringify({viewId:viewId,seconds:seconds})}).catch(function(){}); }
+  function start(){ if(timer) return; timer=setInterval(function(){ seconds+=15; beat(); },15000); }
+  function stop(){ if(timer){ clearInterval(timer); timer=null; beat(); } }
+  document.addEventListener('visibilitychange',function(){ document.hidden?stop():start(); });
+  window.addEventListener('pagehide',stop);
+  start();
+</script>
+</html>
