@@ -2432,7 +2432,7 @@ function cardTouchLight(){
 
 /* ESTIMATES ON FILE — Kevin, 6 Aug: "I need to make sure all estimate numbers
    get put in the customer files — did they happen today, and how can we make
-   them do it better?" This card IS the daily answer. Before migration 122 it
+   them do it better?" This card IS the daily answer. Before migration 131 it
    could not exist: the blink-red capture (build 57) saved the amount to each
    rep's phone only, and 121's coverage card had to decline a dollar figure
    for exactly that reason. Now the app posts every capture to the server
@@ -2446,7 +2446,7 @@ function cardEstimates(){
   const est = EFF_INTEL.est;
   const label = EFF_INTEL.win === 'day' ? 'today' : EFF_INTEL.win === 'month' ? 'this month' : 'this week';
   if (!est) return effAwait('Estimates on file · the numbers in the customer files',
-    'The estimate feed (migration 122, <b>estimate_board</b>) did not answer. Until 122 is applied and the field is on the build that posts amounts, estimate numbers exist only on each rep’s own phone — nothing is estimated in their place.');
+    'The estimate feed (migration 131, <b>estimate_board</b>) did not answer. Until 131 is applied and the field is on the build that posts amounts, estimate numbers exist only on each rep’s own phone — nothing is estimated in their place.');
   const rows = est.filter(r => +r.appts > 0 || +r.quoted > 0);
   const tQ = rows.reduce((n,r)=>n+ +r.quoted,0), tA = rows.reduce((n,r)=>n+ +r.appts,0);
   const tM = rows.reduce((n,r)=>n+ +r.missing,0), t$ = rows.reduce((n,r)=>n+ +r.dollars,0);
@@ -2454,7 +2454,7 @@ function cardEstimates(){
      need a pipeline dollar value."). A STOCK, deliberately not windowed like
      the columns above it: every open customer's latest on-file amount, 120-day
      book, sold work out, lost stays (build 59's pipeline rule). From
-     pipeline_value() (123); absent honestly if the fn hasn't answered. */
+     pipeline_value() (132); absent honestly if the fn hasn't answered. */
   const pipe = EFF_INTEL.pipe;
   const pipeBy = {}; if (pipe) for (const p of pipe) pipeBy[String(p.rep_id)] = p;
   const pT = pipe ? pipe.reduce((n,p)=>n+ +p.dollars,0) : null;
@@ -2486,7 +2486,7 @@ function cardEstimates(){
           <div class="amt">${money(+r.dollars)} <span>· ${r.quoted} quoted of ${r.appts} ran</span>${pager?'<span class="acc-chev">›</span>':''}</div></div>
         <div class="tgt-cap"><span>${miss?`<b style="color:var(--red)">${miss} appt${miss===1?'':'s'} with no estimate on file</b>`:'every run appointment has its number'}</span><span>${p&&+p.dollars>0?`pipeline ${money(+p.dollars)}${+p.unquoted?` · ${p.unquoted} unpriced`:''}`:r.last_at?`last capture ${new Date(r.last_at).toLocaleString('en-US',{timeZone:'America/New_York',hour:'numeric',minute:'2-digit',month:'short',day:'numeric'})}`:''}</span></div>
       </div>`; }).join('')}
-    <div class="note">From <b>estimate_board()</b> (122) and <b>pipeline_value()</b> (123): appointments from the CC feed, amounts from the app’s capture — an appointment is covered by an estimate dated its day or later, so a next-morning backfill clears yesterday honestly. The pipeline figure is a stock, not a window: every open customer’s latest on-file amount, 120-day book, sold work out, lost stays (build 59’s pipeline rule). Counts and totals only, sources never blended; a missing number reads missing, never guessed.</div>
+    <div class="note">From <b>estimate_board()</b> (131) and <b>pipeline_value()</b> (132): appointments from the CC feed, amounts from the app’s capture — an appointment is covered by an estimate dated its day or later, so a next-morning backfill clears yesterday honestly. The pipeline figure is a stock, not a window: every open customer’s latest on-file amount, 120-day book, sold work out, lost stays (build 59’s pipeline rule). Counts and totals only, sources never blended; a missing number reads missing, never guessed.</div>
   </div>`;
 }
 
@@ -4302,7 +4302,7 @@ addEventListener('resize', () => {
    server for hours while Kevin looked at yesterday's build and reported the bug
    as unfixed. That happened. The page now checks version.json on every load and
    reloads itself once if the deployed build is newer than the one running. */
-const BUILD = '2026-08-06T00:45Z-open-pipeline-value';
+const BUILD = '2026-08-07T06:30Z-estimates-on-file-131-132';
 const SB_URL = 'https://lzegjjbkfuecrhdvlvay.supabase.co';
 /* The one page that can finish a password reset. Hard-coded rather than derived,
    because every derivation of it so far has been a source of bugs: a bare origin
