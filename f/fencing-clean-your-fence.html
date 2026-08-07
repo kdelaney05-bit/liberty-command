@@ -1,0 +1,66 @@
+<!doctype html><html lang="en"><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex">
+<title>How to Clean Your Fence — Liberty Fencing</title>
+<style>
+  :root{--accent:#1c3055}
+  html,body{margin:0;background:#faf8f2;color:#22281f;
+    font:16px/1.55 -apple-system,system-ui,"Segoe UI",sans-serif}
+  header{background:var(--accent);color:#fff;text-align:center;padding:34px 16px 26px}
+  header h1{margin:0;font-size:24px;letter-spacing:.18em;font-weight:800}
+  header p{margin:8px 0 0;opacity:.92;font-size:14px;letter-spacing:.04em}
+  main{max-width:680px;margin:0 auto;padding:22px 16px 8px}
+  h2{font-size:20px;color:var(--accent);margin:26px 0 8px}
+  p{margin:0 0 14px}
+  .card{background:#fff;border-radius:12px;box-shadow:0 2px 14px rgba(20,30,55,.14);
+    padding:18px 18px 12px;margin:0 0 16px}
+  .card h3{margin:0 0 4px;font-size:17px;color:var(--accent)}
+  .card p{margin:0 0 8px;font-size:14.5px;color:#4a5040}
+  .tip{background:#f2f5f0;border-left:4px solid var(--accent);border-radius:8px;
+    padding:12px 14px;font-size:14.5px;color:#3c4234;margin:0 0 16px}
+  .fine{font-size:12px;color:#8a8f9b;margin:14px 0 0;line-height:1.5}
+  footer{text-align:center;color:#8b917f;font-size:13px;padding:16px 16px 40px}
+</style>
+<header><h1>LIBERTY FENCING</h1><p>How to Clean Your Fence</p></header>
+<main>
+  <p>A fence is one of the few upgrades that looks better the longer you take
+  care of it — and taking care of it is easier than most people think. Here's
+  the right way to clean each kind.</p>
+
+  <div class="card"><h3>PVC &amp; vinyl</h3>
+    <p>A garden hose, a soft brush and a little dish soap handle almost
+    everything. For scuffs and stubborn marks, a melamine sponge (magic
+    eraser) works wonders. Skip harsh solvents — they can dull the finish —
+    and keep pressure washers on a wide, gentle setting from a few feet
+    back.</p></div>
+  <div class="card"><h3>Aluminum</h3>
+    <p>The easiest of all: rinse it a couple of times a year, mild soapy water
+    where grime builds near sprinklers, and it keeps its finish for
+    decades.</p></div>
+  <div class="card"><h3>Wood</h3>
+    <p>Gentle wash with soapy water and a brush. Go easy with pressure —
+    blasting up close furs the grain. When water stops beading on the surface,
+    that's the fence telling you it's time to re-seal or re-stain.</p></div>
+
+  <div class="tip">💡 <strong>Florida tip:</strong> in our humidity, the shady
+  side of the fence grows algae and mildew first. Catch it early with a quick
+  seasonal rinse and it never gets a foothold.</div>
+
+  <p>Questions about your fence — or thinking about a new one? Just reply to
+  the message that brought you here.</p>
+</main>
+<footer>Prepared for you by your representative &middot; Liberty Fencing</footer>
+
+<script>
+  var q=new URLSearchParams(location.search), viewId=q.get('v')||null;
+  var seconds=0, timer=null;
+  function beat(){ if(!viewId) return;
+    fetch('https://lzegjjbkfuecrhdvlvay.supabase.co/functions/v1/folder/fencing/beat',{method:'POST',headers:{'content-type':'application/json'},
+      body:JSON.stringify({viewId:viewId,seconds:seconds})}).catch(function(){}); }
+  function start(){ if(timer) return; timer=setInterval(function(){ seconds+=15; beat(); },15000); }
+  function stop(){ if(timer){ clearInterval(timer); timer=null; beat(); } }
+  document.addEventListener('visibilitychange',function(){ document.hidden?stop():start(); });
+  window.addEventListener('pagehide',stop);
+  start();
+</script>
+</html>

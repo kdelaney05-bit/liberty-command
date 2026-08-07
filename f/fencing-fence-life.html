@@ -1,0 +1,70 @@
+<!doctype html><html lang="en"><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Get the Most Out of Your Fence — Liberty Fencing</title>
+<style>
+  :root{--accent:#1c3055}
+  html,body{margin:0;background:#faf8f2;color:#22281f;
+    font:16px/1.55 -apple-system,system-ui,"Segoe UI",sans-serif}
+  header{background:var(--accent);color:#fff;text-align:center;padding:34px 16px 26px}
+  header h1{margin:0;font-size:24px;letter-spacing:.18em;font-weight:800}
+  header p{margin:8px 0 0;opacity:.92;font-size:14px;letter-spacing:.04em}
+  main{max-width:680px;margin:0 auto;padding:22px 16px 8px}
+  h2{font-size:20px;color:var(--accent);margin:26px 0 8px}
+  p{margin:0 0 14px}
+  .card{background:#fff;border-radius:12px;box-shadow:0 2px 14px rgba(20,30,55,.14);
+    padding:18px 18px 12px;margin:0 0 16px}
+  .card h3{margin:0 0 4px;font-size:17px;color:var(--accent)}
+  .card p{margin:0 0 8px;font-size:14.5px;color:#4a5040}
+  .tip{background:#f2f5f0;border-left:4px solid var(--accent);border-radius:8px;
+    padding:12px 14px;font-size:14.5px;color:#3c4234;margin:0 0 16px}
+  .fine{font-size:12px;color:#8a8f9b;margin:14px 0 0;line-height:1.5}
+  footer{text-align:center;color:#8b917f;font-size:13px;padding:16px 16px 40px}
+</style>
+<header><h1>LIBERTY FENCING</h1><p>Get the Most Out of Your Fence</p></header>
+<main>
+  <p>A well-built fence should serve you for a very long time. A few easy
+  habits make the difference between a fence that ages gracefully and one that
+  fights you.</p>
+
+  <div class="card"><h3>Start with the gate</h3>
+    <p>The gate is the only part of a fence with moving parts, and it works
+    every day. Once a year, snug the hinge hardware and check the latch still
+    catches cleanly — two minutes that prevent the most common fence
+    repair.</p></div>
+  <div class="card"><h3>Aim the sprinklers away</h3>
+    <p>Constant overspray stains PVC, spots aluminum and soaks wood. If a head
+    is painting your fence twice a day, turn it a few degrees — your fence and
+    your water bill both win.</p></div>
+  <div class="card"><h3>Give it breathing room</h3>
+    <p>Vines, leaning firewood and beds piled against the pickets hold
+    moisture on the fence. Keep a little gap and air does the maintenance for
+    you.</p></div>
+  <div class="card"><h3>Walk the line after storms</h3>
+    <p>After a blow, walk your fence line. A slightly leaning post or lifted
+    panel is a quick fix caught early — and a bigger one after the next
+    storm.</p></div>
+  <div class="card"><h3>Trim what hangs over</h3>
+    <p>Overhanging limbs are the number-one cause of fence damage in a storm.
+    If a branch could reach the fence when it falls, it's worth
+    trimming.</p></div>
+
+  <p>Want a professional set of eyes on your fence — or a quote on a new one
+  built to last like this? Just reply to the message that brought you
+  here.</p>
+</main>
+<footer>Prepared for you by your representative &middot; Liberty Fencing</footer>
+
+<script>
+  var q=new URLSearchParams(location.search), viewId=q.get('v')||null;
+  var seconds=0, timer=null;
+  function beat(){ if(!viewId) return;
+    fetch('https://lzegjjbkfuecrhdvlvay.supabase.co/functions/v1/folder/fencing/beat',{method:'POST',headers:{'content-type':'application/json'},
+      body:JSON.stringify({viewId:viewId,seconds:seconds})}).catch(function(){}); }
+  function start(){ if(timer) return; timer=setInterval(function(){ seconds+=15; beat(); },15000); }
+  function stop(){ if(timer){ clearInterval(timer); timer=null; beat(); } }
+  document.addEventListener('visibilitychange',function(){ document.hidden?stop():start(); });
+  window.addEventListener('pagehide',stop);
+  start();
+</script>
+</html>

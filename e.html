@@ -15,26 +15,176 @@
   iframe{border:0;width:100%;height:82vh;background:#fff;border-radius:10px}
   .folder{display:block;text-align:center;background:#1e6b3a;color:#fff;text-decoration:none;
     font-weight:700;letter-spacing:.05em;border-radius:12px;padding:15px 16px;margin:16px 0 30px}
+
+  /* ── Approve & Sign (126) ────────────────────────────────────────────── */
+  .sign{background:#fff;border-radius:12px;box-shadow:0 2px 14px rgba(20,30,50,.14);
+    padding:20px 18px 18px;margin:18px 0 30px}
+  .sign h2{margin:0 0 4px;font-size:17px;letter-spacing:.04em;color:#1c3055}
+  .sign .lead{margin:0 0 16px;font-size:13.5px;color:#5f6672}
+  .sign label{display:block;font-size:12px;letter-spacing:.09em;text-transform:uppercase;
+    color:#5f6672;font-weight:700;margin:0 0 6px}
+  .sign input[type=text]{width:100%;box-sizing:border-box;font:16px/1.4 inherit;
+    padding:12px 12px;border:1.5px solid #d8d5ca;border-radius:9px;background:#fcfbf7;color:#22281f}
+  .sign input[type=text]:focus{outline:0;border-color:#1c3055}
+  /* The acknowledgment. No checkbox — the signature IS the acknowledgment, so
+     this clause sits directly above the pad where it cannot be missed. */
+  .terms{margin:18px 0 6px;font-size:13.5px;color:#3d4450}
+  .terms a{color:#1c3055;font-weight:700;text-decoration:underline}
+  .padwrap{position:relative;border:1.5px dashed #c9c5b8;border-radius:10px;background:#fcfbf7;
+    height:190px;overflow:hidden;touch-action:none}
+  .padwrap canvas{display:block;width:100%;height:100%;touch-action:none;cursor:crosshair}
+  .padhint{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+    color:#a9a89c;font-size:14px;pointer-events:none;letter-spacing:.04em}
+  .padline{position:absolute;left:18px;right:18px;bottom:44px;border-top:1.5px solid #e0ddd0;
+    pointer-events:none}
+  .padrow{display:flex;justify-content:space-between;align-items:center;margin:8px 2px 0}
+  .padrow .stamp{font-size:12px;color:#8a8f98}
+  .clear{background:none;border:0;color:#8a8f98;font-size:13px;font-weight:600;
+    text-decoration:underline;padding:4px 2px;cursor:pointer}
+  .go{display:block;width:100%;margin:16px 0 0;background:#1e6b3a;color:#fff;border:0;
+    border-radius:12px;padding:16px;font:700 16px/1 inherit;letter-spacing:.05em;cursor:pointer}
+  .go[disabled]{background:#c3c8bf;cursor:default}
+  .err{margin:10px 0 0;font-size:13.5px;color:#a3341f;min-height:1px}
+  .done{background:#eef6ef;border:1.5px solid #1e6b3a;border-radius:12px;padding:18px;
+    margin:18px 0 30px}
+  .done h2{margin:0 0 6px;font-size:17px;color:#1e6b3a;letter-spacing:.04em}
+  .done p{margin:0;font-size:14px;color:#3d4450}
 </style>
 <header><h1>YOUR ESTIMATE</h1><a class="dl" id="dl" href="#" download>Download</a></header>
 <div class="wrap" id="wrap"></div>
 <script>
+  var FN='https://lzegjjbkfuecrhdvlvay.supabase.co/functions/v1/estimate-view/';
   var q=new URLSearchParams(location.search);
   var t=q.get('t'), m=q.get('m')||'i', f=q.get('f');
-  var src='https://lzegjjbkfuecrhdvlvay.supabase.co/functions/v1/estimate-view/'+t+'/pdf';
+  var termsUrl=q.get('tu')||'./terms/liberty.html';   // server picks the brand document
+  var signedAt=q.get('sg');                            // present = already signed
+  var src=FN+t+'/pdf';
   document.getElementById('dl').href=src;
   var w=document.getElementById('wrap');
-  if(!t){ w.innerHTML='<p style="text-align:center;color:#8a8f85;padding:40px 10px">This estimate isn\u2019t available. Please contact your rep for a new link.</p>'; }
+  if(!t){ w.innerHTML='<p style="text-align:center;color:#8a8f85;padding:40px 10px">This estimate isn’t available. Please contact your rep for a new link.</p>'; }
   else {
     w.innerHTML=(m==='p'?'<iframe src="'+src+'" title="Estimate"></iframe>'
                         :'<img src="'+src+'" alt="Your estimate">')
-      +(f?'<a class="folder" href="https://lzegjjbkfuecrhdvlvay.supabase.co/functions/v1/folder/'+f+'?e='+t+'">BROWSE OUR DESIGN FOLDER \u2192</a>':'');
+      + signBlock()
+      +(f?'<a class="folder" href="https://lzegjjbkfuecrhdvlvay.supabase.co/functions/v1/folder/'+f+'?e='+t+'">BROWSE OUR DESIGN FOLDER →</a>':'');
+    if(!signedAt) wireSigning();
+  }
+
+  function esc(s){ return String(s).replace(/[&<>"]/g,function(c){
+    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
+
+  /* A link that has already been signed shows the receipt, never a second
+     empty pad — re-opening the estimate must not read as "sign again". */
+  function signBlock(){
+    if(signedAt){
+      var when=new Date(signedAt);
+      var pretty=isNaN(when)?'':when.toLocaleString([], {dateStyle:'long', timeStyle:'short'});
+      return '<div class="done"><h2>✓ SIGNED</h2>'
+        +'<p>Thank you — this estimate was approved and signed'
+        +(pretty?' on '+esc(pretty):'')+'. Your rep has been notified. '
+        +'You agreed to our <a href="'+esc(termsUrl)+'" target="_blank" rel="noopener">Terms &amp; Conditions</a>.</p></div>';
+    }
+    return '<div class="sign">'
+      +'<h2>APPROVE &amp; SIGN</h2>'
+      +'<p class="lead">Happy with this estimate? Approve it right here — no printing, no scanning.</p>'
+      +'<label for="nm">Your full name</label>'
+      +'<input type="text" id="nm" autocomplete="name" autocapitalize="words" '
+      +'spellcheck="false" placeholder="Type your full name">'
+      /* THE CLAUSE — one line, directly above the pad. */
+      +'<p class="terms">By signing, you agree to the '
+      +'<a href="'+esc(termsUrl)+'" target="_blank" rel="noopener">Terms &amp; Conditions</a>.</p>'
+      +'<div class="padwrap"><canvas id="pad"></canvas><div class="padline"></div>'
+      +'<div class="padhint" id="hint">Sign here with your finger</div></div>'
+      +'<div class="padrow"><span class="stamp" id="stamp"></span>'
+      +'<button type="button" class="clear" id="clr">Clear</button></div>'
+      +'<button type="button" class="go" id="go">APPROVE &amp; SIGN</button>'
+      +'<p class="err" id="err"></p>'
+      +'</div>';
+  }
+
+  function wireSigning(){
+    var shownAt=new Date().toISOString();      // when the clause was put in front of them
+    var pad=document.getElementById('pad'), hint=document.getElementById('hint');
+    var stamp=document.getElementById('stamp'), err=document.getElementById('err');
+    var go=document.getElementById('go'), nm=document.getElementById('nm');
+    var ctx=pad.getContext('2d'), ink=false, drawing=false, last=null;
+
+    stamp.textContent=new Date().toLocaleString([], {dateStyle:'medium', timeStyle:'short'});
+
+    /* Backing store at device resolution, or the signature is a blurry mess on
+       a phone — which is exactly the device every one of these is signed on. */
+    function size(){
+      var r=pad.getBoundingClientRect(), d=window.devicePixelRatio||1;
+      var keep=ink?pad.toDataURL('image/png'):null;
+      pad.width=Math.round(r.width*d); pad.height=Math.round(r.height*d);
+      ctx.setTransform(d,0,0,d,0,0);
+      ctx.lineWidth=2.4; ctx.lineCap='round'; ctx.lineJoin='round'; ctx.strokeStyle='#16233d';
+      if(keep){ var im=new Image(); im.onload=function(){ ctx.drawImage(im,0,0,r.width,r.height); }; im.src=keep; }
+    }
+    size();
+    window.addEventListener('resize', size);
+    window.addEventListener('orientationchange', size);
+
+    function pt(e){
+      var r=pad.getBoundingClientRect();
+      var s=e.touches&&e.touches[0]?e.touches[0]:e;
+      return {x:s.clientX-r.left, y:s.clientY-r.top};
+    }
+    function down(e){ e.preventDefault(); drawing=true; last=pt(e);
+      if(!ink){ ink=true; hint.style.display='none'; } }
+    function move(e){
+      if(!drawing) return;
+      e.preventDefault();                       // otherwise the page scrolls under the finger
+      var p=pt(e);
+      ctx.beginPath(); ctx.moveTo(last.x,last.y); ctx.lineTo(p.x,p.y); ctx.stroke();
+      last=p;
+    }
+    function up(){ drawing=false; last=null; }
+
+    pad.addEventListener('touchstart',down,{passive:false});
+    pad.addEventListener('touchmove',move,{passive:false});
+    pad.addEventListener('touchend',up);
+    pad.addEventListener('touchcancel',up);
+    pad.addEventListener('mousedown',down);
+    pad.addEventListener('mousemove',move);
+    window.addEventListener('mouseup',up);
+
+    document.getElementById('clr').addEventListener('click',function(){
+      ctx.clearRect(0,0,pad.width,pad.height); ink=false; hint.style.display='';
+      err.textContent='';
+    });
+
+    go.addEventListener('click',function(){
+      var name=(nm.value||'').trim();
+      if(name.length<2){ err.textContent='Please type your full name.'; nm.focus(); return; }
+      if(!ink){ err.textContent='Please sign in the box above.'; return; }
+      err.textContent=''; go.disabled=true; go.textContent='SENDING…';
+
+      fetch(FN+t+'/sign',{method:'POST',headers:{'content-type':'application/json'},
+        body:JSON.stringify({name:name, signature:pad.toDataURL('image/png'), termsShownAt:shownAt})})
+        .then(function(r){ return r.json().catch(function(){ return {ok:false}; }); })
+        .then(function(j){
+          if(j && j.ok){ signedAt=j.signedAt||new Date().toISOString(); render(); }
+          else { throw new Error((j&&j.error)||'failed'); }
+        })
+        .catch(function(){
+          go.disabled=false; go.textContent='APPROVE & SIGN';
+          err.textContent='That didn’t go through. Please check your connection and try again.';
+        });
+    });
+
+    /* Swap the form for the receipt in place — no reload, so a flaky signal
+       cannot lose the confirmation they just earned. */
+    function render(){
+      var host=document.querySelector('.sign');
+      if(host) host.outerHTML=signBlock();
+    }
   }
 </script>
 <script>
   var viewId=q.get('v')||null, seconds=0, timer=null;
   function beat(){ if(!viewId||!t) return;
-    fetch('https://lzegjjbkfuecrhdvlvay.supabase.co/functions/v1/estimate-view/'+t+'/beat',{method:'POST',headers:{'content-type':'application/json'},
+    fetch(FN+t+'/beat',{method:'POST',headers:{'content-type':'application/json'},
       body:JSON.stringify({viewId:viewId,seconds:seconds})}).catch(function(){}); }
   function start(){ if(timer) return; timer=setInterval(function(){ seconds+=15; beat(); },15000); }
   function stop(){ if(timer){ clearInterval(timer); timer=null; beat(); } }

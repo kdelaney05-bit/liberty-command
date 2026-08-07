@@ -1,0 +1,21 @@
+NOT A PAGE — the shared skeleton the five terms/*.html placeholders were cut
+from, kept so the real documents can be dropped in consistently.
+
+⚠️ THESE ARE PLACEHOLDERS (126, 6 Aug 2026). Kevin's leave-behind Terms &
+Conditions — "it's all the legal not-my-fault stuff" — have not been sent yet.
+The pages therefore say so in plain words. NOTHING on them invents a term,
+a warranty, an arbitration clause, a cancellation window or a limitation of
+liability: legal text nobody at the company wrote is worse than an honest
+placeholder, and it would be exactly the kind of thing the actuals law exists
+to stop. A signature is evidence of what the signer was shown; showing them
+invented terms would poison the evidence.
+
+WHEN THE REAL DOCUMENTS ARRIVE
+  1. Replace the <main> body of the brand page with the real terms.
+  2. Bump TERMS_VERSION_DATE in supabase/functions/estimate-view/index.ts
+     (trureview-mobile) and redeploy the function.
+  3. NEVER edit a version that has already been signed against — old
+     customer_signatures rows must keep pointing at the document their signer
+     actually saw. A new document is a new version string, always.
+
+Placeholders in the skeleton: {{ACCENT}} {{BRAND}} {{TITLE}}
