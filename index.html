@@ -1055,7 +1055,8 @@ function weekReset(){
   if (daysIn > 1 && !thin) return null;
   return { daysIn, full,
            began: daysIn <= 1 ? 'Week began today' : `Week is ${daysIn} days old`,
-           topReps: (full.reps || []).filter(r => r.rev > 0).slice(0, 3) };
+           // unattributed pseudo-rows never rank as a person (who-signed-it ruling)
+           topReps: (full.reps || []).filter(r => r.rev > 0 && !r.office).slice(0, 3) };
 }
 
 function weekResetNote(){
@@ -1920,8 +1921,22 @@ function cardReps(){
          not company money until CC books it. Kevin read "$217K" up top and
          "$312K" here (31 Jul) and rightly called it a discrepancy: two honest
          numbers, zero explanation. So the seam is stated on the face of the
-         total — confirmed vs rung — instead of leaving him to reconcile it. */
+         total — confirmed vs rung — instead of leaving him to reconcile it.
+         SECOND SEAM, same lesson (7 Aug): this footnote flatly called its
+         confirmed subtotal "the Signed figure up top" — but a CC contract
+         with no rep_id is in the hero and on NO rep's bar (it ranks nowhere;
+         it lives in Needs an owner, per the who-signed-it ruling). Kevin read
+         $189K up top against "$173K (the Signed figure up top)" here. The
+         equality is now COMPUTED, never asserted: when unattributed money
+         exists, the gap is named and pointed at, and only a true equation
+         claims to be one. */
       const rung2 = all.reduce((n,r)=>n+(r.rung||0),0);
+      const heroRev = ((W.company||{}).rev)||0, unatt = heroRev - (tot2 - rung2);
+      const seam = Math.abs(unatt) < 1
+        ? '' /* confirmed IS the hero figure; the line below says so inline */
+        : unatt > 0
+          ? `<div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text-dim);margin-top:4px">Signed up top reads <b style="color:var(--text)">${short(heroRev)}</b> — this board's ${short(tot2-rung2)} confirmed plus <b style="color:var(--text)">${short(unatt)}</b> signed with <b style="color:var(--text)">no rep on the record</b>: money nobody is credited with sits off the rep board, not inside anyone's bar. It is listed under <b style="color:var(--text)">Needs an owner</b> in the window drill-in — a gap to fix at the source in CC.</div>`
+          : `<div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text-dim);margin-top:4px">Signed up top reads <b style="color:var(--text)">${short(heroRev)}</b> — these two are measured from the same window but do not currently reconcile, which is a bug worth reporting, not a seam.</div>`;
       return `<div style="margin:6px 0 10px">
         <div style="font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--text-dim)">All reps · ${label}</div>
         <div style="display:flex;align-items:baseline;gap:12px">
@@ -1929,7 +1944,8 @@ function cardReps(){
           ${dp!==null?`<span class="${dp>=0?'up':'dn'}" style="font-family:'JetBrains Mono',monospace;font-size:15px;font-weight:700">${dp>=0?'▲':'▼'} ${Math.abs(dp)}%</span>`:''}
         </div>
         <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text-dim);margin-top:2px">${deals2} deal${deals2===1?'':'s'}${dp!==null?` · vs <b style="color:var(--text)">${short(pTot)}</b> ${esc(W.prevLabel||'')}`:''}</div>
-        ${rung2?`<div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text-dim);margin-top:4px">= <b style="color:var(--text)">${short(tot2-rung2)}</b> confirmed · cc + billdu (the Signed figure up top) + <b style="color:var(--text)">${short(rung2)}</b> rung 🛎️ pending CC — board credit, not company money yet</div>`:''}
+        ${rung2?`<div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text-dim);margin-top:4px">= <b style="color:var(--text)">${short(tot2-rung2)}</b> confirmed · cc + billdu${Math.abs(unatt)<1?' (the Signed figure up top)':''} + <b style="color:var(--text)">${short(rung2)}</b> rung 🛎️ pending CC — board credit, not company money yet</div>`:''}
+        ${seam}
       </div>`; })()}
     ${reps.map((r,i)=>`<div class="rep-row${r.office?'':' acc'}"${i>=CORE?' data-extra="1" style="display:none"':''} ${r.office?'style="opacity:.8"':`onclick="openRep('${esc(String(r.id))}')"`}>
       <div class="rep-head">
@@ -4304,7 +4320,7 @@ addEventListener('resize', () => {
    server for hours while Kevin looked at yesterday's build and reported the bug
    as unfixed. That happened. The page now checks version.json on every load and
    reloads itself once if the deployed build is newer than the one running. */
-const BUILD = '2026-08-07T13:28Z-lost-file-133';
+const BUILD = '2026-08-07T18:05Z-rep-board-seam';
 const SB_URL = 'https://lzegjjbkfuecrhdvlvay.supabase.co';
 /* The one page that can finish a password reset. Hard-coded rather than derived,
    because every derivation of it so far has been a source of bugs: a bare origin
