@@ -356,6 +356,11 @@
     letter-spacing: -0.02em; line-height: 1.05; margin-top: 3px; }
   @media (min-width: 700px) { .snap-v { font-size: 30px; } }
   .snap-s { font-family: 'JetBrains Mono', monospace; font-size: 9px; color: var(--text-dim); margin-top: 3px; }
+  /* the rung line under the Signed hero: the bell layer said out loud, beside
+     the actual, never blended into it */
+  .snap-bell { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--text-dim);
+    margin-top: 6px; line-height: 1.5; }
+  .snap-bell b { color: var(--gold); font-weight: 600; }
   .snap-d { font-family: 'JetBrains Mono', monospace; font-size: 9px; margin-top: 5px; letter-spacing: 0.02em; }
   .snap-d.up { color: var(--green-soft); } .snap-d.down { color: #d8997f; } .snap-d.flat { color: var(--text-dim); }
   .snaphint { font-family: 'JetBrains Mono', monospace; font-size: 9px; letter-spacing: 0.1em;
@@ -645,6 +650,8 @@
   .tick { font-family: 'JetBrains Mono', monospace; font-size: 7.5px; letter-spacing: 0.1em;
     text-transform: uppercase; color: var(--accent-soft); border: 1px solid rgba(240,131,74,0.4);
     border-radius: 100px; padding: 1px 5px; margin-left: 6px; vertical-align: middle; }
+  /* bell tick: rung dollars riding NEXT TO a brand's signed figure, never in it */
+  .tick.bell { color: var(--gold); border-color: rgba(212,177,90,0.45); text-transform: none; }
 
   /* ── per-window deep dive ── */
   .backbar { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
@@ -694,6 +701,7 @@
   .feed-tag.billdu { color: var(--accent-soft); border-color: rgba(240,131,74,0.45);
     background: rgba(240,131,74,0.08); }
   .feed-tag.none { color: var(--text-dim); border-color: rgba(255,255,255,0.12); }
+  .feed-tag.bell { color: var(--gold); border-color: rgba(212,177,90,0.45); }
 
   /* withheld / honest-absence block */
   .withheld { background: rgba(212,177,90,0.05); border: 1px solid rgba(212,177,90,0.22);
@@ -1122,7 +1130,7 @@ function heroTrend(){
         <div class="ht-top"><span>${esc(m.s)}</span>
           <span class="ht-v" style="color:${tgt?(hit?'var(--green-soft)':'var(--gold)'):'var(--text)'}">${short(proj)}</span></div>
         <div class="meter"><div class="meter-fill" style="width:${Math.round(b.rev/mx*100)}%;background:${m.c}"></div></div>
-        <div class="ht-sub">${short(b.rev)} booked${tgt?` · ${hit?`clears goal ${short(tgt)}`:`short of goal ${short(tgt)}`}`:''} · ${shaped!=null?`shape from ${sh.n} mo`:'flat rate'}</div>
+        <div class="ht-sub">${short(b.rev)} so far${tgt?` · ${hit?`clears goal ${short(tgt)}`:`short of goal ${short(tgt)}`}`:''} · ${shaped!=null?`shape from ${sh.n} mo`:'flat rate'}</div>
       </div>`;}).join('')}
   </div>`;
 }
@@ -1139,10 +1147,12 @@ function hdr(){
   const W = flat(k), pv = W.prev;
   const d = pv.rev ? Math.round((W.rev - pv.rev)/pv.rev*100) : null;
   const wr = k === 'week' ? weekReset() : null;
+  const seam = [[W.ccRev,'CC'],[W.billdu,'Billdu'],[W.rungRev,'🔔 rung']]
+    .filter(([v]) => v).map(([v,l]) => `${short(v)} ${l}`).join(' + ');
   const sub = wr
     ? `${wr.daysIn <= 1 ? 'began today' : wr.daysIn + ' days in'} · last wk ${short(wr.full.rev)}`
-    : W.billdu
-      ? `${short(W.ccRev)} CC + ${short(W.billdu)} Billdu`
+    : (W.billdu || W.rungRev)
+      ? seam
       : (W.prevSpanDays >= spanOf(k) ? `${W.jobs} signed` : `pace ${short(paceOf(k))}`);
   const q = qbWinOf(k);
   return `<div class="hdr">
@@ -1162,10 +1172,12 @@ function hdr(){
         <div class="alloc-chart"><canvas id="cHeroMix"></canvas>
           <div class="alloc-center"><div class="big">${short(W.rev)}</div><div class="lbl">signed</div></div></div>
         <div class="alloc-legend">${allBrands(W.brands).map(b => { const m = brandOf(b.id);
-          return `<div class="alloc-row" ${b.rev?'':'style="opacity:.55"'}>
+          const rg = W.rung && W.rung.byBrand[String(b.id)];
+          return `<div class="alloc-row" ${(b.rev||rg)?'':'style="opacity:.55"'}>
             <div class="alloc-dot" style="background:${m.c}"></div>
-            <div class="name">${esc(m.n)}${b.billdu?'<span class="tick">billdu</span>':''}</div>
+            <div class="name">${esc(m.n)}${b.billdu?'<span class="tick">billdu</span>':''}${rg?`<span class="tick bell">🔔 ${short(rg.value)} rung</span>`:''}</div>
             <div class="val">${b.rev?`${short(b.rev)} · ${pct(b.rev, W.rev)}%`:'$0'}</div></div>`; }).join('')}</div>
+        ${W.rung && W.rung.value ? `<div class="snap-bell">incl. 🔔 <b>${short(W.rung.value)}</b> rung · ${W.rung.count} deal${W.rung.count===1?'':'s'} awaiting the book — comes off in 5 business days if never turned in<span class="feed-tag bell">bell</span></div>` : ''}
         <div class="snap-s">${sub}</div>
         <div class="snap-d ${d===null?'flat':d>=0?'up':'down'}">${d===null?'—':(d>=0?'▲':'▼')+' '+Math.abs(d)+'% vs '+esc(W.prevLabel)}</div>
         <div class="snap-go">details <span class="go-chev">›</span></div>
@@ -1195,7 +1207,7 @@ function hdr(){
       </button>
     </div>
     ${k === 'month' ? heroTrend() : ''}
-    <div class="snaphint">Signed = contract value · CC + Oasis via Billdu. Built = invoiced in QuickBooks. Two different events in two systems — never added together.</div>
+    <div class="snaphint">Signed = every sale on the board — CC contracts + Oasis via Billdu + 🔔 rung bells awaiting the book, each part labeled, same union as the rep board below (Kevin's 10 Aug ruling: "that needs to match"). A bell counts the moment it rings, hands off to the feed the moment CC or Billdu books it, and comes off after 5 business days if never turned in — the managers get a notification when one does. Built = invoiced in QuickBooks; Signed and Built are never added together.</div>
   </div>`;
 }
 
@@ -1586,7 +1598,7 @@ function cardQuota(){
       ${closeMini(r.id)}
     </div>`).join('')}
 
-    <div class="note">The floor is uniform — <b>${short(Q.daily)}/day signed, every rep</b>, prorated to the same point in ${label}. Signed value is Contractors Cloud contract value plus each rep's own Billdu invoices (Oasis money reads entirely from Billdu), attributed the same way the rep board is, Oasis office-default included — the boards and this floor read one rule. The tick on each bar marks the floor. This is stated as a floor because that is what it is — not a target anyone may or may not choose to hit.</div>
+    <div class="note">The floor is uniform — <b>${short(Q.daily)}/day signed, every rep</b>, prorated to the same point in ${label}. Signed value is Contractors Cloud contract value plus each rep's own Billdu invoices (Oasis money reads entirely from Billdu) plus their 🔔 rung bells awaiting the book, attributed the same way the rep board is, Oasis office-default included — the boards and this floor read one rule (10 Aug: "that needs to match"). The tick on each bar marks the floor. This is stated as a floor because that is what it is — not a target anyone may or may not choose to hit.</div>
   </div>`;
 }
 
@@ -1959,11 +1971,12 @@ function cardReps(){
       const pAll = ((W.prev||{}).reps)||[], pTot = pAll.reduce((n,r)=>n+r.rev,0);
       const dp = pTot ? Math.round((tot2-pTot)/pTot*100) : null;
       /* The board total counts rung 🛎️ claims (a rep's credit the moment they
-         ring, per the 086 fold) — the Signed hero does not, because a claim is
-         not company money until CC books it. Kevin read "$217K" up top and
-         "$312K" here (31 Jul) and rightly called it a discrepancy: two honest
-         numbers, zero explanation. So the seam is stated on the face of the
-         total — confirmed vs rung — instead of leaving him to reconcile it. */
+         ring, per the 086 fold) — and since Kevin's 10 Aug ruling ("I want that
+         thing the same as the daily sales below it. That needs to match") the
+         Signed hero counts the same rung layer, so the two figures finally
+         agree. The seam still gets stated on the face of the total — confirmed
+         vs rung — because knowing WHICH dollars await the book is the whole
+         honesty of the fold. */
       const rung2 = all.reduce((n,r)=>n+(r.rung||0),0);
       return `<div style="margin:6px 0 10px">
         <div style="font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--text-dim)">All reps · ${label}</div>
@@ -1972,7 +1985,7 @@ function cardReps(){
           ${dp!==null?`<span class="${dp>=0?'up':'dn'}" style="font-family:'JetBrains Mono',monospace;font-size:15px;font-weight:700">${dp>=0?'▲':'▼'} ${Math.abs(dp)}%</span>`:''}
         </div>
         <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text-dim);margin-top:2px">${deals2} deal${deals2===1?'':'s'}${dp!==null?` · vs <b style="color:var(--text)">${short(pTot)}</b> ${esc(W.prevLabel||'')}`:''}</div>
-        ${rung2?`<div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text-dim);margin-top:4px">= <b style="color:var(--text)">${short(tot2-rung2)}</b> confirmed · cc + billdu (the Signed figure up top) + <b style="color:var(--text)">${short(rung2)}</b> rung 🛎️ pending CC — board credit, not company money yet</div>`:''}
+        ${rung2?`<div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text-dim);margin-top:4px">= <b style="color:var(--text)">${short(tot2-rung2)}</b> confirmed · cc + billdu + <b style="color:var(--text)">${short(rung2)}</b> rung 🛎️ awaiting the book — same union as the Signed figure up top, which carries the same bell line</div>`:''}
       </div>`; })()}
     ${reps.map((r,i)=>`<div class="rep-row${r.office?'':' acc'}"${i>=CORE?' data-extra="1" style="display:none"':''} ${r.office?'style="opacity:.8"':`onclick="openRep('${esc(String(r.id))}')"`}>
       <div class="rep-head">
@@ -3418,9 +3431,10 @@ function diveView(k){
     <div class="alloc-chart" style="width:180px;height:180px"><canvas id="cDiveMix"></canvas>
       <div class="alloc-center"><div class="big" style="font-size:22px">${short(W.rev)}</div><div class="lbl">signed</div></div></div>
     <div class="alloc-legend" style="margin-bottom:10px">${allBrands(W.brands).map(b => { const m = brandOf(b.id);
-      return `<div class="alloc-row" ${b.rev?'':'style="opacity:.55"'}>
+      const rg = W.rung && W.rung.byBrand[String(b.id)];
+      return `<div class="alloc-row" ${(b.rev||rg)?'':'style="opacity:.55"'}>
         <div class="alloc-dot" style="background:${m.c}"></div>
-        <div class="name">${esc(m.n)}${b.billdu?'<span class="tick">billdu</span>':''}</div>
+        <div class="name">${esc(m.n)}${b.billdu?'<span class="tick">billdu</span>':''}${rg?`<span class="tick bell">🔔 ${short(rg.value)} rung</span>`:''}</div>
         <div class="val">${b.rev?`${short(b.rev)} · ${pct(b.rev, W.rev)}%`:'$0'}</div></div>`; }).join('')}</div>
     <div class="card-sub" style="margin:0">${complete ? `${W.deals} deal${W.deals===1?'':'s'}` : `pace <b>${short(pace)}</b> · day ${el} of ${full}`}${dTot===null?'':` · <b class="${dTot>=0?'up':'dn'}">${dTot>=0?'▲':'▼'}${Math.abs(dTot)}%</b> vs ${esc(W.prevLabel)}`}</div>
     ${/* The components sit ON the headline, not below the fold of the card.
@@ -3429,10 +3443,12 @@ function diveView(k){
           the only place the split appeared was further down. A headline that is
           a union has to declare itself a union at the point of reading. */''}
     ${W.billdu ? `<div class="hero-incl">incl. <b>${short(W.billdu)}</b> <span class="feed-tag billdu">live · billdu</span> — Oasis reads from Billdu invoices</div>` : ''}
+    ${W.rung && W.rung.value ? `<div class="hero-incl">incl. <b>${short(W.rung.value)}</b> <span class="feed-tag bell">bell</span> — ${W.rung.count} deal${W.rung.count===1?'':'s'} rung and awaiting the book. In the figure per Kevin's 10 Aug ruling ("show all sales, whether it's been fully verified or not"); hands off to CC / Billdu when the feed books it, comes off after 5 business days if never turned in.</div>` : ''}
     ${billduDown() ? `<div class="hero-incl warn">Contractors Cloud only — the Billdu feed is unreadable, so Oasis sales (which read from Billdu invoices) are <b>missing from this figure</b>, not absent from the day.</div>` : ''}
-    ${W.billdu ? `<div class="seam">
+    ${W.billdu || W.rungRev ? `<div class="seam">
       <span><b>${short(W.ccRev)}</b> signed in Contractors Cloud · ${W.jobs - (W.billduCount||0)} contract${(W.jobs - (W.billduCount||0))===1?'':'s'}</span>
-      <span><b>${short(W.billdu)}</b> invoiced in Billdu · ${W.billduCount} Oasis deal${W.billduCount===1?'':'s'} — the whole Oasis figure, per Kevin's go-off-of-Billdu ruling</span>
+      ${W.billdu?`<span><b>${short(W.billdu)}</b> invoiced in Billdu · ${W.billduCount} Oasis deal${W.billduCount===1?'':'s'} — the whole Oasis figure, per Kevin's go-off-of-Billdu ruling</span>`:''}
+      ${W.rungRev?`<span><b>${short(W.rungRev)}</b> 🔔 rung · ${W.rungCount} bell${W.rungCount===1?'':'s'} awaiting the book — counts now, hands off when the feed books it</span>`:''}
       ${W.suppressed?`<span class="muted">${short(W.suppressed)} of Contractors Cloud's own Oasis entries are superseded by the Billdu invoices and are not counted</span>`:''}
     </div>` : ''}
     <div class="card-sub" style="margin:10px 0 0">${(k==='month'&&MONTHOFF)
@@ -3826,9 +3842,9 @@ function repView(id){
         <div class="val">${short(b.jobsNotBuilt)}</div><div class="sub">contract value not yet built</div></div>
       <div class="stat-tile"><div class="lbl">Rung, open</div>
         <div class="val ${b.rungFlagged?'red':b.rungOpen?'blue':''}">${b.rungOpen||'—'}</div>
-        <div class="sub">${b.rungOpen?`${short(b.rungValue)} pending CC${b.rungFlagged?` · ${b.rungFlagged} flagged past 5 days`:''}`:'nothing waiting on CC'}</div></div>
+        <div class="sub">${b.rungOpen?`${short(b.rungValue)} pending CC${b.rungFlagged?` · ${b.rungFlagged} flagged, near the pull`:''}`:'nothing waiting on CC'}</div></div>
     </div>
-    <div class="note">Straight off the office ledger (Jessica's Commission Available / Paid columns). The bank is cleared money not yet drawn — it can go DOWN if a job cancels or liens after clearing, so it is the office's current figure, not a promise. Rung = bell sales the office hasn't confirmed; they come off the board at 7 business days if CC never books them.</div>
+    <div class="note">Straight off the office ledger (Jessica's Commission Available / Paid columns). The bank is cleared money not yet drawn — it can go DOWN if a job cancels or liens after clearing, so it is the office's current figure, not a promise. Rung = bell sales the office hasn't confirmed; they come off the board at 5 business days if CC never books them (Kevin, 10 Aug), and the managers get a notification when one does.</div>
   </div>`; })()}
   ${floor}
   ${closeCard}
@@ -4354,7 +4370,7 @@ addEventListener('resize', () => {
    server for hours while Kevin looked at yesterday's build and reported the bug
    as unfixed. That happened. The page now checks version.json on every load and
    reloads itself once if the deployed build is newer than the one running. */
-const BUILD = '2026-08-10T21:20Z-close-by-brand';
+const BUILD = '2026-08-10T22:30Z-close-honesty-x-bell-137';
 const SB_URL = 'https://lzegjjbkfuecrhdvlvay.supabase.co';
 /* The one page that can finish a password reset. Hard-coded rather than derived,
    because every derivation of it so far has been a source of bugs: a bare origin
@@ -4729,6 +4745,41 @@ function buildData(raw){
     return { byBrand, sinceDays: 180 };
   })();
 
+  /* ── THE RUNG LAYER, WINDOW-SLICED (Kevin's 10 Aug ruling) ────────────────
+     "I want my board to show all sales for today, whether it's been fully
+      verified or not. That's an internal thing that we can work on later.
+      I want that thing the same as the daily sales below it. That needs to
+      match. If for whatever reason it doesn't get turned in in five days,
+      it will take it out at that point."
+     One fold rule, one place — the same rule the rep rows have always used:
+     open bells only (pending/warned/flagged), confirmer-suppressed
+     (cc_already_counted / job_linked are already in the CC or Billdu money and
+     counting them again is the $42K-vs-$29,052 class), dated by signed_on.
+     The 5-business-day clock (136) pulls a never-turned-in bell out of this
+     fold on its own, and the pull notifies the managers (137). */
+  const rungAdd = (a, b) => {
+    const A = ymdOf(a), B = ymdOf(b);
+    const out = { value:0, count:0, byBrand:{}, byRep:{}, list:[] };
+    for (const c of (claims || [])) {
+      if (!['pending','warned','flagged'].includes(c.status)) continue;
+      if (c.cc_already_counted || c.cc_state === 'job_linked') continue;
+      const d = String(c.signed_on || '').slice(0,10);
+      if (d < A || d >= B) continue;
+      const rid = c.rep_id; if (!rid || !repById[rid]) continue;
+      const amt = Number(c.claimed_amount || 0);
+      const rb = rollup(c.cc_company_id || 'unknown');
+      out.value += amt; out.count++;
+      (out.byBrand[rb] ??= { value:0, count:0 });
+      out.byBrand[rb].value += amt; out.byBrand[rb].count++;
+      (out.byRep[rid] ??= { value:0, count:0 });
+      out.byRep[rid].value += amt; out.byRep[rid].count++;
+      out.list.push({ cust: c.customer_name || null, brand: rb,
+        resolved: !!c.cc_company_id, amount: amt, src:'bell',
+        rep: repById[rid]?.name || 'Unknown', repId: rid });
+    }
+    return out;
+  };
+
   function slice(a,b){
     /* Oasis CC entries are OUT of the money side — their amounts drift from the
        invoice truth and the invoice feed (billduAdd) now carries all of Oasis.
@@ -4785,7 +4836,6 @@ function buildData(raw){
     const apptsByBrand = {};
     for (const x of as) { const ab = apptBrand[String(x.cc_project_id)] || 'unknown';
       apptsByBrand[ab] = (apptsByBrand[ab] || 0) + 1; }
-    const claimsByBrand = {};
 
     // Fold Billdu into Oasis here, so no downstream card has to remember to.
     const bd = billduAdd(a,b);
@@ -4819,35 +4869,37 @@ function buildData(raw){
       }
     }
 
-    /* BELL CLAIMS — the board's pending layer, 086's rule verbatim: count
-       pending/warned/flagged only; exclude anything CC has already booked
-       (cc_already_counted) or linked (job_linked) — those dollars are in the CC
-       jobs above and adding them again is the $1.6M double-count class. Folded
-       into the REP rows only: a claim is a rep's board credit, not company
-       revenue — the money cards stay CC + Billdu until CC confirms. This is
-       why Jared rang four sales and his board read $0 · 0 deals. */
-    for (const c of (claims || [])) {
-      if (!['pending','warned','flagged'].includes(c.status)) continue;
-      if (c.cc_already_counted || c.cc_state === 'job_linked') continue;
-      const d = String(c.signed_on || '').slice(0,10);
-      if (d < ymdOf(a) || d >= ymdOf(b)) continue;
-      const rid = c.rep_id; if (!rid || !repById[rid]) continue;
-      const amt = Number(c.claimed_amount || 0);
-      (byRep[rid] ??= { jobs:0, rev:0, appts:0, list:[] });
-      byRep[rid].rev += amt; byRep[rid].jobs++;
-      byRep[rid].rung = (byRep[rid].rung || 0) + amt;
-      byRep[rid].rungCount = (byRep[rid].rungCount || 0) + 1;
-      // …and toward the brand's close-rate numerator (30 Jul ruling: a ring
-      // counts toward close the day it happens; the counted/linked guards
-      // above keep it out once CC books it). Money stays rep-only as ever.
-      if (c.cc_company_id) { const cb = rollup(c.cc_company_id);
-        claimsByBrand[cb] = (claimsByBrand[cb] || 0) + 1; }
-      byRep[rid].list.push({ cust: c.customer_name || null,
-        brand: rollup(c.cc_company_id || 'unknown'), resolved: !!c.cc_company_id,
-        amount: amt, src:'bell',
-        rep: repById[rid]?.name || 'Unknown', repId: rid });
+    /* BELL CLAIMS — the board's open layer, folded into BOTH the rep rows and
+       the company money since Kevin's 10 Aug ruling: "I want my board to show
+       all sales for today, whether it's been fully verified or not… I want
+       that thing the same as the daily sales below it. That needs to match."
+       This deliberately supersedes the earlier board-credit-only display for
+       this page — the ruling is verbatim in ROADMAP.md (10 Aug, the rung
+       ruling). The fold rule itself is unchanged and it is the whole safety:
+       open bells only, confirmer-suppressed (a bell CC or Billdu has booked is
+       already in the money above — counting it again is the $42K-vs-$29,052
+       class), and the 5-business-day clock (136) pulls a never-turned-in bell
+       out of every figure here at once, notifying the managers (137). Every
+       rung dollar stays LABELED — bell ticks on the brand rows, the incl. line
+       on the hero — so what is verified and what is rung is always readable.
+       ⚠️ sale_fact and team_scoreboard_* stay CC-only: this fold is this
+       page's OWN layer (count-once-per-surface), and the supervisor app and
+       kpi feeds still read booked money only. */
+    const rung = rungAdd(a, b);
+    for (const row of rung.list) {
+      allRows.push(row);
+      (brands[row.brand] ??= { jobs:0, rev:0, list:[] });
+      brands[row.brand].jobs++; brands[row.brand].rev += row.amount;
+      brands[row.brand].rung = (brands[row.brand].rung || 0) + row.amount;
+      brands[row.brand].rungCount = (brands[row.brand].rungCount || 0) + 1;
+      brands[row.brand].list.push(row);
+      (byRep[row.repId] ??= { jobs:0, rev:0, appts:0, list:[] });
+      byRep[row.repId].rev += row.amount; byRep[row.repId].jobs++;
+      byRep[row.repId].rung = (byRep[row.repId].rung || 0) + row.amount;
+      byRep[row.repId].rungCount = (byRep[row.repId].rungCount || 0) + 1;
+      byRep[row.repId].list.push(row);
     }
-    const unionRev = rev + (bd ? bd.value : 0);
+    const unionRev = rev + (bd ? bd.value : 0) + rung.value;
 
     /* Each rep and each brand carries its own job list, capped and sorted by
        value so the accordion under it stays bounded on a long window; the count
@@ -4873,6 +4925,7 @@ function buildData(raw){
     const flat = [...allRows].sort((a,b)=>b.amount-a.amount);
 
     return {
+      rung,
       signedList: flat.slice(0,FLATCAP),
       signedCount: flat.length,
       signedRestValue: flat.slice(FLATCAP).reduce((n,r)=>n+r.amount,0),
@@ -4885,8 +4938,9 @@ function buildData(raw){
       // rev is the COMPANY figure — both systems. ccRev keeps the seam readable.
       company:{ jobs:js.length, rev: unionRev, ccRev: rev,
                 billdu: bd ? bd.value : 0, billduCount: bd ? bd.count : 0,
+                rungRev: rung.value, rungCount: rung.count,
                 suppressed: ccOasisSuperseded,
-                deals: js.length + (bd ? bd.count : 0),
+                deals: js.length + (bd ? bd.count : 0) + rung.count,
                 appts:as.length, completed:done.length,
                 /* Built = CC project_completed_at landed in this window. The
                    value is those jobs' contract value — what the built work was
@@ -4899,13 +4953,17 @@ function buildData(raw){
                 avgJob: js.length ? Math.round(rev/js.length) : 0 },
       /* One close rate PER BRAND — same numerator rule as the momentum chips
          (Kevin, 30 Jul): all signings — CC contracts, Billdu acceptances for
-         Oasis, open rung claims — over that brand's own appts elapsed. Every
-         known brand renders even at zero (a missing brand reads as broken,
-         not as quiet); unmapped ids ride along at the end. */
+         Oasis, open rung claims — over that brand's own appts elapsed. Since
+         the 10 Aug that-needs-to-match fold, brands[].jobs already carries
+         all three feeds (rung included, confirmer-suppressed), so it IS the
+         numerator — adding claims again here would be the count-once-per-
+         surface double-count. Every known brand renders even at zero (a
+         missing brand reads as broken, not as quiet); unmapped ids ride
+         along at the end. */
       closeByBrand: [...BRAND_ORDER,
-        ...[...new Set([...Object.keys(brands), ...Object.keys(apptsByBrand), ...Object.keys(claimsByBrand)])]
+        ...[...new Set([...Object.keys(brands), ...Object.keys(apptsByBrand)])]
           .filter(bid => bid !== 'unknown' && !BRAND_ORDER.includes(bid))]
-        .map(bid => { const signed = (brands[bid]?.jobs || 0) + (claimsByBrand[bid] || 0);
+        .map(bid => { const signed = brands[bid]?.jobs || 0;
                       const ap = apptsByBrand[bid] || 0;
                       return { id: bid, signed, appts: ap,
                                close: ap ? Math.round(signed / ap * 100) : null }; }),
@@ -4940,12 +4998,16 @@ function buildData(raw){
     const br = {};
     for (const j of js){ const k = rollup(j.cc_company_id||'unknown');
       (br[k] ??= {rev:0,jobs:0}); br[k].rev += Number(j.fin_sold_amount||0); br[k].jobs++; }
-    // same union in the stacked trend, or the chart contradicts the headline
+    // same union in the stacked trend, or the chart contradicts the headline —
+    // Billdu and the rung layer both, since the 10 Aug that-needs-to-match ruling
     const wbd = billduAdd(a,b);
     if (wbd && wbd.value) { (br[OASIS] ??= {rev:0,jobs:0});
       br[OASIS].rev += wbd.value; br[OASIS].jobs += wbd.count; }
+    const wrg = rungAdd(a,b);
+    for (const [bid,v] of Object.entries(wrg.byBrand)) { (br[bid] ??= {rev:0,jobs:0});
+      br[bid].rev += v.value; br[bid].jobs += v.count; }
     weeks.push({ label:`${a.getMonth()+1}/${a.getDate()}`, current:i===0, jobs:js.length,
-      rev: js.reduce((n,j)=>n+Number(j.fin_sold_amount||0),0) + (wbd?wbd.value:0),
+      rev: js.reduce((n,j)=>n+Number(j.fin_sold_amount||0),0) + (wbd?wbd.value:0) + wrg.value,
       brands: Object.entries(br).map(([id,v])=>({id,...v})) });
   }
   /* Trend series for the per-window drill-ins. Each window gets a shape that
@@ -4956,18 +5018,20 @@ function buildData(raw){
     const a = addD(sod(NOW), -i), b = addD(a, 1);
     const js = jobs.filter(j => inR(j.contract_signed_at, a, b));
     const bd = billduAdd(a,b);
+    const rg = rungAdd(a,b);
     daily.push({ label: `${a.getMonth()+1}/${a.getDate()}`, current: i === 0,
-      jobs: js.length + (bd?bd.count:0),
-      rev: js.reduce((n,j)=>n+Number(j.fin_sold_amount||0),0) + (bd?bd.value:0) });
+      jobs: js.length + (bd?bd.count:0) + rg.count,
+      rev: js.reduce((n,j)=>n+Number(j.fin_sold_amount||0),0) + (bd?bd.value:0) + rg.value });
   }
   const monthly = [];
   for (let i = 12; i >= 0; i--) {
     const a = addM(som(NOW), -i), b = addM(a, 1);
     const js = jobs.filter(j => inR(j.contract_signed_at, a, b));
     const bd = billduAdd(a,b);
+    const rg = rungAdd(a,b);
     monthly.push({ label: ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][a.getMonth()],
-      current: i === 0, jobs: js.length + (bd?bd.count:0),
-      rev: js.reduce((n,j)=>n+Number(j.fin_sold_amount||0),0) + (bd?bd.value:0) });
+      current: i === 0, jobs: js.length + (bd?bd.count:0) + rg.count,
+      rev: js.reduce((n,j)=>n+Number(j.fin_sold_amount||0),0) + (bd?bd.value:0) + rg.value });
   }
 
   const cadence = (() => {
@@ -5434,6 +5498,12 @@ function buildData(raw){
       const bd = billduAdd(wv.from, wv.to);
       if (bd) for (const [rid, v] of Object.entries(bd.byRep))
         if (rid !== OFFICE) sig[rid] = (sig[rid] || 0) + v.value;
+      // the rung layer too — the fleet reads the same union as the rep board
+      // (10 Aug, "that needs to match"), and a rung week counting toward the
+      // floor is exactly the bell-is-board-credit rule the board already keeps
+      const rg = rungAdd(wv.from, wv.to);
+      for (const [rid, v] of Object.entries(rg.byRep))
+        sig[rid] = (sig[rid] || 0) + v.value;
       /* capped at the window's own span: under the time machine a closed month's
          "elapsed" would otherwise keep counting into today and inflate the floor */
       const el = Math.min(elapsedCal(wv.from),
@@ -6343,8 +6413,8 @@ async function loadAll(){
      pay surface. Optional on the same rule as the leak view: unreadable claims
      cost the board its pending layer and the rows their bank line, never the
      money underneath. 45 days covers every window that can still hold an open
-     claim (the clock pulls at 7 business days; confirmed ones are excluded by
-     the fold, not the fetch).
+     claim (the clock pulls at 5 business days since 136, Kevin 10 Aug —
+     was 7; confirmed ones are excluded by the fold, not the fetch).
      ⚠️ This block was silently LOST once already (30 Jul): a concurrent
      session's sync overwrote loadAll between edits, and the deploy shipped
      bankMini with no data behind it — chips defined, nothing rendered. If the
