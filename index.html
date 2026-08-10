@@ -1684,8 +1684,8 @@ function cardStats(){
     <div class="stat-grid" style="margin-top:10px">
     <div class="stat-tile"><div class="lbl">Signed${MONTHOFF?'':' MTD'}</div>
       <div class="val green">${short(W.rev)}</div><div class="sub">${W.jobs} contracts · cc</div>${dl(W.rev,pv.rev)}</div>
-    <div class="stat-tile"><div class="lbl">Appts scheduled</div>
-      <div class="val blue">${W.appts}</div><div class="sub">${W.close===null?'no close rate':W.close+'% closed'}</div>${dl(W.appts,pv.appts)}</div>
+    <div class="stat-tile"><div class="lbl">${MONTHOFF?'Appts scheduled':'Appts run MTD'}</div>
+      <div class="val blue">${W.appts}</div><div class="sub">${W.close===null?'no close rate':W.close+'% closed'+(MONTHOFF?'':' · signed ÷ run')}</div>${dl(W.appts,pv.appts)}</div>
     <div class="stat-tile"><div class="lbl">Built${MONTHOFF?'':' MTD'}</div>
       ${q ? `<div class="val gold">${short(q.invoiced)}</div><div class="sub">${q.count} invoice${q.count===1?'':'s'} · billed when built · qb</div>${dl(q.invoiced,q.prev.invoiced)}`
           : `<div class="val" style="color:var(--text-dim)">—</div><div class="sub">not readable</div><div class="delta flat">see note below</div>`}</div>
@@ -3392,7 +3392,7 @@ function diveView(k){
       <span><b>${short(W.billdu)}</b> invoiced in Billdu · ${W.billduCount} Oasis deal${W.billduCount===1?'':'s'} — the whole Oasis figure, per Kevin's go-off-of-Billdu ruling</span>
       ${W.suppressed?`<span class="muted">${short(W.suppressed)} of Contractors Cloud's own Oasis entries are superseded by the Billdu invoices and are not counted</span>`:''}
     </div>` : ''}
-    <div class="card-sub" style="margin:10px 0 0">${W.appts} appointments · ${W.completed} completed in CC${W.close===null?'':' · '+W.close+'% close on CC work'}</div>
+    <div class="card-sub" style="margin:10px 0 0">${W.appts} appointments${(k==='month'&&MONTHOFF)?'':' run'} · ${W.completed} completed in CC${W.close===null?'':' · '+W.close+'% close on CC work'}${(k==='month'&&!MONTHOFF)?' · month-to-date':''}</div>
   </div>
 
   ${diveBuilt(k)}
@@ -3673,7 +3673,7 @@ function repView(id){
     <div class="card-title">Conversion · ${esc(label)}<span class="feed-tag cc">live · cc</span></div>
     <div class="stat-grid" style="margin:12px 0 0">
       <div class="stat-tile"><div class="lbl">Appointments</div>
-        <div class="val">${S.appts}</div><div class="sub">on the CC calendar</div></div>
+        <div class="val">${S.appts}</div><div class="sub">${(k==='month'&&MONTHOFF)?'on the CC calendar':'run on the CC calendar'}</div></div>
       <div class="stat-tile"><div class="lbl">CC contracts</div>
         <div class="val">${S.ccDeals}</div><div class="sub">signed in CC</div></div>
       <div class="stat-tile"><div class="lbl">Close</div>
@@ -4304,7 +4304,7 @@ addEventListener('resize', () => {
    server for hours while Kevin looked at yesterday's build and reported the bug
    as unfixed. That happened. The page now checks version.json on every load and
    reloads itself once if the deployed build is newer than the one running. */
-const BUILD = '2026-08-07T13:28Z-lost-file-133';
+const BUILD = '2026-08-10T00:00Z-close-rate-mtd';
 const SB_URL = 'https://lzegjjbkfuecrhdvlvay.supabase.co';
 /* The one page that can finish a password reset. Hard-coded rather than derived,
    because every derivation of it so far has been a source of bugs: a bare origin
@@ -4645,7 +4645,16 @@ function buildData(raw){
     const js = jsAll.filter(j => String(j.cc_company_id) !== OASIS);
     const ccOasisSuperseded = jsAll.filter(j => String(j.cc_company_id) === OASIS)
                                    .reduce((n,j)=>n+Number(j.fin_sold_amount||0),0);
-    const as = appts.filter(x => inR(x.starts_at,a,b));
+    /* The close-rate denominator is appointments that have RUN, so the
+       appointment side is capped at NOW. A live window (MTD / this week /
+       today) spans its whole calendar period, and filtering on the raw bound
+       swept in appointments booked for the REST of the period — signed-so-far
+       divided by run-plus-still-to-come, a close rate that read low all month
+       and only "caught up" at month end. Signings can only exist up to now,
+       so capping the appointments makes both sides cover the same elapsed
+       days; a finished window sits entirely behind NOW and is untouched. */
+    const runBy = new Date(Math.min(b.getTime(), NOW.getTime()));
+    const as = appts.filter(x => inR(x.starts_at,a,runBy));
     const done = jobs.filter(j => inR(j.completed_at,a,b));
     const rev = js.reduce((n,j)=>n+Number(j.fin_sold_amount||0),0);
     /* brands and byRep each carry a `list` of their own job rows, so a rep row
@@ -5784,12 +5793,12 @@ function buildData(raw){
     const wp = slice(...prevRange(WINS.month)).company;
     if (wm.close !== null && wp.close !== null && wp.close >= 20 && wm.close < wp.close * 0.7) {
       add('watch', 'close-drop', ['flags','dive:month'],
-        `Close rate is ${wm.close}% this month against ${wp.close}% last.`,
+        `Close rate is ${wm.close}% so far this month against ${wp.close}% through the same point last month.`,
         `Same appointments, fewer contracts — look at what changed in the pitch or the lead mix before it costs another month.`,
         `close rate down to ${wm.close}% from ${wp.close}%`,
         { lines: [`Sit down with ${ORG.salesWho} on what changed — same appointments, fewer contracts.`,
                   `Check the lead mix first: a shift in source mix moves close rate before the pitch does.`],
-          draft: `Close rate is ${wm.close}% this month against ${wp.close}% last. Same appointment volume, fewer contracts. Can we look at whether it's the pitch or the lead mix before it costs another month?` });
+          draft: `Close rate is ${wm.close}% so far this month against ${wp.close}% through the same point last month. Same appointment volume, fewer contracts. Can we look at whether it's the pitch or the lead mix before it costs another month?` });
     }
 
     const order = { fire: 0, watch: 1, note: 2 };
