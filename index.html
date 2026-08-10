@@ -1668,6 +1668,48 @@ function cardWow(){
   </div>`;
 }
 
+/* ── The close-rate honesty kit (Kevin, 10 Aug) ────────────────────────────
+   Three rulings, applied on every close-rate surface:
+   · "Run" was a lie: CC logs no appointment outcomes, only schedules. The
+     denominator is scheduled-and-time-passed, so it is called APPTS ELAPSED,
+     with the definition one tap/hover away and in the fine print (tooltips
+     do not exist on a phone).
+   · Never one blended close: median days-to-close differs several-fold by
+     brand, so a single company rate moves with brand mix, not with closing.
+     Close renders per brand; where a combined figure survives it is labeled
+     mix-dependent.
+   · An MTD close is immature by construction: the newest appointments have
+     not had time to close. The window is NOT lagged (that empties the
+     denominator early in the month) — instead the like-for-like delta vs the
+     same elapsed days of last month is the headline, the raw % is secondary,
+     and a measured maturation note says how much of the tail is still open. */
+const ELAPSED_TIP = 'Scheduled appointments whose time has passed. Outcomes are not logged in CC — no-shows are included.';
+const closeBrandStr = W => (W.closeByBrand || []).filter(r => r.appts || r.signed)
+  .map(r => `${esc(brandOf(r.id).s || brandOf(r.id).n)} ${r.close===null?'—':r.close+'%'}`).join(' · ');
+
+function closeMtdByBrand(W, pv){
+  const rows = W.closeByBrand || [];
+  if (!rows.length) return '';
+  const lag = (D.closeLag && D.closeLag.byBrand) || {};
+  return `<div class="card-title" style="margin:16px 0 6px">Close rate MTD · by brand<span class="feed-tag cc">live · cc</span><span class="feed-tag billdu">live · billdu</span></div>
+    <div class="card-sub">The headline is the like-for-like move: this month's elapsed days against the same days of ${esc(W.prevLabel)}. The raw MTD rate sits under it — partial by construction, because the newest appointments have not had time to close.</div>
+    <div class="stat-grid" style="margin-top:8px">
+    ${rows.map(r => {
+      const m = brandOf(r.id);
+      const p = ((pv && pv.closeByBrand) || []).find(x => x.id === r.id);
+      const d = (r.close !== null && p && p.close !== null) ? r.close - p.close : null;
+      const L = lag[r.id];
+      return `<div class="stat-tile" title="${ELAPSED_TIP}">
+        <div class="lbl">${esc(m.s || m.n)}</div>
+        <div class="val ${d===null?'':d>=0?'green':'red'}">${d===null?'—':(d>=0?'▲ +':'▼ −')+Math.abs(d)+' pts'}</div>
+        <div class="sub">${d===null?'no like-for-like baseline':'vs same days of '+esc(W.prevLabel)}</div>
+        <div class="sub">${r.appts?`${r.close}% closed · ${r.signed} of ${r.appts} appts elapsed`:r.signed?`${r.signed} signed · no appts elapsed`:'no appts elapsed'}</div>
+        ${L?`<div class="sub" style="color:var(--text-dim)">partial — appts in the last ~${L.median} day${L.median===1?'':'s'} have not had time to close</div>`:''}
+      </div>`; }).join('')}
+    </div>
+    <div class="note"><b>Appts elapsed</b> = scheduled appointments whose time has passed. Outcomes are not logged in CC — no-shows are included. One rate per brand because median days-to-close differs several-fold across brands, so a blended rate moves with brand mix, not with closing. Signings count from every feed (CC contracts, Billdu for Oasis, rung sales pending CC) over that brand's own elapsed appointments.${W.apptsUnknownBrand?` <b>${W.apptsUnknownBrand}</b> elapsed appointment${W.apptsUnknownBrand===1?' is':'s are'} against projects the sync has not delivered, so ${W.apptsUnknownBrand===1?'it sits':'they sit'} in no brand's rate.`:''}${Object.keys(lag).length?` Maturation is measured, not seeded: each brand's median gap from a project's last preceding appointment to its signing, over the past ${D.closeLag.sinceDays} days.`:''}</div>`;
+}
+
 /* ── 3. 2x2 stat grid. CC signed and QB invoiced sit side by side and are
       NEVER added: they measure different events in different systems. ─────── */
 function cardStats(){
@@ -1684,8 +1726,8 @@ function cardStats(){
     <div class="stat-grid" style="margin-top:10px">
     <div class="stat-tile"><div class="lbl">Signed${MONTHOFF?'':' MTD'}</div>
       <div class="val green">${short(W.rev)}</div><div class="sub">${W.jobs} contracts · cc</div>${dl(W.rev,pv.rev)}</div>
-    <div class="stat-tile"><div class="lbl">${MONTHOFF?'Appts scheduled':'Appts run MTD'}</div>
-      <div class="val blue">${W.appts}</div><div class="sub">${W.close===null?'no close rate':W.close+'% closed'+(MONTHOFF?'':' · signed ÷ run')}</div>${dl(W.appts,pv.appts)}</div>
+    <div class="stat-tile"${MONTHOFF?'':` title="${ELAPSED_TIP}"`}><div class="lbl">${MONTHOFF?'Appts scheduled':'Appts elapsed MTD'}</div>
+      <div class="val blue">${W.appts}</div><div class="sub">${MONTHOFF?(W.close===null?'no close rate':W.close+'% closed'):'close by brand below'}</div>${dl(W.appts,pv.appts)}</div>
     <div class="stat-tile"><div class="lbl">Built${MONTHOFF?'':' MTD'}</div>
       ${q ? `<div class="val gold">${short(q.invoiced)}</div><div class="sub">${q.count} invoice${q.count===1?'':'s'} · billed when built · qb</div>${dl(q.invoiced,q.prev.invoiced)}`
           : `<div class="val" style="color:var(--text-dim)">—</div><div class="sub">not readable</div><div class="delta flat">see note below</div>`}</div>
@@ -1694,6 +1736,7 @@ function cardStats(){
       <div class="delta flat">position, not a window</div>`
       : `<div class="val" style="color:var(--text-dim)">—</div><div class="sub">not readable</div><div class="delta flat">see note below</div>`}</div>
   </div>
+    ${MONTHOFF ? '' : closeMtdByBrand(W, pv)}
     <div class="note">
       <b>Signed</b> is Contractors Cloud contract value. <b>Built</b> is QuickBooks invoiced face value — a job is billed when it is built, so the invoice is the built record. They count different events in different systems and are never added together on this page.
       ${qbOK() ? `<b>${D.qb.dropped}</b> of ${D.qb.total.toLocaleString()} QuickBooks invoices are flagged <b>reporting_excluded</b> and are left out of every figure here.`
@@ -2006,13 +2049,13 @@ function cardCloseTrend(){
     : `<div class="ct-cell dim"><b>—</b><span>${c.signed ? c.signed + ' signed' : 'no appts'}</span></div>`;
   return `<div class="card full">
     <div class="card-title">Closing momentum<span class="feed-tag cc">live · cc</span></div>
-    <div class="card-sub">Every seller's close rate over trailing windows ending today — signings (CC + Billdu + rung pending CC) ÷ appointments run in CC. The arrow is the last two weeks against the 60-day baseline. Tap a row for the one-pager.</div>
+    <div class="card-sub">Every seller's close rate over trailing windows ending today — signings (CC + Billdu + rung pending CC) ÷ appointments elapsed in CC. The arrow is the last two weeks against the 60-day baseline. Team tiles are blended across brands, so they move with brand mix as well as with closing; each rep's row is their own book. Tap a row for the one-pager.</div>
 
     <div class="stat-grid" style="margin:12px 0 2px">
-      <div class="stat-tile"><div class="lbl">Team close · 30 day</div>
+      <div class="stat-tile" title="${ELAPSED_TIP}"><div class="lbl">Team close · 30 day · blended</div>
         <div class="val ${t.d30.close!==null&&t.d30.close>=40?'green':''}">${t.d30.close!==null?t.d30.close+'%':'—'}</div>
         <div class="sub">${t.d30.appts?`${t.d30.signed} signed of ${t.d30.appts} appts`:'no appointments in 30 days'}</div></div>
-      <div class="stat-tile"><div class="lbl">Team close · 2 wk</div>
+      <div class="stat-tile" title="${ELAPSED_TIP}"><div class="lbl">Team close · 2 wk · blended</div>
         <div class="val ${t.w2.close!==null&&t.d30.close!==null&&t.w2.close>=t.d30.close?'green':''}">${t.w2.close!==null?t.w2.close+'%':'—'}</div>
         <div class="sub">${t.w2.appts?`${t.w2.signed} of ${t.w2.appts} — ${t.d30.close!==null&&t.w2.close!==null?(t.w2.close>=t.d30.close?'ahead of':'behind'):'vs'} the 30-day pace`:'no appointments in 2 weeks'}</div></div>
     </div>
@@ -3392,7 +3435,9 @@ function diveView(k){
       <span><b>${short(W.billdu)}</b> invoiced in Billdu · ${W.billduCount} Oasis deal${W.billduCount===1?'':'s'} — the whole Oasis figure, per Kevin's go-off-of-Billdu ruling</span>
       ${W.suppressed?`<span class="muted">${short(W.suppressed)} of Contractors Cloud's own Oasis entries are superseded by the Billdu invoices and are not counted</span>`:''}
     </div>` : ''}
-    <div class="card-sub" style="margin:10px 0 0">${W.appts} appointments${(k==='month'&&MONTHOFF)?'':' run'} · ${W.completed} completed in CC${W.close===null?'':' · '+W.close+'% close on CC work'}${(k==='month'&&!MONTHOFF)?' · month-to-date':''}</div>
+    <div class="card-sub" style="margin:10px 0 0">${(k==='month'&&MONTHOFF)
+      ? `${W.appts} appointments · ${W.completed} completed in CC${W.close===null?'':' · '+W.close+'% close on CC work'}`
+      : `<span title="${ELAPSED_TIP}">${W.appts} appts elapsed</span> · ${W.completed} completed in CC${closeBrandStr(W)?` · close — ${closeBrandStr(W)}`:''}${k==='month'?' · month-to-date':''}`}</div>
   </div>
 
   ${diveBuilt(k)}
@@ -3504,6 +3549,11 @@ function diveAppointments(k){
   const bookedRows = Object.entries(p.bookedByBrand).sort((a,b)=>b[1]-a[1]);
   const bookedTot = bookedRows.reduce((n,[,c])=>n+c,0);
   const av = apptVerdict(A);
+  /* The combined close survives here as one tile for the window's shape, but
+     it is built from the per-brand rates' own sums and says on its face that
+     it moves with brand mix — never presented as "the" close rate. */
+  const blend = (W.closeByBrand || []).reduce((o,r)=>({s:o.s+r.signed, a:o.a+r.appts}), {s:0, a:0});
+  const blendClose = blend.a ? Math.round(blend.s / blend.a * 100) : null;
   return `<div class="card full">
     <div class="card-title">Appointments · ${esc(label)}<span class="feed-tag cc">live · cc</span></div>
     <div class="card-sub">What the team <b>set</b> in this window, and what sat on the calendar during it. Two different questions.</div>
@@ -3517,10 +3567,10 @@ function diveAppointments(k){
         <div class="val blue">${p.held}</div>
         <div class="sub">appointment date</div>
         ${dH===null?'<div class="delta flat">no prior baseline</div>':`<div class="delta ${dH>=0?'up':'down'}">${dH>=0?'▲':'▼'} ${Math.abs(dH)}% vs ${esc(W.prevLabel)}</div>`}</div>
-      <div class="stat-tile"><div class="lbl">Close on run</div>
-        <div class="val ${W.close===null?'':'gold'}">${W.close===null?'—':W.close+'%'}</div>
-        <div class="sub">${W.jobs} signed of ${W.appts} run</div>
-        <div class="delta flat">CC work only</div></div>
+      <div class="stat-tile" title="${ELAPSED_TIP}"><div class="lbl">Close · blended</div>
+        <div class="val ${blendClose===null?'':'gold'}">${blendClose===null?'—':blendClose+'%'}</div>
+        <div class="sub">${blend.s} signed of ${blend.a} appts elapsed</div>
+        <div class="delta flat">mix-dependent — by brand: ${closeBrandStr(W)||'—'}</div></div>
       <div class="stat-tile"><div class="lbl">Completed in CC</div>
         <div class="val">${W.completed}</div>
         <div class="sub">job${W.completed===1?'':'s'} · ${short(W.builtRev)} contract value</div>
@@ -3548,7 +3598,7 @@ function diveAppointments(k){
         </div>`}).join('');
     })()}`:''}
 
-    <div class="note"><b>Booked</b> counts when the appointment was created — what the setters produced. <b>On the calendar</b> counts when it was scheduled to happen — what the crews drove to. A busy calendar and a productive setting week are different facts, so they are never added together. Close rate is signed ÷ run on Contractors Cloud work; Billdu deals carry no CC appointment and are excluded from it.</div>
+    <div class="note"><b>Booked</b> counts when the appointment was created — what the setters produced. <b>On the calendar</b> counts when it was scheduled to happen — what the crews drove to. A busy calendar and a productive setting week are different facts, so they are never added together. Close rate is signings ÷ <b>appts elapsed</b> — scheduled appointments whose time has passed; outcomes are not logged in CC, so no-shows are included. The blended tile moves with brand mix as well as with closing (median days-to-close differs several-fold by brand), which is why the per-brand rates ride with it.</div>
   </div>`;
 }
 
@@ -3672,15 +3722,15 @@ function repView(id){
   const closeCard = `<div class="card full" style="margin-bottom:12px">
     <div class="card-title">Conversion · ${esc(label)}<span class="feed-tag cc">live · cc</span></div>
     <div class="stat-grid" style="margin:12px 0 0">
-      <div class="stat-tile"><div class="lbl">Appointments</div>
-        <div class="val">${S.appts}</div><div class="sub">${(k==='month'&&MONTHOFF)?'on the CC calendar':'run on the CC calendar'}</div></div>
+      <div class="stat-tile"${(k==='month'&&MONTHOFF)?'':` title="${ELAPSED_TIP}"`}><div class="lbl">${(k==='month'&&MONTHOFF)?'Appointments':'Appts elapsed'}</div>
+        <div class="val">${S.appts}</div><div class="sub">on the CC calendar</div></div>
       <div class="stat-tile"><div class="lbl">CC contracts</div>
         <div class="val">${S.ccDeals}</div><div class="sub">signed in CC</div></div>
       <div class="stat-tile"><div class="lbl">Close</div>
         <div class="val ${S.close!==null&&S.appts>=10&&S.close>=50?'green':''}">${S.close!==null&&S.appts>=10?S.close+'%':'—'}</div>
-        <div class="sub">${S.close===null?'no appointments to divide by':S.appts>=10?'all signings ÷ CC appts':`${S.deals} of ${S.appts} — too few appts for a rate`}</div></div>
+        <div class="sub">${S.close===null?'no appointments to divide by':S.appts>=10?((k==='month'&&MONTHOFF)?'all signings ÷ CC appts':'all signings ÷ appts elapsed'):`${S.deals} of ${S.appts} — too few appts for a rate`}</div></div>
     </div>
-    <div class="note">Signings count from every feed — CC contracts, Billdu acceptances${S.rungCount?`, and <b>${S.rungCount} rung sale${S.rungCount===1?'':'s'}</b> CC hasn't confirmed yet (they leave the rate if CC never books them)`:', and rung sales pending CC'} — over CC appointments. ${D.coverage.apptsWithRep.toLocaleString()} of ${D.coverage.appts.toLocaleString()} appointments carry a rep; below that coverage a rate is unknown, not assumed.</div>
+    <div class="note">Signings count from every feed — CC contracts, Billdu acceptances${S.rungCount?`, and <b>${S.rungCount} rung sale${S.rungCount===1?'':'s'}</b> CC hasn't confirmed yet (they leave the rate if CC never books them)`:', and rung sales pending CC'} — over CC <b>appts elapsed</b>: scheduled appointments whose time has passed. Outcomes are not logged in CC, so no-shows are included. ${D.coverage.apptsWithRep.toLocaleString()} of ${D.coverage.appts.toLocaleString()} appointments carry a rep; below that coverage a rate is unknown, not assumed.</div>
   </div>`;
 
   /* Momentum: the same trailing windows as the front board, for THIS rep.
@@ -3699,9 +3749,9 @@ function repView(id){
     <div class="stat-grid" style="margin:12px 0 0">
       ${D.closeTrend.spans.map(sp => { const c = ct[sp.key];
         const band = closeBand(c);
-        return `<div class="stat-tile"><div class="lbl">${esc(sp.label)} close</div>
+        return `<div class="stat-tile" title="${ELAPSED_TIP}"><div class="lbl">${esc(sp.label)} close</div>
           <div class="val ${band==='hot'?'green':band==='warm'?'gold':band==='cold'?'red':''}">${c.appts?c.close+'%':'—'}</div>
-          <div class="sub">${c.appts?`${c.signed} of ${c.appts} appt${c.appts===1?'':'s'} run`:(c.signed?`${c.signed} signed · no appts run`:'no appointments run')}</div></div>`; }).join('')}
+          <div class="sub">${c.appts?`${c.signed} of ${c.appts} appt${c.appts===1?'':'s'} elapsed`:(c.signed?`${c.signed} signed · no appts elapsed`:'no appointments elapsed')}</div></div>`; }).join('')}
     </div>
     ${verdict}
     <div class="note">Trailing windows ending today — the 30-day column is the last 30 days, whatever the calendar says. Signings are CC contracts, unrecorded Billdu acceptances, and rung sales pending CC (a ring counts the day it happens and leaves the rate if CC never books it), over CC appointments — and the counts stay beside every rate so a hot week on two appointments reads as exactly that.</div>
@@ -4304,7 +4354,7 @@ addEventListener('resize', () => {
    server for hours while Kevin looked at yesterday's build and reported the bug
    as unfixed. That happened. The page now checks version.json on every load and
    reloads itself once if the deployed build is newer than the one running. */
-const BUILD = '2026-08-10T00:00Z-close-rate-mtd';
+const BUILD = '2026-08-10T21:20Z-close-by-brand';
 const SB_URL = 'https://lzegjjbkfuecrhdvlvay.supabase.co';
 /* The one page that can finish a password reset. Hard-coded rather than derived,
    because every derivation of it so far has been a source of bugs: a bare origin
@@ -4637,6 +4687,48 @@ function buildData(raw){
              byRep, rows };
   };
 
+  /* Brand of an appointment = brand of its project's job, via cc_project_id.
+     Built once for the per-brand close split below; the appointments card
+     builds its own equivalent map inside its own scope. */
+  const apptBrand = {};
+  for (const j of jobs) if (j.cc_project_id) apptBrand[String(j.cc_project_id)] = rollup(j.cc_company_id);
+
+  /* How long a signed deal typically took, per brand — the maturation note
+     under the MTD close rate reads its N from here. MEASURED, never seeded:
+     every signing in the last 180 days is matched to the latest appointment
+     on its own project at or before the signing (a day of slack, because
+     signing timestamps and appointment times straddle midnight in different
+     zones), and the brand's median of those gaps is the number. Fewer than
+     five matched pairs is not a median, so the brand shows no note rather
+     than a guessed one. Caveat, stated here because it is measurable nowhere
+     else: Oasis signs in Billdu and CC imports the signing late, so Oasis's
+     measured lag reads from CC's own late record and can only run LONG —
+     the note under Oasis is conservative, never flattering. */
+  const closeLag = (() => {
+    const byProj = {};
+    for (const x of appts) if (x.cc_project_id && x.starts_at)
+      (byProj[String(x.cc_project_id)] ??= []).push(new Date(x.starts_at).getTime());
+    const cut = addD(sod(NOW), -180).getTime();
+    const acc = {};
+    for (const j of jobs) {
+      if (!j.contract_signed_at || !j.cc_project_id) continue;
+      const t = new Date(j.contract_signed_at).getTime();
+      if (t < cut || t > NOW.getTime()) continue;
+      const list = byProj[String(j.cc_project_id)]; if (!list) continue;
+      let best = null;
+      for (const at of list) if (at <= t + 86400000 && (best === null || at > best)) best = at;
+      if (best === null) continue;
+      (acc[rollup(j.cc_company_id)] ??= []).push(Math.max(0, Math.round((t - best) / 86400000)));
+    }
+    const byBrand = {};
+    for (const [bid, arr] of Object.entries(acc)) {
+      if (arr.length < 5) continue;
+      arr.sort((x,y) => x - y);
+      byBrand[bid] = { median: arr[Math.floor(arr.length / 2)], n: arr.length };
+    }
+    return { byBrand, sinceDays: 180 };
+  })();
+
   function slice(a,b){
     /* Oasis CC entries are OUT of the money side — their amounts drift from the
        invoice truth and the invoice feed (billduAdd) now carries all of Oasis.
@@ -4682,6 +4774,18 @@ function buildData(raw){
       else { unowned.push({ ...row, reason:'no-rep' }); }
     }
     for (const x of as) if (x.rep_id) { (byRep[x.rep_id] ??= { jobs:0, rev:0, appts:0, list:[] }); byRep[x.rep_id].appts++; }
+
+    /* Never one blended close (Kevin, 10 Aug): median days-to-close runs ~3
+       days for Pro-Tec to ~12 for Oasis with tails past 100, so a single
+       company-wide rate moves with brand MIX, not with closing. Elapsed
+       appointments are counted per brand here so every close-rate surface can
+       render per brand; an appointment whose project the sync has not
+       delivered has no brand and sits in no brand's rate (counted, said out
+       loud, never guessed). */
+    const apptsByBrand = {};
+    for (const x of as) { const ab = apptBrand[String(x.cc_project_id)] || 'unknown';
+      apptsByBrand[ab] = (apptsByBrand[ab] || 0) + 1; }
+    const claimsByBrand = {};
 
     // Fold Billdu into Oasis here, so no downstream card has to remember to.
     const bd = billduAdd(a,b);
@@ -4733,6 +4837,11 @@ function buildData(raw){
       byRep[rid].rev += amt; byRep[rid].jobs++;
       byRep[rid].rung = (byRep[rid].rung || 0) + amt;
       byRep[rid].rungCount = (byRep[rid].rungCount || 0) + 1;
+      // …and toward the brand's close-rate numerator (30 Jul ruling: a ring
+      // counts toward close the day it happens; the counted/linked guards
+      // above keep it out once CC books it). Money stays rep-only as ever.
+      if (c.cc_company_id) { const cb = rollup(c.cc_company_id);
+        claimsByBrand[cb] = (claimsByBrand[cb] || 0) + 1; }
       byRep[rid].list.push({ cust: c.customer_name || null,
         brand: rollup(c.cc_company_id || 'unknown'), resolved: !!c.cc_company_id,
         amount: amt, src:'bell',
@@ -4788,6 +4897,19 @@ function buildData(raw){
                 // and mixing them would inflate it.
                 close: as.length ? Math.round(js.length/as.length*100) : null,
                 avgJob: js.length ? Math.round(rev/js.length) : 0 },
+      /* One close rate PER BRAND — same numerator rule as the momentum chips
+         (Kevin, 30 Jul): all signings — CC contracts, Billdu acceptances for
+         Oasis, open rung claims — over that brand's own appts elapsed. Every
+         known brand renders even at zero (a missing brand reads as broken,
+         not as quiet); unmapped ids ride along at the end. */
+      closeByBrand: [...BRAND_ORDER,
+        ...[...new Set([...Object.keys(brands), ...Object.keys(apptsByBrand), ...Object.keys(claimsByBrand)])]
+          .filter(bid => bid !== 'unknown' && !BRAND_ORDER.includes(bid))]
+        .map(bid => { const signed = (brands[bid]?.jobs || 0) + (claimsByBrand[bid] || 0);
+                      const ap = apptsByBrand[bid] || 0;
+                      return { id: bid, signed, appts: ap,
+                               close: ap ? Math.round(signed / ap * 100) : null }; }),
+      apptsUnknownBrand: apptsByBrand.unknown || 0,
       brands: Object.entries(brands).map(([id,v])=>({id, ...capped(v)})),
       reps: Object.entries(byRep).map(([id,v])=>({
         id,
@@ -5788,17 +5910,28 @@ function buildData(raw){
       }
     }
 
-    // ── close rate falling against the like-for-like prior window
-    const wm = slice(WINS.month.from, WINS.month.to).company;
-    const wp = slice(...prevRange(WINS.month)).company;
-    if (wm.close !== null && wp.close !== null && wp.close >= 20 && wm.close < wp.close * 0.7) {
-      add('watch', 'close-drop', ['flags','dive:month'],
-        `Close rate is ${wm.close}% so far this month against ${wp.close}% through the same point last month.`,
-        `Same appointments, fewer contracts — look at what changed in the pitch or the lead mix before it costs another month.`,
-        `close rate down to ${wm.close}% from ${wp.close}%`,
-        { lines: [`Sit down with ${ORG.salesWho} on what changed — same appointments, fewer contracts.`,
-                  `Check the lead mix first: a shift in source mix moves close rate before the pitch does.`],
-          draft: `Close rate is ${wm.close}% so far this month against ${wp.close}% through the same point last month. Same appointment volume, fewer contracts. Can we look at whether it's the pitch or the lead mix before it costs another month?` });
+    // ── close rate falling against the like-for-like prior window — PER
+    //    BRAND (Kevin, 10 Aug). The blended flag this replaces could fire on
+    //    a shift in brand mix with nobody actually closing worse, and stay
+    //    silent while one brand fell inside a steady blend. Each brand is
+    //    held against its own prior month; small denominators claim no rate
+    //    (the one-pager's own ≥10-appointment discipline).
+    const wmB = slice(WINS.month.from, WINS.month.to).closeByBrand || [];
+    const wpB = slice(...prevRange(WINS.month)).closeByBrand || [];
+    for (const bc of wmB) {
+      const bp = wpB.find(x => x.id === bc.id);
+      if (!bp || bc.close === null || bp.close === null) continue;
+      if (bc.appts < 10 || bp.appts < 10) continue;
+      if (bp.close >= 20 && bc.close < bp.close * 0.7) {
+        const bn = brandOf(bc.id).n;
+        add('watch', 'close-drop-' + bc.id, ['flags','dive:month'],
+          `${bn} close rate is ${bc.close}% so far this month against ${bp.close}% through the same point last month.`,
+          `Same appointments, fewer contracts — look at what changed in the pitch or the lead mix before it costs another month.`,
+          `${bn} close rate down to ${bc.close}% from ${bp.close}%`,
+          { lines: [`Sit down with ${ORG.salesWho} on what changed — same appointments, fewer contracts.`,
+                    `Check the lead mix first: a shift in source mix moves close rate before the pitch does.`],
+            draft: `${bn} close rate is ${bc.close}% so far this month against ${bp.close}% through the same point last month. Same appointment volume, fewer contracts. Can we look at whether it's the pitch or the lead mix before it costs another month?` });
+      }
     }
 
     const order = { fire: 0, watch: 1, note: 2 };
@@ -5825,6 +5958,10 @@ function buildData(raw){
     const bump = (rid, iso, field) => {
       if (!rid || !seller[rid] || !iso) return;
       const t = new Date(iso).getTime();
+      // appointments count once ELAPSED — a 5pm appointment is not in the
+      // denominator at 9am. Signings and rings keep the whole day: a ring
+      // counts the day it happens (30 Jul ruling), whatever the clock says.
+      if (field === 'appts' && t > NOW.getTime()) return;
       for (const [k,, days] of SPANS)
         if (t >= addD(end, -days).getTime() && t < end.getTime()) (by[rid] ??= blank())[k][field]++;
     };
@@ -6002,7 +6139,7 @@ function buildData(raw){
 
   return {
     generatedAt: new Date().toISOString(),
-    oasisLag, exclusions, sampleReps, signals, closeTrend, marketWatch, apptWtd, pipeline,
+    oasisLag, exclusions, sampleReps, signals, closeTrend, marketWatch, apptWtd, pipeline, closeLag,
     // the filtered roster by id, for the rep one-pager — name, role and the
     // sells flag travel together so the pager never re-derives who someone is
     roster: Object.fromEntries(reps.map(r =>
@@ -6036,7 +6173,7 @@ function buildData(raw){
       ...slice(wv.from, wv.to),
       // reps on prev too: when a week has just reset, "who closed last week" is
       // the context that stops an empty board reading as a broken one
-      prev: (p => ({ ...p.company, brands:p.brands, reps:p.reps }))(slice(...prevRange(wv))),
+      prev: (p => ({ ...p.company, brands:p.brands, reps:p.reps, closeByBrand:p.closeByBrand }))(slice(...prevRange(wv))),
       // and the FULL prior period, not just the like-for-like slice — on a Monday
       // the like-for-like comparison is one day against one day, which is not the
       // number he means when he says "last week"
