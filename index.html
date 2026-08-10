@@ -356,6 +356,11 @@
     letter-spacing: -0.02em; line-height: 1.05; margin-top: 3px; }
   @media (min-width: 700px) { .snap-v { font-size: 30px; } }
   .snap-s { font-family: 'JetBrains Mono', monospace; font-size: 9px; color: var(--text-dim); margin-top: 3px; }
+  /* the rung line under the Signed hero: the bell layer said out loud, beside
+     the actual, never blended into it */
+  .snap-bell { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--text-dim);
+    margin-top: 6px; line-height: 1.5; }
+  .snap-bell b { color: var(--gold); font-weight: 600; }
   .snap-d { font-family: 'JetBrains Mono', monospace; font-size: 9px; margin-top: 5px; letter-spacing: 0.02em; }
   .snap-d.up { color: var(--green-soft); } .snap-d.down { color: #d8997f; } .snap-d.flat { color: var(--text-dim); }
   .snaphint { font-family: 'JetBrains Mono', monospace; font-size: 9px; letter-spacing: 0.1em;
@@ -645,6 +650,8 @@
   .tick { font-family: 'JetBrains Mono', monospace; font-size: 7.5px; letter-spacing: 0.1em;
     text-transform: uppercase; color: var(--accent-soft); border: 1px solid rgba(240,131,74,0.4);
     border-radius: 100px; padding: 1px 5px; margin-left: 6px; vertical-align: middle; }
+  /* bell tick: rung dollars riding NEXT TO a brand's signed figure, never in it */
+  .tick.bell { color: var(--gold); border-color: rgba(212,177,90,0.45); text-transform: none; }
 
   /* ── per-window deep dive ── */
   .backbar { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
@@ -694,6 +701,7 @@
   .feed-tag.billdu { color: var(--accent-soft); border-color: rgba(240,131,74,0.45);
     background: rgba(240,131,74,0.08); }
   .feed-tag.none { color: var(--text-dim); border-color: rgba(255,255,255,0.12); }
+  .feed-tag.bell { color: var(--gold); border-color: rgba(212,177,90,0.45); }
 
   /* withheld / honest-absence block */
   .withheld { background: rgba(212,177,90,0.05); border: 1px solid rgba(212,177,90,0.22);
@@ -1162,10 +1170,12 @@ function hdr(){
         <div class="alloc-chart"><canvas id="cHeroMix"></canvas>
           <div class="alloc-center"><div class="big">${short(W.rev)}</div><div class="lbl">signed</div></div></div>
         <div class="alloc-legend">${allBrands(W.brands).map(b => { const m = brandOf(b.id);
-          return `<div class="alloc-row" ${b.rev?'':'style="opacity:.55"'}>
+          const rg = W.rung && W.rung.byBrand[String(b.id)];
+          return `<div class="alloc-row" ${(b.rev||rg)?'':'style="opacity:.55"'}>
             <div class="alloc-dot" style="background:${m.c}"></div>
-            <div class="name">${esc(m.n)}${b.billdu?'<span class="tick">billdu</span>':''}</div>
+            <div class="name">${esc(m.n)}${b.billdu?'<span class="tick">billdu</span>':''}${rg?`<span class="tick bell">🔔 +${short(rg.value)}</span>`:''}</div>
             <div class="val">${b.rev?`${short(b.rev)} · ${pct(b.rev, W.rev)}%`:'$0'}</div></div>`; }).join('')}</div>
+        ${W.rung && W.rung.value ? `<div class="snap-bell">🔔 <b>+${short(W.rung.value)}</b> rung, awaiting the book · ${W.rung.count} deal${W.rung.count===1?'':'s'} — signed + rung = <b>${short(W.rev + W.rung.value)}</b><span class="feed-tag bell">bell</span></div>` : ''}
         <div class="snap-s">${sub}</div>
         <div class="snap-d ${d===null?'flat':d>=0?'up':'down'}">${d===null?'—':(d>=0?'▲':'▼')+' '+Math.abs(d)+'% vs '+esc(W.prevLabel)}</div>
         <div class="snap-go">details <span class="go-chev">›</span></div>
@@ -1195,7 +1205,7 @@ function hdr(){
       </button>
     </div>
     ${k === 'month' ? heroTrend() : ''}
-    <div class="snaphint">Signed = contract value · CC + Oasis via Billdu. Built = invoiced in QuickBooks. Two different events in two systems — never added together.</div>
+    <div class="snaphint">Signed = contract value · CC + Oasis via Billdu. Built = invoiced in QuickBooks. Two different events in two systems — never added together. 🔔 Rung = bells the reps rang that no feed has booked yet — board credit, shown beside Signed, never inside it; each bell hands off on its own the moment CC or Billdu books the deal.</div>
   </div>`;
 }
 
@@ -3375,9 +3385,10 @@ function diveView(k){
     <div class="alloc-chart" style="width:180px;height:180px"><canvas id="cDiveMix"></canvas>
       <div class="alloc-center"><div class="big" style="font-size:22px">${short(W.rev)}</div><div class="lbl">signed</div></div></div>
     <div class="alloc-legend" style="margin-bottom:10px">${allBrands(W.brands).map(b => { const m = brandOf(b.id);
-      return `<div class="alloc-row" ${b.rev?'':'style="opacity:.55"'}>
+      const rg = W.rung && W.rung.byBrand[String(b.id)];
+      return `<div class="alloc-row" ${(b.rev||rg)?'':'style="opacity:.55"'}>
         <div class="alloc-dot" style="background:${m.c}"></div>
-        <div class="name">${esc(m.n)}${b.billdu?'<span class="tick">billdu</span>':''}</div>
+        <div class="name">${esc(m.n)}${b.billdu?'<span class="tick">billdu</span>':''}${rg?`<span class="tick bell">🔔 +${short(rg.value)}</span>`:''}</div>
         <div class="val">${b.rev?`${short(b.rev)} · ${pct(b.rev, W.rev)}%`:'$0'}</div></div>`; }).join('')}</div>
     <div class="card-sub" style="margin:0">${complete ? `${W.deals} deal${W.deals===1?'':'s'}` : `pace <b>${short(pace)}</b> · day ${el} of ${full}`}${dTot===null?'':` · <b class="${dTot>=0?'up':'dn'}">${dTot>=0?'▲':'▼'}${Math.abs(dTot)}%</b> vs ${esc(W.prevLabel)}`}</div>
     ${/* The components sit ON the headline, not below the fold of the card.
@@ -3386,6 +3397,7 @@ function diveView(k){
           the only place the split appeared was further down. A headline that is
           a union has to declare itself a union at the point of reading. */''}
     ${W.billdu ? `<div class="hero-incl">incl. <b>${short(W.billdu)}</b> <span class="feed-tag billdu">live · billdu</span> — Oasis reads from Billdu invoices</div>` : ''}
+    ${W.rung && W.rung.value ? `<div class="hero-incl">plus <b>${short(W.rung.value)}</b> <span class="feed-tag bell">bell</span> rung and awaiting the book — ${W.rung.count} deal${W.rung.count===1?'':'s'} the reps rang that CC / Billdu has not booked yet. Board credit now, company money when the feed books it; signed + rung = <b>${short(W.rev + W.rung.value)}</b>.</div>` : ''}
     ${billduDown() ? `<div class="hero-incl warn">Contractors Cloud only — the Billdu feed is unreadable, so Oasis sales (which read from Billdu invoices) are <b>missing from this figure</b>, not absent from the day.</div>` : ''}
     ${W.billdu ? `<div class="seam">
       <span><b>${short(W.ccRev)}</b> signed in Contractors Cloud · ${W.jobs - (W.billduCount||0)} contract${(W.jobs - (W.billduCount||0))===1?'':'s'}</span>
@@ -4304,7 +4316,7 @@ addEventListener('resize', () => {
    server for hours while Kevin looked at yesterday's build and reported the bug
    as unfixed. That happened. The page now checks version.json on every load and
    reloads itself once if the deployed build is newer than the one running. */
-const BUILD = '2026-08-07T13:28Z-lost-file-133';
+const BUILD = '2026-08-10T20:00Z-rung-on-the-hero-134';
 const SB_URL = 'https://lzegjjbkfuecrhdvlvay.supabase.co';
 /* The one page that can finish a password reset. Hard-coded rather than derived,
    because every derivation of it so far has been a source of bugs: a bare origin
@@ -4712,7 +4724,17 @@ function buildData(raw){
        jobs above and adding them again is the $1.6M double-count class. Folded
        into the REP rows only: a claim is a rep's board credit, not company
        revenue — the money cards stay CC + Billdu until CC confirms. This is
-       why Jared rang four sales and his board read $0 · 0 deals. */
+       why Jared rang four sales and his board read $0 · 0 deals.
+       The same fold also totals a window-level RUNG layer (10 Aug — Kevin:
+       "sales for the day, like, one ten, but my board says fifty… Protech
+       isn't filtering in, but I see Eric has it"). Eric's $49K Pro-Tec bell
+       was on his rep row but invisible at the top, so the day read as broken
+       rather than as booked-so-far. The rung total is SHOWN on the hero as
+       its own labeled line and per-brand bell ticks — it is never added into
+       rev, the donut, or any brand's signed figure: bells become company
+       money only when CC / Billdu books them, and then they leave this layer
+       by the confirmer (109/110/111/118) on their own. */
+    const rung = { value:0, count:0, byBrand:{}, list:[] };
     for (const c of (claims || [])) {
       if (!['pending','warned','flagged'].includes(c.status)) continue;
       if (c.cc_already_counted || c.cc_state === 'job_linked') continue;
@@ -4728,6 +4750,12 @@ function buildData(raw){
         brand: rollup(c.cc_company_id || 'unknown'), resolved: !!c.cc_company_id,
         amount: amt, src:'bell',
         rep: repById[rid]?.name || 'Unknown', repId: rid });
+      rung.value += amt; rung.count++;
+      const rb = rollup(c.cc_company_id || 'unknown');
+      (rung.byBrand[rb] ??= { value:0, count:0 });
+      rung.byBrand[rb].value += amt; rung.byBrand[rb].count++;
+      rung.list.push({ cust: c.customer_name || null, brand: rb, amount: amt,
+        rep: repById[rid]?.name || 'Unknown' });
     }
     const unionRev = rev + (bd ? bd.value : 0);
 
@@ -4755,6 +4783,7 @@ function buildData(raw){
     const flat = [...allRows].sort((a,b)=>b.amount-a.amount);
 
     return {
+      rung,
       signedList: flat.slice(0,FLATCAP),
       signedCount: flat.length,
       signedRestValue: flat.slice(FLATCAP).reduce((n,r)=>n+r.amount,0),
