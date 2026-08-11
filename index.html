@@ -207,9 +207,19 @@
     border-left: 2px solid var(--gold); background: rgba(212,177,90,.07); border-radius: 0 8px 8px 0;
     font-size: 12px; line-height: 1.5; }
   .intel-alert.fire { border-left-color: var(--red); background: rgba(217,106,94,.08); }
+  /* The intel board's four other registers. These were inline styles until the
+     11 Aug rebuild gave the board named sections; a class per severity keeps
+     the row markup readable and the colours in one place. */
+  .intel-alert.good { border-left-color: var(--green); background: rgba(108,194,139,.07); }
+  .intel-alert.control { border-left-color: var(--blue); background: rgba(107,168,201,.07); }
+  .intel-alert.find { border-left-color: var(--accent); background: rgba(216,122,74,.07); }
   .intel-alert .tag { font-family: 'JetBrains Mono', monospace; font-size: 9px; letter-spacing: .1em;
-    padding-top: 2px; color: var(--gold); flex-shrink: 0; }
+    padding-top: 2px; color: var(--gold); flex-shrink: 0; white-space: nowrap; }
   .intel-alert.fire .tag { color: var(--red); }
+  .intel-alert.good .tag { color: var(--green); }
+  .intel-alert.control .tag { color: var(--blue); }
+  .intel-alert.find .tag { color: var(--accent-soft); }
+  .attn .sig-sep { margin-top: 12px; }
   .intel-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 12px; margin-top: 12px; }
   .feedgrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 8px; margin-top: 10px; }
   .feedtile { background: var(--bg-card-hi); border-radius: 8px; padding: 9px 11px; border-top: 2px solid var(--green); }
@@ -2096,31 +2106,39 @@ function cardCloseTrend(){
       intelligence into the owner dashboard" — the fencing deep-dive, as a
       permanent instrument. Two layers, honestly separated:
         · the DEMAND layer computes live in this page from the same jobs and
-          appointments every other card reads — bookings vs the same days last
-          year, per trade, with the cross-brand control
+          appointments every other card reads — bookings per trade against the
+          LAST 1-4 MONTHS (Kevin, 11 Aug: a year ago, after a big storm, is not
+          a relevant comparison and the adjustment period is too long), with
+          the cross-brand control
         · the MONEY layer (P&L, gross margin, the lead/lag spread) needs
           Contractors Cloud and Windsor keys, which a public page must never
           hold — it loads from the liberty-intel Edge Function and is stated
           as withheld until that service is deployed. ─────────────────────── */
 let INTEL = null, INTEL_STATE = 'idle';
 function cardIntel(){
-  const M = D.marketWatch; if (!M) return '';
-  const flags = M.brands.flatMap(b => b.flags.map(f => ({ ...f, brand: b.s })));
+  const R = D.rhythm; if (!R) return '';
+  const C = R.company;
+  const flags = R.brands.flatMap(b => b.flags.map(f => ({ ...f, brand: b.s })));
+  const rows = [...R.predict.map(p => ({ sev:p.sev, txt:p.txt })),
+                ...flags.filter(f => !R.predict.some(p => p.brand === f.brand))
+                        .map(f => ({ sev:f.sev, txt:`<b>${esc(f.brand)}:</b> ${f.txt}` }))];
   return `<div class="card full intel-band">
     <div class="card-title">Market intelligence<span class="feed-tag cc">live · cc</span>${INTEL?'<span class="feed-tag qb">live · qb</span>':''}</div>
-    <div class="card-sub">Demand per trade against the same days last year, and whether a slump is one trade's problem or the market's. ${INTEL?'':'Money layer (P&L, margins) loads from the intel service.'}</div>
-    ${flags.map(f => `<div class="intel-alert ${f.sev}"><span class="tag">${f.sev==='fire'?'ALARM':'WATCH'}</span><span><b>${esc(f.brand)}:</b> ${f.txt}</span></div>`).join('')}
-    ${M.control ? `<div class="intel-alert" style="border-left-color:var(--blue);background:rgba(107,168,201,.07)"><span class="tag" style="color:var(--blue)">CONTROL</span><span>${M.control}</span></div>` : ''}
+    <div class="card-sub">Demand per trade against its own last four months — 30-day buckets, so no partial month and no storm-year baseline — and whether a slump is one trade's problem or the market's. ${INTEL?'':'Money layer (P&L, margins) loads from the intel service.'}</div>
+    ${rows.map(f => `<div class="intel-alert ${ATTN_SEV[f.sev]||''}"><span class="tag">${ATTN_TAG[f.sev]||'WATCH'}</span><span>${f.txt}</span></div>`).join('')}
+    ${R.control ? `<div class="intel-alert control"><span class="tag">CONTROL</span><span>${R.control}</span></div>` : ''}
+    ${C.set.thin ? '' : `<div class="intel-alert ${ATTN_SEV[RHY_SEV[C.set.verdict]]||''}"><span class="tag">${esc('SET ' + RHY_WORD[C.set.verdict])}</span><span>Company-wide, <b>${C.set.now} appointments were set in the last 30 days</b> against ${Math.round(C.set.b4)} a month over the rhythm${C.set.d1!==null?` · ${C.set.d1>=8?'up '+C.set.d1+'%':C.set.d1<=-8?'down '+Math.abs(C.set.d1)+'%':'flat'} on last month`:''}${C.set.d2!==null?` · ${C.set.d2>=8?'up '+C.set.d2+'%':C.set.d2<=-8?'down '+Math.abs(C.set.d2)+'%':'flat'} on the last 2`:''}.</span></div>`}
     <div class="intel-grid">
       <div>
-        <div class="card-title" style="font-size:11px;margin:10px 0 4px">Bookings · this month vs same days last year</div>
+        <div class="card-title" style="font-size:11px;margin:10px 0 4px">Bookings set · last 30 days vs the 4-month monthly average</div>
         <div class="chart-wrap" style="height:180px"><canvas id="cMwDemand"></canvas></div>
       </div>
       <div>
-        <div class="card-title" style="font-size:11px;margin:10px 0 4px">Signed value · last 90 vs prior 90</div>
+        <div class="card-title" style="font-size:11px;margin:10px 0 4px">Signed value · last 30 days vs the 4-month monthly average</div>
         <div class="chart-wrap" style="height:180px"><canvas id="cMwMoney"></canvas></div>
       </div>
     </div>
+    <div class="note">Every comparison on this card is a trailing 30-day bucket against the mean of the three behind it — the rhythm the business is actually running at, per Kevin's 11 Aug ruling. The year-over-year series is <b>gone, not hidden</b>: it described a business with a storm in it. Money here is BOOKED money only (CC contracts plus Billdu invoices for Oasis); an open 🔔 ring can only exist in the newest bucket, so folding the rung layer into a trend would manufacture a rise — it stays counted and labelled on the money cards instead.</div>
     <div id="intelbody">${INTEL ? intelBody() : `<div class="note" style="margin-top:12px">${
       INTEL_STATE === 'loading' ? 'Reading the full deep-dive — the intel service paces Contractors Cloud’s rate limit, so a cold read can take a minute…'
       : INTEL_STATE === 'absent' ? 'The money layer — QuickBooks P&L, gross margin by quarter, the bookings-vs-revenue spread — is <b>withheld, not missing</b>: the liberty-intel service is written (supabase/functions/liberty-intel) but not deployed with its CC and Windsor keys yet. The demand read above is live from this page’s own data.'
@@ -3176,35 +3194,107 @@ function askAnswer(){
 
 /* ── ATTENTION. Kevin (28 Jul): "attention is like — hey man, leads are slow
    or up, this guy is trending down. Business stuff. Yours is housekeeping."
-   So this is a trend board, not a chore list: appointments, sales, builds,
-   A/R, each with its direction, plus only the alerts a market or a rep earns.
-   The housekeeping inbox still exists — folded at the bottom as Review. */
+   Rebuilt 11 Aug on his second pass at it: "this intel board is best of best
+   and worst of worst… pressing things are rev hot or cold, builds hot or
+   cold, receivables if they are out of control, marketing trends for
+   predicting, and then anything cool the data will reveal."
+
+   So the board has four named registers, in that order, and nothing else:
+     PRESSING   — revenue, builds, receivables, marketing, each hot/cold
+                  against the 1-4 month rhythm, never against last year
+     CRUSHING   — best of best, two names, earned on trend or on level
+     COOLING    — worst of worst, two names, same test, no failure words
+     FOUND      — what the data revealed on its own
+   The owner is excluded from every rep read (Kevin, 11 Aug: "Gio is owner,
+   don't include any intel on him"). The housekeeping inbox still exists —
+   folded at the bottom as Review. */
+const ATTN_SEV = { fire:'fire', watch:'', good:'good', control:'control', find:'find' };
+const ATTN_TAG = { fire:'ALARM', watch:'WATCH', good:'UP', control:'CONTROL', find:'FOUND' };
+function attnRow(a){
+  return `<div class="intel-alert ${ATTN_SEV[a.sev]||''}">`
+    + `<span class="tag">${a.kicker ? esc(a.kicker) : (ATTN_TAG[a.sev]||'WATCH')}</span>`
+    + `<span>${a.txt}</span></div>`;
+}
+/* Hot or cold in one word, from the rhythm verdict — the same vocabulary on
+   every row so "cold" means one thing on this page. */
+const RHY_WORD = { hot:'HOT', warm:'WARM', flat:'FLAT', cooling:'COOLING', cold:'COLD', thin:'THIN' };
+const RHY_SEV  = { hot:'good', warm:'good', flat:'watch', cooling:'watch', cold:'fire', thin:'watch' };
 function cardAttention(){
-  const W = D.windows || {}, mo = W.month || {}, wtd = D.apptWtd;
-  const arr = (d) => d===null||d===undefined ? '' : ` <b class="${d>=0?'up':'dn'}">${d>=0?'▲':'▼'}${Math.abs(d)}%</b>`;
-  const pd = (c,p) => p ? Math.round((c-p)/p*100) : null;
-  const revD = mo.prev && mo.prev.rev ? pd(mo.company?mo.company.rev:0, mo.prev.rev) : null;
-  const builtNow = mo.company ? mo.company.builtRev : 0;
-  const builtD = mo.prev && mo.prev.builtRev ? pd(builtNow, mo.prev.builtRev) : null;
-  const alerts = [];
-  if (D.marketWatch) {
-    for (const b of D.marketWatch.brands) for (const f of b.flags)
-      alerts.push({ sev: f.sev, txt: `<b>${esc(b.s)}:</b> ${f.txt}` });
-    if (D.marketWatch.control) alerts.push({ sev:'control', txt: D.marketWatch.control });
-  }
-  if (D.closeTrend) {
-    for (const r of D.closeTrend.rows) {
-      if (!r.sells || r.momentum === null) continue;
-      if (r.momentum <= -8) alerts.push({ sev:'watch',
-        txt:`<b>${esc(r.name)}</b> is trending down — 2-wk close ${r.w2.close}% vs their 60-day ${r.d60.close}%. <span class="tapname" onclick="openRep('${esc(String(r.id))}')">One-pager ›</span>` });
-      else if (r.momentum >= 12) alerts.push({ sev:'good',
-        txt:`<b>${esc(r.name)}</b> is heating up — 2-wk close ${r.w2.close}% vs their 60-day ${r.d60.close}%.` });
+  const R = D.rhythm, BW = D.bestWorst, DISC = D.discoveries || [];
+  const pressing = [], found = [];
+
+  if (R) {
+    const C = R.company;
+    /* Kevin's phrase, verbatim in shape: "marketing is up compared to this
+       time last month / flat vs last 2 etc." Every pressing row carries all
+       three reads, because the useful fact is usually which of them disagree. */
+    const line = (r, unit) => r.thin ? 'no rhythm behind it yet'
+      : [ r.d1 !== null ? `${r.d1 >= 8 ? 'up ' + r.d1 + '%' : r.d1 <= -8 ? 'down ' + Math.abs(r.d1) + '%' : 'flat'} vs last month` : null,
+          r.d2 !== null ? `${r.d2 >= 8 ? 'up ' + r.d2 + '%' : r.d2 <= -8 ? 'down ' + Math.abs(r.d2) + '%' : 'flat'} vs the last 2` : null,
+          r.d4 !== null ? `<b>${r.d4 >= 8 ? 'up ' + r.d4 + '%' : r.d4 <= -8 ? 'down ' + Math.abs(r.d4) + '%' : 'flat'} vs the 4-month rhythm</b>` : null,
+        ].filter(Boolean).join(' · ');
+
+    // 1. REVENUE, hot or cold.
+    if (!C.rev.thin) pressing.push({ sev: RHY_SEV[C.rev.verdict], kicker: 'REV ' + RHY_WORD[C.rev.verdict],
+      txt: `<b>${short(C.rev.now)} signed in the last 30 days</b> against ${short(Math.round(C.rev.b4))} a month across the rhythm — ${line(C.rev)}${C.rev.shape === 'climbing' ? ' · up in every one of the four months' : C.rev.shape === 'sliding' ? ' · down in every one of the four months' : ''}.` });
+
+    // 2. BUILDS, hot or cold — production first, billing alongside it.
+    if (!C.built.thin) pressing.push({ sev: RHY_SEV[C.built.verdict], kicker: 'BUILDS ' + RHY_WORD[C.built.verdict],
+      txt: `<b>${short(C.built.now)} of work completed in the last 30 days</b> against ${short(Math.round(C.built.b4))} a month — ${line(C.built)}.${C.inv && !C.inv.thin ? ` QuickBooks billed ${short(C.inv.now)} over the same 30 (${line(C.inv)}).` : ''}` });
+
+    // 3. RECEIVABLES — only when there is something to say about control.
+    if (R.ar && R.ar.months !== null && R.ar.verdict !== 'clean') {
+      const m = R.ar.months, out = R.ar.verdict === 'out-of-control';
+      pressing.push({ sev: out ? 'fire' : 'watch', kicker: out ? 'A/R LOOSE' : 'A/R',
+        txt: `<b>${short(R.ar.total)} open across ${R.ar.open} invoice${R.ar.open === 1 ? '' : 's'}</b> — ${m.toFixed(1)} months of billing outstanding against a ${short(Math.round(R.ar.monthly))} average month. ${out ? 'That is out of control by this business’s own rhythm: a collections pass, oldest and largest first, is the highest-return hour this week.' : 'Worth a pass before it becomes the story.'}` });
     }
+
+    /* 4. MARKETING — the predicting register, per trade, plus the control.
+       Sorted WORST FIRST and capped, because the trade that is cold is the
+       reason he opened the page and two trades running hot must never push it
+       off the bottom of a five-row board. (It did, on the first cut of this.) */
+    const SEV_RANK = { fire:0, watch:1, control:2, good:3 };
+    const mkt = [];
+    for (const p of R.predict) mkt.push({ sev: p.sev, kicker: 'MARKETING', txt: p.txt });
+    for (const b of R.brands) for (const f of b.flags)
+      if (!R.predict.some(p => p.brand === b.s))
+        mkt.push({ sev: f.sev, kicker: 'MARKETING', txt: `<b>${esc(b.s)}:</b> ${f.txt}` });
+    if (R.control) mkt.push({ sev:'control', kicker:'CONTROL', txt: R.control });
+    /* When no trade earns a flag the marketing register still reports, because
+       "demand is steady" is an answer he came here for, not an empty slot. */
+    if (!mkt.length && !C.set.thin)
+      mkt.push({ sev: RHY_SEV[C.set.verdict], kicker: 'MARKETING ' + RHY_WORD[C.set.verdict],
+        txt: `<b>${C.set.now} appointments set in the last 30 days</b> against ${Math.round(C.set.b4)} a month — ${line(C.set)}. No trade is off its own rhythm far enough to call.` });
+    mkt.sort((a, b) => (SEV_RANK[a.sev] ?? 9) - (SEV_RANK[b.sev] ?? 9));
+    pressing.push(...mkt.slice(0, 3));
   }
+
+  const repRow = (r, up) => {
+    const lvl = r.why === 'level';
+    const mo = r.momentum === null ? null : Math.abs(r.momentum);
+    return { sev: up ? 'good' : 'watch', kicker: up ? 'CRUSHING' : 'COOLING',
+      txt: `<b>${esc(r.name)}</b> ${up
+        ? (lvl ? `is closing <b>${r.d30.close}%</b> flat out over 30 days (${r.d30.signed}/${r.d30.appts})`
+               : `is <b>${mo} points above their own 60-day baseline</b> — 2-wk close ${r.w2.close}% vs ${r.d60.close}% (${r.w2.signed}/${r.w2.appts} in the fortnight)`)
+        : (lvl ? `is closing ${r.d30.close}% over 30 days (${r.d30.signed}/${r.d30.appts}) — the lowest on the floor with a real sample`
+               : `has cooled <b>${mo} points off their own 60-day baseline</b> — 2-wk close ${r.w2.close}% vs ${r.d60.close}% (${r.w2.signed}/${r.w2.appts} in the fortnight)`)}${r.money ? ` · ${short(r.money)} signed in 30 days` : ''}. <span class="tapname" onclick="openRep('${esc(String(r.id))}')">One-pager ›</span>` };
+  };
+  const best = BW ? BW.best.map(r => repRow(r, true)) : [];
+  const worst = BW ? BW.worst.map(r => repRow(r, false)) : [];
+  for (const d of DISC.slice(0, 3)) found.push({ sev:'find', kicker:'FOUND', txt: d.txt });
+
+  const sect = (label, rows) => rows.length
+    ? `<div class="sig-sep">${esc(label)}</div>` + rows.map(attnRow).join('') : '';
+
+  const anything = pressing.length + best.length + worst.length + found.length;
   return `<div class="card attn">
-    <div class="card-title">Attention<span class="feed-tag cc">trends, not chores</span></div>
-    ${alerts.slice(0,5).map(a=>`<div class="intel-alert ${a.sev==='fire'?'fire':''}"${a.sev==='good'?' style="border-left-color:var(--green);background:rgba(108,194,139,.07)"':a.sev==='control'?' style="border-left-color:var(--blue);background:rgba(107,168,201,.07)"':''}><span class="tag"${a.sev==='good'?' style="color:var(--green)"':a.sev==='control'?' style="color:var(--blue)"':''}>${a.sev==='fire'?'ALARM':a.sev==='good'?'UP':a.sev==='control'?'CONTROL':'WATCH'}</span><span>${a.txt}</span></div>`).join('')}
-    ${alerts.length?'':'<div class="nofires" style="margin-top:10px">Nothing trending off — bookings, sales and builds are inside their normal range.</div>'}
+    <div class="card-title">Attention<span class="feed-tag cc">best of best · worst of worst</span></div>
+    ${pressing.length ? `<div class="sig-sep">Pressing · against the last 1–4 months, not last year</div>`
+        + pressing.map(attnRow).join('') : ''}
+    ${sect('Crushing', best)}
+    ${sect('Cooling — where the air cover goes', worst)}
+    ${sect('What the data found', found)}
+    ${anything ? '' : '<div class="nofires" style="margin-top:10px">Nothing off its rhythm — revenue, builds, receivables and bookings are all inside the range of the last four months.</div>'}
   </div>`;
 }
 
@@ -4083,14 +4173,19 @@ function drawCharts(){
 
   /* Market intelligence: demand + money per trade, and the intel service's
      spread + margin charts when the payload is live. */
+  /* Both bars are now RHYTHM bars: the grey is the 4-month monthly average
+     (the mean of the three buckets behind the newest), the coloured one is the
+     last 30 days. Red only when the newest bucket is materially under its own
+     rhythm — the same -12% line the flags use, so the chart and the alert can
+     never disagree about which trade is cold. */
   const mw = document.getElementById('cMwDemand');
-  if (mw && D.marketWatch) {
-    const B = D.marketWatch.brands;
+  if (mw && D.rhythm) {
+    const B = D.rhythm.brands;
     charts.push(new Chart(mw.getContext('2d'), {
       type:'bar',
       data:{ labels:B.map(b=>b.s), datasets:[
-        { label:'same days last year', data:B.map(b=>b.mtd.apP), backgroundColor:'rgba(138,160,148,0.35)', borderRadius:3 },
-        { label:'this month', data:B.map(b=>b.mtd.ap), backgroundColor:B.map(b=>(b.mtd.apD!==null&&b.mtd.apD<=-20)?'#d96a5e':b.c), borderRadius:3 },
+        { label:'4-month rhythm · per month', data:B.map(b=>Math.round(b.set.b4)), backgroundColor:'rgba(138,160,148,0.35)', borderRadius:3 },
+        { label:'last 30 days', data:B.map(b=>b.set.now), backgroundColor:B.map(b=>(!b.set.thin&&b.set.d4!==null&&b.set.d4<=-12)?'#d96a5e':b.c), borderRadius:3 },
       ]},
       options:{ responsive:true, maintainAspectRatio:false, layout:{padding:{top:18}},
         plugins:{ legend:{display:true, labels:{font:{family:MONO,size:9}, boxWidth:10}}, tooltip:TIP },
@@ -4099,13 +4194,13 @@ function drawCharts(){
     }));
   }
   const mwm = document.getElementById('cMwMoney');
-  if (mwm && D.marketWatch) {
-    const B = D.marketWatch.brands;
+  if (mwm && D.rhythm) {
+    const B = D.rhythm.brands;
     charts.push(new Chart(mwm.getContext('2d'), {
       type:'bar',
       data:{ labels:B.map(b=>b.s), datasets:[
-        { label:'prior 90 days', data:B.map(b=>b.t90.revP), backgroundColor:'rgba(138,160,148,0.35)', borderRadius:3 },
-        { label:'last 90 days', data:B.map(b=>b.t90.rev), backgroundColor:B.map(b=>(b.t90.revD!==null&&b.t90.revD<0)?'#d96a5e':b.c), borderRadius:3 },
+        { label:'4-month rhythm · per month', data:B.map(b=>Math.round(b.rev.b4)), backgroundColor:'rgba(138,160,148,0.35)', borderRadius:3 },
+        { label:'last 30 days', data:B.map(b=>Math.round(b.rev.now)), backgroundColor:B.map(b=>(!b.rev.thin&&b.rev.d4!==null&&b.rev.d4<=-12)?'#d96a5e':b.c), borderRadius:3 },
       ]},
       options:{ responsive:true, maintainAspectRatio:false, layout:{padding:{top:18}},
         plugins:{ legend:{display:true, labels:{font:{family:MONO,size:9}, boxWidth:10}}, tooltip:{...TIP, callbacks:{label:c=>' '+short(c.parsed.y)}} },
@@ -4370,7 +4465,7 @@ addEventListener('resize', () => {
    server for hours while Kevin looked at yesterday's build and reported the bug
    as unfixed. That happened. The page now checks version.json on every load and
    reloads itself once if the deployed build is newer than the one running. */
-const BUILD = '2026-08-10T22:30Z-close-honesty-x-bell-137';
+const BUILD = '2026-08-11T20:10Z-rhythm-intel-best-worst';
 const SB_URL = 'https://lzegjjbkfuecrhdvlvay.supabase.co';
 /* The one page that can finish a password reset. Hard-coded rather than derived,
    because every derivation of it so far has been a source of bugs: a bare origin
@@ -6080,80 +6175,375 @@ function buildData(raw){
              byId: Object.fromEntries(rows.map(r => [r.id, r])), team: finish(team) };
   })();
 
-  /* ── MARKET WATCH. Kevin (28 Jul), after an offline deep-dive found Fencing
-     bookings off a cliff while Oasis boomed: "can we build this level of
-     intelligence into the owner dashboard." The full version — P&L margins,
-     Windsor, close-vs-pricing attribution — needs the ask-bar backend; what a
-     public static page can hold honestly is the demand-and-money core of that
-     analysis, recomputed live per trade:
-       · bookings this month vs the SAME DAYS last year, and trailing 90 vs
-         the prior 90 — the demand series
-       · signed value over the same four windows — the money series
-       · the divergence verdicts: a demand cliff, and "bookings lead revenue"
-         (bookings fall first; installed work follows next month)
-       · the cross-brand control — one trade down while another is up is not
-         a local-economy story, and the card says which it is reading.
-     Appointment history reaches APPT_SINCE (13 months), which is exactly
-     enough for the same-days-last-year comparison and no more — so this card
-     never claims a quarterly YoY series it cannot see. */
-  const marketWatch = (() => {
-    const pb = {};
-    for (const j of jobs) if (j.cc_project_id) pb[String(j.cc_project_id)] = rollup(j.cc_company_id);
-    const yrAgo = d => { const x = new Date(d); x.setFullYear(x.getFullYear() - 1); return x; };
-    const tomorrow = addD(sod(NOW), 1);
-    const WINS2 = {
-      mtd: { label: 'month · same days LY', a: som(NOW), b: tomorrow,
-             pa: som(yrAgo(NOW)), pb: addD(sod(yrAgo(NOW)), 1) },
-      t90: { label: 'last 90 · prior 90', a: addD(tomorrow, -90), b: tomorrow,
-             pa: addD(tomorrow, -180), pb: addD(tomorrow, -90) },
-    };
-    const mk = () => ({ mtd: { ap:0, apP:0, rev:0, revP:0 }, t90: { ap:0, apP:0, rev:0, revP:0 } });
-    const by = Object.fromEntries(BRAND_ORDER.map(id => [id, mk()]));
+  /* ── THE RHYTHM. Kevin (11 Aug), on the intel board: "instead of last years
+     marketing historical data it needs to be based on the last 1-4 months
+     rhythm. A year ago after a big storm is not relevant data comparison for
+     marketing. It's the past few months that matter. We've adjusted our rev to
+     where we are so it will be more relevant. It's too long an adjustment
+     period."
+
+     So the year-ago ghost is GONE from this page's intelligence. Every intel
+     comparison now reads against four trailing 30-day buckets ending today —
+       M0 last 30 · M1 the 30 before · M2 61-90 back · M3 91-120 back
+     and each metric states the three reads he asked for out loud:
+       vs last month  = M0 against M1
+       vs last 2      = M0 against the mean of M1-M2
+       vs the rhythm  = M0 against the mean of M1-M3 — and THAT is the verdict
+     Buckets are 30 days wide, always: no partial month, no Monday reset, and
+     no storm-year baseline standing behind a number that has to be argued
+     with. The year-over-year series is not "hidden" — it is gone, because the
+     business it described is not the business being run. */
+  const RHY_DAYS = 30, RHY_N = 4;
+  const RHY_LABELS = ['last 30 days', 'the 30 before', '61–90 days back', '91–120 days back'];
+  const rhyEnd = addD(sod(NOW), 1);
+  const RHY_WINS = Array.from({ length: RHY_N },
+    (_, i) => [addD(rhyEnd, -RHY_DAYS * (i + 1)), addD(rhyEnd, -RHY_DAYS * i)]);
+  const mean_ = a => a.length ? a.reduce((n, x) => n + x, 0) / a.length : 0;
+  /* One reading, one vocabulary, used by every metric on the board. `min` is a
+     floor under the BASELINE, not under today: below it there is no rhythm to
+     be off, and the metric says THIN rather than screaming a percentage off a
+     number of three. */
+  const readRhythm = (m, min) => {
+    const pctd = (c, p) => (p > 0 ? Math.round((c - p) / p * 100) : null);
+    const b1 = m[1], b2 = mean_(m.slice(1, 3)), b4 = mean_(m.slice(1));
+    const thin = !(b4 >= (min || 0) && b4 > 0);
+    const d1 = pctd(m[0], b1), d2 = pctd(m[0], b2), d4 = pctd(m[0], b4);
+    const verdict = (thin || d4 === null) ? 'thin'
+      : d4 >= 25 ? 'hot' : d4 >= 8 ? 'warm' : d4 > -8 ? 'flat' : d4 > -25 ? 'cooling' : 'cold';
+    /* Shape reads oldest → newest, so three straight steps up is "climbing"
+       and not just "the last 30 happened to be big". A 3% dead band keeps a
+       rounding wobble from being promoted to a direction. */
+    const seq = [m[3], m[2], m[1], m[0]];
+    let up = 0, dn = 0;
+    for (let i = 1; i < seq.length; i++) {
+      if (seq[i] > seq[i - 1] * 1.03) up++; else if (seq[i] < seq[i - 1] * 0.97) dn++;
+    }
+    const shape = thin ? null : up === 3 ? 'climbing' : dn === 3 ? 'sliding'
+      : up > dn ? 'firming' : dn > up ? 'easing' : 'steady';
+    return { m, now: m[0], b1, b2, b4, d1, d2, d4, verdict, shape, thin };
+  };
+  const rhythm = (() => {
+    const zeros = () => Array(RHY_N).fill(0);
+    const inW = (iso, i) => inR(iso, RHY_WINS[i][0], RHY_WINS[i][1]);
+    /* DEMAND. Appointments SET (cc_created_at) is the marketing signal — what
+       the phone and the ad spend actually produced. Appointments RUN
+       (starts_at) is the calendar load that follows it a few days later. Both
+       are carried; the marketing verdict reads SET, because SET is the one
+       that leads and the whole point of this board is predicting. */
+    const set = zeros(), ran = zeros();
+    const bySet = {}, byRan = {}, byRev = {};
+    for (const id of BRAND_ORDER) { bySet[id] = zeros(); byRan[id] = zeros(); byRev[id] = zeros(); }
     for (const x of appts) {
-      const b = pb[String(x.cc_project_id)]; if (!by[b]) continue;
-      for (const [k, w2] of Object.entries(WINS2)) {
-        if (inR(x.starts_at, w2.a, w2.b)) by[b][k].ap++;
-        if (inR(x.starts_at, w2.pa, w2.pb)) by[b][k].apP++;
+      const b = apptBrand[String(x.cc_project_id)];
+      for (let i = 0; i < RHY_N; i++) {
+        if (inW(x.cc_created_at, i)) { set[i]++; if (bySet[b]) bySet[b][i]++; }
+        if (inW(x.starts_at, i)) { ran[i]++; if (byRan[b]) byRan[b][i]++; }
       }
+    }
+    /* MONEY. The same union every board on this page uses — CC contract value
+       for the other brands, Billdu invoices for the whole of Oasis, never
+       both. BOOKED money only, and this is deliberate: an open 🔔 ring exists
+       in M0 and can exist nowhere else (the 5-day clock either books it or
+       pulls it), so folding the rung layer into a trend would tilt every
+       comparison in M0's favour and manufacture a rise. The rung layer stays
+       counted and labelled on the money cards, per the 10 Aug ruling, and
+       stays OUT of the rhythm — said out loud in the card's own note. */
+    const rev = zeros();
+    for (const j of jobs) {
+      if (!j.contract_signed_at || String(j.cc_company_id) === OASIS) continue;
+      const b = rollup(j.cc_company_id), v = Number(j.fin_sold_amount || 0);
+      for (let i = 0; i < RHY_N; i++) if (inW(j.contract_signed_at, i)) {
+        rev[i] += v; if (byRev[b]) byRev[b][i] += v;
+      }
+    }
+    for (let i = 0; i < RHY_N; i++) {
+      const bd = billduAdd(RHY_WINS[i][0], RHY_WINS[i][1]);
+      if (bd) { rev[i] += bd.value; if (byRev[OASIS]) byRev[OASIS][i] += bd.value; }
+    }
+    /* BUILDS. Production, dated by CC completed_at and valued at what the work
+       was sold for — the same figure the month card calls built. QuickBooks
+       invoicing rides alongside it when the login can read QB, because the two
+       answer different questions: what got finished, and what got billed. */
+    const built = zeros();
+    for (const j of jobs) {
+      const v = Number(j.fin_sold_amount || 0);
+      for (let i = 0; i < RHY_N; i++) if (inW(j.completed_at, i)) built[i] += v;
+    }
+    let inv = null;
+    if (qb && !qb.unavailable) {
+      inv = zeros();
+      for (const x of qbInv) {
+        if (x.reporting_excluded) continue;
+        for (let i = 0; i < RHY_N; i++)
+          if (inRDate(x.txn_date, RHY_WINS[i][0], RHY_WINS[i][1])) inv[i] += Number(x.total_amt || 0);
+      }
+    }
+    const company = {
+      set: readRhythm(set, 10), ran: readRhythm(ran, 10),
+      rev: readRhythm(rev, 20000), built: readRhythm(built, 20000),
+      inv: inv ? readRhythm(inv, 20000) : null,
+    };
+    /* RECEIVABLES. QuickBooks carries a balance but no due date, so an ageing
+       bucket is not available here and is not invented. What IS available is
+       the pressure read Kevin asked for — "receivables if they are out of
+       control": open A/R measured against the average month of invoicing
+       standing behind it. Under a month of billing outstanding is normal for
+       this trade; past two and a half is out of control. */
+    let ar = null;
+    if (qb && !qb.unavailable && inv) {
+      const monthly = mean_(inv);
+      const months = monthly > 0 ? qb.arTotal / monthly : null;
+      ar = { total: qb.arTotal, monthly, months,
+             open: qb.ar.reduce((n, a) => n + a.count, 0),
+             verdict: months === null ? 'thin' : months >= 2.5 ? 'out-of-control'
+                    : months >= 1.6 ? 'heavy' : months >= 1 ? 'watch' : 'clean' };
+    }
+    /* Per trade, the same three reads. A brand's floor is lower than the
+       company's because a brand legitimately runs smaller — but it is a floor,
+       so a trade with eight appointments a month never earns an ALARM. */
+    const brands = BRAND_ORDER.map(id => {
+      const b = { id, name: brandOf(id).n, s: brandOf(id).s, c: brandOf(id).c,
+                  set: readRhythm(bySet[id], 8), ran: readRhythm(byRan[id], 8),
+                  rev: readRhythm(byRev[id], 10000) };
+      const f = [];
+      if (!b.set.thin && b.set.d4 !== null && b.set.d4 <= -25)
+        f.push({ sev:'fire', txt:`Bookings are <b>${Math.abs(b.set.d4)}% under their own 4-month rhythm</b> — ${b.set.now} set in the last 30 days against ${Math.round(b.set.b4)} a month${b.set.d1 !== null ? `, ${b.set.d1 >= 0 ? 'up' : 'down'} ${Math.abs(b.set.d1)}% on last month alone` : ''}.` });
+      else if (!b.set.thin && b.set.d4 !== null && b.set.d4 <= -12)
+        f.push({ sev:'watch', txt:`Bookings are ${Math.abs(b.set.d4)}% under the 4-month rhythm (${b.set.now} vs ${Math.round(b.set.b4)} a month)${b.set.shape === 'sliding' ? ' — and have stepped down in every one of those months' : ''}.` });
+      else if (!b.set.thin && b.set.d4 !== null && b.set.d4 >= 25)
+        f.push({ sev:'good', txt:`Bookings are <b>${b.set.d4}% above the 4-month rhythm</b> — ${b.set.now} set in the last 30 days against ${Math.round(b.set.b4)} a month.` });
+      b.flags = f;
+      b.sev = f.some(x => x.sev === 'fire') ? 'fire' : f.some(x => x.sev === 'watch') ? 'watch' : 'ok';
+      return b;
+    });
+    /* THE PREDICTION. Bookings lead revenue, so where demand has already moved
+       and the money has not, the money is the thing that moves next. The
+       horizon is MEASURED, not a round number: closeLag holds each brand's own
+       median days from appointment to signature, so this says "at this brand's
+       own speed" and can be checked. */
+    const lagAll = Object.values(closeLag.byBrand).map(x => x.median);
+    const lagDays = lagAll.length ? Math.round(mean_(lagAll)) : null;
+    const predict = [];
+    for (const b of brands) {
+      if (b.set.thin || b.set.d4 === null) continue;
+      const lag = (closeLag.byBrand[b.id] || {}).median ?? lagDays;
+      if (b.set.d4 <= -15 && (b.rev.d4 === null || b.rev.d4 > b.set.d4 + 10))
+        predict.push({ sev:'watch', brand:b.s, txt:`<b>${esc(b.s)}</b> is booking ${Math.abs(b.set.d4)}% under its 4-month rhythm (${b.set.now} set in the last 30 vs ${Math.round(b.set.b4)} a month) while the signed money is ${b.rev.thin || b.rev.d4 === null ? 'not readable at this size' : b.rev.d4 >= 0 ? `still up ${b.rev.d4}%` : `only down ${Math.abs(b.rev.d4)}%`}. Bookings lead the money${lag ? ` by about ${lag} day${lag === 1 ? '' : 's'} in this trade` : ''} — that gap is next month's revenue, not this month's.` });
+      else if (b.set.d4 >= 20)
+        predict.push({ sev:'good', brand:b.s, txt:`<b>${esc(b.s)}</b> is booking ${b.set.d4}% above its 4-month rhythm (${b.set.now} set in the last 30 vs ${Math.round(b.set.b4)} a month)${lag ? ` — at this trade's ${lag}-day close lag, that lands inside the next 30` : ''}. Crew and material are the constraint, not leads.` });
+    }
+    /* The control, rebased off the rhythm: is a slump one trade's problem or
+       the market's? Stated only when it is unambiguous. */
+    const live = brands.filter(b => !b.set.thin && b.set.d4 !== null);
+    const down = live.filter(b => b.set.d4 <= -15), up = live.filter(b => b.set.d4 >= 15);
+    let control = null;
+    if (down.length && up.length)
+      control = `${down.map(b => b.s).join(' and ')} booking under rhythm while ${up.map(b => `${b.s} runs ${b.set.d4}% above it`).join(' and ')} over the same four months — that reads <b>trade-specific, not a local-economy story</b>.`;
+    else if (down.length >= 2 && !up.length)
+      control = `${down.map(b => b.s).join(' and ')} are both booking under their own 4-month rhythm — that reads <b>market-wide, not one trade's problem</b>.`;
+    else if (up.length >= 2 && !down.length)
+      control = `${up.map(b => b.s).join(' and ')} are both booking above their own 4-month rhythm — the demand is broad, not one trade's spike.`;
+    return { days: RHY_DAYS, n: RHY_N, labels: RHY_LABELS, company, brands, ar,
+             control, predict, lagDays,
+             wins: RHY_WINS.map(([a, b]) => ({ from: +a, to: +b })) };
+  })();
+
+  /* Kevin (11 Aug): "Gio is owner — don't include any intel on him." The intel
+     board reads the SALES FLOOR, and the owner is not on it: no best-of, no
+     worst-of, no momentum verdict, no discovery written about him. This does
+     NOT take him off the money — his deals are the company's deals and the
+     boards keep counting them exactly as before. Resolved from the roster's
+     own role first, with the name as the second arm, the same way cardReps has
+     always found him (a role column that drifts must not silently put the
+     owner back on a coaching board). */
+  const isOwnerRep = r => !!r && (String(r.role || '').toLowerCase() === 'owner'
+                                  || /\bgio\b/i.test(r.name || ''));
+
+  /* ── BEST OF BEST, WORST OF WORST. Kevin (11 Aug): "this intel board is best
+     of best and worst of worst. These guys are trending crushing. These guys
+     are struggling."
+
+     Not a leaderboard — a shortlist, two names a side at most, and only where
+     the sample is thick enough to carry a verdict. Ranked on momentum first
+     (the fortnight against the rep's own 60-day baseline, which is the measure
+     of TRENDING) with the absolute close rate as the tiebreak, and an
+     absolute arm underneath it so a rep closing 60% flat still reads as best
+     of best. Bottom copy stays inside the 7 Aug language law: COOLING, never
+     failing — the read is "where the air cover goes", not a grade. */
+  const bestWorst = (() => {
+    const [a30, b30] = RHY_WINS[0];
+    const money30 = {};
+    for (const j of jobs) {
+      if (!j.rep_id || String(j.cc_company_id) === OASIS) continue;
+      if (inR(j.contract_signed_at, a30, b30))
+        money30[j.rep_id] = (money30[j.rep_id] || 0) + Number(j.fin_sold_amount || 0);
+    }
+    const bd = billduAdd(a30, b30);
+    if (bd) for (const [rid, v] of Object.entries(bd.byRep))
+      if (rid !== OFFICE) money30[rid] = (money30[rid] || 0) + v.value;
+    const pool = closeTrend.rows
+      .filter(r => r.sells && !isOwnerRep(repById[r.id]) && r.d30.appts >= 6)
+      .map(r => ({ ...r, money: Math.round(money30[r.id] || 0) }));
+    const seen = new Set();
+    const take = (list, n) => { const out = [];
+      for (const r of list) { if (seen.has(r.id) || out.length >= n) continue; seen.add(r.id); out.push(r); }
+      return out; };
+    /* Trending first — that is the word he used — then the flat-out closers. */
+    const hot = take(pool.filter(r => r.momentum !== null && r.momentum >= 10)
+      .sort((a, b) => b.momentum - a.momentum || b.money - a.money), 2);
+    const hotAbs = hot.length >= 2 ? [] : take(pool
+      .filter(r => r.d30.close !== null && r.d30.close >= 45 && r.d30.appts >= 10)
+      .sort((a, b) => b.d30.close - a.d30.close || b.money - a.money), 2 - hot.length);
+    const cold = take(pool.filter(r => r.momentum !== null && r.momentum <= -10)
+      .sort((a, b) => a.momentum - b.momentum || a.money - b.money), 2);
+    const coldAbs = cold.length >= 2 ? [] : take(pool
+      .filter(r => r.d30.close !== null && r.d30.close < 20 && r.d30.appts >= 10)
+      .sort((a, b) => a.d30.close - b.d30.close || a.money - b.money), 2 - cold.length);
+    const mark = (r, why) => ({ ...r, why });
+    return { pool: pool.length,
+             best: [...hot.map(r => mark(r, 'trend')), ...hotAbs.map(r => mark(r, 'level'))],
+             worst: [...cold.map(r => mark(r, 'trend')), ...coldAbs.map(r => mark(r, 'level'))] };
+  })();
+
+  /* ── WHAT THE DATA REVEALS. Kevin (11 Aug): "and then anything cool the data
+     will reveal. Ex Eric is closing 67% when he runs 25+ apts week based on
+     that we can predict he should close this and same with struggling. Lots of
+     insights in data."
+
+     Three generators. Each either finds a real split or says nothing at all —
+     none of them will promote a thin week to a pattern. Every one carries its
+     own sample floor and every claim ships with the counts that produced it,
+     so a finding can be argued with rather than believed. The owner is out of
+     all three. */
+  const discoveries = (() => {
+    const out = [];
+    const sellers = reps.filter(r => r.active && r.sells && !isOwnerRep(r));
+    if (!sellers.length) return out;
+    const byId = Object.fromEntries(sellers.map(r => [r.id, r]));
+    const WEEKS = 12;
+    /* The CURRENT week is excluded on purpose: a Tuesday's three appointments
+       would land in the low-volume bucket and drag a real threshold with it.
+       weeks[0] is therefore the last COMPLETE Monday-to-Sunday. */
+    const w0 = sow(NOW);
+    const weeks = Array.from({ length: WEEKS }, (_, i) => [addD(w0, -7 * (i + 1)), addD(w0, -7 * i)]);
+    const wkIdx = iso => {
+      if (!iso) return -1;
+      const t = new Date(iso).getTime();
+      for (let i = 0; i < WEEKS; i++)
+        if (t >= weeks[i][0].getTime() && t < weeks[i][1].getTime()) return i;
+      return -1;
+    };
+    const per = {};
+    for (const r of sellers) per[r.id] = weeks.map(() => ({ appts: 0, signed: 0 }));
+    for (const x of appts) { const i = wkIdx(x.starts_at); if (i >= 0 && per[x.rep_id]) per[x.rep_id][i].appts++; }
+    for (const j of jobs) { const i = wkIdx(j.contract_signed_at); if (i >= 0 && per[j.rep_id]) per[j.rep_id][i].signed++; }
+    /* Same three-feed union as the close chips — a Billdu acceptance counts as
+       a signing only where CC has not already recorded one. */
+    if (billdu && billdu.feed) for (const r of billdu.feed) {
+      const rid = bRepOf[String(r.billdu_id)];
+      if (!rid || rid === OFFICE || !per[rid]) continue;
+      if (r.job_id && ccSignedMap && ccSignedMap[r.job_id] === true) continue;
+      const i = wkIdx(r.accepted_at); if (i >= 0) per[rid][i].signed++;
+    }
+
+    /* (1) THE VOLUME THRESHOLD — the Eric read, generalised. For each rep,
+       search their own weekly history for the appointment count where their
+       close rate steps, and state BOTH sides of it with the counts. A
+       threshold only survives if each side holds 3+ weeks and 12+ appointments
+       and the step is 12 points or more; anything looser is a coincidence
+       wearing a number. The step can run either way and both are said
+       honestly — some reps close better light, and that is a routing fact,
+       not a compliment or a complaint. */
+    const sum2 = arr => arr.reduce((a, x) => ({ appts: a.appts + x.appts, signed: a.signed + x.signed }), { appts: 0, signed: 0 });
+    for (const r of sellers) {
+      const w = per[r.id]; if (!w) continue;
+      const tot = w.reduce((n, x) => n + x.appts, 0); if (tot < 40) continue;
+      let best = null;
+      for (let th = 6; th <= 45; th++) {
+        const hi = w.filter(x => x.appts >= th), lo = w.filter(x => x.appts < th);
+        if (hi.length < 3 || lo.length < 3) continue;
+        const H = sum2(hi), L = sum2(lo);
+        if (H.appts < 12 || L.appts < 12) continue;
+        const hc = Math.round(H.signed / H.appts * 100), lc = Math.round(L.signed / L.appts * 100);
+        const gap = hc - lc;
+        if (best === null || Math.abs(gap) > Math.abs(best.gap))
+          best = { th, hc, lc, gap, H, L, hiN: hi.length, loN: lo.length };
+      }
+      if (!best || Math.abs(best.gap) < 12) continue;
+      const lastWk = w[0].appts;
+      const side = lastWk >= best.th;
+      const expect = side ? best.hc : best.lc;
+      const other = side ? best.lc : best.hc;
+      out.push({ kind:'volume', rep:r.id, weight: Math.abs(best.gap) * (best.H.appts + best.L.appts),
+        txt: `<b>${esc(r.name)}</b> closes <b>${best.hc}%</b> in weeks they run <b>${best.th}+ appointments</b> (${best.H.signed}/${best.H.appts} across ${best.hiN} weeks) and ${best.lc}% in weeks under that (${best.L.signed}/${best.L.appts} across ${best.loN}). Last full week they ran <b>${lastWk}</b> — the read says about <b>${expect}%</b>, roughly ${Math.max(0, Math.round(lastWk * expect / 100))} signing${Math.round(lastWk * expect / 100) === 1 ? '' : 's'}. ${best.gap > 0 ? `Volume is the lever: getting them over ${best.th} is worth about ${Math.abs(best.gap)} points of close.` : `They close ${Math.abs(best.gap)} points BETTER on lighter weeks — past ${best.th} the quality of the run drops, so loading more appointments on is not the move.`}` });
+    }
+
+    /* (2) THE ONE-CALL CLOSE. Who signs it on the appointment itself and who
+       needs the second trip — matched from the project's own appointment
+       record, so it is the business's record and never a self-report. A rep
+       needs 8 matched signings before this says anything about them. */
+    const byProj2 = {};
+    for (const x of appts) if (x.cc_project_id && x.starts_at)
+      (byProj2[String(x.cc_project_id)] ??= []).push(new Date(x.starts_at).getTime());
+    const cut2 = addD(sod(NOW), -120).getTime();
+    const oc = {};
+    let ocTeam = { same: 0, n: 0 };
+    for (const j of jobs) {
+      if (!j.rep_id || !byId[j.rep_id] || !j.contract_signed_at || !j.cc_project_id) continue;
+      const t = new Date(j.contract_signed_at).getTime();
+      if (t < cut2 || t > NOW.getTime()) continue;
+      const list = byProj2[String(j.cc_project_id)]; if (!list) continue;
+      let bestT = null;
+      for (const at of list) if (at <= t + 86400000 && (bestT === null || at > bestT)) bestT = at;
+      if (bestT === null) continue;
+      const days = Math.max(0, Math.round((t - bestT) / 86400000));
+      const s = (oc[j.rep_id] ??= { same: 0, n: 0 });
+      s.n++; ocTeam.n++;
+      if (days <= 1) { s.same++; ocTeam.same++; }
+    }
+    const teamOC = ocTeam.n >= 20 ? Math.round(ocTeam.same / ocTeam.n * 100) : null;
+    if (teamOC !== null) for (const [rid, s] of Object.entries(oc)) {
+      if (s.n < 8) continue;
+      const p = Math.round(s.same / s.n * 100), gap = p - teamOC;
+      if (Math.abs(gap) < 18) continue;
+      out.push({ kind:'onecall', rep:rid, weight: Math.abs(gap) * s.n,
+        txt: gap > 0
+          ? `<b>${esc(byId[rid].name)}</b> closes <b>${p}%</b> of their deals on the appointment itself (${s.same}/${s.n} in 120 days) against a team ${teamOC}%. Whatever they are doing at the table is the thing worth copying onto everyone else.`
+          : `<b>${esc(byId[rid].name)}</b> closes ${p}% at the table (${s.same}/${s.n} in 120 days) where the team runs ${teamOC}% — ${Math.abs(gap)} points more of their business needs a second trip. Their follow-up discipline, not their pitch, is where the money is.` });
+    }
+
+    /* (3) TRADE AFFINITY. A rep who closes one trade far better than another
+       is a ROUTING instruction — where the next appointment should go — and
+       never a verdict on the rep. 10 appointments a side, 15 points of gap. */
+    const bb = {};
+    const [a90, b90] = [addD(rhyEnd, -90), rhyEnd];
+    for (const x of appts) {
+      if (!x.rep_id || !byId[x.rep_id] || !inR(x.starts_at, a90, b90)) continue;
+      const b = apptBrand[String(x.cc_project_id)]; if (!b || !BRANDS[b]) continue;
+      ((bb[x.rep_id] ??= {})[b] ??= { appts: 0, signed: 0 }).appts++;
     }
     for (const j of jobs) {
-      const b = rollup(j.cc_company_id); if (!by[b] || !j.contract_signed_at) continue;
-      const v = Number(j.fin_sold_amount || 0);
-      for (const [k, w2] of Object.entries(WINS2)) {
-        if (inR(j.contract_signed_at, w2.a, w2.b)) by[b][k].rev += v;
-        if (inR(j.contract_signed_at, w2.pa, w2.pb)) by[b][k].revP += v;
-      }
+      if (!j.rep_id || !byId[j.rep_id] || !inR(j.contract_signed_at, a90, b90)) continue;
+      const b = rollup(j.cc_company_id); if (!BRANDS[b]) continue;
+      ((bb[j.rep_id] ??= {})[b] ??= { appts: 0, signed: 0 }).signed++;
     }
-    const pctd = (cur, prev) => prev ? Math.round((cur - prev) / prev * 100) : null;
-    const brands2 = BRAND_ORDER.map(id => {
-      const v = by[id], r = { id, name: brandOf(id).n, s: brandOf(id).s, c: brandOf(id).c };
-      for (const k of Object.keys(WINS2))
-        r[k] = { ...v[k], apD: pctd(v[k].ap, v[k].apP), revD: pctd(v[k].rev, v[k].revP) };
-      const flags = [];
-      const mo = r.mtd, t = r.t90;
-      /* A cliff needs a real prior-year base under it, or every quiet January
-         screams. Thresholds are deliberately coarse — this card flags, the
-         deep-dive decides. */
-      if (mo.apD !== null && mo.apD <= -20 && mo.apP >= 20)
-        flags.push({ sev:'fire', txt:`Bookings this month are <b>${Math.abs(mo.apD)}% below the same days last year</b> (${mo.ap} vs ${mo.apP}).` });
-      else if (t.apD !== null && t.apD <= -12 && t.apP >= 40)
-        flags.push({ sev:'watch', txt:`90-day bookings are <b>${Math.abs(t.apD)}% below the prior 90</b> (${t.ap} vs ${t.apP}).` });
-      if (mo.apD !== null && mo.revD !== null && mo.apD <= -20 && (mo.revD - mo.apD) >= 10)
-        flags.push({ sev:'watch', txt:`Bookings lead installed work: signed value is ${mo.revD < 0 ? 'only down ' + Math.abs(mo.revD) + '%' : 'still holding'} while bookings are down ${Math.abs(mo.apD)}% — if the booking rate holds, the money takes the hit next.` });
-      r.flags = flags;
-      r.sev = flags.some(f => f.sev === 'fire') ? 'fire' : flags.length ? 'watch' : 'ok';
-      return r;
+    for (const [rid, m] of Object.entries(bb)) {
+      const rows = Object.entries(m).filter(([, v]) => v.appts >= 10)
+        .map(([b, v]) => ({ b, ...v, close: Math.round(v.signed / v.appts * 100) }))
+        .sort((x, y) => y.close - x.close);
+      if (rows.length < 2) continue;
+      const hi = rows[0], lo = rows[rows.length - 1];
+      if (hi.close - lo.close < 15) continue;
+      out.push({ kind:'trade', rep:rid, weight: (hi.close - lo.close) * (hi.appts + lo.appts),
+        txt: `<b>${esc(byId[rid].name)}</b> closes <b>${hi.close}%</b> of ${esc(brandOf(hi.b).s)} appointments (${hi.signed}/${hi.appts}, 90 days) and ${lo.close}% of ${esc(brandOf(lo.b).s)} (${lo.signed}/${lo.appts}). Same rep, ${hi.close - lo.close} points apart — that is a routing decision sitting on the table.` });
+    }
+
+    /* One finding per rep at most, strongest first: five variations on the
+       same person is a wall, not intelligence. */
+    const used = new Set();
+    return out.sort((a, b) => b.weight - a.weight).filter(x => {
+      if (used.has(x.rep)) return false; used.add(x.rep); return true;
     });
-    /* The control: is a slump one trade's problem or the whole market's?
-       Read from the same 90-day demand series, stated only when it is clear. */
-    let control = null;
-    const down = brands2.filter(b => b.t90.apD !== null && b.t90.apD <= -15);
-    const up = brands2.filter(b => b.t90.apD !== null && b.t90.apD >= 15);
-    if (down.length && up.length)
-      control = `${down.map(b => b.s).join(' and ')} down while ${up.map(b => `${b.s} is up ${b.t90.apD}%`).join(' and ')} over the same 90 days — that reads <b>trade-specific, not a local-economy story</b>.`;
-    else if (down.length >= 2 && !up.length)
-      control = `${down.map(b => b.s).join(' and ')} are down together over the same 90 days — that reads <b>market-wide, not one trade's problem</b>.`;
-    return { brands: brands2, control, since: APPT_SINCE };
   })();
 
   /* Week-to-date appointment pulse, like-for-like: this week through now vs
@@ -6209,7 +6599,7 @@ function buildData(raw){
 
   return {
     generatedAt: new Date().toISOString(),
-    oasisLag, exclusions, sampleReps, signals, closeTrend, marketWatch, apptWtd, pipeline, closeLag,
+    oasisLag, exclusions, sampleReps, signals, closeTrend, rhythm, bestWorst, discoveries, apptWtd, pipeline, closeLag,
     // the filtered roster by id, for the rep one-pager — name, role and the
     // sells flag travel together so the pager never re-derives who someone is
     roster: Object.fromEntries(reps.map(r =>
