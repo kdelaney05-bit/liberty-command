@@ -202,6 +202,37 @@
   .attn .stat-tile .sub { font-size: 9px; margin-top: 3px; }
   .attn .intel-alert { padding: 6px 10px; font-size: 11px; margin-top: 6px; line-height: 1.4; }
   .attn .intel-alert .tag { font-size: 8px; padding-top: 2px; }
+  /* ── The folded intel row (Kevin, 11 Aug: "shorten nuggets… small teaser
+     and expand"). One line at rest, the working behind a tap. Height is the
+     whole point: 5px of padding and a single clamped line puts a row at
+     ~26px against the ~49px the two-line alerts used, so eight findings now
+     occupy less than the old five did. `min-width:0` on the flex child is
+     what actually lets the ellipsis happen — without it the text forces the
+     row wider instead of truncating, which is how this looked fine on a
+     laptop and blew out on his phone. */
+  .attn .ia { border-left: 2px solid var(--gold); background: rgba(212,177,90,.07);
+    border-radius: 0 7px 7px 0; margin-top: 3px; }
+  .attn .ia.fire { border-left-color: var(--red); background: rgba(217,106,94,.08); }
+  .attn .ia.good { border-left-color: var(--green); background: rgba(108,194,139,.07); }
+  .attn .ia.control { border-left-color: var(--blue); background: rgba(107,168,201,.07); }
+  .attn .ia.find { border-left-color: var(--accent); background: rgba(216,122,74,.07); }
+  .attn .ia-row { display: flex; gap: 8px; align-items: baseline; padding: 4px 9px;
+    cursor: pointer; font-size: 11.5px; line-height: 1.35;
+    -webkit-tap-highlight-color: transparent; }
+  .attn .ia-row .tag { font-family: 'JetBrains Mono', monospace; font-size: 8px;
+    letter-spacing: .1em; color: var(--gold); flex-shrink: 0; white-space: nowrap; }
+  .attn .ia.fire .ia-row .tag { color: var(--red); }
+  .attn .ia.good .ia-row .tag { color: var(--green); }
+  .attn .ia.control .ia-row .tag { color: var(--blue); }
+  .attn .ia.find .ia-row .tag { color: var(--accent-soft); }
+  .attn .ia-t { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .attn .ia.open .ia-t { white-space: normal; overflow: visible; color: var(--text); }
+  .attn .ia .acc-chev { margin-left: 0; font-size: 12px; flex-shrink: 0; }
+  .attn .ia.open .acc-chev { transform: rotate(90deg); color: var(--accent); }
+  .attn .ia-body { display: none; padding: 2px 9px 8px; font-size: 11.5px;
+    line-height: 1.55; color: var(--text-dim); }
+  .attn .ia.open .ia-body { display: block; }
+  @media (hover: hover) { .attn .ia-row:hover .ia-t { color: var(--text); } }
   /* Market intelligence band */
   .intel-alert { display: flex; gap: 10px; align-items: flex-start; padding: 9px 12px; margin-top: 8px;
     border-left: 2px solid var(--gold); background: rgba(212,177,90,.07); border-radius: 0 8px 8px 0;
@@ -3207,18 +3238,48 @@ function askAnswer(){
      FOUND      — what the data revealed on its own
    The owner is excluded from every rep read (Kevin, 11 Aug: "Gio is owner,
    don't include any intel on him"). The housekeeping inbox still exists —
-   folded at the bottom as Review. */
+   folded at the bottom as Review.
+
+   ── SHAPE, third pass (Kevin, 11 Aug, on seeing it live): "Love the new
+   intel it's just taking up way too much space. Shorten nuggets. Maybe small
+   teaser and expand for me. Shrink it to about same size as previous version
+   took up."
+
+   So every finding is now ONE LINE at rest and opens on tap. Two rules
+   learned writing it:
+     · the teaser has to stand alone. It is what he actually reads, so it
+       always carries the number and the direction — "Pro-Tec booking ▼32%
+       vs rhythm" — never a bare label like "Pro-Tec is off" that forces a
+       tap to learn anything. The tap is for the WORKING, not the verdict.
+     · the section headings are gone. Four rule-topped separators cost more
+       height than the rows they introduced, and the kicker on each row
+       (REV / A/R / CRUSHING / FOUND) already says which register it is.
+   One flat list, ordered pressing → crushing → cooling → found, capped so
+   the collapsed card lands about where the old five-row board did. */
 const ATTN_SEV = { fire:'fire', watch:'', good:'good', control:'control', find:'find' };
 const ATTN_TAG = { fire:'ALARM', watch:'WATCH', good:'UP', control:'CONTROL', find:'FOUND' };
-function attnRow(a){
-  return `<div class="intel-alert ${ATTN_SEV[a.sev]||''}">`
-    + `<span class="tag">${a.kicker ? esc(a.kicker) : (ATTN_TAG[a.sev]||'WATCH')}</span>`
-    + `<span>${a.txt}</span></div>`;
+/* A row is a teaser and a body. `short` is required for the row to fold; a
+   finding that somehow arrives without one shows its full text rather than
+   being silently dropped — an absent nugget is worse than a tall one. */
+function attnRow(a, i){
+  const tag = a.kicker ? esc(a.kicker) : (ATTN_TAG[a.sev] || 'WATCH');
+  const cls = ATTN_SEV[a.sev] || '';
+  if (!a.short) return `<div class="ia ${cls} open"><div class="ia-row"><span class="tag">${tag}</span>`
+    + `<span class="ia-t">${a.txt}</span></div></div>`;
+  return `<div class="ia ${cls}">`
+    + `<div class="ia-row" onclick="this.parentNode.classList.toggle('open')">`
+    + `<span class="tag">${tag}</span><span class="ia-t">${esc(a.short)}</span>`
+    + `<span class="acc-chev">›</span></div>`
+    + `<div class="ia-body">${a.txt}</div></div>`;
 }
 /* Hot or cold in one word, from the rhythm verdict — the same vocabulary on
    every row so "cold" means one thing on this page. */
 const RHY_WORD = { hot:'HOT', warm:'WARM', flat:'FLAT', cooling:'COOLING', cold:'COLD', thin:'THIN' };
 const RHY_SEV  = { hot:'good', warm:'good', flat:'watch', cooling:'watch', cold:'fire', thin:'watch' };
+/* The teaser's own arrow vocabulary: a direction and a number, or the word
+   flat. Never a percentage dressed as a verdict when it is inside the band. */
+const rhyTick = d => d === null ? 'flat'
+  : d >= 8 ? `▲${d}%` : d <= -8 ? `▼${Math.abs(d)}%` : 'flat';
 function cardAttention(){
   const R = D.rhythm, BW = D.bestWorst, DISC = D.discoveries || [];
   const pressing = [], found = [];
@@ -3226,8 +3287,9 @@ function cardAttention(){
   if (R) {
     const C = R.company;
     /* Kevin's phrase, verbatim in shape: "marketing is up compared to this
-       time last month / flat vs last 2 etc." Every pressing row carries all
-       three reads, because the useful fact is usually which of them disagree. */
+       time last month / flat vs last 2 etc." All three reads live in the
+       BODY now — the useful fact is usually which of them disagree, and that
+       is exactly the kind of thing worth a tap rather than a glance. */
     const line = (r, unit) => r.thin ? 'no rhythm behind it yet'
       : [ r.d1 !== null ? `${r.d1 >= 8 ? 'up ' + r.d1 + '%' : r.d1 <= -8 ? 'down ' + Math.abs(r.d1) + '%' : 'flat'} vs last month` : null,
           r.d2 !== null ? `${r.d2 >= 8 ? 'up ' + r.d2 + '%' : r.d2 <= -8 ? 'down ' + Math.abs(r.d2) + '%' : 'flat'} vs the last 2` : null,
@@ -3236,65 +3298,63 @@ function cardAttention(){
 
     // 1. REVENUE, hot or cold.
     if (!C.rev.thin) pressing.push({ sev: RHY_SEV[C.rev.verdict], kicker: 'REV ' + RHY_WORD[C.rev.verdict],
+      short: `${short(C.rev.now)} signed in 30 days · ${rhyTick(C.rev.d4)} vs rhythm`,
       txt: `<b>${short(C.rev.now)} signed in the last 30 days</b> against ${short(Math.round(C.rev.b4))} a month across the rhythm — ${line(C.rev)}${C.rev.shape === 'climbing' ? ' · up in every one of the four months' : C.rev.shape === 'sliding' ? ' · down in every one of the four months' : ''}.` });
 
     // 2. BUILDS, hot or cold — production first, billing alongside it.
     if (!C.built.thin) pressing.push({ sev: RHY_SEV[C.built.verdict], kicker: 'BUILDS ' + RHY_WORD[C.built.verdict],
+      short: `${short(C.built.now)} built in 30 days · ${rhyTick(C.built.d4)} vs rhythm`,
       txt: `<b>${short(C.built.now)} of work completed in the last 30 days</b> against ${short(Math.round(C.built.b4))} a month — ${line(C.built)}.${C.inv && !C.inv.thin ? ` QuickBooks billed ${short(C.inv.now)} over the same 30 (${line(C.inv)}).` : ''}` });
 
     // 3. RECEIVABLES — only when there is something to say about control.
     if (R.ar && R.ar.months !== null && R.ar.verdict !== 'clean') {
       const m = R.ar.months, out = R.ar.verdict === 'out-of-control';
       pressing.push({ sev: out ? 'fire' : 'watch', kicker: out ? 'A/R LOOSE' : 'A/R',
+        short: `${short(R.ar.total)} open · ${m.toFixed(1)} months of billing out`,
         txt: `<b>${short(R.ar.total)} open across ${R.ar.open} invoice${R.ar.open === 1 ? '' : 's'}</b> — ${m.toFixed(1)} months of billing outstanding against a ${short(Math.round(R.ar.monthly))} average month. ${out ? 'That is out of control by this business’s own rhythm: a collections pass, oldest and largest first, is the highest-return hour this week.' : 'Worth a pass before it becomes the story.'}` });
     }
 
     /* 4. MARKETING — the predicting register, per trade, plus the control.
        Sorted WORST FIRST and capped, because the trade that is cold is the
        reason he opened the page and two trades running hot must never push it
-       off the bottom of a five-row board. (It did, on the first cut of this.) */
+       off the bottom of a short board. (It did, on the first cut of this.) */
     const SEV_RANK = { fire:0, watch:1, control:2, good:3 };
     const mkt = [];
-    for (const p of R.predict) mkt.push({ sev: p.sev, kicker: 'MARKETING', txt: p.txt });
+    for (const p of R.predict) mkt.push({ sev: p.sev, kicker: 'MARKETING', short: p.short, txt: p.txt });
     for (const b of R.brands) for (const f of b.flags)
       if (!R.predict.some(p => p.brand === b.s))
-        mkt.push({ sev: f.sev, kicker: 'MARKETING', txt: `<b>${esc(b.s)}:</b> ${f.txt}` });
-    if (R.control) mkt.push({ sev:'control', kicker:'CONTROL', txt: R.control });
+        mkt.push({ sev: f.sev, kicker: 'MARKETING', short: f.short, txt: `<b>${esc(b.s)}:</b> ${f.txt}` });
+    if (R.control) mkt.push({ sev:'control', kicker:'CONTROL', short: R.controlShort, txt: R.control });
     /* When no trade earns a flag the marketing register still reports, because
        "demand is steady" is an answer he came here for, not an empty slot. */
     if (!mkt.length && !C.set.thin)
       mkt.push({ sev: RHY_SEV[C.set.verdict], kicker: 'MARKETING ' + RHY_WORD[C.set.verdict],
+        short: `${C.set.now} appointments set in 30 days · ${rhyTick(C.set.d4)} vs rhythm`,
         txt: `<b>${C.set.now} appointments set in the last 30 days</b> against ${Math.round(C.set.b4)} a month — ${line(C.set)}. No trade is off its own rhythm far enough to call.` });
     mkt.sort((a, b) => (SEV_RANK[a.sev] ?? 9) - (SEV_RANK[b.sev] ?? 9));
-    pressing.push(...mkt.slice(0, 3));
+    pressing.push(...mkt.slice(0, 2));
   }
 
   const repRow = (r, up) => {
     const lvl = r.why === 'level';
     const mo = r.momentum === null ? null : Math.abs(r.momentum);
     return { sev: up ? 'good' : 'watch', kicker: up ? 'CRUSHING' : 'COOLING',
+      short: `${r.name} · ${lvl ? `${r.d30.close}% close, 30 days` : `${up ? '▲' : '▼'}${mo} pts on their own baseline`}${r.money ? ` · ${short(r.money)}` : ''}`,
       txt: `<b>${esc(r.name)}</b> ${up
         ? (lvl ? `is closing <b>${r.d30.close}%</b> flat out over 30 days (${r.d30.signed}/${r.d30.appts})`
                : `is <b>${mo} points above their own 60-day baseline</b> — 2-wk close ${r.w2.close}% vs ${r.d60.close}% (${r.w2.signed}/${r.w2.appts} in the fortnight)`)
         : (lvl ? `is closing ${r.d30.close}% over 30 days (${r.d30.signed}/${r.d30.appts}) — the lowest on the floor with a real sample`
-               : `has cooled <b>${mo} points off their own 60-day baseline</b> — 2-wk close ${r.w2.close}% vs ${r.d60.close}% (${r.w2.signed}/${r.w2.appts} in the fortnight)`)}${r.money ? ` · ${short(r.money)} signed in 30 days` : ''}. <span class="tapname" onclick="openRep('${esc(String(r.id))}')">One-pager ›</span>` };
+               : `has cooled <b>${mo} points off their own 60-day baseline</b> — 2-wk close ${r.w2.close}% vs ${r.d60.close}% (${r.w2.signed}/${r.w2.appts} in the fortnight)`)}${r.money ? ` · ${short(r.money)} signed in 30 days` : ''}. <span class="tapname" onclick="event.stopPropagation();openRep('${esc(String(r.id))}')">One-pager ›</span>` };
   };
   const best = BW ? BW.best.map(r => repRow(r, true)) : [];
   const worst = BW ? BW.worst.map(r => repRow(r, false)) : [];
-  for (const d of DISC.slice(0, 3)) found.push({ sev:'find', kicker:'FOUND', txt: d.txt });
+  for (const d of DISC.slice(0, 2)) found.push({ sev:'find', kicker:'FOUND', short: d.short, txt: d.txt });
 
-  const sect = (label, rows) => rows.length
-    ? `<div class="sig-sep">${esc(label)}</div>` + rows.map(attnRow).join('') : '';
-
-  const anything = pressing.length + best.length + worst.length + found.length;
+  const rows = [...pressing, ...best, ...worst, ...found];
   return `<div class="card attn">
-    <div class="card-title">Attention<span class="feed-tag cc">best of best · worst of worst</span></div>
-    ${pressing.length ? `<div class="sig-sep">Pressing · against the last 1–4 months, not last year</div>`
-        + pressing.map(attnRow).join('') : ''}
-    ${sect('Crushing', best)}
-    ${sect('Cooling — where the air cover goes', worst)}
-    ${sect('What the data found', found)}
-    ${anything ? '' : '<div class="nofires" style="margin-top:10px">Nothing off its rhythm — revenue, builds, receivables and bookings are all inside the range of the last four months.</div>'}
+    <div class="card-title">Attention<span class="feed-tag cc">tap any line for the working</span></div>
+    ${rows.length ? rows.map(attnRow).join('')
+      : '<div class="nofires" style="margin-top:10px">Nothing off its rhythm — revenue, builds, receivables and bookings are all inside the range of the last four months.</div>'}
   </div>`;
 }
 
@@ -4465,7 +4525,7 @@ addEventListener('resize', () => {
    server for hours while Kevin looked at yesterday's build and reported the bug
    as unfixed. That happened. The page now checks version.json on every load and
    reloads itself once if the deployed build is newer than the one running. */
-const BUILD = '2026-08-11T20:10Z-rhythm-intel-best-worst';
+const BUILD = '2026-08-11T22:05Z-intel-folded-teasers';
 const SB_URL = 'https://lzegjjbkfuecrhdvlvay.supabase.co';
 /* The one page that can finish a password reset. Hard-coded rather than derived,
    because every derivation of it so far has been a source of bugs: a bare origin
@@ -6306,12 +6366,19 @@ function buildData(raw){
                   set: readRhythm(bySet[id], 8), ran: readRhythm(byRan[id], 8),
                   rev: readRhythm(byRev[id], 10000) };
       const f = [];
+      /* Every finding carries BOTH a one-line teaser and the full sentence
+         (Kevin, 11 Aug: "shorten nuggets… small teaser and expand"). The
+         teaser must stand alone — it is what he reads at a glance — so it
+         always holds the number and the direction, never just a label. */
       if (!b.set.thin && b.set.d4 !== null && b.set.d4 <= -25)
-        f.push({ sev:'fire', txt:`Bookings are <b>${Math.abs(b.set.d4)}% under their own 4-month rhythm</b> — ${b.set.now} set in the last 30 days against ${Math.round(b.set.b4)} a month${b.set.d1 !== null ? `, ${b.set.d1 >= 0 ? 'up' : 'down'} ${Math.abs(b.set.d1)}% on last month alone` : ''}.` });
+        f.push({ sev:'fire', short:`${b.s} bookings ▼${Math.abs(b.set.d4)}% vs rhythm`,
+          txt:`Bookings are <b>${Math.abs(b.set.d4)}% under their own 4-month rhythm</b> — ${b.set.now} set in the last 30 days against ${Math.round(b.set.b4)} a month${b.set.d1 !== null ? `, ${b.set.d1 >= 0 ? 'up' : 'down'} ${Math.abs(b.set.d1)}% on last month alone` : ''}.` });
       else if (!b.set.thin && b.set.d4 !== null && b.set.d4 <= -12)
-        f.push({ sev:'watch', txt:`Bookings are ${Math.abs(b.set.d4)}% under the 4-month rhythm (${b.set.now} vs ${Math.round(b.set.b4)} a month)${b.set.shape === 'sliding' ? ' — and have stepped down in every one of those months' : ''}.` });
+        f.push({ sev:'watch', short:`${b.s} bookings ▼${Math.abs(b.set.d4)}% vs rhythm`,
+          txt:`Bookings are ${Math.abs(b.set.d4)}% under the 4-month rhythm (${b.set.now} vs ${Math.round(b.set.b4)} a month)${b.set.shape === 'sliding' ? ' — and have stepped down in every one of those months' : ''}.` });
       else if (!b.set.thin && b.set.d4 !== null && b.set.d4 >= 25)
-        f.push({ sev:'good', txt:`Bookings are <b>${b.set.d4}% above the 4-month rhythm</b> — ${b.set.now} set in the last 30 days against ${Math.round(b.set.b4)} a month.` });
+        f.push({ sev:'good', short:`${b.s} bookings ▲${b.set.d4}% vs rhythm`,
+          txt:`Bookings are <b>${b.set.d4}% above the 4-month rhythm</b> — ${b.set.now} set in the last 30 days against ${Math.round(b.set.b4)} a month.` });
       b.flags = f;
       b.sev = f.some(x => x.sev === 'fire') ? 'fire' : f.some(x => x.sev === 'watch') ? 'watch' : 'ok';
       return b;
@@ -6328,23 +6395,27 @@ function buildData(raw){
       if (b.set.thin || b.set.d4 === null) continue;
       const lag = (closeLag.byBrand[b.id] || {}).median ?? lagDays;
       if (b.set.d4 <= -15 && (b.rev.d4 === null || b.rev.d4 > b.set.d4 + 10))
-        predict.push({ sev:'watch', brand:b.s, txt:`<b>${esc(b.s)}</b> is booking ${Math.abs(b.set.d4)}% under its 4-month rhythm (${b.set.now} set in the last 30 vs ${Math.round(b.set.b4)} a month) while the signed money is ${b.rev.thin || b.rev.d4 === null ? 'not readable at this size' : b.rev.d4 >= 0 ? `still up ${b.rev.d4}%` : `only down ${Math.abs(b.rev.d4)}%`}. Bookings lead the money${lag ? ` by about ${lag} day${lag === 1 ? '' : 's'} in this trade` : ''} — that gap is next month's revenue, not this month's.` });
+        predict.push({ sev:'watch', brand:b.s, short:`${b.s} booking ▼${Math.abs(b.set.d4)}% vs rhythm — the money follows`, txt:`<b>${esc(b.s)}</b> is booking ${Math.abs(b.set.d4)}% under its 4-month rhythm (${b.set.now} set in the last 30 vs ${Math.round(b.set.b4)} a month) while the signed money is ${b.rev.thin || b.rev.d4 === null ? 'not readable at this size' : b.rev.d4 >= 0 ? `still up ${b.rev.d4}%` : `only down ${Math.abs(b.rev.d4)}%`}. Bookings lead the money${lag ? ` by about ${lag} day${lag === 1 ? '' : 's'} in this trade` : ''} — that gap is next month's revenue, not this month's.` });
       else if (b.set.d4 >= 20)
-        predict.push({ sev:'good', brand:b.s, txt:`<b>${esc(b.s)}</b> is booking ${b.set.d4}% above its 4-month rhythm (${b.set.now} set in the last 30 vs ${Math.round(b.set.b4)} a month)${lag ? ` — at this trade's ${lag}-day close lag, that lands inside the next 30` : ''}. Crew and material are the constraint, not leads.` });
+        predict.push({ sev:'good', brand:b.s, short:`${b.s} booking ▲${b.set.d4}% vs rhythm — staff for it`, txt:`<b>${esc(b.s)}</b> is booking ${b.set.d4}% above its 4-month rhythm (${b.set.now} set in the last 30 vs ${Math.round(b.set.b4)} a month)${lag ? ` — at this trade's ${lag}-day close lag, that lands inside the next 30` : ''}. Crew and material are the constraint, not leads.` });
     }
     /* The control, rebased off the rhythm: is a slump one trade's problem or
        the market's? Stated only when it is unambiguous. */
     const live = brands.filter(b => !b.set.thin && b.set.d4 !== null);
     const down = live.filter(b => b.set.d4 <= -15), up = live.filter(b => b.set.d4 >= 15);
-    let control = null;
-    if (down.length && up.length)
+    let control = null, controlShort = null;
+    if (down.length && up.length) {
       control = `${down.map(b => b.s).join(' and ')} booking under rhythm while ${up.map(b => `${b.s} runs ${b.set.d4}% above it`).join(' and ')} over the same four months — that reads <b>trade-specific, not a local-economy story</b>.`;
-    else if (down.length >= 2 && !up.length)
+      controlShort = `Trade-specific · ${down.map(b => b.s).join(' + ')} under, ${up.length} above`;
+    } else if (down.length >= 2 && !up.length) {
       control = `${down.map(b => b.s).join(' and ')} are both booking under their own 4-month rhythm — that reads <b>market-wide, not one trade's problem</b>.`;
-    else if (up.length >= 2 && !down.length)
+      controlShort = `Market-wide · ${down.length} trades under their own rhythm`;
+    } else if (up.length >= 2 && !down.length) {
       control = `${up.map(b => b.s).join(' and ')} are both booking above their own 4-month rhythm — the demand is broad, not one trade's spike.`;
+      controlShort = `Demand is broad · ${up.length} trades above their own rhythm`;
+    }
     return { days: RHY_DAYS, n: RHY_N, labels: RHY_LABELS, company, brands, ar,
-             control, predict, lagDays,
+             control, controlShort, predict, lagDays,
              wins: RHY_WINS.map(([a, b]) => ({ from: +a, to: +b })) };
   })();
 
@@ -6475,6 +6546,8 @@ function buildData(raw){
       const expect = side ? best.hc : best.lc;
       const other = side ? best.lc : best.hc;
       out.push({ kind:'volume', rep:r.id, weight: Math.abs(best.gap) * (best.H.appts + best.L.appts),
+        short: best.gap > 0 ? `${r.name} closes ${best.hc}% on ${best.th}+ appointment weeks`
+                            : `${r.name} closes ${best.lc}% under ${best.th} appointments a week, ${best.hc}% over`,
         txt: `<b>${esc(r.name)}</b> closes <b>${best.hc}%</b> in weeks they run <b>${best.th}+ appointments</b> (${best.H.signed}/${best.H.appts} across ${best.hiN} weeks) and ${best.lc}% in weeks under that (${best.L.signed}/${best.L.appts} across ${best.loN}). Last full week they ran <b>${lastWk}</b> — the read says about <b>${expect}%</b>, roughly ${Math.max(0, Math.round(lastWk * expect / 100))} signing${Math.round(lastWk * expect / 100) === 1 ? '' : 's'}. ${best.gap > 0 ? `Volume is the lever: getting them over ${best.th} is worth about ${Math.abs(best.gap)} points of close.` : `They close ${Math.abs(best.gap)} points BETTER on lighter weeks — past ${best.th} the quality of the run drops, so loading more appointments on is not the move.`}` });
     }
 
@@ -6507,6 +6580,7 @@ function buildData(raw){
       const p = Math.round(s.same / s.n * 100), gap = p - teamOC;
       if (Math.abs(gap) < 18) continue;
       out.push({ kind:'onecall', rep:rid, weight: Math.abs(gap) * s.n,
+        short: `${byId[rid].name} closes ${p}% at the table — team runs ${teamOC}%`,
         txt: gap > 0
           ? `<b>${esc(byId[rid].name)}</b> closes <b>${p}%</b> of their deals on the appointment itself (${s.same}/${s.n} in 120 days) against a team ${teamOC}%. Whatever they are doing at the table is the thing worth copying onto everyone else.`
           : `<b>${esc(byId[rid].name)}</b> closes ${p}% at the table (${s.same}/${s.n} in 120 days) where the team runs ${teamOC}% — ${Math.abs(gap)} points more of their business needs a second trip. Their follow-up discipline, not their pitch, is where the money is.` });
@@ -6535,6 +6609,7 @@ function buildData(raw){
       const hi = rows[0], lo = rows[rows.length - 1];
       if (hi.close - lo.close < 15) continue;
       out.push({ kind:'trade', rep:rid, weight: (hi.close - lo.close) * (hi.appts + lo.appts),
+        short: `${byId[rid].name}: ${hi.close}% on ${brandOf(hi.b).s} vs ${lo.close}% on ${brandOf(lo.b).s}`,
         txt: `<b>${esc(byId[rid].name)}</b> closes <b>${hi.close}%</b> of ${esc(brandOf(hi.b).s)} appointments (${hi.signed}/${hi.appts}, 90 days) and ${lo.close}% of ${esc(brandOf(lo.b).s)} (${lo.signed}/${lo.appts}). Same rep, ${hi.close - lo.close} points apart — that is a routing decision sitting on the table.` });
     }
 
