@@ -3297,19 +3297,19 @@ function cardAttention(){
         ].filter(Boolean).join(' · ');
 
     // 1. REVENUE, hot or cold.
-    if (!C.rev.thin) pressing.push({ sev: RHY_SEV[C.rev.verdict], kicker: 'REV ' + RHY_WORD[C.rev.verdict],
+    if (!C.rev.thin) pressing.push({ ord: 0, sev: RHY_SEV[C.rev.verdict], kicker: 'REV ' + RHY_WORD[C.rev.verdict],
       short: `${short(C.rev.now)} signed in 30 days · ${rhyTick(C.rev.d4)} vs rhythm`,
       txt: `<b>${short(C.rev.now)} signed in the last 30 days</b> against ${short(Math.round(C.rev.b4))} a month across the rhythm — ${line(C.rev)}${C.rev.shape === 'climbing' ? ' · up in every one of the four months' : C.rev.shape === 'sliding' ? ' · down in every one of the four months' : ''}.` });
 
     // 2. BUILDS, hot or cold — production first, billing alongside it.
-    if (!C.built.thin) pressing.push({ sev: RHY_SEV[C.built.verdict], kicker: 'BUILDS ' + RHY_WORD[C.built.verdict],
+    if (!C.built.thin) pressing.push({ ord: 1, sev: RHY_SEV[C.built.verdict], kicker: 'BUILDS ' + RHY_WORD[C.built.verdict],
       short: `${short(C.built.now)} built in 30 days · ${rhyTick(C.built.d4)} vs rhythm`,
       txt: `<b>${short(C.built.now)} of work completed in the last 30 days</b> against ${short(Math.round(C.built.b4))} a month — ${line(C.built)}.${C.inv && !C.inv.thin ? ` QuickBooks billed ${short(C.inv.now)} over the same 30 (${line(C.inv)}).` : ''}` });
 
     // 3. RECEIVABLES — only when there is something to say about control.
     if (R.ar && R.ar.months !== null && R.ar.verdict !== 'clean') {
       const m = R.ar.months, out = R.ar.verdict === 'out-of-control';
-      pressing.push({ sev: out ? 'fire' : 'watch', kicker: out ? 'A/R LOOSE' : 'A/R',
+      pressing.push({ ord: 2, sev: out ? 'fire' : 'watch', kicker: out ? 'A/R LOOSE' : 'A/R',
         short: `${short(R.ar.total)} open · ${m.toFixed(1)} months of billing out`,
         txt: `<b>${short(R.ar.total)} open across ${R.ar.open} invoice${R.ar.open === 1 ? '' : 's'}</b> — ${m.toFixed(1)} months of billing outstanding against a ${short(Math.round(R.ar.monthly))} average month. ${out ? 'That is out of control by this business’s own rhythm: a collections pass, oldest and largest first, is the highest-return hour this week.' : 'Worth a pass before it becomes the story.'}` });
     }
@@ -3332,7 +3332,7 @@ function cardAttention(){
         short: `${C.set.now} appointments set in 30 days · ${rhyTick(C.set.d4)} vs rhythm`,
         txt: `<b>${C.set.now} appointments set in the last 30 days</b> against ${Math.round(C.set.b4)} a month — ${line(C.set)}. No trade is off its own rhythm far enough to call.` });
     mkt.sort((a, b) => (SEV_RANK[a.sev] ?? 9) - (SEV_RANK[b.sev] ?? 9));
-    pressing.push(...mkt.slice(0, 2));
+    pressing.push(...mkt.slice(0, 2).map((m, i) => ({ ...m, ord: 3 + i * 0.1 })));
   }
 
   const repRow = (r, up) => {
@@ -3346,11 +3346,36 @@ function cardAttention(){
         : (lvl ? `is closing ${r.d30.close}% over 30 days (${r.d30.signed}/${r.d30.appts}) — the lowest on the floor with a real sample`
                : `has cooled <b>${mo} points off their own 60-day baseline</b> — 2-wk close ${r.w2.close}% vs ${r.d60.close}% (${r.w2.signed}/${r.w2.appts} in the fortnight)`)}${r.money ? ` · ${short(r.money)} signed in 30 days` : ''}. <span class="tapname" onclick="event.stopPropagation();openRep('${esc(String(r.id))}')">One-pager ›</span>` };
   };
-  const best = BW ? BW.best.map(r => repRow(r, true)) : [];
-  const worst = BW ? BW.worst.map(r => repRow(r, false)) : [];
-  for (const d of DISC.slice(0, 2)) found.push({ sev:'find', kicker:'FOUND', short: d.short, txt: d.txt });
+  const best = BW ? BW.best.map(r => ({ ...repRow(r, true), ord: 4 })) : [];
+  const worst = BW ? BW.worst.map(r => ({ ...repRow(r, false), ord: 5 })) : [];
+  for (const d of DISC.slice(0, 2)) found.push({ ord: 6, sev:'find', kicker:'FOUND', short: d.short, txt: d.txt });
 
-  const rows = [...pressing, ...best, ...worst, ...found];
+  /* ── THE ROW BUDGET. Nine folded rows at ~27px is ~243px, which is the
+     ~245px the old five-row board occupied — that is the whole size ruling
+     and it is a HARD cap, not a target.
+
+     Filling it first-come would spend the budget on whatever happened to be
+     computed first and starve the registers at the end of the list; the first
+     cut of this did exactly that and pushed FOUND off the board entirely. So
+     every register gets a GUARANTEED slot before any register gets a second:
+     revenue, builds, A/R and the single worst marketing read, then up to two
+     crushing and two cooling, then one finding. That is 9 exactly. Only if a
+     register had nothing to say (A/R clean, say) does the leftover go to a
+     runner-up — the second marketing read first, then a second finding.
+     Display order is Kevin's order, restored by `ord` after selection. */
+  const CAP = 9;
+  const mktRows = pressing.filter(r => r.ord >= 3).sort((a, b) => a.ord - b.ord);
+  const core = pressing.filter(r => r.ord < 3);
+  const chosen = [];
+  const take1 = r => { if (r && chosen.length < CAP) chosen.push(r); };
+  core.forEach(take1);
+  take1(mktRows[0]);
+  best.forEach(take1);
+  worst.forEach(take1);
+  take1(found[0]);
+  take1(mktRows[1]);
+  take1(found[1]);
+  const rows = chosen.sort((a, b) => (a.ord ?? 9) - (b.ord ?? 9));
   return `<div class="card attn">
     <div class="card-title">Attention<span class="feed-tag cc">tap any line for the working</span></div>
     ${rows.length ? rows.map(attnRow).join('')
@@ -4525,7 +4550,7 @@ addEventListener('resize', () => {
    server for hours while Kevin looked at yesterday's build and reported the bug
    as unfixed. That happened. The page now checks version.json on every load and
    reloads itself once if the deployed build is newer than the one running. */
-const BUILD = '2026-08-11T22:05Z-intel-folded-teasers';
+const BUILD = '2026-08-11T23:20Z-intel-fold-cohort-fix';
 const SB_URL = 'https://lzegjjbkfuecrhdvlvay.supabase.co';
 /* The one page that can finish a password reset. Hard-coded rather than derived,
    because every derivation of it so far has been a source of bugs: a bare origin
@@ -6452,20 +6477,28 @@ function buildData(raw){
     const bd = billduAdd(a30, b30);
     if (bd) for (const [rid, v] of Object.entries(bd.byRep))
       if (rid !== OFFICE) money30[rid] = (money30[rid] || 0) + v.value;
+    /* d60 >= 5 is closeTrend's own guard on the BASELINE. It says nothing
+       about the fortnight on top, and a 46-point "cooled" verdict came off
+       1/4 in two weeks on the live board — four appointments cannot move a
+       rate, they can only look like they did. A trend verdict now needs six
+       elapsed appointments in the fortnight as well; a rep below that can
+       still make the board on their 30-day LEVEL, where the denominator is
+       real. */
     const pool = closeTrend.rows
       .filter(r => r.sells && !isOwnerRep(repById[r.id]) && r.d30.appts >= 6)
-      .map(r => ({ ...r, money: Math.round(money30[r.id] || 0) }));
+      .map(r => ({ ...r, money: Math.round(money30[r.id] || 0),
+                   trendOK: r.momentum !== null && r.w2.appts >= 6 }));
     const seen = new Set();
     const take = (list, n) => { const out = [];
       for (const r of list) { if (seen.has(r.id) || out.length >= n) continue; seen.add(r.id); out.push(r); }
       return out; };
     /* Trending first — that is the word he used — then the flat-out closers. */
-    const hot = take(pool.filter(r => r.momentum !== null && r.momentum >= 10)
+    const hot = take(pool.filter(r => r.trendOK && r.momentum >= 10)
       .sort((a, b) => b.momentum - a.momentum || b.money - a.money), 2);
     const hotAbs = hot.length >= 2 ? [] : take(pool
       .filter(r => r.d30.close !== null && r.d30.close >= 45 && r.d30.appts >= 10)
       .sort((a, b) => b.d30.close - a.d30.close || b.money - a.money), 2 - hot.length);
-    const cold = take(pool.filter(r => r.momentum !== null && r.momentum <= -10)
+    const cold = take(pool.filter(r => r.trendOK && r.momentum <= -10)
       .sort((a, b) => a.momentum - b.momentum || a.money - b.money), 2);
     const coldAbs = cold.length >= 2 ? [] : take(pool
       .filter(r => r.d30.close !== null && r.d30.close < 20 && r.d30.appts >= 10)
@@ -6492,29 +6525,77 @@ function buildData(raw){
     if (!sellers.length) return out;
     const byId = Object.fromEntries(sellers.map(r => [r.id, r]));
     const WEEKS = 12;
-    /* The CURRENT week is excluded on purpose: a Tuesday's three appointments
-       would land in the low-volume bucket and drag a real threshold with it.
-       weeks[0] is therefore the last COMPLETE Monday-to-Sunday. */
-    const w0 = sow(NOW);
+
+    /* ⚠️ THE COHORT RULE — read this before touching the weekly buckets.
+       ────────────────────────────────────────────────────────────────────
+       The first cut of this counted a week's APPOINTMENTS by when they ran
+       and that week's SIGNINGS by when they were signed, then divided one by
+       the other. That is not a close rate. It is a ratio of two different
+       groups of deals, and because signing trails the appointment by days,
+       it is MECHANICALLY anti-correlated with volume: a quiet week inherits
+       the previous busy week's signatures and reads as a monster close rate
+       off a tiny denominator.
+
+       It shipped, and the result was unmistakable — all three findings on
+       the live board said the same thing, that the rep "closes better on
+       lighter weeks", one of them at 88% (15/17). That is not three
+       discoveries, it is one artefact three times, and the advice it
+       generated ("loading more appointments on is not the move") was the
+       exact opposite of the truth.
+
+       So a signing is now bucketed into the week ITS OWN APPOINTMENT ran,
+       matched through the project the same way closeLag matches. Numerator
+       and denominator describe the same cohort of deals, and the ratio is a
+       close rate again. Do not go back to signing-date buckets. */
+    const byProj = {};
+    for (const x of appts) if (x.cc_project_id && x.starts_at)
+      (byProj[String(x.cc_project_id)] ??= []).push(new Date(x.starts_at).getTime());
+
+    /* And the cohort has to be RIPE. A week's appointments need time to turn
+       into signatures, so the most recent weeks are structurally short of
+       numerator and would read as a slump every time. The wait is measured,
+       not guessed: closeLag holds each brand's own median days to signature,
+       and the window ends one and a half of the slowest of those behind
+       today (floor a week, ceiling three). */
+    const lagMax = Math.max(0, ...Object.values(closeLag.byBrand).map(x => x.median));
+    const MATURE = Math.min(21, Math.max(7, Math.ceil(lagMax * 1.5)));
+    const w0 = sow(addD(sod(NOW), -MATURE));
     const weeks = Array.from({ length: WEEKS }, (_, i) => [addD(w0, -7 * (i + 1)), addD(w0, -7 * i)]);
-    const wkIdx = iso => {
-      if (!iso) return -1;
-      const t = new Date(iso).getTime();
+    const wkIdxT = t => {
       for (let i = 0; i < WEEKS; i++)
         if (t >= weeks[i][0].getTime() && t < weeks[i][1].getTime()) return i;
       return -1;
     };
+    const wkIdx = iso => iso ? wkIdxT(new Date(iso).getTime()) : -1;
     const per = {};
     for (const r of sellers) per[r.id] = weeks.map(() => ({ appts: 0, signed: 0 }));
     for (const x of appts) { const i = wkIdx(x.starts_at); if (i >= 0 && per[x.rep_id]) per[x.rep_id][i].appts++; }
-    for (const j of jobs) { const i = wkIdx(j.contract_signed_at); if (i >= 0 && per[j.rep_id]) per[j.rep_id][i].signed++; }
-    /* Same three-feed union as the close chips — a Billdu acceptance counts as
-       a signing only where CC has not already recorded one. */
+    /* Signings, attributed to their originating appointment's week. A day of
+       slack on the match because signing timestamps and appointment times
+       straddle midnight in different zones — the same slack closeLag uses. */
+    const claimed = {}, total = {};
+    for (const j of jobs) {
+      if (!j.rep_id || !per[j.rep_id] || !j.contract_signed_at) continue;
+      total[j.rep_id] = (total[j.rep_id] || 0) + 1;
+      const t = new Date(j.contract_signed_at).getTime();
+      const list = j.cc_project_id ? byProj[String(j.cc_project_id)] : null;
+      if (!list) continue;
+      let bestT = null;
+      for (const at of list) if (at <= t + 86400000 && (bestT === null || at > bestT)) bestT = at;
+      if (bestT === null) continue;
+      const i = wkIdxT(bestT);
+      if (i >= 0) { per[j.rep_id][i].signed++; claimed[j.rep_id] = (claimed[j.rep_id] || 0) + 1; }
+    }
+    /* Billdu acceptances carry no CC appointment, so they cannot be placed in
+       an appointment's week at all. Rather than drop them silently and make
+       an Oasis-heavy rep look cold, they are COUNTED as unmatchable: a rep
+       whose signings this generator cannot see most of is skipped entirely
+       below. Honest silence beats a confident wrong number. */
     if (billdu && billdu.feed) for (const r of billdu.feed) {
       const rid = bRepOf[String(r.billdu_id)];
       if (!rid || rid === OFFICE || !per[rid]) continue;
       if (r.job_id && ccSignedMap && ccSignedMap[r.job_id] === true) continue;
-      const i = wkIdx(r.accepted_at); if (i >= 0) per[rid][i].signed++;
+      if (wkIdx(r.accepted_at) >= 0) total[rid] = (total[rid] || 0) + 1;
     }
 
     /* (1) THE VOLUME THRESHOLD — the Eric read, generalised. For each rep,
@@ -6529,6 +6610,13 @@ function buildData(raw){
     for (const r of sellers) {
       const w = per[r.id]; if (!w) continue;
       const tot = w.reduce((n, x) => n + x.appts, 0); if (tot < 40) continue;
+      /* If most of this rep's signings cannot be traced back to a CC
+         appointment — an Oasis seller closing in Billdu, or a book of work
+         that never got an appointment row — then this generator is not
+         looking at their business and must not narrate it. Two thirds
+         matched is the bar; below it the rep is skipped, silently. */
+      const cov = total[r.id] ? (claimed[r.id] || 0) / total[r.id] : 0;
+      if (cov < 0.66) continue;
       let best = null;
       for (let th = 6; th <= 45; th++) {
         const hi = w.filter(x => x.appts >= th), lo = w.filter(x => x.appts < th);
@@ -6541,23 +6629,24 @@ function buildData(raw){
           best = { th, hc, lc, gap, H, L, hiN: hi.length, loN: lo.length };
       }
       if (!best || Math.abs(best.gap) < 12) continue;
+      /* w[0] is the newest RIPE week, not literally last week — the window
+         ends MATURE days back so the cohort has had time to convert. The
+         copy says "their last full week" only when that is what it is. */
       const lastWk = w[0].appts;
+      const wkAgo = Math.round((sod(NOW) - weeks[0][1]) / 86400000 / 7);
       const side = lastWk >= best.th;
       const expect = side ? best.hc : best.lc;
       const other = side ? best.lc : best.hc;
       out.push({ kind:'volume', rep:r.id, weight: Math.abs(best.gap) * (best.H.appts + best.L.appts),
         short: best.gap > 0 ? `${r.name} closes ${best.hc}% on ${best.th}+ appointment weeks`
                             : `${r.name} closes ${best.lc}% under ${best.th} appointments a week, ${best.hc}% over`,
-        txt: `<b>${esc(r.name)}</b> closes <b>${best.hc}%</b> in weeks they run <b>${best.th}+ appointments</b> (${best.H.signed}/${best.H.appts} across ${best.hiN} weeks) and ${best.lc}% in weeks under that (${best.L.signed}/${best.L.appts} across ${best.loN}). Last full week they ran <b>${lastWk}</b> — the read says about <b>${expect}%</b>, roughly ${Math.max(0, Math.round(lastWk * expect / 100))} signing${Math.round(lastWk * expect / 100) === 1 ? '' : 's'}. ${best.gap > 0 ? `Volume is the lever: getting them over ${best.th} is worth about ${Math.abs(best.gap)} points of close.` : `They close ${Math.abs(best.gap)} points BETTER on lighter weeks — past ${best.th} the quality of the run drops, so loading more appointments on is not the move.`}` });
+        txt: `<b>${esc(r.name)}</b> closes <b>${best.hc}%</b> in weeks they run <b>${best.th}+ appointments</b> (${best.H.signed}/${best.H.appts} across ${best.hiN} weeks) and ${best.lc}% in weeks under that (${best.L.signed}/${best.L.appts} across ${best.loN}). Their most recent settled week${wkAgo > 1 ? ` — ${wkAgo} weeks back, the newest one whose deals have had time to close` : ''} they ran <b>${lastWk}</b>, which reads at about <b>${expect}%</b>, roughly ${Math.max(0, Math.round(lastWk * expect / 100))} signing${Math.round(lastWk * expect / 100) === 1 ? '' : 's'}. ${best.gap > 0 ? `Volume is the lever: getting them over ${best.th} is worth about ${Math.abs(best.gap)} points of close.` : `They close ${Math.abs(best.gap)} points better under ${best.th} — worth asking whether the heavy weeks are being filled with softer appointments, rather than assuming the volume itself is the problem.`}<br/><span style="opacity:.7">Each signing is counted in the week its own appointment ran, so both sides of the rate describe the same deals.</span>` });
     }
 
     /* (2) THE ONE-CALL CLOSE. Who signs it on the appointment itself and who
        needs the second trip — matched from the project's own appointment
        record, so it is the business's record and never a self-report. A rep
        needs 8 matched signings before this says anything about them. */
-    const byProj2 = {};
-    for (const x of appts) if (x.cc_project_id && x.starts_at)
-      (byProj2[String(x.cc_project_id)] ??= []).push(new Date(x.starts_at).getTime());
     const cut2 = addD(sod(NOW), -120).getTime();
     const oc = {};
     let ocTeam = { same: 0, n: 0 };
@@ -6565,7 +6654,7 @@ function buildData(raw){
       if (!j.rep_id || !byId[j.rep_id] || !j.contract_signed_at || !j.cc_project_id) continue;
       const t = new Date(j.contract_signed_at).getTime();
       if (t < cut2 || t > NOW.getTime()) continue;
-      const list = byProj2[String(j.cc_project_id)]; if (!list) continue;
+      const list = byProj[String(j.cc_project_id)]; if (!list) continue;
       let bestT = null;
       for (const at of list) if (at <= t + 86400000 && (bestT === null || at > bestT)) bestT = at;
       if (bestT === null) continue;
