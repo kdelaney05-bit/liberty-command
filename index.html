@@ -4133,10 +4133,10 @@ function repView(id){
       <div class="stat-tile"><div class="lbl">Jobs behind it</div>
         <div class="val">${short(b.jobsNotBuilt)}</div><div class="sub">contract value not yet built</div></div>
       <div class="stat-tile"><div class="lbl">Rung, open</div>
-        <div class="val ${b.rungFlagged?'red':b.rungOpen?'blue':''}">${b.rungOpen||'—'}</div>
-        <div class="sub">${b.rungOpen?`${short(b.rungValue)} pending CC${b.rungFlagged?` · ${b.rungFlagged} flagged, near the pull`:''}`:'nothing waiting on CC'}</div></div>
+        <div class="val ${b.rungOpen?'blue':''}">${b.rungOpen||'—'}</div>
+        <div class="sub">${b.rungOpen?`${short(b.rungValue)} pending CC`:'nothing waiting on CC'}</div></div>
     </div>
-    <div class="note">Straight off the office ledger (Jessica's Commission Available / Paid columns). The bank is cleared money not yet drawn — it can go DOWN if a job cancels or liens after clearing, so it is the office's current figure, not a promise. Rung = bell sales the office hasn't confirmed; they come off the board at 5 business days if CC never books them (Kevin, 10 Aug), and the managers get a notification when one does.</div>
+    <div class="note">Straight off the office ledger (Jessica's Commission Available / Paid columns). The bank is cleared money not yet drawn — it can go DOWN if a job cancels or liens after clearing, so it is the office's current figure, not a promise. Rung = bell sales the office hasn't confirmed; they stay on the board until CC or Billdu books them (Kevin, 12 Aug — the 5-day pull is gone, migration 145).</div>
   </div>`; })()}
   ${floor}
   ${closeCard}
@@ -4673,7 +4673,7 @@ addEventListener('resize', () => {
    server for hours while Kevin looked at yesterday's build and reported the bug
    as unfixed. That happened. The page now checks version.json on every load and
    reloads itself once if the deployed build is newer than the one running. */
-const BUILD = '2026-08-12T15:30Z-quoted-volume-board';
+const BUILD = '2026-08-12T19:45Z-no-verification-pull';
 const SB_URL = 'https://lzegjjbkfuecrhdvlvay.supabase.co';
 /* The one page that can finish a password reset. Hard-coded rather than derived,
    because every derivation of it so far has been a source of bugs: a bare origin
@@ -5052,19 +5052,18 @@ function buildData(raw){
      "I want my board to show all sales for today, whether it's been fully
       verified or not. That's an internal thing that we can work on later.
       I want that thing the same as the daily sales below it. That needs to
-      match. If for whatever reason it doesn't get turned in in five days,
-      it will take it out at that point."
+      match."
      One fold rule, one place — the same rule the rep rows have always used:
-     open bells only (pending/warned/flagged), confirmer-suppressed
+     open bells only (status pending), confirmer-suppressed
      (cc_already_counted / job_linked are already in the CC or Billdu money and
      counting them again is the $42K-vs-$29,052 class), dated by signed_on.
-     The 5-business-day clock (136) pulls a never-turned-in bell out of this
-     fold on its own, and the pull notifies the managers (137). */
+     No clock since 145 (Kevin, 12 Aug: "no verification process") — a bell
+     stays in this fold at any age until CC or Billdu books it. */
   const rungAdd = (a, b) => {
     const A = ymdOf(a), B = ymdOf(b);
     const out = { value:0, count:0, byBrand:{}, byRep:{}, list:[] };
     for (const c of (claims || [])) {
-      if (!['pending','warned','flagged'].includes(c.status)) continue;
+      if (c.status !== 'pending') continue;
       if (c.cc_already_counted || c.cc_state === 'job_linked') continue;
       const d = String(c.signed_on || '').slice(0,10);
       if (d < A || d >= B) continue;
@@ -6356,12 +6355,11 @@ function buildData(raw){
        Before this, a big selling day READ AS A SLUMP: today's appointments
        landed in the denominator immediately while the signings waited 1-2 days
        for CC. Same union law as Billdu, third feed: a ring counts ONLY while
-       CC has not booked it (the counted/linked guards flip it to the CC feed
-       the moment the office does), and the 7-business-day pull takes an
-       unconfirmed ring out of the numerator the same day it leaves the board —
-       rung optimism cannot permanently flatter a close rate. */
+       CC has not booked it — the counted/linked guards flip it to the CC feed
+       the moment the office books it, so the ring and the job never count
+       together. (The old business-day pull is gone — 145, Kevin 12 Aug.) */
     for (const c of (claims || [])) {
-      if (!['pending','warned','flagged'].includes(c.status)) continue;
+      if (c.status !== 'pending') continue;
       if (c.cc_already_counted || c.cc_state === 'job_linked') continue;
       // signed_on is a bare DATE; pin midday so UTC parsing cannot slip it a day
       bump(c.rep_id, String(c.signed_on || '').slice(0,10) + 'T12:00:00', 'signed');
@@ -6896,7 +6894,7 @@ function buildData(raw){
        line, never a $0 that reads as "no money owed". */
     bank: Object.fromEntries((bank || []).map(b => {
       const mine = (claims || []).filter(c => c.rep_id === b.rep_id
-        && ['pending','warned','flagged'].includes(c.status)
+        && c.status === 'pending'
         && !c.cc_already_counted && c.cc_state !== 'job_linked');
       return [String(b.rep_id), {
         banked: Number(b.banked || 0), bankedDeals: Number(b.banked_deals || 0),
@@ -6904,8 +6902,7 @@ function buildData(raw){
         jobsNotBuilt: Number(b.jobs_not_built_value || 0),
         paidYtd: Number(b.paid_ytd || 0),
         rungOpen: mine.length,
-        rungValue: mine.reduce((n, c) => n + Number(c.claimed_amount || 0), 0),
-        rungFlagged: mine.filter(c => c.status === 'flagged').length }]; })),
+        rungValue: mine.reduce((n, c) => n + Number(c.claimed_amount || 0), 0) }]; })),
     coverage: { jobs: jobs.length, appts: appts.length,
       apptsWithRep: appts.filter(a=>a.rep_id).length, touches: touches.length,
       // Coverage of the field every dollar on this page is actually built from.
