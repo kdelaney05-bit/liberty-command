@@ -2377,6 +2377,26 @@ async function loadEffortIntel(){
   EFF_INTEL = { mix, close, hits, light, streaks, cover, speed, est, pipe, win };
   render();
 }
+
+/* ── GROSS QUOTED VOLUME (Kevin, 12 Aug: "build the gross quoted per rep
+      board"). It carries its OWN trailing window rather than following the
+      day/week/month switcher above it, because month-to-date cannot answer
+      "how much has each rep quoted" — on the 3rd it reads near zero and that
+      is a window, not a slow start. Its own loader too, so changing the range
+      costs one round trip instead of re-pulling the whole effort suite.
+
+      The rows are kept across a range change on purpose: blanking them first
+      would flash "no feed" over a card that is simply mid-fetch, and this page
+      uses that skin to mean something specific. ──────────────────────────── */
+let QVOL_DAYS = 90, QVOL = null, QVOL_ERR = false, QVOL_LOADING = false;
+const QVOL_RANGES = [[30,'30 days'],[90,'90 days'],[365,'12 months'],[0,'All time']];
+async function loadQuoteVolume(){
+  QVOL_LOADING = true;
+  try { QVOL = await q(`rpc/quote_volume?p_days=${QVOL_DAYS}`); QVOL_ERR = false; }
+  catch (e) { if (!QVOL) QVOL_ERR = true; }
+  QVOL_LOADING = false;
+  render();
+}
 /* A feed that errored (missing migration, offline) says so in the card's own
    skin instead of vanishing — Kevin asked for these cards by name, so an
    empty slot would read as "not built" when the truth is "no feed". */
@@ -2608,6 +2628,89 @@ function cardEstimates(){
         <div class="tgt-cap"><span>${miss?`<b style="color:var(--red)">${miss} appt${miss===1?'':'s'} with no estimate on file</b>`:'every run appointment has its number'}</span><span>${since?`counting since ${esc(since)}`:''}${p&&+p.dollars>0?`${since?' · ':''}pipeline ${money(+p.dollars)}${+p.unquoted?` · ${p.unquoted} unpriced`:''}`:r.last_at?`${since?' · ':''}last capture ${new Date(r.last_at).toLocaleString('en-US',{timeZone:'America/New_York',hour:'numeric',minute:'2-digit',month:'short',day:'numeric'})}`:''}</span></div>
       </div>`; }).join('')}
     <div class="note"><b>What is counted (migration 143, Kevin 11 Aug).</b> An appointment is owed an estimate for <b>60 days</b> and no longer — the customer-history import put years of old jobs in the book, and past two months a job is a closed chapter rather than a missing number. And each rep is counted only from <b>their own first capture</b>, because the field adopted over a week and nobody should be graded on days they did not have the app; that date rides on every row above. <b>Nothing was deleted to achieve either</b> — every amount ever captured is still on file and still in the pipeline figure. Note the pipeline dollars deliberately keep their <b>120-day</b> horizon: the 60-day rule bounds what is OWED, not what the pipeline is worth.<br/><br/>From <b>estimate_board()</b> (131/143) and <b>pipeline_value()</b> (132/143): appointments from the CC feed, amounts from the app’s capture — an appointment is covered by an estimate dated its day or later, so a next-morning backfill clears yesterday honestly. The pipeline figure is a stock, not a window: every open customer’s latest on-file amount, 120-day book, sold work out and lost files out (7 Aug ruling, migration 133 — a lost deal lives in the app’s LOST file, never in pipeline money). Counts and totals only, sources never blended; a missing number reads missing, never guessed.</div>
+  </div>`;
+}
+
+/* QUOTED VOLUME — Kevin, 12 Aug: "are we getting totals for quotes given by
+   all the sales reps" → "build the gross quoted per rep board".
+
+   The card above this one and the pipeline tile inside it both had to decline
+   the question. estimate_board tops out at MONTH-TO-DATE, so there is no
+   quarter and no all-time; pipeline_value is a stock of what is still OPEN, so
+   it drops every deal that signed and (since 133) every deal that was lost —
+   a rep who quoted $400K and closed half of it reads SMALLER there than one
+   who quoted $250K and closed none. Right for "what is sitting out there",
+   exactly wrong for "what did you put in front of customers". This is the
+   third read and the missing one: gross quoted volume over any window, with
+   the outcome shown as a split rather than filtered away.
+
+   Every figure here is a QUOTED dollar. "Signed from those quotes" is the
+   quoted value of deals that later signed — never their contract amount,
+   never revenue. The money boards stay the only authority on money and
+   nothing on this card is folded into them (count once per surface). */
+function cardQuoteVolume(){
+  /* Nothing at all until the feed has answered one way or the other: an
+     "awaiting" skin flashed on every page load would train the eye to ignore
+     it, and this page uses that skin to mean a real missing migration. */
+  if (!QVOL && !QVOL_ERR) return '';
+  const label = (QVOL_RANGES.find(([d]) => d === QVOL_DAYS) || [0,''])[1].toLowerCase();
+  const prose = QVOL_DAYS === 0 ? 'all time' : `the last ${label}`;
+  const seg = `<div class="seg" style="margin:0 0 12px">
+    ${QVOL_RANGES.map(([d,l]) => `<button class="${d===QVOL_DAYS?'on':''}" onclick="setQvol(${d})">${l}</button>`).join('')}
+  </div>`;
+  if (!QVOL) return effAwait('Quoted volume · what each rep put in front of customers',
+    'The quoted-volume feed (migration 144, <b>quote_volume</b>) did not answer. Until 144 is applied the totals exist only as a month-to-date slice on the card above — nothing is estimated in its place.');
+
+  const rows = QVOL;
+  const n = (k) => rows.reduce((s,r) => s + +r[k], 0);
+  const tQ = n('quotes'), t$ = n('dollars');
+  const wN = n('won'), w$ = n('won_dollars');
+  const lN = n('lost'), l$ = n('lost_dollars');
+  const oN = n('still_open'), o$ = n('open_dollars');
+  const active = rows.filter(r => +r.quotes > 0);
+  /* Conversion is stated in DOLLARS, not deals: a rep who closes the small
+     ones and loses the big ones has a flattering count and an honest dollar. */
+  const conv = t$ > 0 ? Math.round(w$ / t$ * 100) : null;
+
+  if (!tQ) return `<div class="card full">
+    <div class="card-title">Quoted volume · what each rep put in front of customers<span class="feed-tag none">quiet ${esc(prose)}</span></div>
+    ${seg}
+    <div class="withheld"><div class="wt">Honest zero</div><div class="wx">No estimate amounts were captured in this window. Widen the range — the first captures landed when the field adopted the flow, so a 30-day window can be genuinely empty while all time is not.</div></div></div>`;
+
+  return `<div class="card full">
+    <div class="card-title">Quoted volume · what each rep put in front of customers<span class="feed-tag${QVOL_LOADING?' none':''}">${QVOL_LOADING?'reading…':'live · db'}</span></div>
+    <div class="card-sub">Gross quoted dollars over ${esc(prose)} — <b>sold and lost work included</b>, which is what makes this different from the open-pipeline figure above. One number per customer per rep: correcting an amount is not a second quote.</div>
+    ${seg}
+    <div class="stat-grid" style="margin-bottom:14px">
+      <div class="stat-tile"><div class="lbl">Gross quoted · ${esc(prose)}</div>
+        <div class="val">${money(t$)}</div>
+        <div class="sub">${tQ} quote${tQ===1?'':'s'} · ${active.length} rep${active.length===1?'':'s'} quoting</div></div>
+      <div class="stat-tile"><div class="lbl">Signed from those quotes</div>
+        <div class="val green">${money(w$)}</div>
+        <div class="sub">${wN} of ${tQ}${conv!=null?` · ${conv}% of quoted $`:''}</div></div>
+      <div class="stat-tile"><div class="lbl">Still open</div>
+        <div class="val blue">${money(o$)}</div>
+        <div class="sub">${oN} quote${oN===1?'':'s'} still to earn</div></div>
+      <div class="stat-tile"><div class="lbl">Went another way</div>
+        <div class="val">${money(l$)}</div>
+        <div class="sub">${lN} quote${lN===1?'':'s'} in the lost file</div></div>
+    </div>
+    ${rows.map(r => {
+      const pager = D.roster && D.roster[String(r.rep_id)];
+      const qn = +r.quotes;
+      if (!qn) return `<div class="rep-row" style="opacity:.75">
+        <div class="rep-head"><div class="nm">${esc(r.name)}</div>
+          <div class="amt"><span style="color:var(--text-dim)">no quotes captured</span></div></div>
+        <div class="tgt-cap"><span>Nothing on file for ${esc(prose)} — the amounts are captured in the app at the estimate, so an empty row is an empty window, not a broken feed.</span><span></span></div>
+      </div>`;
+      const rc = +r.dollars > 0 ? Math.round(+r.won_dollars / +r.dollars * 100) : null;
+      const avg = +r.dollars / qn;
+      return `<div class="rep-row${pager?' acc':''}"${pager?` onclick="openRep('${esc(String(r.rep_id))}')"`:''}>
+        <div class="rep-head"><div class="nm">${esc(r.name)}</div>
+          <div class="amt">${money(+r.dollars)} <span>· ${qn} quote${qn===1?'':'s'}</span>${pager?'<span class="acc-chev">›</span>':''}</div></div>
+        <div class="tgt-cap"><span>${+r.won?`<b style="color:var(--green-soft)">${money(+r.won_dollars)} signed</b> · ${r.won} of ${qn}${rc!=null?` · ${rc}% of quoted $`:''}`:'none signed from these quotes yet'}</span><span>avg ${money(avg)}${+r.open_dollars>0?` · ${money(+r.open_dollars)} open`:''}${+r.lost_dollars>0?` · ${money(+r.lost_dollars)} lost`:''}</span></div>
+      </div>`; }).join('')}
+    <div class="note"><b>Quoted dollars, never signed money.</b> “Signed from those quotes” is the <b>quoted value</b> of deals that later signed — not their contract amount and not revenue. The hero, brand mix and quota fleet remain the only authority on money; nothing on this card is folded into them, and the two must not be added together.<br/><br/><b>What is counted (migration 144).</b> One number per customer per rep — the <b>latest capture inside the window</b>, because <code>estimates</code> is append-only and an amount edit is a new row, so a plain sum would count a corrected quote twice and reward the typo. <b>Sold and lost work stays in</b>: a quote that closed is still a quote that was given, and that is the whole difference between this card and the open-pipeline figure above it. Signed is read from the CC job feed and from the rep’s own WON tap, so a rung sale counts from the moment it is rung. A property quoted by two reps counts for each of them, so the team total is <b>quotes given</b>, not properties. Appointments are not involved at all — a backfilled paper estimate counts the same as one typed in the driveway, by ruling.</div>
   </div>`;
 }
 
@@ -4118,6 +4221,11 @@ function render(){
       /* ESTIMATES ON FILE rides with the accountability set — Kevin, 6 Aug:
          "make sure all estimate numbers get put in the customer files." */
       cardEstimates(),
+      /* …and the gross total right under it, because the card above answers
+         "did today's numbers get captured" while this one answers "how much
+         has each rep quoted" — Kevin, 12 Aug. Different question, different
+         window, deliberately its own switcher. */
+      cardQuoteVolume(),
       cardConsistency(),
       cardCoverage(),
       cardSpeed(),
@@ -4163,6 +4271,7 @@ function keepScroll(fn){
   window.scrollTo({ top: y });
 }
 function setEff(k){ keepScroll(() => { EFFWIN = k; }); loadEffortIntel(); }
+function setQvol(d){ keepScroll(() => { QVOL_DAYS = d; }); loadQuoteVolume(); }
 function setApptCo(k){ keepScroll(() => { APPTCOWIN = k; }); }
 function setQuota(k){ keepScroll(() => { QUOTAWIN = k; }); }
 function setLead(k){ keepScroll(() => { LEADWIN = k; }); }
@@ -4564,7 +4673,7 @@ addEventListener('resize', () => {
    server for hours while Kevin looked at yesterday's build and reported the bug
    as unfixed. That happened. The page now checks version.json on every load and
    reloads itself once if the deployed build is newer than the one running. */
-const BUILD = '2026-08-12T00:15Z-estimate-owed-window';
+const BUILD = '2026-08-12T15:30Z-quoted-volume-board';
 const SB_URL = 'https://lzegjjbkfuecrhdvlvay.supabase.co';
 /* The one page that can finish a password reset. Hard-coded rather than derived,
    because every derivation of it so far has been a source of bugs: a bare origin
@@ -7002,6 +7111,7 @@ async function loadAll(){
   D = buildData(RAW);
   render();
   loadEffortIntel();   // after first paint — a missing 108/119 can never block the page
+  loadQuoteVolume();   // same rule: 144 unapplied must never block the page
 }
 
 /* Reload once if the server has a newer build than the one running. Guarded by a
