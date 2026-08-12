@@ -2557,7 +2557,16 @@ function cardEstimates(){
      as a clean board when it is actually an absent one, and "nobody has
      captured anything yet" is a louder fact than any miss count. */
   const rows = est.filter(r => +r.appts > 0 || +r.quoted > 0 || r.started === false);
-  const notStarted = rows.filter(r => r.started === false);
+  /* IS 143 ACTUALLY APPLIED? The card must not claim a rule that is not in
+     force. Migration 143 widens estimate_board with `counting_since` and
+     `started`; until it is run the function returns 131's eight columns and
+     those keys are simply absent from every row. Everything else here degrades
+     correctly on its own — an undefined `started` is never === false, an
+     undefined `counting_since` renders nothing — but the NOTE would have gone
+     on describing a 60-day horizon and per-rep start dates that the numbers
+     above it were not yet obeying. That is the actuals law applied to prose:
+     never label a figure with a rule it is not following. */
+  const owedApplied = est.some(r => 'started' in r);
   const tQ = rows.reduce((n,r)=>n+ +r.quoted,0), tA = rows.reduce((n,r)=>n+ +r.appts,0);
   const tM = rows.reduce((n,r)=>n+ +r.missing,0), t$ = rows.reduce((n,r)=>n+ +r.dollars,0);
   /* PIPELINE DOLLAR VALUE (Kevin, 6 Aug: "After they give the estimate — we
@@ -2607,7 +2616,10 @@ function cardEstimates(){
           <div class="amt">${money(+r.dollars)} <span>· ${r.quoted} quoted of ${r.appts} ran</span>${pager?'<span class="acc-chev">›</span>':''}</div></div>
         <div class="tgt-cap"><span>${miss?`<b style="color:var(--red)">${miss} appt${miss===1?'':'s'} with no estimate on file</b>`:'every run appointment has its number'}</span><span>${since?`counting since ${esc(since)}`:''}${p&&+p.dollars>0?`${since?' · ':''}pipeline ${money(+p.dollars)}${+p.unquoted?` · ${p.unquoted} unpriced`:''}`:r.last_at?`${since?' · ':''}last capture ${new Date(r.last_at).toLocaleString('en-US',{timeZone:'America/New_York',hour:'numeric',minute:'2-digit',month:'short',day:'numeric'})}`:''}</span></div>
       </div>`; }).join('')}
-    <div class="note"><b>What is counted (migration 143, Kevin 11 Aug).</b> An appointment is owed an estimate for <b>60 days</b> and no longer — the customer-history import put years of old jobs in the book, and past two months a job is a closed chapter rather than a missing number. And each rep is counted only from <b>their own first capture</b>, because the field adopted over a week and nobody should be graded on days they did not have the app; that date rides on every row above. <b>Nothing was deleted to achieve either</b> — every amount ever captured is still on file and still in the pipeline figure. Note the pipeline dollars deliberately keep their <b>120-day</b> horizon: the 60-day rule bounds what is OWED, not what the pipeline is worth.<br/><br/>From <b>estimate_board()</b> (131/143) and <b>pipeline_value()</b> (132/143): appointments from the CC feed, amounts from the app’s capture — an appointment is covered by an estimate dated its day or later, so a next-morning backfill clears yesterday honestly. The pipeline figure is a stock, not a window: every open customer’s latest on-file amount, 120-day book, sold work out and lost files out (7 Aug ruling, migration 133 — a lost deal lives in the app’s LOST file, never in pipeline money). Counts and totals only, sources never blended; a missing number reads missing, never guessed.</div>
+    ${owedApplied
+      ? `<div class="note"><b>What is counted (migration 143, Kevin 11 Aug).</b> An appointment is owed an estimate for <b>60 days</b> and no longer — the customer-history import put years of old jobs in the book, and past two months a job is a closed chapter rather than a missing number. And each rep is counted only from <b>their own first capture</b>, because the field adopted over a week and nobody should be graded on days they did not have the app; that date rides on every row above. <b>Nothing was deleted to achieve either</b> — every amount ever captured is still on file and still in the pipeline figure. Note the pipeline dollars deliberately keep their <b>120-day</b> horizon: the 60-day rule bounds what is OWED, not what the pipeline is worth.</div>`
+      : `<div class="note" style="border-left:2px solid var(--gold);padding-left:10px"><b>Migration 143 is not applied yet.</b> These counts are still the old ones — every appointment in a 120-day book, including the years of history the customer import brought in, and no allowance for the fact that the field only adopted the app about two weeks ago. The 60-day owed window and the per-rep &#34;counting since&#34; date arrive the moment <code>143_estimate_owed_window.sql</code> is run; this page needs no redeploy for it. Said here rather than left to be inferred, because a number labelled with a rule it is not following is worse than an unlabelled one.</div>`}
+    <div class="note">From <b>estimate_board()</b> (131/143) and <b>pipeline_value()</b> (132/143): appointments from the CC feed, amounts from the app’s capture — an appointment is covered by an estimate dated its day or later, so a next-morning backfill clears yesterday honestly. The pipeline figure is a stock, not a window: every open customer’s latest on-file amount, 120-day book, sold work out and lost files out (7 Aug ruling, migration 133 — a lost deal lives in the app’s LOST file, never in pipeline money). Counts and totals only, sources never blended; a missing number reads missing, never guessed.</div>
   </div>`;
 }
 
@@ -4564,7 +4576,7 @@ addEventListener('resize', () => {
    server for hours while Kevin looked at yesterday's build and reported the bug
    as unfixed. That happened. The page now checks version.json on every load and
    reloads itself once if the deployed build is newer than the one running. */
-const BUILD = '2026-08-12T00:15Z-estimate-owed-window';
+const BUILD = '2026-08-12T01:05Z-owed-window-honest-note';
 const SB_URL = 'https://lzegjjbkfuecrhdvlvay.supabase.co';
 /* The one page that can finish a password reset. Hard-coded rather than derived,
    because every derivation of it so far has been a source of bugs: a bare origin
