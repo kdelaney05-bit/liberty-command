@@ -3760,7 +3760,7 @@ function diveView(k){
           money missing — it was in the total, but the total did not say so, and
           the only place the split appeared was further down. A headline that is
           a union has to declare itself a union at the point of reading. */''}
-    ${W.billdu ? `<div class="hero-incl">incl. <b>${short(W.billdu)}</b> <span class="feed-tag billdu">live · billdu</span> — Oasis reads from Billdu invoices</div>` : ''}
+    ${W.billdu ? `<div class="hero-incl">incl. <b>${short(W.billdu)}</b> <span class="feed-tag billdu">live · billdu</span> — Oasis reads from Billdu invoices, counted on the day the rep sold it</div>` : ''}
     ${W.rung && W.rung.value ? `<div class="hero-incl">incl. <b>${short(W.rung.value)}</b> <span class="feed-tag bell">bell</span> — ${W.rung.count} deal${W.rung.count===1?'':'s'} rung and awaiting the book. In the figure per Kevin's 10 Aug ruling ("show all sales, whether it's been fully verified or not"); hands off to CC / Billdu when the feed books it, comes off after 5 business days if never turned in.</div>` : ''}
     ${billduDown() ? `<div class="hero-incl warn">Contractors Cloud only — the Billdu feed is unreadable, so Oasis sales (which read from Billdu invoices) are <b>missing from this figure</b>, not absent from the day.</div>` : ''}
     ${W.billdu || W.rungRev ? `<div class="seam">
@@ -4699,7 +4699,7 @@ addEventListener('resize', () => {
    server for hours while Kevin looked at yesterday's build and reported the bug
    as unfixed. That happened. The page now checks version.json on every load and
    reloads itself once if the deployed build is newer than the one running. */
-const BUILD = '2026-08-13T14:45Z-inherited-visible-at-zero-dollars';
+const BUILD = '2026-08-13T18:20Z-oasis-sold-date';
 const SB_URL = 'https://lzegjjbkfuecrhdvlvay.supabase.co';
 /* The one page that can finish a password reset. Hard-coded rather than derived,
    because every derivation of it so far has been a source of bugs: a bare origin
@@ -5011,11 +5011,26 @@ function buildData(raw){
      the attributed rep_id is taken as given, and only basis='unattributed'
      (no rule matched at all) stays unowned. */
   const bInvoices = (billdu && billdu.invoices) || null;
+  /* WHICH DAY AN OASIS INVOICE COUNTS ON (migration 148, Kevin 13 Aug on Dena
+     Kent — "Mike Leroy said this customer is not in his numbers… Sold Aug 5").
+     issue_date is an OFFICE ADMIN date: it says when somebody typed the invoice,
+     not when the rep sold the work, and on that deal the two ran eight days
+     apart. So the deal counted on 8/5 as an open 🔔 ring and then jumped to 8/13
+     the moment the office invoiced it — out of one week and into the next. 148
+     gives the view a sold_on: the signed_on of the bell that invoice silences,
+     else the issue date. The handoff from ring to invoice is date-preserving
+     and this page reads the same date the phone does.
+     The `?? issue_date` fallback is not decoration — the console deploys on
+     push and the migration lands whenever Kevin pastes it, so this must be
+     right in both states. Same reason the fetch below asks for `*`: naming
+     sold_on in the select list would 400 the whole Billdu feed until 148 is
+     applied, and Oasis money would read as missing rather than as itself. */
+  const soldDay = r => String(r.sold_on || r.issue_date || '').slice(0,10);
   const billduAdd = (a, b) => {
     if (!bInvoices) return null;
     const A = ymdOf(a), B = ymdOf(b);
     const rows = bInvoices
-      .filter(r => { const d = String(r.issue_date).slice(0,10); return d >= A && d < B; })
+      .filter(r => { const d = soldDay(r); return d >= A && d < B; })
       .map(r => ({ billdu_id: r.billdu_id, client_name: r.client_name,
                    accepted_value: Number(r.total_price||0),
                    repId: r.rep_id || null }));
@@ -7054,8 +7069,12 @@ async function loadAll(){
       /* Migration 096: Oasis money reads from Billdu INVOICES, attributed
          CC-evidence-first. This is Kevin's 2026-07-30 ruling — "we're gonna go
          off of Billdu until we migrate everything over" — after his export
-         proved the CC+acceptances blend ran ~$95K over what was actually sold. */
-      qp('billdu_invoice_attributed?select=billdu_id,client_name,rep_id,attribution_basis,issue_date,total_price'),
+         proved the CC+acceptances blend ran ~$95K over what was actually sold.
+         `*` rather than a column list on purpose: 148 appends sold_on to this
+         view and naming it here would 400 the entire Billdu feed on any
+         database where 148 has not been applied yet — Oasis money would read
+         as MISSING, which is a worse lie than reading on the invoice date. */
+      qp('billdu_invoice_attributed?select=*'),
       // rep_id is the backend's OWN mapping of a Billdu author to a rep. It is
       // set for sellers who send their own estimates and deliberately NULL for
       // the office accounts, so an office-sent deal is never credited to a
