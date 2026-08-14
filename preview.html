@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Liberty Command — phone preview</title>
+<meta name="color-scheme" content="dark" />
+<link rel="icon" type="image/png" href="icon-1024.png" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500&family=JetBrains+Mono:wght@400;500;600&family=Inter+Tight:wght@400;500;600;700&display=swap" rel="stylesheet">
+<!--
+  ═══════════════════════════════════════════════════════════════════════════
+  PHONE PREVIEW — a desktop rig for looking at the owner console as a phone.
+
+  Why an iframe and not a screenshot or a scaled-down copy: media queries read
+  the VIEWPORT width of the document they live in, and an iframe has its own
+  viewport. Sizing the frame to 393px means the console genuinely evaluates
+  every `@media (min-width: 900px)` the same way an iPhone does — the .stack
+  stays a flex column, minorOpen()'s `innerWidth < 900` is true, Chart.js lays
+  out at phone width. The zoom control scales with a CSS transform, which does
+  NOT change the layout viewport, so a preview shrunk to fit a laptop screen is
+  still a truthful 393px render — just smaller on the glass.
+
+  It is the live page, not a copy. Same origin, so the sign-in in localStorage
+  carries into the frame: real numbers, real feeds, real gate. Nothing here
+  touches index.html, so this file needs no BUILD / version.json bump.
+
+  Open it at:  https://kdelaney05-bit.github.io/liberty-command/preview.html
+  ═══════════════════════════════════════════════════════════════════════════
+-->
+<style>
+  :root {
+    --bg-deep: #0d1f17; --bg-card: #15291f; --bg-card-hi: #1c3528;
+    --line: rgba(255,255,255,0.06); --text: #e8efe9; --text-dim: #8aa094;
+    --accent: #f0834a; --accent-soft: #f4a37a; --green: #6cc28b; --green-soft: #8fd5a8;
+    --gold: #d4b15a; --blue: #6ba8c9;
+    --mono: 'JetBrains Mono', ui-monospace, Menlo, Consolas, monospace;
+    --bar: 116px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body {
+    font-family: 'Inter Tight', sans-serif;
+    background: radial-gradient(ellipse at top, #1a3326 0%, #0d1f17 60%) fixed;
+    color: var(--text); -webkit-font-smoothing: antialiased;
+    display: flex; flex-direction: column; overflow: hidden;
+  }
+
+  /* ── the bar ─────────────────────────────────────────────────────────── */
+  .bar {
+    flex: 0 0 auto; border-bottom: 1px solid var(--line);
+    background: rgba(13,31,23,0.86); backdrop-filter: blur(10px);
+    padding: 10px 16px 11px; display: flex; flex-wrap: wrap; align-items: center; gap: 14px;
+  }
+  .brand { display: flex; flex-direction: column; gap: 2px; margin-right: 4px; }
+  .brand .eyebrow {
+    font-family: var(--mono); font-size: 9px; letter-spacing: 0.18em;
+    text-transform: uppercase; color: var(--accent);
+  }
+  .brand .ttl { font-family: 'Fraunces', serif; font-size: 17px; font-weight: 400; line-height: 1; }
+  .brand .ttl em { font-style: italic; color: var(--accent-soft); font-weight: 400; }
+
+  .grp { display: flex; align-items: center; gap: 6px; }
+  .grp > .lbl {
+    font-family: var(--mono); font-size: 8.5px; letter-spacing: 0.16em;
+    text-transform: uppercase; color: var(--text-dim); margin-right: 2px;
+  }
+  .sep { width: 1px; align-self: stretch; background: var(--line); margin: 0 2px; }
+
+  button, select, input[type=number] {
+    font-family: var(--mono); font-size: 10.5px; color: var(--text);
+    background: var(--bg-card); border: 1px solid var(--line);
+    border-radius: 9px; padding: 7px 11px; cursor: pointer;
+    letter-spacing: 0.03em; transition: border-color .13s, color .13s, background .13s;
+  }
+  select { padding-right: 8px; }
+  input[type=number] { width: 62px; cursor: text; text-align: right; }
+  input[type=number]::-webkit-outer-spin-button,
+  input[type=number]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+  @media (hover: hover) {
+    button:hover, select:hover { border-color: rgba(240,131,74,0.45); color: #fff; }
+  }
+  button.on {
+    background: var(--bg-card-hi); border-color: rgba(108,194,139,0.45); color: var(--green-soft);
+  }
+  button.ghost { background: transparent; }
+  .dims { display: none; align-items: center; gap: 5px; }
+  .dims.show { display: flex; }
+  .dims .x { color: var(--text-dim); font-family: var(--mono); font-size: 10px; }
+
+  /* ── the readout ─────────────────────────────────────────────────────── */
+  .readout { margin-left: auto; display: flex; align-items: center; gap: 10px; }
+  .chip {
+    font-family: var(--mono); font-size: 9.5px; letter-spacing: 0.06em;
+    border: 1px solid var(--line); border-radius: 100px; padding: 4px 10px;
+    color: var(--text-dim); white-space: nowrap;
+  }
+  .chip b { color: var(--text); font-weight: 600; }
+  .chip.band { color: var(--green-soft); border-color: rgba(108,194,139,0.32); }
+  .chip.band.wide { color: var(--blue); border-color: rgba(107,168,201,0.32); }
+  .chip.band.widest { color: var(--gold); border-color: rgba(212,177,90,0.32); }
+
+  /* ── the stage ───────────────────────────────────────────────────────── */
+  .stage {
+    flex: 1 1 auto; position: relative; overflow: auto;
+    display: flex; align-items: center; justify-content: center;
+    gap: 46px; padding: 30px;
+  }
+  .slot { display: flex; flex-direction: column; align-items: center; gap: 11px; flex: 0 0 auto; }
+  .slot .cap {
+    font-family: var(--mono); font-size: 9px; letter-spacing: 0.16em;
+    text-transform: uppercase; color: var(--text-dim);
+  }
+  /* The scaler owns the transform. Its wrapper is sized in real (scaled) px so
+     the flex centring and the scrollbars agree with what the eye sees — a bare
+     transform leaves the original box behind in layout and the page ends up
+     centred on a phantom. */
+  .fit { position: relative; }
+  .scaler { transform-origin: top left; position: absolute; top: 0; left: 0; }
+
+  /* the bezel */
+  .device {
+    position: relative; background: #05100b;
+    border: 10px solid #1b2a22; border-radius: 46px;
+    box-shadow: 0 0 0 1px rgba(255,255,255,0.05),
+                0 34px 70px rgba(0,0,0,0.62),
+                inset 0 0 0 1px rgba(255,255,255,0.03);
+    padding: 0; overflow: hidden;
+  }
+  .device.tablet { border-radius: 26px; border-width: 12px; }
+  .device.tablet .notch { display: none; }
+  .notch {
+    position: absolute; top: 9px; left: 50%; transform: translateX(-50%);
+    width: 104px; height: 26px; background: #05100b; border-radius: 100px;
+    z-index: 3; pointer-events: none;
+  }
+  .device.landscape .notch {
+    top: 50%; left: 9px; transform: translateY(-50%);
+    width: 26px; height: 104px;
+  }
+  .device iframe {
+    display: block; border: 0; background: var(--bg-deep);
+    border-radius: 36px;
+  }
+  .device.tablet iframe { border-radius: 16px; }
+
+  /* ── the note ────────────────────────────────────────────────────────── */
+  .note {
+    flex: 0 0 auto; border-top: 1px solid var(--line);
+    padding: 8px 16px 9px; font-family: var(--mono); font-size: 9.5px;
+    color: var(--text-dim); letter-spacing: 0.03em; line-height: 1.6;
+  }
+  .note b { color: var(--accent-soft); font-weight: 500; }
+  .warn {
+    display: none; margin: 0 16px 10px; padding: 11px 13px;
+    border: 1px solid rgba(217,106,94,0.35); background: rgba(217,106,94,0.07);
+    border-radius: 11px; font-family: var(--mono); font-size: 10.5px;
+    color: #e8b6ae; line-height: 1.65; letter-spacing: 0.02em;
+  }
+  .warn.show { display: block; }
+  .warn b { color: #fff; font-weight: 600; }
+</style>
+</head>
+<body>
+
+<div class="bar">
+  <div class="brand">
+    <div class="eyebrow">TruReview · owner console</div>
+    <div class="ttl">Phone <em>preview</em></div>
+  </div>
+
+  <div class="sep"></div>
+
+  <div class="grp">
+    <span class="lbl">page</span>
+    <select id="page">
+      <option value="index.html">Owner console</option>
+      <option value="supervisor/">Supervisor</option>
+      <option value="invite.html">Invite</option>
+      <option value="f/roofing.html">Folder · Roofing</option>
+      <option value="f/fencing.html">Folder · Fencing</option>
+      <option value="f/oasis.html">Folder · Oasis</option>
+      <option value="f/protech.html">Folder · Pro-Tec</option>
+    </select>
+  </div>
+
+  <div class="grp">
+    <span class="lbl">device</span>
+    <select id="device"></select>
+    <div class="dims" id="dims">
+      <input type="number" id="cw" min="240" max="2400" step="1" />
+      <span class="x">×</span>
+      <input type="number" id="ch" min="320" max="2400" step="1" />
+    </div>
+    <button id="rotate" class="ghost" title="Rotate">⟲ rotate</button>
+  </div>
+
+  <div class="grp">
+    <span class="lbl">zoom</span>
+    <button data-zoom="fit" class="on">fit</button>
+    <button data-zoom="1">100%</button>
+    <button data-zoom="0.75">75%</button>
+    <button data-zoom="0.5">50%</button>
+  </div>
+
+  <div class="sep"></div>
+
+  <div class="grp">
+    <button id="beside" class="ghost" title="Show the desktop render alongside">+ desktop</button>
+    <button id="reload" class="ghost" title="Reload the frame">↻ reload</button>
+    <button id="open" class="ghost" title="Open the page full size in a new tab">↗ open</button>
+  </div>
+
+  <div class="readout">
+    <span class="chip" id="px">— × —</span>
+    <span class="chip band" id="band">—</span>
+  </div>
+</div>
+
+<div class="warn" id="warn">
+  <b>Opened from the filesystem.</b> Browsers refuse to let a <code>file://</code>
+  page read inside its own frame, so the size readout and reload will be blind and
+  the console's own fetches will fail. Open this at
+  <b>https://kdelaney05-bit.github.io/liberty-command/preview.html</b>, or serve the
+  folder locally with <code>npx serve .</code>
+</div>
+
+<div class="stage" id="stage">
+  <div class="slot" id="slotPhone">
+    <div class="fit" id="fitPhone">
+      <div class="scaler" id="scalerPhone">
+        <div class="device" id="phoneBezel">
+          <div class="notch"></div>
+          <iframe id="frame" title="Owner console, phone viewport"></iframe>
+        </div>
+      </div>
+    </div>
+    <div class="cap" id="capPhone">phone</div>
+  </div>
+
+  <div class="slot" id="slotDesk" style="display:none">
+    <div class="fit" id="fitDesk">
+      <div class="scaler" id="scalerDesk">
+        <div class="device tablet" id="deviceDesk">
+          <iframe id="frameDesk" title="Owner console, desktop viewport"></iframe>
+        </div>
+      </div>
+    </div>
+    <div class="cap">desktop · 1440 × 900</div>
+  </div>
+</div>
+
+<div class="note">
+  Live page in a real viewport — same origin, so your sign-in carries in and the
+  numbers are the true ones. Edit <b>index.html</b>, push, then hit <b>↻ reload</b>.
+  The console's layout turns at <b>900px</b> (two columns) and <b>1300px</b> (three);
+  under 900 it is the single stacked column every phone gets.
+</div>
+
+<script>
+/* ── devices ─────────────────────────────────────────────────────────────
+   Portrait CSS pixels, i.e. what the page's viewport actually measures — not
+   the hardware pixel count. An iPhone 15 Pro is 1179 physical wide and 393 to
+   CSS, and 393 is the number every media query is answering. */
+const DEVICES = [
+  { id: 'se',      name: 'iPhone SE',           w: 375,  h: 667  },
+  { id: '13mini',  name: 'iPhone 13 mini',      w: 375,  h: 812  },
+  { id: '15',      name: 'iPhone 15 / 15 Pro',  w: 393,  h: 852  },
+  { id: '15max',   name: 'iPhone 15 Pro Max',   w: 430,  h: 932  },
+  { id: 'pixel',   name: 'Pixel 8',             w: 412,  h: 915  },
+  { id: 'fold',    name: 'Galaxy Z Fold (out)', w: 344,  h: 882  },
+  { id: 'ipadmini',name: 'iPad mini',           w: 744,  h: 1133, tablet: true },
+  { id: 'ipad',    name: 'iPad Pro 11"',        w: 834,  h: 1194, tablet: true },
+  { id: 'custom',  name: 'Custom…',             w: 393,  h: 852  },
+];
+
+const DESK_W = 1440, DESK_H = 900;
+const STORE = 'lcc.preview.v1';
+
+const $ = id => document.getElementById(id);
+/* The bezel is `phoneBezel`, not `device` — `device` is the <select>. They were
+   briefly both `device`, and getElementById handed back the select: the rig
+   measured a 1px form border where it meant to measure the 10px bezel, so every
+   frame sat 16px taller than the box reserved for it and the caption ended up
+   under the phone. Two ids, no ambiguity. */
+const el = {
+  page: $('page'), device: $('device'), dims: $('dims'), cw: $('cw'), ch: $('ch'),
+  rotate: $('rotate'), beside: $('beside'), reload: $('reload'), open: $('open'),
+  px: $('px'), band: $('band'), stage: $('stage'), warn: $('warn'),
+  frame: $('frame'), frameDesk: $('frameDesk'),
+  slotDesk: $('slotDesk'), capPhone: $('capPhone'),
+  fitPhone: $('fitPhone'), scalerPhone: $('scalerPhone'),
+  fitDesk: $('fitDesk'), scalerDesk: $('scalerDesk'),
+  bezelPhone: $('phoneBezel'), bezelDesk: $('deviceDesk'),
+};
+
+const state = Object.assign({
+  page: 'index.html', device: '15', landscape: false, zoom: 'fit',
+  beside: false, cw: 393, ch: 852,
+}, (() => { try { return JSON.parse(localStorage.getItem(STORE)) || {}; } catch (e) { return {}; } })());
+
+function save() { try { localStorage.setItem(STORE, JSON.stringify(state)); } catch (e) {} }
+
+/* ── build the device menu ───────────────────────────────────────────── */
+DEVICES.forEach(d => {
+  const o = document.createElement('option');
+  o.value = d.id;
+  o.textContent = d.id === 'custom' ? d.name : `${d.name} · ${d.w}×${d.h}`;
+  el.device.appendChild(o);
+});
+
+function currentDevice() { return DEVICES.find(d => d.id === state.device) || DEVICES[2]; }
+
+/* Size of the frame in CSS px, after the rotate toggle. Custom reads the two
+   number inputs; everything else reads the table. */
+function frameSize() {
+  const d = currentDevice();
+  const w = d.id === 'custom' ? state.cw : d.w;
+  const h = d.id === 'custom' ? state.ch : d.h;
+  return state.landscape ? { w: h, h: w } : { w, h };
+}
+
+/* ── layout ──────────────────────────────────────────────────────────── */
+function bezelPad(bezel) {
+  const cs = getComputedStyle(bezel);
+  return (parseFloat(cs.borderLeftWidth) || 0) * 2;
+}
+
+function place(fit, scaler, bezel, frame, w, h, scale) {
+  frame.style.width = w + 'px';
+  frame.style.height = h + 'px';
+  scaler.style.transform = `scale(${scale})`;
+  /* the wrapper takes the post-scale box so centring and scrollbars are honest */
+  const pad = bezelPad(bezel);
+  fit.style.width = ((w + pad) * scale) + 'px';
+  fit.style.height = ((h + pad) * scale) + 'px';
+}
+
+function layout() {
+  const { w, h } = frameSize();
+  const d = currentDevice();
+
+  el.bezelPhone.classList.toggle('tablet', !!d.tablet);
+  el.bezelPhone.classList.toggle('landscape', state.landscape);
+
+  /* Room to work in: the stage minus its padding, and minus the desktop slot
+     and the gap when both are showing. */
+  const cs = getComputedStyle(el.stage);
+  const padX = parseFloat(cs.paddingLeft) + parseFloat(cs.paddingRight);
+  const padY = parseFloat(cs.paddingTop) + parseFloat(cs.paddingBottom);
+  const gap = state.beside ? parseFloat(cs.columnGap || 46) : 0;
+  const capH = 30; // the caption under each slot
+
+  let availW = el.stage.clientWidth - padX - gap;
+  const availH = el.stage.clientHeight - padY - capH;
+
+  const padPhone = bezelPad(el.bezelPhone);
+  const padDesk = bezelPad(el.bezelDesk);
+
+  /* When the desktop is beside it, split the width by how wide each render
+     wants to be, so neither gets squeezed to nothing. */
+  let phoneW = availW, deskW = 0;
+  if (state.beside) {
+    const share = (w + padPhone) / ((w + padPhone) + (DESK_W + padDesk));
+    phoneW = availW * share;
+    deskW = availW - phoneW;
+  }
+
+  const fitScale = Math.min(phoneW / (w + padPhone), availH / (h + padPhone));
+  const scale = state.zoom === 'fit' ? Math.min(fitScale, 1) : parseFloat(state.zoom);
+  place(el.fitPhone, el.scalerPhone, el.bezelPhone, el.frame, w, h, scale);
+
+  if (state.beside) {
+    const dScale = Math.min(deskW / (DESK_W + padDesk), availH / (DESK_H + padDesk), 1);
+    place(el.fitDesk, el.scalerDesk, el.bezelDesk, el.frameDesk, DESK_W, DESK_H, dScale);
+  }
+
+  el.capPhone.textContent =
+    `${d.id === 'custom' ? 'custom' : d.name.toLowerCase()} · ${Math.round(scale * 100)}%`;
+
+  el.px.innerHTML = `<b>${w}</b> × <b>${h}</b> css px`;
+  el.band.className = 'chip band' + (w >= 1300 ? ' widest' : w >= 900 ? ' wide' : '');
+  el.band.textContent = w >= 1300 ? '3-column layout' : w >= 900 ? '2-column layout' : 'phone layout';
+}
+
+/* ── frames ──────────────────────────────────────────────────────────── */
+function src(bust) {
+  /* A cache-buster on reload only. The console's own version.json check keeps
+     an idle tab honest; this makes a deliberate reload immediate. */
+  return state.page + (bust ? (state.page.includes('?') ? '&' : '?') + 'pv=' + bust : '');
+}
+
+function loadFrames(bust) {
+  el.frame.src = src(bust);
+  if (state.beside) el.frameDesk.src = src(bust);
+}
+
+/* ── wiring ──────────────────────────────────────────────────────────── */
+function syncControls() {
+  el.page.value = state.page;
+  el.device.value = state.device;
+  el.cw.value = state.cw;
+  el.ch.value = state.ch;
+  el.dims.classList.toggle('show', state.device === 'custom');
+  el.rotate.classList.toggle('on', state.landscape);
+  el.beside.classList.toggle('on', state.beside);
+  el.slotDesk.style.display = state.beside ? '' : 'none';
+  document.querySelectorAll('[data-zoom]').forEach(b => {
+    b.classList.toggle('on', b.dataset.zoom === String(state.zoom));
+  });
+}
+
+el.page.addEventListener('change', () => {
+  state.page = el.page.value; save(); loadFrames(); layout();
+});
+
+el.device.addEventListener('change', () => {
+  state.device = el.device.value;
+  if (state.device !== 'custom') {
+    const d = currentDevice();
+    state.cw = d.w; state.ch = d.h;
+  }
+  save(); syncControls(); layout();
+});
+
+[el.cw, el.ch].forEach(inp => inp.addEventListener('input', () => {
+  const w = parseInt(el.cw.value, 10), h = parseInt(el.ch.value, 10);
+  if (w >= 240) state.cw = w;
+  if (h >= 320) state.ch = h;
+  save(); layout();
+}));
+
+el.rotate.addEventListener('click', () => {
+  state.landscape = !state.landscape; save(); syncControls(); layout();
+});
+
+document.querySelectorAll('[data-zoom]').forEach(b => b.addEventListener('click', () => {
+  state.zoom = b.dataset.zoom; save(); syncControls(); layout();
+}));
+
+el.beside.addEventListener('click', () => {
+  state.beside = !state.beside; save(); syncControls();
+  if (state.beside && !el.frameDesk.src) el.frameDesk.src = src();
+  layout();
+});
+
+el.reload.addEventListener('click', () => loadFrames(Date.now()));
+el.open.addEventListener('click', () => window.open(state.page, '_blank', 'noopener'));
+
+/* r rotates, d toggles the desktop, f refits — the three things you reach for
+   while you are looking at a card and deciding whether it sits right. */
+addEventListener('keydown', e => {
+  if (e.metaKey || e.ctrlKey || e.altKey) return;
+  if (/^(INPUT|SELECT|TEXTAREA)$/.test(e.target.tagName)) return;
+  const k = e.key.toLowerCase();
+  if (k === 'r') el.rotate.click();
+  else if (k === 'd') el.beside.click();
+  else if (k === 'f') { state.zoom = 'fit'; save(); syncControls(); layout(); }
+});
+
+let rt;
+addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(layout, 90); });
+
+if (location.protocol === 'file:') el.warn.classList.add('show');
+
+syncControls();
+loadFrames();
+layout();
+/* Fonts land after first paint and the bezel border is measured from computed
+   style, so one more pass once everything has settled. */
+addEventListener('load', layout);
+</script>
+</body>
+</html>
