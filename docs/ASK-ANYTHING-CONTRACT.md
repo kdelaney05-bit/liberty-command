@@ -8,6 +8,12 @@ Source of truth read for this contract: `kdelaney05-bit/trureview-mobile` at
 `backend/migrations/159_reporting_layer_views.sql`, `backend/reports/*.sql`.
 The field law is quoted from those files, never re-derived here.
 
+**Status:** accepted by Kevin, 15 Aug, with four rulings — all folded in; see
+§11. ⚠️ **Rulings 1–3 each have a SQL half in `trureview-mobile` that is
+specified but NOT APPLIED (§13)** — write access to that repo was denied this
+session. Until those patches land, this contract and the report files
+disagree, and the report files are what run.
+
 ---
 
 ## 0. The one-instrument rule
@@ -75,6 +81,34 @@ So the rule is scoped precisely:
 Reading the restriction any other way would forbid six of the ten reports and
 delete QB money from the product. The invention risk lives in Path B, and
 that is where the gate goes.
+
+### ⚠️ RULING (Kevin, 15 Aug) — do not re-narrow this
+
+This scoping is **settled law, not a reading open to revision**. Kevin's
+ruling, verbatim in substance: *the base-table rule as originally written was
+overbroad; the restriction binds MODEL-AUTHORED SQL only; canned reports are
+pre-vetted, parameterizable, never model-edited.*
+
+Stated as three rules a future session must not soften:
+
+1. **Model-authored SQL (Path B) may reach the six `rpt_*` views and nothing
+   else.** No base tables, ever, for any reason, however well-justified the
+   question.
+2. **Canned reports (Path A) may read base tables** for fields the reporting
+   layer does not carry — QB money, `fin_*` balances, job city, lead source.
+   They are human-reviewed artifacts. Six of the ten do this today and are
+   correct to.
+3. **The model's only power over a canned report is its parameters.** Not its
+   text, not its `WHERE` clause, not "just this once with one column added."
+   A model-edited report is a Path B query wearing a report's provenance
+   footer, which is the worst of both — an invented number carrying a trusted
+   surface's credibility.
+
+The reason the distinction survives is rule 3. Rules 1 and 2 describe *where*
+data comes from; rule 3 is what stops Path B from laundering itself into Path
+A. If a future session finds a canned report that "almost" answers a question,
+the answer is a new reviewed report or a Path B query that says so — never an
+edit.
 
 ---
 
@@ -200,7 +234,7 @@ or `''`. `include_rung` is the confirmed-vs-union toggle.
 | 01 | Morning Card | *none* | `blocks[block, who, source, units, dollars]` (blocks: `signed_yesterday`, `appts_today`, `unassigned`, `rung_open`) · provenance |
 | 02 | Today's Board | `brand` | `[rep, rep_inside_sales, brand_name, appts_today, elapsed, upcoming, booked_today, next_appt_at]` · provenance |
 | 03 | Weekly Scorecard | `win_start`, `win_end`, `include_rung` | per-brand `[brand_name, leads_projects_created, appts, appts_elapsed, units, revenue, of_which_rung, invoiced, collected, ar]` · per-rep `[rep, rep_inside_sales, departed, appts_elapsed, units, revenue, rung_units, rung_dollars]` · unassigned `[reason, day, amount, deal_label, brand_name, detail]` · provenance |
-| 04 | Rep Scorecard | `rep` **(required)**, `win_start`, `win_end`, `include_rung` | production `[rep_name, rep_rollup_name, rep_active_now, rep_inside_sales, source, units, dollars]` · appointments `[booked_in_window, on_calendar, elapsed]` · cohort close `[label, appts_in_cohort, closed, close_pct]` · origination split `[signed_on, amount, deal_label, rep_originating_name]` · provenance |
+| 04 | Rep Scorecard | `rep` **(required)**, `grain` (`rep`\|`rollup`, default `rep`), `win_start`, `win_end`, `include_rung` | production `[rep_name, rep_rollup_name, rep_active_now, rep_inside_sales, source, units, dollars]` · appointments `[booked_in_window, on_calendar, elapsed]` · cohort close `[label, appts_in_cohort, closed, close_pct]` · origination split `[signed_on, amount, deal_label, rep_originating_name]` · provenance |
 | 05 | Closing Momentum | `brand`, `rep`, `include_rung` | buckets `[bucket, rep, brand_name, units_booked, dollars_booked]` · rung callout `[rep, rung_units, rung_dollars]` · provenance |
 | 06 | Month Close | `month_start`, `include_rung`, `breakeven_fencing`, `breakeven_protec`, `breakeven_oasis` | `[brand_name, units, signed, of_which_rung, signed_prev, vs_prior_pct, invoiced, collected, breakeven, vs_breakeven]` · provenance |
 | 07 | Brand P&L Bridge | `month_start` | `[brand_name, cc_signed, cc_revenue_booked, cc_received, qb_invoiced, qb_collected, signed_not_yet_invoiced]` · provenance |
@@ -218,6 +252,25 @@ answer *states the fixed window*, or refuses. It never grows a `win_start`.
 Reports with no `include_rung` are that way by law, not by omission: 07/08/09
 are booked-only (`WHERE confirmed`), 10 is confirmed-only. The toggle is not
 offered on them and the answer says which cut it is.
+
+### `grain` on report 04 (ruling 3, Kevin 15 Aug)
+
+House/Gio is a line Kevin reads regularly and it must not depend on the router
+improvising a Path B query. Report 04 takes `grain`:
+
+- `grain = 'rep'` (default) — filters `rep_id = :rep`. Unchanged behaviour.
+- `grain = 'rollup'` — filters `rep_rollup_id = :rep`, folding Jessica Coley,
+  Jessica Oasis, Nick Campana and Gerardo Costas into House/Gio.
+
+**Safety property that makes this a low-risk change:** for every rep outside
+the rollup set, `rollup_id = id`, so `grain='rollup'` returns figures
+*identical* to `grain='rep'`. The parameter can only change an answer for the
+four rolled-up reps and Gio. It does not disturb the Phase 4 reconciliation.
+
+Origination comparison stays **raw** under both grains
+(`rep_originating_id is distinct from rep_id`) — a close on a housemate's
+appointment is still a real origination fact, and blurring it inside the house
+line would hide exactly what ruling 4 of the addendum asked to expose.
 
 ### Reports that ignore the window on purpose
 
@@ -265,11 +318,17 @@ case-insensitive, first-name match allowed. On ambiguity **ask, never pick**:
 "Jessica" hits Jessica Coley *and* Jessica Oasis. On no match, refuse with the
 roster, do not guess a spelling.
 
-⚠️ **Report 04's `rep` is a raw `reps.id`, not a `rollup_id`.** There is no
-canned rep scorecard for an aggregate line. "How'd House do" cannot be served
-by 04 with a substituted uuid — that would answer a different question under
-the same heading. Route it to Path B over `rpt_rep_day` grouped by
-`rep_rollup_id`, and say the line is a rollup.
+**Rollup-grain questions resolve, they do not fall through** (ruling 3).
+"How'd House do" → `report 04, {rep: <Gio's uuid>, grain: 'rollup', …}`. The
+rep resolver maps `House`, `House / Gio`, and `Gio` to Gio Calderin's uuid;
+`House`/`House / Gio` set `grain = 'rollup'`, a bare `Gio` sets
+`grain = 'rep'` (his own line, $675 · 1 in the pinned window — the two are
+different questions and the answer names which one it ran).
+
+The four rolled-up reps — Jessica Coley, Jessica Oasis, Nick Campana, Gerardo
+Costas — resolve to their **own** raw line under `grain='rep'` when named
+directly. Raw identity is always kept; asking about Jessica Coley must not
+silently return the House total.
 
 **Window phrases → dates (ET, inclusive both ends).** Weeks are
 **Monday-start (ISO)** — the house convention, confirmed by migration 074's
@@ -361,6 +420,8 @@ feeds: <views read> (<source classes folded>)
 | `rpt_unassigned` non-empty | `$X unattributed · N jobs — visible companion line, never absorbed` |
 | any pre-1 Jul 2026 money | `CC money before 1 Jul 2026 is inflation-suspect up to ~28%` |
 | lead source touched | `lead source does not attach to signed jobs yet (~3wk lag); coverage stated, below full coverage the answer is unknown, not assumed` |
+| QB money in a brand join (03/06) | `QB CC 1537 (legacy Liberty Roofing) is NOT in the brand join: N rows, $X excluded — counted out loud, never silently dropped` |
+| report 04 at rollup grain | `grain: ROLLUP (House/Gio folds Jessica Coley, Jessica Oasis, Nick Campana, Gerardo Costas; raw identity kept in the layer)` |
 
 A Path B answer that renders money with an empty caveat set is a bug, not a
 clean result.
@@ -459,8 +520,14 @@ rather than suggested prompts.
 | chip | report | on tap |
 |---|---|---|
 | Morning Card | 01 | runs immediately — zero params |
-| Weekly Scorecard | 03 | last **complete** week (Mon–Sun, ET), `include_rung = true`, toggle in the report header |
+| Weekly Scorecard | 03 | last **complete** week (Mon–Sun, ET), **`include_rung = true` — UNION, ruling 1**, toggle in the report header |
 | Rep Scorecard | 04 | opens the inline rep picker first (`rep` is required); then last complete week, `include_rung = true` |
+
+**Rep picker contents** (ruling 3): every rep in `rpt_reps`, plus a pinned
+**House / Gio** entry at the top that runs `grain = 'rollup'`. Gio's own raw
+line stays in the list separately. Departed reps stay in the picker — the
+scorecard is a historical surface and `rep_active_now = false` is not an
+erasure (Jared rule); they render with the `departed` flag.
 
 **"more reports ▾"** expands to the other seven, grouped by cadence as
 REPORTING.md lists them:
@@ -485,52 +552,204 @@ Rendering rules that bind every chip result:
 
 ---
 
-## 11. Conflicts found while reading — flagged, not fixed
+## 11. Rulings of record (Kevin, 15 Aug)
 
-Phase 3 is contract only, so none of these were changed. All are in
-`trureview-mobile`.
+Contract accepted with four rulings. All are binding; none may be re-opened by
+a later session without Kevin.
 
-1. **`backend/reports/README.md` claims no report touches a base table.** Six
-   do. Resolved in §1 by scoping the rule to Path B; the README line should be
-   corrected at cutover so it doesn't get cited as a rule it can't support.
+| # | ruling | status |
+|---|---|---|
+| — | Base-table rule was overbroad. Restriction binds **model-authored SQL only**; canned reports are pre-vetted, parameterizable, never model-edited. | ✅ written into §1 as settled law |
+| — | The GRANT approach is impossible under `security_invoker`. | ✅ §2, boundary is the statement gate + end-user JWT |
+| 1 | **Weekly Scorecard chip: UNION.** Field law outranks a per-report comment. Report 03's header comment must be fixed so it no longer contradicts the house default. | ✅ contract (§4, §10) · ⚠️ SQL comment fix **not applied** — §13 patch A |
+| 2 | **CC 1537 in the QB brand join: exclusion correct, silence is not.** Surface excluded 1537 rows as a named provenance line with count and dollars. | ✅ contract (§7) · ⚠️ SQL **not applied** — §13 patches B, C |
+| 3 | **Rollup-grain gap must resolve, not fall through.** House/Gio is read regularly and must not depend on router improvisation. | ✅ contract (§4, §5, §10) · ⚠️ SQL **not applied** — §13 patch D |
+| 4 | **`billdu_accepted` rider stays a rider.** Do not resolve by deletion. | ✅ unchanged, §8 Rider 1 |
 
-2. **`billdu_accepted`: NUMBERS-TRUTH vs migration 159.** Carried as Rider 1
-   (§8), not silently resolved, per NUMBERS-TRUTH's own instruction.
+### Still-open observations (not ruled, not blocking)
 
-3. **Report 03's default cut contradicts the house default.** Its header says
-   *"Booked-only by default to match the sheet"*; `backend/reports/README.md`
-   and REPORTING.md set the house default to `include_rung = true` (union).
-   **This contract takes union** — REPORTING.md's field law outranks a
-   per-report comment, and the chip is a console surface, not the office
-   sheet. The booked-only cut stays one labeled toggle away. **Kevin's call to
-   confirm**, since it changes what the Weekly Scorecard chip shows on first
-   tap.
-
-4. **QB rows carrying CC 1537 drop out of reports 03 and 06 silently.** The
-   join is `qb.cc_company_id = <rolled brand_cc_id>`, so a `1537` QB invoice
-   matches nothing. Defensible under "1537 excluded from all active
-   aggregations" — but it is a *silent* drop, and the field law says
-   exclusions are counted out loud. Worth a row count, not necessarily a fix.
-
-5. **No canned report answers a rollup-grain rep question** (§5). Not a
-   defect, but it means "how'd House do" always falls through to Path B.
-
-6. **Origination is not history-proof.** The sync worker rewrites both
-   `jobs.rep_id` and `cc_appointments.rep_id` from CC on every run, so
-   `rep_originating_id` moves if the office edits CC in place. Already stated
-   in REPORTING.md; the ask box must not describe origination as durable
-   history. A `rep_first_seen` capture column is the fix, and it is a worker
-   change.
+- **`backend/reports/README.md` claims no report touches a base table.** Six
+  do. Scoped in §1; the README line should still be corrected upstream so it
+  isn't cited as a rule it cannot support (§13 patch E).
+- **Origination is not history-proof.** The sync worker rewrites both
+  `jobs.rep_id` and `cc_appointments.rep_id` from CC on every run, so
+  `rep_originating_id` moves if the office edits CC in place. Already stated
+  in REPORTING.md; the ask box must not describe origination as durable
+  history. The fix is a `rep_first_seen` capture column — a worker change,
+  outside this contract.
 
 ---
 
 ## 12. Open decisions before build
 
-1. **Weekly Scorecard chip default cut** — union (recommended, per §11.3) or
-   booked-only to match the office sheet?
-2. **Answer verbosity** — the envelope caps prose at 4 sentences. Confirm that
+1. **Answer verbosity** — the envelope caps prose at 4 sentences. Confirm that
    is the right ceiling for the phone-width render.
-3. **Path B visibility** — does a novel-question answer show the SQL it ran?
+2. **Path B visibility** — does a novel-question answer show the SQL it ran?
    Recommendation: yes, collapsed. It is the only way a wrong answer is
    diagnosable, and it makes the rpt_*-only guarantee visible rather than
    claimed.
+
+*(The Weekly Scorecard default cut was decision 1 and is now ruling 1: union.)*
+
+---
+
+## 13. Upstream changes required in `trureview-mobile` — SPECIFIED, NOT APPLIED
+
+⚠️ **Rulings 1–3 have a SQL half that did not land in this session.** Write
+access to `kdelaney05-bit/trureview-mobile` was denied by the environment
+(the repo was attached read-only; the push-access request was blocked). The
+patches are written out below so they can be applied mechanically, per
+Kevin's "log it if you can't fix it in this pass."
+
+Until they are applied: **the contract and the report files disagree**, and
+the report files are what actually run. Specifically — report 03 still prints
+a header comment claiming booked-only, reports 03/06 still drop CC 1537 from
+the QB join silently, and report 04 has no `grain` param, so the Rep Scorecard
+chip's House / Gio entry has nothing to call.
+
+Same pattern as REPORTING.md's own "Required frontend changes at cutover"
+section: exact locations, spec only.
+
+### Patch A — ruling 1 · `backend/reports/03-weekly-scorecard.sql`, lines 3–5
+
+Replace:
+
+```sql
+-- Goal: retire the manual sheet. Booked-only by default to match the sheet;
+-- flip :include_rung to see the union cut — ALWAYS labeled either way.
+```
+
+with:
+
+```sql
+-- Goal: retire the manual sheet. HOUSE DEFAULT IS UNION (:include_rung=true,
+-- rung IN, labeled 🔔) — Kevin's 10 Aug console ruling and the REPORTING.md
+-- field law; the ask-anything Weekly Scorecard chip runs it that way (ruling 1,
+-- 15 Aug). The office sheet's booked-only cut is :include_rung=false, one
+-- toggle away — ALWAYS labeled either way.
+```
+
+### Patch B — ruling 2 · `03-weekly-scorecard.sql`, the closing provenance SELECT
+
+The statement needs a CTE, so it changes shape:
+
+```sql
+with x1537 as (
+  select count(*) n, coalesce(sum(total_amt),0) amt
+  from qb_invoices
+  where txn_date between :'win_start'::date and :'win_end'::date
+    and not reporting_excluded
+    and cc_company_id = '1537'
+)
+select 'feeds: rpt_brand_day/rpt_rep_day (cc_contract + billdu attributed invoices'
+       || case when :include_rung then ' + rung 🔔' else '; rung EXCLUDED (booked-only cut)' end
+       || ') · QB invoiced/collected/AR txn-dated, R-prefix excluded'
+       || ' · QB CC 1537 (legacy Liberty Roofing) is NOT in the brand join: '
+       || x1537.n || ' rows, ' || to_char(x1537.amt,'FM$999,999,990.00')
+       || ' excluded — counted out loud, never silently dropped'
+       || ' · window ' || :'win_start' || '→' || :'win_end' || ' inclusive, ET'
+       || ' · leads = CC projects created (no separate lead object in sync)'
+       || ' · appts_elapsed includes no-shows (CC logs no outcomes)'
+       || ' · close rate NOT printed here: signings lag the appointment; see Rep Scorecard cohort windows'
+       as provenance
+from x1537;
+```
+
+Zero rows is a legitimate and useful result — `0 rows, $0.00` is the exclusion
+counted out loud, which is the point of the ruling.
+
+### Patch C — ruling 2 · `06-month-close.sql`, the closing provenance SELECT
+
+```sql
+with x1537 as (
+  select count(*) n, coalesce(sum(total_amt),0) amt
+  from qb_invoices
+  where txn_date between :'month_start'::date
+        and (:'month_start'::date + interval '1 month' - interval '1 day')::date
+    and not reporting_excluded
+    and cc_company_id = '1537'
+)
+select 'feeds: rpt_brand_day (signed) + qb_invoices (invoiced/collected, txn-dated, R-prefix excluded)'
+       || ' · QB CC 1537 (legacy Liberty Roofing) is NOT in the brand join: '
+       || x1537.n || ' rows, ' || to_char(x1537.amt,'FM$999,999,990.00')
+       || ' excluded — counted out loud, never silently dropped'
+       || ' · month ' || :'month_start' || ' vs prior month, ET · rung '
+       || case when :include_rung then 'IN, labeled' else 'OUT (booked-only)' end
+       || ' · breakeven figures are office inputs, not derived — absent reads absent'
+       || ' · signed ≠ invoiced ≠ collected: three different clocks, never blended'
+       as provenance
+from x1537;
+```
+
+### Patch D — ruling 3 · `04-rep-scorecard.sql`, add `:grain`
+
+New param, default `'rep'`. Chosen over an eleventh report because 04's stated
+design is *"ONE report + rep picker"* — a rollup is a picker entry, not a
+second report — and because it leaves the Phase 4 reconciliation untouched
+(`rollup_id = id` for every rep outside the rollup set, so `grain='rollup'`
+is numerically identical to `grain='rep'` for all of them).
+
+Define once, conceptually, then apply at all four filter sites:
+
+```sql
+-- the grain switch, used in every statement below
+(case when :'grain' = 'rollup' then rep_rollup_id else rep_id end) = :'rep'::uuid
+```
+
+**1 — production block.** The `select`/`group by` must change too: at rollup
+grain several raw reps fold in, so per-rep identity columns would split the
+line into several rows per source.
+
+```sql
+select
+  case when :'grain'='rollup' then d.rep_rollup_name else d.rep_name end as rep_name,
+  d.rep_rollup_name,
+  bool_or(d.rep_active_now)   as rep_active_now,
+  bool_or(d.rep_inside_sales) as rep_inside_sales,
+  d.source, sum(d.units) units, sum(d.dollars) dollars
+from rpt_rep_day d, wnd
+where (case when :'grain'='rollup' then d.rep_rollup_id else d.rep_id end) = :'rep'::uuid
+  and d.day between wnd.a and wnd.b
+  and (d.confirmed or :include_rung)
+group by 1,2,5 order by d.source;
+```
+
+**2 — appointments block:** replace `where rep_id = :'rep'::uuid` with the
+grain switch (`rpt_appointments` carries `rep_rollup_id`).
+
+**3 — cohort block:** replace `where a.rep_id = :'rep'::uuid` with the grain
+switch on `a.`.
+
+**4 — origination split:** replace `where rep_id = :'rep'::uuid` with the
+grain switch, but **leave the comparison raw** —
+`rep_originating_id is distinct from rep_id` stays as written. Folding it to
+rollup grain would hide cross-rep origination inside the house line, which is
+the exact distortion addendum ruling 4 asked to expose.
+
+**5 — provenance:** append
+
+```sql
+|| ' · grain: ' || case when :'grain'='rollup'
+     then 'ROLLUP (House/Gio folds Jessica Coley, Jessica Oasis, Nick Campana, Gerardo Costas; raw identity kept in the layer)'
+     else 'raw rep' end
+```
+
+### Patch E — `backend/reports/README.md`
+
+1. Add `grain` to the params table: `text` · `'rep'` (default) or `'rollup'` ·
+   report 04 only · rollup folds House/Gio.
+2. Correct *"No report touches a base table"* to the scoped form: no report
+   derives **a signing** from anywhere but the `rpt_*` views; six read base
+   tables for QB money, `fin_*`, job city and lead source, which the layer
+   does not carry.
+3. Note that the model may parameterise these reports and never edit them.
+
+### Verification once applied
+
+- `psql -v grain="'rollup'" -v rep="'940ad537-cfbd-4129-a335-9d8a9bc7a013'"` —
+  House / Gio returns Gio's own line **plus** the four rolled-up reps; a
+  `grain='rep'` run on the same uuid returns Gio alone ($675 · 1 in the pinned
+  1–14 Aug window, per the Phase 4 reconciliation).
+- Any rep outside the rollup set must return **byte-identical** figures under
+  both grains. If one does not, the patch is wrong.
+- Reports 03 and 06 print the 1537 line whether or not any rows match.
