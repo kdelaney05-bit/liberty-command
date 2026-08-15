@@ -41,16 +41,18 @@ tool is allowed to express — it is something the tool is only allowed to
 
 ### Path A — canned reports (ALWAYS TRIED FIRST)
 
-The ten queries in `backend/reports/`. The model does not author these. It
-picks one and fills its params. "How'd Ron do last week" →
-`report 04, {rep: <Ron's uuid>, win_start: 2026-08-03, win_end: 2026-08-09,
-include_rung: true}`. Nothing about that answer is composed by the model
-except the prose wrapper.
+The ten reports, called as RPCs (§2.4, §4.1). The model does not author these.
+It picks one and fills its params. "How'd Ron do last week" →
+`rpt_report_rep_scorecard{rep: <Ron's uuid>, win_start: 2026-08-03,
+win_end: 2026-08-09, include_rung: true}`. Nothing about that answer is
+composed by the model except the prose wrapper.
 
-### Path B — view query (FALLTHROUGH ONLY)
+### Path B — view read (FALLTHROUGH ONLY)
 
-Free-form SQL the model composes, for genuinely novel questions no report
-covers. `rpt_*`-only, hard-gated (§2).
+A single PostgREST read the model composes, for genuinely novel questions no
+report covers. `rpt_*`-only, hard-gated (§2.2a). **Not SQL** — ruling 5
+declined a SQL-executing RPC, so there is no arbitrary-query surface to
+compose against.
 
 **Routing is not a preference, it is an ordering.** If a report covers the
 question, Path B is unavailable for it — even if the model believes it could
@@ -98,9 +100,9 @@ pre-vetted, parameterizable, never model-edited.*
 
 Stated as three rules a future session must not soften:
 
-1. **Model-authored SQL (Path B) may reach the six `rpt_*` views and nothing
-   else.** No base tables, ever, for any reason, however well-justified the
-   question.
+1. **Model-authored queries (Path B) may reach the six `rpt_*` views and
+   nothing else.** No base tables, ever, for any reason, however
+   well-justified the question.
 2. **Canned reports (Path A) may read base tables** for fields the reporting
    layer does not carry — QB money, `fin_*` balances, job city, lead source.
    They are human-reviewed artifacts. Six of the ten do this today and are
