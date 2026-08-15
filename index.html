@@ -201,12 +201,16 @@
   .ct-chip.cold { border-color: rgba(217,106,94,.4);   background: rgba(217,106,94,.06); }   .ct-chip.cold .v { color: var(--red); }
   .ct-chip.none .v { color: var(--text-dim); font-weight: 400; }
   .ct-cell.hot b { color: var(--green); } .ct-cell.warm b { color: var(--gold); } .ct-cell.cold b { color: var(--red); }
-  /* Attention board — compact on purpose: it flags, the cards below explain. */
+  /* Attention board layout. The three type rules that used to sit here —
+     `.attn .stat-tile` .lbl/.val/.sub, holding the board's tiles at 8/15/9px —
+     are gone. They were left over from the version of this board that carried
+     stat tiles, and the board has not carried one since it became the headline:
+     cardAttention() emits a title and `.ia` rows, nothing else. They matched no
+     element on the page, so they suppressed nothing — but they were sized for a
+     board that flags rather than one that leads, and any tile added here later
+     would have been silently shrunk back to footnote scale by them. */
   .attn .stat-grid { gap: 6px; }
   .attn .stat-tile { padding: 8px 10px; border-radius: 8px; }
-  .attn .stat-tile .lbl { font-size: 8px; margin-bottom: 3px; }
-  .attn .stat-tile .val { font-size: 15px; }
-  .attn .stat-tile .sub { font-size: 9px; margin-top: 3px; }
   .attn .intel-alert { padding: 6px 10px; font-size: 11px; margin-top: 6px; line-height: 1.4; }
   .attn .intel-alert .tag { font-size: 8px; padding-top: 2px; }
   /* ── The folded intel row (Kevin, 11 Aug: "shorten nuggets… small teaser
@@ -245,15 +249,30 @@
      flag size. It is now the first instrument on the page — the headline, not
      the footnote — and a headline has to be readable at a glance from across a
      desk. Nothing about the board changes but its type scale: same severity
-     colours, same rows, same tap-for-the-working. */
+     colours, same rows, same tap-for-the-working.
+
+     That first pass did not go far enough. It moved the rows to 14px, 15px on a
+     desktop — larger than the 11.5px flag scale they came from, but still under
+     the 22px the money tiles in the band directly below are set at, so the
+     headline went on reading smaller than its own footnotes. A reader coming to
+     this page at 6am found the biggest thing on the screen was a revenue number
+     he could look up any time, and the one line telling him what had gone wrong
+     was set smaller than it. The scale below fixes that: the rows now clear the
+     22px tiles beneath them, so the first instrument on the page is also the
+     largest. The tag, the chevron, the working and the all-clear line move with
+     the rows — a 23px sentence next to a 9.5px tag reads as a mistake. */
   .attn.lead { padding: 18px; }
   .attn.lead .ia { margin-top: 6px; border-left-width: 3px; }
-  .attn.lead .ia-row { padding: 8px 12px; font-size: 14px; line-height: 1.4; }
-  .attn.lead .ia-row .tag { font-size: 9.5px; }
-  .attn.lead .ia .acc-chev { font-size: 14px; }
-  .attn.lead .ia-body { padding: 2px 12px 10px; font-size: 13px; line-height: 1.6; }
-  .attn.lead .nofires { font-size: 14.5px; }
-  @media (min-width: 900px) { .attn.lead .ia-row { font-size: 15px; } }
+  .attn.lead .ia-row { padding: 10px 14px; font-size: 18px; line-height: 1.4; }
+  .attn.lead .ia-row .tag { font-size: 11px; }
+  .attn.lead .ia .acc-chev { font-size: 17px; }
+  .attn.lead .ia-body { padding: 3px 14px 12px; font-size: 15px; line-height: 1.6; }
+  .attn.lead .nofires { font-size: 18px; }
+  @media (min-width: 900px) { .attn.lead .ia-row { font-size: 23px; }
+    .attn.lead .ia-row .tag { font-size: 12px; }
+    .attn.lead .ia .acc-chev { font-size: 20px; }
+    .attn.lead .ia-body { font-size: 16px; }
+    .attn.lead .nofires { font-size: 22px; } }
   /* ── THE EFFORT ROOM ────────────────────────────────────────────────────────
      The room holds the working instruments rather than the reading ones, and
      it still folds — but it no longer HIDES. A bare drawer header was a name
@@ -4975,7 +4994,7 @@ addEventListener('resize', () => {
    server for hours while Kevin looked at yesterday's build and reported the bug
    as unfixed. That happened. The page now checks version.json on every load and
    reloads itself once if the deployed build is newer than the one running. */
-const BUILD = '2026-08-15T22:25Z-effort-room-preview-shelf';
+const BUILD = '2026-08-15T23:05Z-attention-headline-scale';
 const SB_URL = 'https://lzegjjbkfuecrhdvlvay.supabase.co';
 /* The one page that can finish a password reset. Hard-coded rather than derived,
    because every derivation of it so far has been a source of bugs: a bare origin
