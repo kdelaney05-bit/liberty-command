@@ -4,15 +4,22 @@ The contract the ask-anything box consumes. Spec only — no frontend in this
 pass, per the Phase 1 addendum's stop point.
 
 Source of truth read for this contract: `kdelaney05-bit/trureview-mobile` at
-`76d5a0a` — `REPORTING.md`, `docs/NUMBERS-TRUTH.md`,
-`backend/migrations/159_reporting_layer_views.sql`, `backend/reports/*.sql`.
+`0f63999` — `REPORTING.md`, `docs/NUMBERS-TRUTH.md`,
+`backend/migrations/159_reporting_layer_views.sql`,
+`backend/migrations/160_reporting_rpcs.sql`, `backend/reports/*.sql`.
 The field law is quoted from those files, never re-derived here.
 
-**Status:** accepted by Kevin, 15 Aug, with four rulings — all folded in; see
-§11. ⚠️ **Rulings 1–3 each have a SQL half in `trureview-mobile` that is
-specified but NOT APPLIED (§13)** — write access to that repo was denied this
-session. Until those patches land, this contract and the report files
-disagree, and the report files are what run.
+**Status:** accepted by Kevin, 15 Aug, with five rulings — all folded in; see
+§11. Transport settled both ways: **Path A** is the ten SECURITY INVOKER RPCs
+from migration 160 (applied live, PR #193) — §2.4, §4.1. **Path B** is
+PostgREST reads against the six views, with **no SQL-executing RPC** and none
+to be built (ruling 5) — §2.2a.
+
+⚠️ **Rulings 1–3 each have a SQL half that is specified but NOT APPLIED
+(§13)** — write access to `trureview-mobile` was denied this session. Since
+160, that SQL now lives in **two** places (the report files *and* the RPC
+bodies), so each patch is double-sited and the RPC half needs its own
+migration. Until they land, this contract and the running code disagree.
 
 ---
 
@@ -34,16 +41,18 @@ tool is allowed to express — it is something the tool is only allowed to
 
 ### Path A — canned reports (ALWAYS TRIED FIRST)
 
-The ten queries in `backend/reports/`. The model does not author these. It
-picks one and fills its params. "How'd Ron do last week" →
-`report 04, {rep: <Ron's uuid>, win_start: 2026-08-03, win_end: 2026-08-09,
-include_rung: true}`. Nothing about that answer is composed by the model
-except the prose wrapper.
+The ten reports, called as RPCs (§2.4, §4.1). The model does not author these.
+It picks one and fills its params. "How'd Ron do last week" →
+`rpt_report_rep_scorecard{rep: <Ron's uuid>, win_start: 2026-08-03,
+win_end: 2026-08-09, include_rung: true}`. Nothing about that answer is
+composed by the model except the prose wrapper.
 
-### Path B — view query (FALLTHROUGH ONLY)
+### Path B — view read (FALLTHROUGH ONLY)
 
-Free-form SQL the model composes, for genuinely novel questions no report
-covers. `rpt_*`-only, hard-gated (§2).
+A single PostgREST read the model composes, for genuinely novel questions no
+report covers. `rpt_*`-only, hard-gated (§2.2a). **Not SQL** — ruling 5
+declined a SQL-executing RPC, so there is no arbitrary-query surface to
+compose against.
 
 **Routing is not a preference, it is an ordering.** If a report covers the
 question, Path B is unavailable for it — even if the model believes it could
@@ -91,9 +100,9 @@ pre-vetted, parameterizable, never model-edited.*
 
 Stated as three rules a future session must not soften:
 
-1. **Model-authored SQL (Path B) may reach the six `rpt_*` views and nothing
-   else.** No base tables, ever, for any reason, however well-justified the
-   question.
+1. **Model-authored queries (Path B) may reach the six `rpt_*` views and
+   nothing else.** No base tables, ever, for any reason, however
+   well-justified the question.
 2. **Canned reports (Path A) may read base tables** for fields the reporting
    layer does not carry — QB money, `fin_*` balances, job city, lead source.
    They are human-reviewed artifacts. Six of the ten do this today and are
@@ -137,8 +146,17 @@ comes back. The owner passes `is_manager()`; a plain rep sees own-only. A
 service role here would bypass RLS and pre-break org isolation the day 153
 lands.
 
-**2.2 — Statement gate (the real rpt_*-only control).** Path B SQL is parsed
-before execution. Reject unless *all* hold:
+**2.2 — Statement gate — ⚠️ SUPERSEDED, RETAINED FOR RATIONALE ONLY.**
+
+> **RULING (Kevin, 15 Aug):** Path B is **PostgREST reads against the six
+> views. There is no SQL-executing RPC, and none is to be built.** The
+> operative gate is §2.2a. Everything in the indented block below describes a
+> transport this product does not have; it is kept because it records *why*
+> the boundary sits where it does, and because anyone who later proposes a
+> `rpt_query(sql text)` RPC needs to see the full weight of what that would
+> re-import. Do not implement it. Do not treat it as a fallback.
+
+Path B SQL would have been parsed before execution. Reject unless *all* hold:
 
 - exactly one statement; no `;` outside string literals
 - the statement begins with `SELECT` or `WITH`
@@ -157,6 +175,31 @@ before execution. Reject unless *all* hold:
 
 Parse it, don't regex it. A regex gate on SQL is a suggestion.
 
+**2.2a — The PostgREST read gate (OPERATIVE).** Path B issues one PostgREST
+read and nothing else. The request is validated before it is sent:
+
+- **`GET` only.** `POST` to a table path is an insert in PostgREST; `PATCH`
+  and `DELETE` likewise. Method allowlist, not method denylist.
+- **Path is exactly one of the six views** — `/rest/v1/rpt_signings`,
+  `rpt_appointments`, `rpt_rep_day`, `rpt_brand_day`, `rpt_unassigned`,
+  `rpt_reps`. The relation is now a URL segment, so this is a string
+  comparison rather than something recovered from a parser.
+- **No `/rpc/` path on Path B.** The ten report slugs are Path A's, reached
+  by the router, never assembled by the model.
+- ⚠️ **No embedding.** This is the one way a PostgREST read can still reach a
+  base table: `select=*,jobs(*)` traverses a detected relationship and
+  returns base-table columns through a view path that passed the allowlist.
+  **Reject any `(` in `select`**, and allowlist `select` items against the
+  column lists in §3. This is the single check that keeps the boundary real —
+  the path allowlist alone does not.
+- **No `Prefer:` header**, no `on_conflict`, no `columns` — all write-side.
+- `Range` / `limit` capped at 5000 rows, with truncation surfaced (§6).
+
+Everything else §2.2 worried about — a second statement, DDL, a
+`SECURITY DEFINER` call, `pg_read_file` — is unreachable by construction:
+the REST grammar cannot express it. That is the whole reason this ruling is
+an improvement and not merely a simplification.
+
 **2.3 — Execution envelope.** `BEGIN; SET TRANSACTION READ ONLY;`
 `statement_timeout = 5s`, `LIMIT 5000` injected if absent, result truncation
 reported on the face if it fires (a truncated table is a silently wrong
@@ -165,6 +208,62 @@ answer otherwise).
 A gate failure is a **refusal with a named reason**, surfaced to the user —
 never a silent retry against something else, and never a fallback to a
 guessed number.
+
+### 2.4 — Transport (migration 160, applied live)
+
+Path A no longer runs psql. Each report is a **SECURITY INVOKER function**
+callable over PostgREST:
+
+```
+POST /rest/v1/rpc/rpt_report_<slug>      Authorization: Bearer <caller JWT>
+  → 200 jsonb { report, sections: {<name>: [rows…]}, provenance }
+```
+
+Verified live 15 Aug: owner JWT 200, anon 401 (`revoke all … from public,
+anon`), and `rep_scorecard(Eric, 1–14 Aug, union)` reconciles with Phase 4 to
+the dollar — $63,736/13 cc + $116,429/9 rung = $180,165/22.
+
+**This confirms §2.1 rather than replacing it.** The functions are
+`language sql stable` with no `security definer`, so they are invoker by
+default: the same reasoning that governs the views governs the RPCs, and the
+caller's JWT is still what RLS reads. The owner passes `is_manager()`; a rep
+credential gets own-only from the same call.
+
+> ⚠️ **The grant is `authenticated, service_role`.** `service_role` has
+> EXECUTE. The ask-anything box **must never hold it** — a service-role call
+> returns the whole book to whoever asked, bypasses RLS, and pre-breaks 153.
+> That the grant exists is not permission to use it.
+
+#### What this does to Path B
+
+Migration 160 settles Path A's transport and **leaves Path B's open.**
+PostgREST cannot execute arbitrary SQL, so the §2.2 statement gate now has
+nothing to gate unless a SQL-executing RPC is built — and building one would
+reintroduce the exact risk §2 exists to prevent, on a surface that already
+passed review.
+
+**RULED (Kevin, 15 Aug): Path B is PostgREST reads against the six views**, e.g.
+`GET /rest/v1/rpt_rep_day?select=…&day=gte.…`. This is strictly better than
+the SQL parser it replaces:
+
+- the allowlist becomes a **path check** — the relation is a URL segment, not
+  something recovered from parsing SQL. §2.2's "parse it, don't regex it"
+  caveat disappears because there is no SQL to parse.
+- the REST grammar cannot express a base-table read, a `SECURITY DEFINER`
+  call, DDL, or a second statement. Most of §2.2 becomes unreachable by
+  construction rather than forbidden by inspection.
+- `rpt_rep_day` / `rpt_brand_day` are already aggregated, so the common novel
+  question is a filter and a group over them — inside what PostgREST does.
+
+The cost is real and should be named: questions needing a join or an
+aggregate shape PostgREST cannot express become unanswerable on Path B, and
+must surface as `no_route` (§9) rather than being quietly escalated to SQL.
+**That is the correct trade.** An unanswerable question is a known gap; an
+arbitrary-SQL RPC is an unknown one.
+
+The alternative — a `rpt_query(sql text)` RPC keeping §2.2 in force — was
+**declined**. It is not a fallback for a question Path B cannot express; those
+refuse as `no_route` (§9). See §2.2's superseded note.
 
 ---
 
@@ -224,12 +323,52 @@ Exact columns. The model may reference nothing outside this list.
 
 ## 4. The report surface
 
-Params follow the psql `-v` convention in `backend/reports/README.md`.
-`win_start`/`win_end` are **inclusive both ends, ET dates**. `brand` is a CC
-company id (`1461`/`1563`/`1560`) or `''` for all. `rep` is a `reps.id` uuid
-or `''`. `include_rung` is the confirmed-vs-union toggle.
+**Called as RPCs** (migration 160), not psql. `win_start`/`win_end` are
+**inclusive both ends, ET dates**. `brand` is a CC company id
+(`1461`/`1563`/`1560`) or `''` for all. `rep` is an `rpt_reps.id` **uuid** —
+`null` means all where the report allows it (**not** `''`; that is the psql
+convention and it is a type error over the RPC). `include_rung` is the
+confirmed-vs-union toggle.
 
-| # | report | params | result blocks (in order) |
+### 4.1 — Slugs, signatures, sections
+
+Every slug is prefixed `rpt_report_`. Defaults are the function's own, so an
+omitted param takes them — **`include_rung` defaults to `true`, the house
+union cut, at the transport layer.** A caller that wants the booked-only cut
+must pass `false` explicitly.
+
+| # | `POST /rest/v1/rpc/rpt_report_…` | signature | `sections` keys |
+|---|---|---|---|
+| 01 | `morning_card` | `()` | `card` |
+| 02 | `todays_board` | `(brand text = '')` | `board` |
+| 03 | `weekly_scorecard` | `(win_start date, win_end date, include_rung boolean = true)` | `brand_block`, `rep_closing`, `unassigned` |
+| 04 | `rep_scorecard` | `(rep uuid, win_start date, win_end date, include_rung boolean = true)` | `production`, `appointments`, `cohort_close`, `origination` |
+| 05 | `closing_momentum` | `(brand text = '', rep uuid = null, include_rung boolean = true)` | `series`, `rung_callout` |
+| 06 | `month_close` | `(month_start date, include_rung boolean = true, breakeven_fencing numeric = 0, breakeven_protec numeric = 0, breakeven_oasis numeric = 0)` | `close` |
+| 07 | `brand_pnl_bridge` | `(month_start date)` | `bridge` |
+| 08 | `job_margin` | `(win_start date, win_end date, brand text = '')` | `jobs` |
+| 09 | `pipeline_health` | `(brand text = '')` | `chase_list`, `rollup` |
+| 10 | `marketing_roi` | `(win_start date, win_end date)` | `by_source`, `coverage` |
+
+Only 04's `rep`, 03/08/10's window, and 06/07's `month_start` are required;
+everything else has a default.
+
+**Empty sections are `[]`, never `null`.** An empty array is a measured
+absence — "nothing signed yesterday" — and must render as such. It is not a
+failure and not a zero to be hidden.
+
+`cohort_close` rows are ordered by an internal `days` key which is **stripped
+from the output**; consume `label` and do not re-sort by it alphabetically.
+
+The row shapes below are unchanged by 160 — the SQL inside each function is
+the report file's SQL reshaped into jsonb, not re-derived.
+
+### 4.2 — Row shapes per section
+
+Params in this table are the psql `-v` names (`backend/reports/*.sql`, still
+canonical for hand runs); the RPC equivalents are §4.1.
+
+| # | report | params | sections and their columns |
 |---|---|---|---|
 | 01 | Morning Card | *none* | `blocks[block, who, source, units, dollars]` (blocks: `signed_yesterday`, `appts_today`, `unassigned`, `rung_open`) · provenance |
 | 02 | Today's Board | `brand` | `[rep, rep_inside_sales, brand_name, appts_today, elapsed, upcoming, booked_today, next_appt_at]` · provenance |
@@ -285,8 +424,8 @@ every open row, by design (a nudge list). The answer must not narrate them as
 ### Router output (the only three shapes)
 
 ```json
-{"route":"report","report_id":"04","params":{...},"confidence":0.0-1.0}
-{"route":"view_query","sql":"...","why_no_report":"..."}
+{"route":"report","rpc":"rpt_report_rep_scorecard","params":{...},"confidence":0.0-1.0}
+{"route":"view_query","view":"rpt_rep_day","query":"...","why_no_report":"..."}
 {"route":"refuse","reason_code":"...","message":"..."}
 ```
 
@@ -366,9 +505,9 @@ See §11 conflict 3 on report 03.
 {
   "answer": "prose, ≤4 sentences, every figure adjacent to its cut label",
   "cut": "union" | "booked-only" | "n/a",
-  "route": {"kind":"report","id":"04","params":{…}}
-         | {"kind":"view_query","sql":"…"},
-  "blocks": [ {"title":"…","columns":[…],"rows":[[…]]} ],
+  "route": {"kind":"report","rpc":"rpt_report_rep_scorecard","params":{…}}
+         | {"kind":"view_query","view":"rpt_rep_day","query":"…"},
+  "blocks": [ {"title":"…","section":"production","rows":[…]} ],
   "companion_lines": ["$67,267 unattributed · 3 jobs"],
   "truncated": false,
   "provenance": "…verbatim…"
@@ -386,6 +525,20 @@ Hard rules on the envelope:
 - `provenance` is a string, not a struct, and is rendered **verbatim** — see
   §7.
 - `truncated: true` must appear in `answer`, not only in the envelope.
+
+### Mapping the RPC response onto the envelope
+
+`blocks` comes from `sections` — one block per key, in the order §4.1 lists
+them (jsonb object key order is not guaranteed; do not iterate and hope).
+`provenance` is copied across **unmodified**. `report` is the RPC's own label
+and is what the block heading reads.
+
+The envelope adds only the prose wrapper, the cut label, and the companion
+lines. **Nothing in `sections` is recomputed, re-summed, re-sorted or
+re-rounded on the way through.** A total that appears in the envelope but not
+in the RPC response is an invented number no matter how correct its
+arithmetic — that is the count-once-per-surface rule at the transport
+boundary.
 
 ---
 
@@ -484,7 +637,8 @@ Refuse with a named `reason_code`, one sentence, and the nearest thing that
 | `no_live_source` | spend, ROI, gross margin, CC job cost, appointment outcomes. **Absent reads absent. Never estimated.** |
 | `year_over_year` | the rhythm law forbids YoY series; offer the four trailing 30-day buckets |
 | `ambiguous_rep` / `ambiguous_window` | ask; do not pick |
-| `gate_violation` | Path B SQL failed §2.2 |
+| `gate_violation` | Path B query failed the §2.2 / §2.4 gate |
+| `no_route` | no canned report fits **and** Path B's transport cannot express the question (§2.4). Say which half failed — a shape PostgREST can't reach is a different fact from a question the layer has no data for. |
 
 Two standing behaviours from the field law, not user-triggered:
 
@@ -511,11 +665,12 @@ union total and a rung total into a third number.
   more reports ▾
 ```
 
-**The three chips bypass the LLM entirely.** A chip is a direct, deterministic
-report invocation — no router, no model, no chance of invention. The model
-only ever sees free-typed questions. This is the single highest-value
-property of the layout, and it is why the three most-used reports are chips
-rather than suggested prompts.
+**The three chips bypass the LLM entirely.** A chip is a direct RPC call —
+`POST /rest/v1/rpc/rpt_report_<slug>` with the signed-in user's JWT. No
+router, no model, no chance of invention. The model only ever sees free-typed
+questions. This is the single highest-value property of the layout, and since
+160 it is also the simplest thing to build: a chip is one fetch and a render,
+with no server of our own in the path.
 
 | chip | report | on tap |
 |---|---|---|
@@ -561,10 +716,12 @@ a later session without Kevin.
 |---|---|---|
 | — | Base-table rule was overbroad. Restriction binds **model-authored SQL only**; canned reports are pre-vetted, parameterizable, never model-edited. | ✅ written into §1 as settled law |
 | — | The GRANT approach is impossible under `security_invoker`. | ✅ §2, boundary is the statement gate + end-user JWT |
-| 1 | **Weekly Scorecard chip: UNION.** Field law outranks a per-report comment. Report 03's header comment must be fixed so it no longer contradicts the house default. | ✅ contract (§4, §10) · ⚠️ SQL comment fix **not applied** — §13 patch A |
-| 2 | **CC 1537 in the QB brand join: exclusion correct, silence is not.** Surface excluded 1537 rows as a named provenance line with count and dollars. | ✅ contract (§7) · ⚠️ SQL **not applied** — §13 patches B, C |
-| 3 | **Rollup-grain gap must resolve, not fall through.** House/Gio is read regularly and must not depend on router improvisation. | ✅ contract (§4, §5, §10) · ⚠️ SQL **not applied** — §13 patch D |
+| 1 | **Weekly Scorecard chip: UNION.** Field law outranks a per-report comment. Report 03's header comment must be fixed so it no longer contradicts the house default. | ✅ contract (§4, §10); **160 makes union the RPC's own default** · ⚠️ comment fix **not applied** — §13 patch A |
+| 2 | **CC 1537 in the QB brand join: exclusion correct, silence is not.** Surface excluded 1537 rows as a named provenance line with count and dollars. | ✅ contract (§7) · ⚠️ SQL **not applied**, both halves — §13 patches B, C, F1 |
+| 3 | **Rollup-grain gap must resolve, not fall through.** House/Gio is read regularly and must not depend on router improvisation. | ✅ contract (§4, §5, §10) · ⚠️ SQL **not applied**, both halves — §13 patches D, F2 |
 | 4 | **`billdu_accepted` rider stays a rider.** Do not resolve by deletion. | ✅ unchanged, §8 Rider 1 |
+| — | **C7 resolved:** the ten reports are SECURITY INVOKER RPCs over PostgREST (migration 160, live, PR #193). | ✅ transport in §2.4, §4.1 |
+| 5 | **Path B is PostgREST reads against the six views. No SQL-executing RPC, and none is to be built.** | ✅ operative gate §2.2a; §2.2 superseded, retained for rationale |
 
 ### Still-open observations (not ruled, not blocking)
 
@@ -584,12 +741,13 @@ a later session without Kevin.
 
 1. **Answer verbosity** — the envelope caps prose at 4 sentences. Confirm that
    is the right ceiling for the phone-width render.
-2. **Path B visibility** — does a novel-question answer show the SQL it ran?
+2. **Path B visibility** — does a novel-question answer show the query it ran?
    Recommendation: yes, collapsed. It is the only way a wrong answer is
-   diagnosable, and it makes the rpt_*-only guarantee visible rather than
+   diagnosable, and it makes the `rpt_*`-only guarantee visible rather than
    claimed.
 
-*(The Weekly Scorecard default cut was decision 1 and is now ruling 1: union.)*
+*(The Weekly Scorecard default cut was decision 1 and is now ruling 1: union
+— and since 160 it is also the RPC's own default.)*
 
 ---
 
@@ -601,14 +759,40 @@ access to `kdelaney05-bit/trureview-mobile` was denied by the environment
 patches are written out below so they can be applied mechanically, per
 Kevin's "log it if you can't fix it in this pass."
 
-Until they are applied: **the contract and the report files disagree**, and
-the report files are what actually run. Specifically — report 03 still prints
-a header comment claiming booked-only, reports 03/06 still drop CC 1537 from
-the QB join silently, and report 04 has no `grain` param, so the Rep Scorecard
-chip's House / Gio entry has nothing to call.
+Verified against `0f63999` (post-160): `backend/reports/*.sql` is **unchanged**
+since `76d5a0a`, so none of patches A–E has landed.
 
-Same pattern as REPORTING.md's own "Required frontend changes at cutover"
-section: exact locations, spec only.
+Until they are applied: **the contract and the running code disagree.** Report
+03 still prints a header comment claiming booked-only, reports 03/06 still
+drop CC 1537 from the QB join silently, and `rpt_report_rep_scorecard` has no
+`grain`, so the Rep Scorecard chip's House / Gio entry has nothing to call.
+
+### ⚠️ Since 160, every report patch is DOUBLE-SITED
+
+The report SQL now lives in two places:
+
+1. `backend/reports/<nn>-<slug>.sql` — canonical for hand runs
+2. the RPC body in `backend/migrations/160_reporting_rpcs.sql` — what the
+   product actually calls
+
+`backend/reports/README.md` states the rule directly: *"edit a report in BOTH
+places or the two surfaces drift."* A patch applied to only one half is worse
+than no patch, because the two surfaces then disagree while both claim the
+same provenance footer — the precise failure this whole layer was built to
+end.
+
+**The RPC half needs its own migration — 161, numbered from the live head, not
+from this document** (`schema_migrations` is unreliable; object presence is
+the only trustworthy check, and there have been five collisions). Do not edit
+160 in place: it is applied live and registered.
+
+Translation notes when porting a patch from a report file to an RPC body:
+
+- params are plain identifiers (`win_start`), not psql vars (`:'win_start'`)
+- provenance is an expression inside `jsonb_build_object`, so a CTE value is
+  reached with a scalar subquery — `(select n::text from x1537)`
+- 160 deliberately fixes the doubled `%%` in 07/08/09 provenance (a psql
+  escaping artifact) to a single `%`. Keep that; do not "restore" it.
 
 ### Patch A — ruling 1 · `backend/reports/03-weekly-scorecard.sql`, lines 3–5
 
@@ -744,6 +928,62 @@ the exact distortion addendum ruling 4 asked to expose.
    does not carry.
 3. Note that the model may parameterise these reports and never edit them.
 
+### Patch F — the RPC half, as migration 161
+
+Patches B, C and D again, against the function bodies. Number from the live
+head.
+
+**F1 · `rpt_report_weekly_scorecard` and `rpt_report_month_close`** (ruling 2).
+Add the `x1537` CTE to each body and reach it from the provenance expression
+with scalar subqueries:
+
+```sql
+x1537 as (
+  select count(*) n, coalesce(sum(total_amt),0) amt
+  from qb_invoices
+  where txn_date between win_start and win_end      -- month_close: month_start .. month end
+    and not reporting_excluded
+    and cc_company_id = '1537'
+)
+```
+
+```sql
+    || ' · QB CC 1537 (legacy Liberty Roofing) is NOT in the brand join: '
+    || (select n::text from x1537) || ' rows, '
+    || (select to_char(amt,'FM$999,999,990.00') from x1537)
+    || ' excluded — counted out loud, never silently dropped'
+```
+
+**F2 · `rpt_report_rep_scorecard`** (ruling 3) — add `grain text default 'rep'`
+and apply the §13-D grain switch at all four filter sites inside the body.
+
+> ⚠️ **`CREATE OR REPLACE` will NOT do this.** A different argument list is a
+> different function in PostgreSQL, so replacing with a 5-arg version
+> **leaves the 4-arg one in place** — two overloads, and PostgREST resolves
+> RPC overloads by the key set in the request body. A call omitting `grain`
+> would still reach the old function and silently return raw-rep figures
+> under a rollup heading. That is a wrong number wearing a correct
+> provenance footer.
+>
+> Drop first, then create, then **re-grant** — `DROP FUNCTION` takes the
+> grants with it:
+>
+> ```sql
+> drop function if exists rpt_report_rep_scorecard(uuid,date,date,boolean);
+> -- create or replace function rpt_report_rep_scorecard(
+> --   rep uuid, win_start date, win_end date,
+> --   include_rung boolean default true, grain text default 'rep') …
+> revoke all on function rpt_report_rep_scorecard(uuid,date,date,boolean,text)
+>   from public, anon;
+> grant execute on function rpt_report_rep_scorecard(uuid,date,date,boolean,text)
+>   to authenticated, service_role;
+> ```
+>
+> Confirm afterwards that exactly one `rpt_report_rep_scorecard` remains:
+> `select oid::regprocedure from pg_proc where proname = 'rpt_report_rep_scorecard';`
+
+Patch A (a comment) and patch E (a README) have no RPC half.
+
 ### Verification once applied
 
 - `psql -v grain="'rollup'" -v rep="'940ad537-cfbd-4129-a335-9d8a9bc7a013'"` —
@@ -753,3 +993,9 @@ the exact distortion addendum ruling 4 asked to expose.
 - Any rep outside the rollup set must return **byte-identical** figures under
   both grains. If one does not, the patch is wrong.
 - Reports 03 and 06 print the 1537 line whether or not any rows match.
+- **Both halves agree.** For each patched report, the psql run and the RPC
+  call must produce the same figures and the same provenance string. The
+  Phase 4 anchor is the check that matters:
+  `rpt_report_rep_scorecard(Eric, '2026-08-01', '2026-08-14', true)` must
+  still read $180,165 · 22 after the `grain` change, on both halves.
+- Anon still 401s on every slug, including the re-created 5-arg one.
