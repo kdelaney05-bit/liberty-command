@@ -4,13 +4,16 @@ The contract the ask-anything box consumes. Spec only — no frontend in this
 pass, per the Phase 1 addendum's stop point.
 
 Source of truth read for this contract: `kdelaney05-bit/trureview-mobile` at
-`76d5a0a` — `REPORTING.md`, `docs/NUMBERS-TRUTH.md`,
-`backend/migrations/159_reporting_layer_views.sql`, `backend/reports/*.sql`.
+`0f63999` — `REPORTING.md`, `docs/NUMBERS-TRUTH.md`,
+`backend/migrations/159_reporting_layer_views.sql`,
+`backend/migrations/160_reporting_rpcs.sql`, `backend/reports/*.sql`.
 The field law is quoted from those files, never re-derived here.
 
-**Status:** accepted by Kevin, 15 Aug, with four rulings — all folded in; see
-§11. Transport settled by **migration 160** (applied live, PR #193): the ten
-reports are SECURITY INVOKER RPCs over PostgREST — §2.4 and §4.
+**Status:** accepted by Kevin, 15 Aug, with five rulings — all folded in; see
+§11. Transport settled both ways: **Path A** is the ten SECURITY INVOKER RPCs
+from migration 160 (applied live, PR #193) — §2.4, §4.1. **Path B** is
+PostgREST reads against the six views, with **no SQL-executing RPC** and none
+to be built (ruling 5) — §2.2a.
 
 ⚠️ **Rulings 1–3 each have a SQL half that is specified but NOT APPLIED
 (§13)** — write access to `trureview-mobile` was denied this session. Since
@@ -141,11 +144,17 @@ comes back. The owner passes `is_manager()`; a plain rep sees own-only. A
 service role here would bypass RLS and pre-break org isolation the day 153
 lands.
 
-**2.2 — Statement gate (the real rpt_*-only control).** *Applies if Path B
-executes SQL. See §2.4 — since 160 the recommended Path B transport is
-PostgREST reads, which makes most of this gate unreachable-by-construction
-rather than enforced-by-inspection. Kept in force pending decision §12.1.*
-Path B SQL is parsed before execution. Reject unless *all* hold:
+**2.2 — Statement gate — ⚠️ SUPERSEDED, RETAINED FOR RATIONALE ONLY.**
+
+> **RULING (Kevin, 15 Aug):** Path B is **PostgREST reads against the six
+> views. There is no SQL-executing RPC, and none is to be built.** The
+> operative gate is §2.2a. Everything in the indented block below describes a
+> transport this product does not have; it is kept because it records *why*
+> the boundary sits where it does, and because anyone who later proposes a
+> `rpt_query(sql text)` RPC needs to see the full weight of what that would
+> re-import. Do not implement it. Do not treat it as a fallback.
+
+Path B SQL would have been parsed before execution. Reject unless *all* hold:
 
 - exactly one statement; no `;` outside string literals
 - the statement begins with `SELECT` or `WITH`
@@ -163,6 +172,31 @@ Path B SQL is parsed before execution. Reject unless *all* hold:
 - no `INTO`, no DDL/DML keyword anywhere at statement level
 
 Parse it, don't regex it. A regex gate on SQL is a suggestion.
+
+**2.2a — The PostgREST read gate (OPERATIVE).** Path B issues one PostgREST
+read and nothing else. The request is validated before it is sent:
+
+- **`GET` only.** `POST` to a table path is an insert in PostgREST; `PATCH`
+  and `DELETE` likewise. Method allowlist, not method denylist.
+- **Path is exactly one of the six views** — `/rest/v1/rpt_signings`,
+  `rpt_appointments`, `rpt_rep_day`, `rpt_brand_day`, `rpt_unassigned`,
+  `rpt_reps`. The relation is now a URL segment, so this is a string
+  comparison rather than something recovered from a parser.
+- **No `/rpc/` path on Path B.** The ten report slugs are Path A's, reached
+  by the router, never assembled by the model.
+- ⚠️ **No embedding.** This is the one way a PostgREST read can still reach a
+  base table: `select=*,jobs(*)` traverses a detected relationship and
+  returns base-table columns through a view path that passed the allowlist.
+  **Reject any `(` in `select`**, and allowlist `select` items against the
+  column lists in §3. This is the single check that keeps the boundary real —
+  the path allowlist alone does not.
+- **No `Prefer:` header**, no `on_conflict`, no `columns` — all write-side.
+- `Range` / `limit` capped at 5000 rows, with truncation surfaced (§6).
+
+Everything else §2.2 worried about — a second statement, DDL, a
+`SECURITY DEFINER` call, `pg_read_file` — is unreachable by construction:
+the REST grammar cannot express it. That is the whole reason this ruling is
+an improvement and not merely a simplification.
 
 **2.3 — Execution envelope.** `BEGIN; SET TRANSACTION READ ONLY;`
 `statement_timeout = 5s`, `LIMIT 5000` injected if absent, result truncation
@@ -206,7 +240,7 @@ nothing to gate unless a SQL-executing RPC is built — and building one would
 reintroduce the exact risk §2 exists to prevent, on a surface that already
 passed review.
 
-**Recommendation: Path B is PostgREST reads against the six views**, e.g.
+**RULED (Kevin, 15 Aug): Path B is PostgREST reads against the six views**, e.g.
 `GET /rest/v1/rpt_rep_day?select=…&day=gte.…`. This is strictly better than
 the SQL parser it replaces:
 
@@ -225,9 +259,9 @@ must surface as `no_route` (§9) rather than being quietly escalated to SQL.
 **That is the correct trade.** An unanswerable question is a known gap; an
 arbitrary-SQL RPC is an unknown one.
 
-If Kevin wants full SQL on Path B instead, §2.2 stands as written and needs a
-`rpt_query(sql text)` RPC — which should be reviewed as its own workstream,
-not folded into this contract. **Open decision, §12.**
+The alternative — a `rpt_query(sql text)` RPC keeping §2.2 in force — was
+**declined**. It is not a fallback for a question Path B cannot express; those
+refuse as `no_route` (§9). See §2.2's superseded note.
 
 ---
 
@@ -684,7 +718,8 @@ a later session without Kevin.
 | 2 | **CC 1537 in the QB brand join: exclusion correct, silence is not.** Surface excluded 1537 rows as a named provenance line with count and dollars. | ✅ contract (§7) · ⚠️ SQL **not applied**, both halves — §13 patches B, C, F1 |
 | 3 | **Rollup-grain gap must resolve, not fall through.** House/Gio is read regularly and must not depend on router improvisation. | ✅ contract (§4, §5, §10) · ⚠️ SQL **not applied**, both halves — §13 patches D, F2 |
 | 4 | **`billdu_accepted` rider stays a rider.** Do not resolve by deletion. | ✅ unchanged, §8 Rider 1 |
-| — | **C7 resolved:** the ten reports are SECURITY INVOKER RPCs over PostgREST (migration 160, live, PR #193). | ✅ transport in §2.4, §4.1; Path B transport now open — §12.1 |
+| — | **C7 resolved:** the ten reports are SECURITY INVOKER RPCs over PostgREST (migration 160, live, PR #193). | ✅ transport in §2.4, §4.1 |
+| 5 | **Path B is PostgREST reads against the six views. No SQL-executing RPC, and none is to be built.** | ✅ operative gate §2.2a; §2.2 superseded, retained for rationale |
 
 ### Still-open observations (not ruled, not blocking)
 
@@ -702,16 +737,9 @@ a later session without Kevin.
 
 ## 12. Open decisions before build
 
-1. **Path B transport** (new, raised by 160 — §2.4). Recommendation:
-   PostgREST reads against the six views, path-allowlisted. It makes the
-   `rpt_*`-only guarantee structural instead of parsed, at the cost of
-   novel questions needing joins PostgREST can't express, which then refuse
-   as `no_route`. The alternative — a `rpt_query(sql text)` RPC — keeps §2.2
-   as written but re-opens arbitrary SQL and should be its own reviewed
-   workstream, not a line in this contract.
-2. **Answer verbosity** — the envelope caps prose at 4 sentences. Confirm that
+1. **Answer verbosity** — the envelope caps prose at 4 sentences. Confirm that
    is the right ceiling for the phone-width render.
-3. **Path B visibility** — does a novel-question answer show the query it ran?
+2. **Path B visibility** — does a novel-question answer show the query it ran?
    Recommendation: yes, collapsed. It is the only way a wrong answer is
    diagnosable, and it makes the `rpt_*`-only guarantee visible rather than
    claimed.
