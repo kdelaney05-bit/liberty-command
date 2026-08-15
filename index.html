@@ -201,12 +201,21 @@
   .ct-chip.cold { border-color: rgba(217,106,94,.4);   background: rgba(217,106,94,.06); }   .ct-chip.cold .v { color: var(--red); }
   .ct-chip.none .v { color: var(--text-dim); font-weight: 400; }
   .ct-cell.hot b { color: var(--green); } .ct-cell.warm b { color: var(--gold); } .ct-cell.cold b { color: var(--red); }
-  /* Attention board — compact on purpose: it flags, the cards below explain. */
-  .attn .stat-grid { gap: 6px; }
-  .attn .stat-tile { padding: 8px 10px; border-radius: 8px; }
-  .attn .stat-tile .lbl { font-size: 8px; margin-bottom: 3px; }
-  .attn .stat-tile .val { font-size: 15px; }
-  .attn .stat-tile .sub { font-size: 9px; margin-top: 3px; }
+  /* The attention board's stat-tile overrides USED TO LIVE HERE, under the
+     comment "compact on purpose: it flags, the cards below explain" — a 28 Jul
+     ruling (387e5fb) that shrank the tiles to 15px. Both the tiles and the
+     ruling are gone: the 11 Aug rebuild replaced the board's stat grid with the
+     folded intel rows below, and the board then moved to the top of the page as
+     the headline. `cardAttention()` now emits nothing but `.card-title` and
+     `.ia` rows, so those five selectors matched no element on any render.
+
+     They are deleted rather than left lying around because a dead rule that
+     says "compact on purpose" reads as a live instruction: the next session to
+     ask why ATTENTION looks small finds a shrink here, "fixes" it, and changes
+     nothing — or worse, re-adds a real one. THE BOARD'S TYPE SCALE IS SET IN
+     ONE PLACE ONLY, the `.attn.lead` block below (14px rows, 15px from 900px
+     up, against 12px `.card-sub` prose in the surrounding bands). That block is
+     the lever; this was a fossil. */
   .attn .intel-alert { padding: 6px 10px; font-size: 11px; margin-top: 6px; line-height: 1.4; }
   .attn .intel-alert .tag { font-size: 8px; padding-top: 2px; }
   /* ── The folded intel row (Kevin, 11 Aug: "shorten nuggets… small teaser
@@ -4975,7 +4984,7 @@ addEventListener('resize', () => {
    server for hours while Kevin looked at yesterday's build and reported the bug
    as unfixed. That happened. The page now checks version.json on every load and
    reloads itself once if the deployed build is newer than the one running. */
-const BUILD = '2026-08-15T22:25Z-effort-room-preview-shelf';
+const BUILD = '2026-08-15T22:40Z-attention-fossil-css';
 const SB_URL = 'https://lzegjjbkfuecrhdvlvay.supabase.co';
 /* The one page that can finish a password reset. Hard-coded rather than derived,
    because every derivation of it so far has been a source of bugs: a bare origin
