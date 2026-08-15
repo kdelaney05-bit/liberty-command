@@ -255,26 +255,89 @@
   .attn.lead .nofires { font-size: 14.5px; }
   @media (min-width: 900px) { .attn.lead .ia-row { font-size: 15px; } }
   /* ── THE EFFORT ROOM ────────────────────────────────────────────────────────
-     One drawer, shut by default, holding the working instruments rather than
-     the reading ones. Nothing inside it is deleted or redrawn — each card is
-     exactly the card its own function builds. It loses only its box, because a
-     stack of bordered cards inside a bordered card reads as clutter; the room
-     is the card, and the instruments are its sections. */
+     The room holds the working instruments rather than the reading ones, and
+     it still folds — but it no longer HIDES. A bare drawer header was a name
+     with nothing behind it: to know the room was worth opening you had to
+     already know what was in it, which is the one thing a console cannot
+     assume. So the fold now opens onto a PREVIEW SHELF that is always drawn —
+     one tile per instrument, each tile a miniature of that instrument drawn
+     from the same feed the full card reads.
+
+     Two ways in, and they are mutually exclusive by construction (see
+     ROOM_VIEW): a tile opens its own instrument alone, the shelf control opens
+     every instrument in order. The body is built from exactly one of those
+     branches, so opening one and then expanding all cannot render anything
+     twice. Each card inside is exactly the card its own function builds — same
+     numbers, same source badges, same notes — it loses only its box, because a
+     stack of bordered cards inside a bordered card reads as clutter. */
   .room { background: var(--bg-card); border: 1px solid var(--line); border-radius: 14px; }
-  .room-head { display: flex; align-items: center; gap: 12px; padding: 14px 16px; cursor: pointer; }
-  .room-head .card-title { margin: 0; min-width: 0; }
-  .room-sum { margin-left: auto; font-family: 'JetBrains Mono', monospace; font-size: 11px;
-    color: var(--text-dim); text-align: right; flex-shrink: 0; }
-  .room-chev { color: var(--text-dim); font-size: 15px; line-height: 1; flex-shrink: 0;
-    display: inline-block; transition: transform .15s; }
-  .room.open .room-chev { transform: rotate(90deg); }
-  .room.open .room-sum { display: none; }
-  .room-body { display: none; padding: 0 16px 16px; }
-  .room.open .room-body { display: block; }
+  .shelf-head { display: flex; align-items: flex-end; gap: 14px; padding: 16px 16px 0; }
+  .shelf-titles { min-width: 0; flex: 1 1 auto; }
+  .shelf-head .card-title { margin: 0; }
+  .shelf-head .card-sub { margin: 5px 0 0; max-width: 68ch; }
+  .shelf-all { flex-shrink: 0; background: var(--bg-card-hi); color: var(--text);
+    border: 1px solid var(--line); border-radius: 100px; padding: 7px 14px; cursor: pointer;
+    font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 0.12em;
+    text-transform: uppercase; white-space: nowrap; }
+  @media (hover: hover) { .shelf-all:hover { border-color: var(--accent); color: var(--accent-soft); } }
+  /* Seven tiles land in one row on a desktop and wrap to two columns on a
+     phone. Wrap rather than a horizontal scroller on purpose: a scroller would
+     put five of the seven back out of sight, which is the bug being fixed. */
+  .shelf-grid { display: grid; gap: 10px; padding: 14px 16px 16px;
+    grid-template-columns: repeat(auto-fit, minmax(164px, 1fr)); }
+  .ptile { display: flex; flex-direction: column; width: 100%; min-height: 108px;
+    background: var(--bg-card-hi); border: 1px solid var(--line); border-radius: 12px;
+    padding: 11px 12px 12px; cursor: pointer; color: var(--text); font: inherit;
+    text-align: left; transition: border-color .15s; }
+  .ptile.on { border-color: var(--accent); }
+  @media (hover: hover) { .ptile:hover { border-color: var(--accent-soft); } }
+  .pt-h { font-family: 'JetBrains Mono', monospace; font-size: 8.5px; letter-spacing: 0.13em;
+    text-transform: uppercase; color: var(--text-dim); line-height: 1.4; }
+  .ptile.on .pt-h { color: var(--accent-soft); }
+  /* The miniature starts directly under the label rather than being pushed to
+     the floor of the tile: grid rows stretch to the tallest tile, and bottom-
+     aligning left every headline number at a different height, which read as
+     seven unrelated boxes instead of one shelf. */
+  .pt-b { padding-top: 9px; }
+  .pt-num { font-family: 'Fraunces', serif; font-size: 26px; line-height: 1; letter-spacing: -0.01em; }
+  .pt-num.green { color: var(--green-soft); } .pt-num.gold { color: var(--gold); }
+  .pt-num.red { color: var(--red); } .pt-num.blue { color: var(--blue); }
+  .pt-num.accent { color: var(--accent-soft); }
+  .pt-cap { font-family: 'JetBrains Mono', monospace; font-size: 9px; color: var(--text-dim);
+    margin-top: 6px; line-height: 1.45; }
+  /* An instrument with nothing behind it says so in words. It must never draw
+     a flat bar or a zeroed shape: a shape with no data in it reads as a
+     working instrument reporting nothing, which is a different claim and a
+     false one. */
+  .pt-empty { font-size: 11.5px; line-height: 1.45; color: var(--text-dim); }
+  .pt-seg { display: flex; height: 7px; border-radius: 100px; overflow: hidden;
+    background: rgba(255,255,255,0.05); margin-top: 7px; }
+  .pt-seg i { display: block; height: 100%; }
+  .pt-meters { display: grid; gap: 5px; margin-top: 7px; }
+  .pt-mrow { display: grid; grid-template-columns: 34px 1fr; gap: 6px; align-items: center; }
+  .pt-mnm { font-family: 'JetBrains Mono', monospace; font-size: 8.5px; color: var(--text-dim);
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .pt-mbar { height: 5px; background: rgba(255,255,255,0.05); border-radius: 100px; overflow: hidden; }
+  .pt-mbar i { display: block; height: 100%; border-radius: 100px; }
+  /* The body exists only when something is open — there is no hidden copy of
+     an instrument sitting in the DOM behind a display:none. */
+  .room-body { padding: 0 16px 16px; }
+  .room-open-head { display: flex; align-items: center; gap: 12px; padding: 12px 0 2px;
+    border-top: 1px solid var(--line); }
+  .room-open-head .ttl { font-family: 'JetBrains Mono', monospace; font-size: 10px;
+    letter-spacing: 0.16em; text-transform: uppercase; color: var(--accent-soft); min-width: 0; }
+  .room-open-head .shelf-all { margin-left: auto; }
   .room-body > .card { border: none; background: transparent; border-radius: 0;
     padding: 18px 0 0; margin: 0; border-top: 1px solid var(--line); }
   .room-body > .prodband { margin: 16px 0 0; }
-  @media (hover: hover) { .room-head:hover .room-chev, .room-head:hover .card-title { color: var(--text); } }
+  @media (max-width: 700px) {
+    .shelf-head { flex-direction: column; align-items: stretch; gap: 12px; }
+    .shelf-all { width: 100%; padding: 10px 14px; }
+    .shelf-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; padding: 12px 12px 14px; }
+    .ptile { min-height: 100px; padding: 10px; }
+    .pt-num { font-size: 22px; }
+    .room-open-head .shelf-all { width: auto; }
+  }
   /* Market intelligence band */
   .intel-alert { display: flex; gap: 10px; align-items: flex-start; padding: 9px 12px; margin-top: 8px;
     border-left: 2px solid var(--gold); background: rgba(212,177,90,.07); border-radius: 0 8px 8px 0;
@@ -2798,70 +2861,271 @@ function cardQuadrant(){
 }
 
 /* ── THE EFFORT ROOM ─────────────────────────────────────────────────────────
-   Seven instruments, one drawer, shut by default.
+   Seven instruments behind a PREVIEW SHELF that is always drawn.
 
    None of this stopped being true and none of it is deleted — it stopped being
-   the first thing. The console's reading order is now what needs him, the money,
+   the first thing. The console's reading order is what needs him, the money,
    who sold it, what marketing produced, and where effort and results disagree.
    The working — who dialled, who finished the play, who captured the number, how
    fast the first touch went out — is what he opens when one of those six bands
    raises a question, so it lives behind one tap instead of under six scrolls.
 
-   The room keeps carrying its number while shut, the same rule every fold on
-   this page keeps: a fold that drops its figure is not a fold, it is a thing to
-   remember to go and check. Each card inside is exactly the card its own
-   function builds — same numbers, same source badges, same notes — it loses only
-   its box, because bordered cards inside a bordered card read as clutter.
+   What changed: the fold used to be a bare header carrying one summary line, and
+   that is a name with nothing behind it. To know the room was worth opening you
+   had to already know what was inside — which is exactly what a console cannot
+   assume, and it is the most valuable data on the page. So the fold now opens
+   onto a shelf of miniatures, one per instrument, each drawn from the same feed
+   its full card reads. The room still folds; it no longer hides.
 
-   Open/shut is remembered per device, like the other folds. Default shut is the
-   ruling, not a preference: the drawer is the point. ────────────────────────── */
+   Two doors, mutually exclusive by construction — see ROOM_VIEW. A tile opens
+   its own instrument alone; the shelf control opens all seven in order. Both
+   reverse. The body is built from exactly one branch, so opening one and then
+   expanding all cannot render an instrument twice.
+
+   Each card inside is exactly the card its own function builds — same numbers,
+   same source badges, same notes — it loses only its box, because bordered cards
+   inside a bordered card read as clutter. What is open is remembered per device,
+   like the other folds; the shelf itself is never folded away. ─────────────── */
 const ROOM_STORE = 'lcc.room';
-let ROOM_OPEN = (() => { try { return localStorage.getItem(ROOM_STORE) === '1'; } catch (e) { return false; } })();
+/* ONE value, never two flags. The room is in exactly one of three states —
+   nothing open, one instrument open (solo), or every instrument open (all) —
+   and the body is built from exactly one branch of it. That is what makes
+   "open a tile, then expand all" incapable of rendering an instrument twice:
+   there is no second place for an open card to come from. */
+let ROOM_VIEW = (() => {
+  try {
+    const raw = localStorage.getItem(ROOM_STORE);
+    if (raw === '1') return { mode:'all' };   // the pre-shelf drawer's stored format
+    const j = JSON.parse(raw || 'null');
+    if (j && j.mode === 'all') return { mode:'all' };
+    if (j && j.mode === 'solo' && j.key) return { mode:'solo', key:j.key };
+  } catch (e) {}
+  return { mode:'none' };
+})();
+function roomSave(){ try { localStorage.setItem(ROOM_STORE, JSON.stringify(ROOM_VIEW)); } catch (e) {} }
 
-function toggleRoom(){
+/* The room sits mid-page, so it redraws its own subtree rather than calling
+   render() — a full redraw would throw the reader back up the page. */
+function roomRedraw(){
   const el = document.getElementById('effort-room');
-  if (!el) return;
-  ROOM_OPEN = !el.classList.contains('open');
-  el.classList.toggle('open', ROOM_OPEN);
-  try { localStorage.setItem(ROOM_STORE, ROOM_OPEN ? '1' : '0'); } catch (e) {}
-  /* A canvas measured while its container was display:none has no size to draw
-     into. Anything the room grows later redraws the moment it can be measured. */
-  if (ROOM_OPEN && el.querySelector('canvas')) drawCharts();
+  if (!el) { render(); return; }
+  const y = window.scrollY;
+  el.outerHTML = effortRoom();
+  window.scrollTo({ top: y });
+  /* No instrument in the room draws to a canvas today. The guard stays because
+     one that grows a chart later must be measured after it is visible: a canvas
+     sized while its container was hidden has no dimensions to draw into. */
+  if (document.querySelector('#effort-room canvas')) drawCharts();
+}
+function roomSolo(key){
+  ROOM_VIEW = (ROOM_VIEW.mode === 'solo' && ROOM_VIEW.key === key) ? { mode:'none' } : { mode:'solo', key };
+  roomSave(); roomRedraw();
+}
+function roomAll(){
+  ROOM_VIEW = ROOM_VIEW.mode === 'all' ? { mode:'none' } : { mode:'all' };
+  roomSave(); roomRedraw();
+}
+function roomClose(){ ROOM_VIEW = { mode:'none' }; roomSave(); roomRedraw(); }
+
+/* ── THE PREVIEW TILES ───────────────────────────────────────────────────────
+   Each tile is a MINIATURE of its instrument, not an icon and not a label: the
+   same feed the full card reads, drawn in that instrument's own shape at small
+   scale — a segmented bar for the channel mix, a red/yellow/green book for the
+   Light, stub meters for the boards that rank reps, a single headline figure
+   for the two instruments that ARE a single figure.
+
+   Three states, and the third is the one that matters. Reading (the RPC has
+   not answered yet — these load after first paint, so the shelf must say so
+   rather than imply a zero). No feed, or an honest zero: said in words. Live:
+   the shape. A tile with nothing behind it never draws a flat bar, because a
+   shape with no data in it reads as a working instrument reporting nothing —
+   a different claim, and a false one. Same law the cards keep. */
+const ptEmptyBox = s => `<div class="pt-empty">${s}</div>`;
+const ptNum = (v, cls) => `<div class="pt-num${cls ? ' ' + cls : ''}">${v}</div>`;
+const ptCap = s => `<div class="pt-cap">${s}</div>`;
+const ptFirst = n => esc(String(n || '').split(' ')[0]);
+/* A stub meter set — the shape every rep-ranking board in this room has. */
+const ptMeters = rows => `<div class="pt-meters">${rows.map(r =>
+  `<div class="pt-mrow"><div class="pt-mnm">${r.nm}</div>
+    <div class="pt-mbar"><i style="width:${r.p}%;background:${r.c}"></i></div></div>`).join('')}</div>`;
+
+function ptChannelMix(){
+  if (!EFF_INTEL) return ptEmptyBox('Reading…');
+  const mix = EFF_INTEL.mix;
+  if (!mix) return ptEmptyBox('No feed yet');
+  const rows = mix.filter(r => +r.touches > 0);
+  const win = { day:'today', week:'this week', month:'this month' }[EFF_INTEL.win] || EFF_INTEL.win;
+  if (!rows.length) return ptEmptyBox(`No touches logged ${esc(win)} — a real zero`);
+  const C = { call:'#6cc28b', text:'#6ba8c9', email:'#d9b96a' };
+  const n = k => rows.reduce((a, r) => a + (+r[k] || 0), 0);
+  const calls = n('calls'), texts = n('texts'), emails = n('emails'), tot = Math.max(1, calls + texts + emails);
+  return ptNum(calls + texts + emails) +
+    `<div class="pt-seg">${[['call',calls],['text',texts],['email',emails]].filter(x => x[1] > 0)
+      .map(([k,v]) => `<i style="width:${100*v/tot}%;background:${C[k]}"></i>`).join('')}</div>` +
+    ptCap(`${calls} call · ${texts} text · ${emails} email`);
 }
 
-function effortRoom(){
+function ptTouchLight(){
+  if (!EFF_INTEL) return ptEmptyBox('Reading…');
+  const light = EFF_INTEL.light;
+  if (!light) return ptEmptyBox('No feed yet');
+  const rows = light.filter(r => +r.book > 0);
+  if (!rows.length) return ptEmptyBox('No seller carries a live book yet');
+  const g = rows.reduce((a,r) => a + +r.green, 0), y = rows.reduce((a,r) => a + +r.yellow, 0),
+        rd = rows.reduce((a,r) => a + +r.red, 0), b = Math.max(1, g + y + rd);
+  const pct = Math.round(100 * g / b);
+  return ptNum(pct + '%', pct >= 50 ? 'green' : pct >= 30 ? 'gold' : 'red') +
+    `<div class="pt-seg">
+      ${g ? `<i style="width:${100*g/b}%;background:var(--green)"></i>` : ''}
+      ${y ? `<i style="width:${100*y/b}%;background:var(--gold)"></i>` : ''}
+      ${rd ? `<i style="width:${100*rd/b}%;background:var(--red)"></i>` : ''}
+    </div>` +
+    ptCap(`of ${g + y + rd} live at green · ${rd} red`);
+}
+
+/* The effort board reads D.effort, which is already in memory at first paint —
+   so this is the one tile that carries a real number before the RPCs land. */
+function ptEffort(){
   const E = D.effort;
-  const K = EFFWIN;
+  if (!E || !E.rows.length) return ptEmptyBox('No roster yet');
+  const K = EFFWIN, span = E.spans ? (E.spans[K] || 1) : 1;
   const label = { day:'today', week:'this week', month:'this month', year:'this year' }[K] || '';
-  const t = E ? E.rows.reduce((n, r) => n + r[K].t, 0) : 0;
-  const span = E && E.spans ? (E.spans[K] || 1) : 1;
-  const onStd = E ? E.rows.filter(r => (r.goal ?? E.defaultGoal) * span > 0
-                                    && r[K].t >= (r.goal ?? E.defaultGoal) * span).length : 0;
-  /* The shut line reads the same D.effort the board inside reads, so opening the
-     room can never contradict the row that opened it. */
-  const sum = E && E.rows.length
-    ? `${t} touch${t === 1 ? '' : 'es'} ${esc(label)} · ${onStd} of ${E.activeReps} on standard`
-    : 'awaiting logging';
-  const body = [
-    prodBand(),
-    cardChannelMix(),
-    cardTouchLight(),
-    cardEffort(),
-    cardTouchProof(),
-    cardEstimates(),
-    cardSpeed(),
-    cardConsistency(),
-  ].join('');
-  return `<div class="room${ROOM_OPEN ? ' open' : ''}" id="effort-room">
-    <div class="room-head" onclick="toggleRoom()">
-      <div class="card-title">The Effort Room</div>
-      <div class="room-sum">${sum}</div>
-      <span class="room-chev">›</span>
+  const t = E.rows.reduce((n, r) => n + r[K].t, 0);
+  if (!t) return ptEmptyBox(`Nothing logged ${esc(label)} — zeros are real, not a broken feed`);
+  const goalOf = r => (r.goal ?? E.defaultGoal) * span;
+  const onStd = E.rows.filter(r => goalOf(r) > 0 && r[K].t >= goalOf(r)).length;
+  const top = [...E.rows].sort((a,b) => b[K].t - a[K].t).filter(r => r[K].t > 0).slice(0, 3);
+  return ptNum(t) + ptMeters(top.map(r => {
+    const goal = goalOf(r), p = goal ? Math.min(100, Math.round(r[K].t / goal * 100)) : 0;
+    return { nm: ptFirst(r.name), p, c: p >= 100 ? 'var(--green)' : 'var(--blue)' };
+  })) + ptCap(`touches ${esc(label)} · ${onStd} of ${E.activeReps} on standard`);
+}
+
+/* This instrument IS one big number, so its miniature is that number. */
+function ptTouchProof(){
+  if (!EFF_INTEL) return ptEmptyBox('Reading…');
+  const close = EFF_INTEL.close;
+  if (!close) return ptEmptyBox('No feed yet');
+  const rows = close.filter(r => r.avg_touches_to_close != null);
+  const totC = rows.reduce((n,r) => n + (+r.closes_with_touches || 0), 0);
+  if (!totC) return ptEmptyBox('No close in 90 days carries touch history yet');
+  const team = rows.reduce((n,r) => n + (+r.avg_touches_to_close) * (+r.closes_with_touches || 0), 0) / totC;
+  return ptNum(team.toFixed(1), 'accent') +
+    ptCap(`avg touches to a signed deal · ${totC} close${totC === 1 ? '' : 's'} with history`);
+}
+
+/* The enforcement number leads, because that is the one Kevin works the phones
+   with — the quoted dollars ride under it. */
+function ptEstimates(){
+  if (!EFF_INTEL) return ptEmptyBox('Reading…');
+  const est = EFF_INTEL.est;
+  if (!est) return ptEmptyBox('No feed yet');
+  const label = EFF_INTEL.win === 'day' ? 'today' : EFF_INTEL.win === 'month' ? 'this month' : 'this week';
+  const rows = est.filter(r => +r.appts > 0 || +r.quoted > 0 || r.started === false);
+  if (!rows.length) return ptEmptyBox(`No appointment ran ${esc(label)}`);
+  const tM = rows.reduce((n,r) => n + +r.missing, 0), tA = rows.reduce((n,r) => n + +r.appts, 0);
+  const t$ = rows.reduce((n,r) => n + +r.dollars, 0);
+  return ptNum(tM, tM ? 'red' : 'green') +
+    ptCap(`missing of ${tA} appt${tA === 1 ? '' : 's'} ${esc(label)}<br/>${money(t$)} quoted`);
+}
+
+function ptSpeed(){
+  if (!EFF_INTEL) return ptEmptyBox('Reading…');
+  const sp = EFF_INTEL.speed;
+  if (!sp) return ptEmptyBox('No feed yet');
+  const rows = sp.filter(r => +r.appts > 0);
+  if (!rows.length) return ptEmptyBox('No first appointments in the last 30 days');
+  const touched = rows.filter(r => r.avg_hours != null);
+  const tN = touched.reduce((n,r) => n + +r.touched, 0);
+  if (!tN) return ptEmptyBox('First appointments exist, none has a logged touch yet');
+  const team = touched.reduce((n,r) => n + +r.avg_hours * +r.touched, 0) / tN;
+  const mx = Math.max(1, ...touched.map(r => +r.avg_hours));
+  const top = [...touched].sort((a,b) => +a.avg_hours - +b.avg_hours).slice(0, 3);
+  return ptNum(team.toFixed(1) + 'h', team <= 24 ? 'green' : 'gold') +
+    ptMeters(top.map(r => ({ nm: ptFirst(r.name), p: Math.max(6, Math.round(100 * +r.avg_hours / mx)),
+      c: +r.avg_hours <= 24 ? 'var(--green)' : +r.avg_hours <= 72 ? 'var(--blue)' : 'var(--gold)' }))) +
+    ptCap('appointment → first touch · shorter is faster');
+}
+
+function ptConsistency(){
+  if (!EFF_INTEL) return ptEmptyBox('Reading…');
+  const st = EFF_INTEL.streaks;
+  if (!st) return ptEmptyBox('No feed yet');
+  if (!st.some(r => +r.streak > 0 || +r.week_hits > 0)) return ptEmptyBox('No day on standard logged yet');
+  const best = [...st].sort((a,b) => +b.streak - +a.streak)[0];
+  const bs = +best.streak || 0;
+  const top = [...st].sort((a,b) => +b.week_hits - +a.week_hits || +b.streak - +a.streak).slice(0, 3);
+  const hits = st.reduce((n,r) => n + +r.week_hits, 0), days = st.reduce((n,r) => n + +r.week_days, 0);
+  /* A zero streak is not a headline — when nobody has one running, the honest
+     lead figure is how much of the week the team held its standard. */
+  return (bs ? ptNum(bs + 'd', 'gold') : ptNum(Math.round(100 * hits / Math.max(1, days)) + '%', 'blue')) +
+    ptMeters(top.map(r => {
+      const p = Math.min(100, Math.round(100 * +r.week_hits / Math.max(1, +r.week_days)));
+      return { nm: ptFirst(r.name), p, c: p >= 80 ? 'var(--green)' : p >= 40 ? 'var(--gold)' : 'var(--text-dim)' };
+    })) +
+    ptCap(bs ? `${ptFirst(best.name)}'s streak · days on standard this week`
+             : 'of days on standard this week · no streak running');
+}
+
+/* ── THE ROOM ────────────────────────────────────────────────────────────────
+   One registry drives both halves. The shelf renders `tile` and the body
+   renders `card` off the same rows in the same order, so a tile and the
+   instrument it opens can never drift apart or fall out of sequence.
+
+   prodBand() is deliberately NOT in here: it is the room's branded band, not
+   an instrument — it has no feed and no number, so there is nothing to draw a
+   miniature of. It rides at the top of the fully-expanded room, where it
+   always has. Seven instruments, seven tiles. */
+const ROOM_KIT = [
+  { key:'mix',     name:'Channel mix · who dials',       card: cardChannelMix,  tile: ptChannelMix },
+  { key:'light',   name:'The 4-Touch Light',             card: cardTouchLight,  tile: ptTouchLight },
+  { key:'board',   name:'The Effort Board',              card: cardEffort,      tile: ptEffort },
+  { key:'proof',   name:'Touches per close',             card: cardTouchProof,  tile: ptTouchProof },
+  { key:'est',     name:'Estimates on file',             card: cardEstimates,   tile: ptEstimates },
+  { key:'speed',   name:'Speed to first touch',          card: cardSpeed,       tile: ptSpeed },
+  { key:'streaks', name:'Consistency · streaks',         card: cardConsistency, tile: ptConsistency },
+];
+
+function effortRoom(){
+  const all = ROOM_VIEW.mode === 'all';
+  const solo = ROOM_VIEW.mode === 'solo' ? ROOM_KIT.find(i => i.key === ROOM_VIEW.key) : null;
+
+  const tiles = ROOM_KIT.map(i => {
+    const on = !!solo && solo.key === i.key;
+    return `<button type="button" class="ptile${on ? ' on' : ''}" onclick="roomSolo('${i.key}')"
+      aria-expanded="${on ? 'true' : 'false'}">
+      <div class="pt-h">${esc(i.name)}</div>
+      <div class="pt-b">${i.tile()}</div>
+    </button>`;
+  }).join('');
+
+  /* Exactly one branch builds the body. There is no state in which an
+     instrument can be emitted by both. */
+  let body = '';
+  if (all) {
+    body = `<div class="room-body">
+      <div class="room-open-head"><div class="ttl">All seven, full size</div>
+        <button type="button" class="shelf-all" onclick="roomClose()">Close</button></div>
+      ${prodBand()}${ROOM_KIT.map(i => i.card()).join('')}
+    </div>`;
+  } else if (solo) {
+    body = `<div class="room-body">
+      <div class="room-open-head"><div class="ttl">${esc(solo.name)}</div>
+        <button type="button" class="shelf-all" onclick="roomClose()">Close</button></div>
+      ${solo.card()}
+    </div>`;
+  }
+
+  return `<div class="room" id="effort-room">
+    <div class="shelf-head">
+      <div class="shelf-titles">
+        <div class="card-title">Why a rep's numbers look like that</div>
+        <div class="card-sub">Seven instruments behind the bands above — who dials, who finishes the plays, who captures the number, how fast the first touch goes out. This is where a rep gets diagnosed rather than ranked. Tap one to open it full size, or open them all.</div>
+      </div>
+      <button type="button" class="shelf-all" onclick="roomAll()">${all ? 'Close all' : 'Open all seven'}</button>
     </div>
-    <div class="room-body">
-      <div class="card-sub" style="margin-top:0">Channel mix, the 4-Touch Light, the effort board, touches per close, estimates on file, speed to first touch and the streaks — the working behind the six bands above. Nothing here is summarised or reduced; these are the same instruments, folded away rather than removed.</div>
-      ${body}
-    </div>
+    <div class="shelf-grid">${tiles}</div>
+    ${body}
   </div>`;
 }
 
@@ -4260,8 +4524,11 @@ function render(){
                                    open because it is the one card that reads
                                    both halves of the page at once.
 
-     Then THE EFFORT ROOM: the working, folded shut. Nothing was reduced to a
-     summary and nothing was thrown away — the room holds each instrument whole.
+     Then THE EFFORT ROOM, directly under the quadrant: the working, behind a
+     preview shelf that is always visible. Nothing was reduced to a summary and
+     nothing was thrown away — the room holds each instrument whole, and the
+     shelf shows a live miniature of each one so the room advertises what it is
+     worth opening for. No other band moved in this pass.
 
      Three instruments were deleted outright in this rebuild, because a console
      that says the same thing twice teaches nobody to trust it: Touches that hit
@@ -4287,7 +4554,8 @@ function render(){
          halves of the page at once, and it is no use behind a tap. */
       cardQuadrant(),
 
-      /* …and the drawer. Shut by default, carrying its own number while shut. */
+      /* …and the room, directly under the quadrant. Its preview shelf is always
+         drawn; what is open inside it is remembered per device. */
       effortRoom(),
     ].join('') + '</div>' +
     `<div class="foot">Trust the instrument, not the retelling<br/>
@@ -4707,7 +4975,7 @@ addEventListener('resize', () => {
    server for hours while Kevin looked at yesterday's build and reported the bug
    as unfixed. That happened. The page now checks version.json on every load and
    reloads itself once if the deployed build is newer than the one running. */
-const BUILD = '2026-08-15T21:45Z-owner-console-bands';
+const BUILD = '2026-08-15T22:25Z-effort-room-preview-shelf';
 const SB_URL = 'https://lzegjjbkfuecrhdvlvay.supabase.co';
 /* The one page that can finish a password reset. Hard-coded rather than derived,
    because every derivation of it so far has been a source of bugs: a bare origin
