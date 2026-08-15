@@ -240,6 +240,41 @@
     line-height: 1.55; color: var(--text-dim); }
   .attn .ia.open .ia-body { display: block; }
   @media (hover: hover) { .attn .ia-row:hover .ia-t { color: var(--text); } }
+  /* ── ATTENTION AS THE HEADLINE ──────────────────────────────────────────────
+     The board used to flag and let the cards below explain, so it was set at
+     flag size. It is now the first instrument on the page — the headline, not
+     the footnote — and a headline has to be readable at a glance from across a
+     desk. Nothing about the board changes but its type scale: same severity
+     colours, same rows, same tap-for-the-working. */
+  .attn.lead { padding: 18px; }
+  .attn.lead .ia { margin-top: 6px; border-left-width: 3px; }
+  .attn.lead .ia-row { padding: 8px 12px; font-size: 14px; line-height: 1.4; }
+  .attn.lead .ia-row .tag { font-size: 9.5px; }
+  .attn.lead .ia .acc-chev { font-size: 14px; }
+  .attn.lead .ia-body { padding: 2px 12px 10px; font-size: 13px; line-height: 1.6; }
+  .attn.lead .nofires { font-size: 14.5px; }
+  @media (min-width: 900px) { .attn.lead .ia-row { font-size: 15px; } }
+  /* ── THE EFFORT ROOM ────────────────────────────────────────────────────────
+     One drawer, shut by default, holding the working instruments rather than
+     the reading ones. Nothing inside it is deleted or redrawn — each card is
+     exactly the card its own function builds. It loses only its box, because a
+     stack of bordered cards inside a bordered card reads as clutter; the room
+     is the card, and the instruments are its sections. */
+  .room { background: var(--bg-card); border: 1px solid var(--line); border-radius: 14px; }
+  .room-head { display: flex; align-items: center; gap: 12px; padding: 14px 16px; cursor: pointer; }
+  .room-head .card-title { margin: 0; min-width: 0; }
+  .room-sum { margin-left: auto; font-family: 'JetBrains Mono', monospace; font-size: 11px;
+    color: var(--text-dim); text-align: right; flex-shrink: 0; }
+  .room-chev { color: var(--text-dim); font-size: 15px; line-height: 1; flex-shrink: 0;
+    display: inline-block; transition: transform .15s; }
+  .room.open .room-chev { transform: rotate(90deg); }
+  .room.open .room-sum { display: none; }
+  .room-body { display: none; padding: 0 16px 16px; }
+  .room.open .room-body { display: block; }
+  .room-body > .card { border: none; background: transparent; border-radius: 0;
+    padding: 18px 0 0; margin: 0; border-top: 1px solid var(--line); }
+  .room-body > .prodband { margin: 16px 0 0; }
+  @media (hover: hover) { .room-head:hover .room-chev, .room-head:hover .card-title { color: var(--text); } }
   /* Market intelligence band */
   .intel-alert { display: flex; gap: 10px; align-items: flex-start; padding: 9px 12px; margin-top: 8px;
     border-left: 2px solid var(--gold); background: rgba(212,177,90,.07); border-radius: 0 8px 8px 0;
@@ -341,6 +376,30 @@
   .money-totals .col { width: 92px; text-align: right; }
   .money-totals .col.inv { color: var(--green-soft); font-weight: 600; }
   .money-totals .col.ar { color: var(--accent-soft); font-weight: 600; }
+  /* ── THE ALL-COMPANIES ROW ON LEADS BY SOURCE. Every other instrument on this
+     page states the whole business first and the brands under it; marketing was
+     the one that opened straight into a single trade, so "what did marketing
+     produce" had to be added up by hand across three toggle taps. Same money
+     type as the table above — mono values, 8px uppercase heads, green for
+     signed — laid out four windows wide so a phone still reads it. */
+  .lsum { margin: 4px 0 16px; }
+  .lsum-head, .lsum-row { display: grid; grid-template-columns: minmax(66px, 1.1fr) repeat(4, minmax(44px, 1fr));
+    gap: 6px; align-items: baseline; }
+  .lsum-head { padding-bottom: 8px; border-bottom: 1px solid rgba(255,255,255,0.08); }
+  .lsum-head div { font-family: 'JetBrains Mono', monospace; font-size: 8px; letter-spacing: 0.1em;
+    text-transform: uppercase; color: var(--text-dim); text-align: right; }
+  .lsum-head div:first-child { text-align: left; }
+  .lsum-row { padding: 10px 0; border-bottom: 1px solid var(--line); }
+  .lsum-row:last-child { border-bottom: none; }
+  .lsum-row .nm { display: flex; align-items: center; gap: 7px; font-size: 13px; font-weight: 500; min-width: 0; }
+  .lsum-row .nm .tdot { width: 8px; height: 8px; border-radius: 2px; flex-shrink: 0; }
+  .lsum-row .col { font-family: 'JetBrains Mono', monospace; font-size: 11px; text-align: right; color: var(--green-soft); }
+  .lsum-row .col.zero { color: var(--text-dim); }
+  .lsum-row .col i { display: block; font-style: normal; font-size: 8px; color: var(--text-dim); margin-top: 2px; }
+  .lsum-row.all { border-bottom: 1px solid rgba(255,255,255,0.08); }
+  .lsum-row.all .nm { font-family: 'Fraunces', serif; font-size: 15px; }
+  .lsum-row.all .col { font-size: 13px; font-weight: 600; }
+  .lsum-row.sel .nm { color: var(--accent-soft); }
   .flag-row { display: flex; gap: 10px; padding: 9px 0; border-bottom: 1px solid var(--line); }
   .flag-row:last-child { border-bottom: none; }
   .flag-dot { width: 7px; height: 7px; border-radius: 50%; margin-top: 5px; flex-shrink: 0; }
@@ -883,6 +942,17 @@
     .stack > .full { column-span: none; }
     /* the two that earn the full width */
     .stack > .acts, .stack > .appt, .stack > .apco-band, .stack > .intel-band { column-span: all; margin-bottom: 26px; }
+    /* The bands of the rebuilt console each read across the page, not down a
+       column: the rep board, the marketing pair, the quadrant and the drawer
+       are the page's structure, and a structure packed into columns stops
+       being one. The room spans for a second reason — opening it must not
+       reflow the two columns beside it. */
+    .stack > .room { column-span: all; margin-bottom: 26px; }
+    /* …and the console itself is bands, not masonry. Six statements read in
+       order down the page, each one full width; a band packed into a column
+       stops being a band. Drill-ins keep the two- and three-column fill, because
+       a drill-in is a set of cards rather than a sequence of statements. */
+    .stack.bands { columns: 1; }
 
     /* Folded rows run the full width as a strip beneath the grid, rather than
        being packed into the columns with everything else. Two reasons, both
@@ -1231,7 +1301,7 @@ function hdr(){
         <div class="snap-d ${d===null?'flat':d>=0?'up':'down'}">${d===null?'—':(d>=0?'▲':'▼')+' '+Math.abs(d)+'% vs '+esc(W.prevLabel)}</div>
         <div class="snap-go">details <span class="go-chev">›</span></div>
       </button>
-      ${heroTouch(k)}
+      ${heroAppts(k)}
       <button class="snap" onclick="openWindow('${k}')" aria-label="Built ${esc(label)} — open details">
         <div class="snap-k" style="color:var(--gold)">Built · ${esc(label)}</div>
         ${q && q.invoiced ? `<div class="alloc-chart mm"><canvas id="cHeroBuilt"></canvas>
@@ -1260,52 +1330,55 @@ function hdr(){
   </div>`;
 }
 
-/* ── TEAM TOUCHES · the hero tile (5 Aug — Kevin: "I want touch data to be no
-      different than sales data, marketing data on the dashboard"). Prominence
-      starts at the top: sales gets a hero tile, so effort gets one, full
-      width, directly under Signed. Reads the same D.effort the board below
-      reads, so tile and board can never disagree. Tapping it scrolls to the
-      effort board rather than opening a dive — the board IS the details. ── */
-function heroTouch(k){
-  const E = D.effort;
-  const ek = { day:'day', week:'week', month:'month', ytd:'year' }[k] || 'day';
-  const t = E.rows.reduce((n, r) => n + r[ek].t, 0);
-  const span = E.spans[ek] || 1;
-  const teamGoal = (E.defaultGoal || 0) * span * E.activeReps;
-  const leader = [...E.rows].sort((a, b) => b[ek].t - a[ek].t)[0];
-  const onStd = E.rows.filter(r => (r.goal ?? E.defaultGoal) * span > 0
-    && r[ek].t >= (r.goal ?? E.defaultGoal) * span).length;
-  /* Pace verdict for the day window only — the app's own vocabulary, against
-     the 8am–6pm workday in ET. Longer windows state the fraction instead. */
-  let verdict = '';
-  if (ek === 'day') {
-    const et = new Date(new Date().toLocaleString('en-US', { timeZone:'America/New_York' }));
-    const through = Math.min(1, Math.max(0, (et.getHours() + et.getMinutes()/60 - 8) / 10));
-    verdict = t === 0 ? 'DAY NOT STARTED'
-      : t >= teamGoal ? 'STANDARD MET'
-      : t >= Math.round(teamGoal * through) ? 'ON TARGET' : 'BEHIND PACE';
-  }
-  /* The month time machine does not reach touches: D.effort is always the
-     live month (touch history re-slicing is a next-pass item), so a shifted
-     month says so instead of wearing a stale label. Honest beats silent. */
-  const shifted = ek === 'month' && typeof MONTHOFF !== 'undefined' && MONTHOFF > 0;
-  const label = { day:'Today', week:'This week', month:'This month', year:'YTD' }[ek];
-  const live = t > 0;
-  return `<button class="snap bigsnap" onclick="scrollToEffort()" aria-label="Team touches — jump to the effort board">
-    <div class="snap-k" style="color:var(--accent-soft)">Team touches · ${esc(label)}${shifted ? ' (live)' : ''}</div>
-    <div class="snap-v">${t}${teamGoal ? ` <span style="font-size:16px;color:var(--text-dim)">of ${teamGoal}</span>` : ''}</div>
-    <div class="snap-s">${shifted
-      ? 'touch history doesn’t time-travel yet — this is the live month'
-      : live
-        ? [verdict, leader && leader[ek].t ? `led by ${esc(leader.name.split(' ')[0])} · ${leader[ek].t}` : '',
-           `${onStd} of ${E.activeReps} on standard`].filter(Boolean).join(' · ')
-        : `no touches logged ${esc(label.toLowerCase())} — a real zero, not a broken feed`}</div>
-    <div class="snap-go">the effort board <span class="go-chev">›</span></div>
+/* ── APPOINTMENTS · the headline row's second tile ───────────────────────────
+      Kevin: "Like daily weekly monthly appt are soooo important to me… It's so
+      crucial to my stress. Appts good life good. Appts bad pay attention need
+      more." So the number he worries about sits IN the money row — Signed,
+      Appointments, Built, Open A/R — rather than in a card below it. It takes
+      the full-width slot the team-touch tile held: effort moved into the Effort
+      Room in the same rebuild, and its numbers ride the room's own summary line
+      so the fold still carries them.
+
+      Reads D.appointments.byCompany — the same feed, windows and measured
+      typical the by-company band in the marketing band reads, so the tile and
+      the band can never disagree. ─────────────────────────────────────────── */
+function heroAppts(k){
+  const A = D.appointments;
+  if (!A || !A.byCompany || !A.byCompany[k]) return '';
+  const W = A.byCompany[k];
+  const label = { day:'Today', week:'This week', month: MONTHOFF ? D.windows.month.label : 'MTD', ytd:'YTD' }[k] || '';
+  const rows = BRAND_ORDER.map(b => ({ m: brandOf(b), n: W.counts[b] || 0, typ: (W.typ[b] || {}).mean || 0 }));
+  const unknown = W.counts.unknown || 0;
+  const branded = rows.reduce((n, r) => n + r.n, 0);
+  const tot = branded + unknown;
+  const typ = rows.reduce((n, r) => n + r.typ, 0);
+  /* The baseline is brand-attributed, so the comparison is too: an appointment
+     the sync has not resolved to a project has no typical to sit against. It
+     still counts in the headline figure and is named on its own line — counted,
+     never quietly dropped, and never measured against a baseline built without
+     it. YTD declines a baseline outright: appointment history reaches 13 months,
+     which cannot cover last year's same span. */
+  const d = typ ? Math.round((branded - typ) / typ * 100) : null;
+  return `<button class="snap bigsnap" onclick="openWindow('${k}')" aria-label="Appointments ${esc(label)} — open details">
+    <div class="snap-k" style="color:var(--blue)">Appointments · ${esc(label)}</div>
+    <div class="snap-v" style="color:var(--blue)">${tot}${typ ? ` <span style="font-size:16px;color:var(--text-dim)">of ${Math.round(typ)} typical</span>` : ''}</div>
+    <div class="alloc-legend mml" style="margin:10px 0 8px">${rows.map(r => `
+      <div class="alloc-row" ${r.n ? '' : 'style="opacity:.55"'}>
+        <div class="alloc-dot" style="background:${r.m.c}"></div>
+        <div class="name">${esc(r.m.s)}</div>
+        <div class="val">${r.n ? `${r.n}${r.typ ? ` · typ ${Math.round(r.typ)}` : ''}` : '—'}</div>
+      </div>`).join('')}${unknown ? `
+      <div class="alloc-row" title="Appointments booked against projects the sync has not delivered yet">
+        <div class="alloc-dot" style="background:#8aa094"></div>
+        <div class="name">counting…</div>
+        <div class="val">${unknown} awaiting project sync</div>
+      </div>` : ''}</div>
+    <div class="snap-s">new appointments booked${typ ? ` · measured against ${esc(W.typLabel)}` : ''}</div>
+    ${d === null
+      ? `<div class="snap-d flat">${esc(W.typLabel)}</div>`
+      : `<div class="snap-d ${d >= 0 ? 'up' : 'down'}">${d >= 0 ? '▲' : '▼'} ${Math.abs(d)}% vs typical${unknown ? ' · on the brand-attributed count' : ''}</div>`}
+    <div class="snap-go">details <span class="go-chev">›</span></div>
   </button>`;
-}
-function scrollToEffort(){
-  const el = document.getElementById('effort-anchor');
-  if (el) el.scrollIntoView({ behavior:'smooth', block:'start' });
 }
 
 /* ── APPOINTMENTS · the thing he actually worries about ─────────────────────
@@ -2371,40 +2444,22 @@ function cardEffort(){
 let EFF_INTEL = null;
 async function loadEffortIntel(){
   const win = EFFWIN === 'day' ? 'day' : EFFWIN === 'month' ? 'month' : 'week';
-  const [mix, close, hits, light, streaks, cover, speed, est, pipe] = await Promise.all([
+  const [mix, close, light, streaks, speed, est, pipe] = await Promise.all([
     q(`rpc/touch_board?p_win=${win}`).catch(() => null),
     q('rpc/touch_close_stats').catch(() => null),
-    q('rpc/touch_hit_rates').catch(() => null),
     q('rpc/touch_light_board').catch(() => null),
     q('rpc/touch_streaks').catch(() => null),
-    q('rpc/book_coverage').catch(() => null),
     q('rpc/first_touch_speed').catch(() => null),
     q(`rpc/estimate_board?p_win=${win}`).catch(() => null),
     q('rpc/pipeline_value').catch(() => null),
   ]);
-  EFF_INTEL = { mix, close, hits, light, streaks, cover, speed, est, pipe, win };
+  /* touch_hit_rates and book_coverage are no longer pulled: the cards that read
+     them are gone — hit rates duplicated the channel mix, and the cooling book
+     belongs to TruOdds now. The RPCs are untouched in the database. */
+  EFF_INTEL = { mix, close, light, streaks, speed, est, pipe, win };
   render();
 }
 
-/* ── GROSS QUOTED VOLUME (Kevin, 12 Aug: "build the gross quoted per rep
-      board"). It carries its OWN trailing window rather than following the
-      day/week/month switcher above it, because month-to-date cannot answer
-      "how much has each rep quoted" — on the 3rd it reads near zero and that
-      is a window, not a slow start. Its own loader too, so changing the range
-      costs one round trip instead of re-pulling the whole effort suite.
-
-      The rows are kept across a range change on purpose: blanking them first
-      would flash "no feed" over a card that is simply mid-fetch, and this page
-      uses that skin to mean something specific. ──────────────────────────── */
-let QVOL_DAYS = 90, QVOL = null, QVOL_ERR = false, QVOL_LOADING = false;
-const QVOL_RANGES = [[30,'30 days'],[90,'90 days'],[365,'12 months'],[0,'All time']];
-async function loadQuoteVolume(){
-  QVOL_LOADING = true;
-  try { QVOL = await q(`rpc/quote_volume?p_days=${QVOL_DAYS}`); QVOL_ERR = false; }
-  catch (e) { if (!QVOL) QVOL_ERR = true; }
-  QVOL_LOADING = false;
-  render();
-}
 /* A feed that errored (missing migration, offline) says so in the card's own
    skin instead of vanishing — Kevin asked for these cards by name, so an
    empty slot would read as "not built" when the truth is "no feed". */
@@ -2489,31 +2544,6 @@ function cardChannelMix(){
         <div class="meter" style="display:flex;overflow:hidden">${seg}</div>
       </div>`; }).join('')}
     <div class="note">From <b>touch_board()</b> (108) — binary touches by channel, real-only (demo touches never count), days bucketed America/New_York.</div>
-  </div>`;
-}
-
-/* TOUCHES THAT HIT · BY CHANNEL — engagement where outcome chips were tapped.
-   Chips are optional for reps, so the scored count rides beside every rate:
-   thin data reads thin, not as a verdict. */
-function cardHitRates(){
-  if (!EFF_INTEL) return '';
-  const hits = EFF_INTEL.hits;
-  if (!hits) return effAwait('Touches that hit · by channel',
-    'The hit-rate feed (migration 108, <b>touch_hit_rates</b>) did not answer.');
-  const rows = hits.filter(r => +r.scored > 0);
-  const CH = { call:'#6cc28b', text:'#6ba8c9', email:'#d9b96a', in_person:'#a98fd5' };
-  if (!rows.length) return `<div class="card full">
-    <div class="card-title">Touches that hit · by channel<span class="feed-tag none">awaiting outcomes</span></div>
-    <div class="withheld"><div class="wt">Honest zero</div><div class="wx">No outcome chips tapped yet. The rate appears when the field starts scoring calls and replies — never before.</div></div></div>`;
-  return `<div class="card full">
-    <div class="card-title">Touches that hit · by channel<span class="feed-tag">live · db</span></div>
-    <div class="card-sub">Engaged = spoke or replied, per the outcome chips the reps tap after a touch. All time, team-wide.</div>
-    ${rows.map(r => `<div class="rep-row">
-      <div class="rep-head"><div class="nm" style="text-transform:capitalize">${esc(r.channel)}s</div>
-        <div class="amt">${r.engaged_pct!=null?Math.round(+r.engaged_pct)+'%':'—'} <span>engaged · ${r.scored} scored of ${r.touches}</span></div></div>
-      <div class="meter"><div class="meter-fill" style="width:${Math.min(100,Math.round(+r.engaged_pct||0))}%;background:${CH[r.channel]||'#8aa094'}"></div></div>
-    </div>`).join('')}
-    <div class="note">This measures engagement among touches that were <b>scored</b>, not the close rate of a channel — a customer who got a call and a text credits both (the 003 caveat). Outcome chips are optional; the rate firms up as the habit does.</div>
   </div>`;
 }
 
@@ -2659,91 +2689,8 @@ function cardEstimates(){
     ${owedApplied
       ? `<div class="note"><b>What is counted (migration 143, Kevin 11 Aug).</b> An appointment is owed an estimate for <b>60 days</b> and no longer — the customer-history import put years of old jobs in the book, and past two months a job is a closed chapter rather than a missing number. And each rep is counted only from <b>their own first capture</b>, because the field adopted over a week and nobody should be graded on days they did not have the app; that date rides on every row above. <b>Nothing was deleted to achieve either</b> — every amount ever captured is still on file and still in the pipeline figure. Note the pipeline dollars deliberately keep their <b>120-day</b> horizon: the 60-day rule bounds what is OWED, not what the pipeline is worth.</div>`
       : `<div class="note" style="border-left:2px solid var(--gold);padding-left:10px"><b>Migration 143 is not applied yet.</b> These counts are still the old ones — every appointment in a 120-day book, including the years of history the customer import brought in, and no allowance for the fact that the field only adopted the app about two weeks ago. The 60-day owed window and the per-rep &#34;counting since&#34; date arrive the moment <code>143_estimate_owed_window.sql</code> is run; this page needs no redeploy for it. Said here rather than left to be inferred, because a number labelled with a rule it is not following is worse than an unlabelled one.</div>`}
-    ${pipe && pipe.some(p => +p.inherited > 0) ? `<div class="note"><b>Someone is carrying a handed-over book (migration 147).</b> When a rep leaves, their open unsold files pass to whoever picks them up, and the row above says how many. Both the customer <b>and</b> the estimate already on that file move together — otherwise a deal the previous rep had already priced would land on the new one as a missing number they never owed. What does <b>not</b> move is history: the quote stays credited to whoever wrote it in the quoted-volume board below, and the appointment stays credited to whoever ran it in the counts above. Sold work does not transfer at all — it rolls to the <b>GIO · HOUSE</b> bucket, per the standing catch-all ruling.</div>` : ''}
+    ${pipe && pipe.some(p => +p.inherited > 0) ? `<div class="note"><b>Someone is carrying a handed-over book (migration 147).</b> When a rep leaves, their open unsold files pass to whoever picks them up, and the row above says how many. Both the customer <b>and</b> the estimate already on that file move together — otherwise a deal the previous rep had already priced would land on the new one as a missing number they never owed. What does <b>not</b> move is history: the quote stays credited to whoever wrote it, and the appointment stays credited to whoever ran it in the counts above. Sold work does not transfer at all — it rolls to the <b>GIO · HOUSE</b> bucket, per the standing catch-all ruling.</div>` : ''}
     <div class="note">From <b>estimate_board()</b> (131/143) and <b>pipeline_value()</b> (132/143): appointments from the CC feed, amounts from the app’s capture — an appointment is covered by an estimate dated its day or later, so a next-morning backfill clears yesterday honestly. The pipeline figure is a stock, not a window: every open customer’s latest on-file amount, 120-day book, sold work out and lost files out (7 Aug ruling, migration 133 — a lost deal lives in the app’s LOST file, never in pipeline money). Counts and totals only, sources never blended; a missing number reads missing, never guessed.</div>
-  </div>`;
-}
-
-/* QUOTED VOLUME — Kevin, 12 Aug: "are we getting totals for quotes given by
-   all the sales reps" → "build the gross quoted per rep board".
-
-   The card above this one and the pipeline tile inside it both had to decline
-   the question. estimate_board tops out at MONTH-TO-DATE, so there is no
-   quarter and no all-time; pipeline_value is a stock of what is still OPEN, so
-   it drops every deal that signed and (since 133) every deal that was lost —
-   a rep who quoted $400K and closed half of it reads SMALLER there than one
-   who quoted $250K and closed none. Right for "what is sitting out there",
-   exactly wrong for "what did you put in front of customers". This is the
-   third read and the missing one: gross quoted volume over any window, with
-   the outcome shown as a split rather than filtered away.
-
-   Every figure here is a QUOTED dollar. "Signed from those quotes" is the
-   quoted value of deals that later signed — never their contract amount,
-   never revenue. The money boards stay the only authority on money and
-   nothing on this card is folded into them (count once per surface). */
-function cardQuoteVolume(){
-  /* Nothing at all until the feed has answered one way or the other: an
-     "awaiting" skin flashed on every page load would train the eye to ignore
-     it, and this page uses that skin to mean a real missing migration. */
-  if (!QVOL && !QVOL_ERR) return '';
-  const label = (QVOL_RANGES.find(([d]) => d === QVOL_DAYS) || [0,''])[1].toLowerCase();
-  const prose = QVOL_DAYS === 0 ? 'all time' : `the last ${label}`;
-  const seg = `<div class="seg" style="margin:0 0 12px">
-    ${QVOL_RANGES.map(([d,l]) => `<button class="${d===QVOL_DAYS?'on':''}" onclick="setQvol(${d})">${l}</button>`).join('')}
-  </div>`;
-  if (!QVOL) return effAwait('Quoted volume · what each rep put in front of customers',
-    'The quoted-volume feed (migration 144, <b>quote_volume</b>) did not answer. Until 144 is applied the totals exist only as a month-to-date slice on the card above — nothing is estimated in its place.');
-
-  const rows = QVOL;
-  const n = (k) => rows.reduce((s,r) => s + +r[k], 0);
-  const tQ = n('quotes'), t$ = n('dollars');
-  const wN = n('won'), w$ = n('won_dollars');
-  const lN = n('lost'), l$ = n('lost_dollars');
-  const oN = n('still_open'), o$ = n('open_dollars');
-  const active = rows.filter(r => +r.quotes > 0);
-  /* Conversion is stated in DOLLARS, not deals: a rep who closes the small
-     ones and loses the big ones has a flattering count and an honest dollar. */
-  const conv = t$ > 0 ? Math.round(w$ / t$ * 100) : null;
-
-  if (!tQ) return `<div class="card full">
-    <div class="card-title">Quoted volume · what each rep put in front of customers<span class="feed-tag none">quiet ${esc(prose)}</span></div>
-    ${seg}
-    <div class="withheld"><div class="wt">Honest zero</div><div class="wx">No estimate amounts were captured in this window. Widen the range — the first captures landed when the field adopted the flow, so a 30-day window can be genuinely empty while all time is not.</div></div></div>`;
-
-  return `<div class="card full">
-    <div class="card-title">Quoted volume · what each rep put in front of customers<span class="feed-tag${QVOL_LOADING?' none':''}">${QVOL_LOADING?'reading…':'live · db'}</span></div>
-    <div class="card-sub">Gross quoted dollars over ${esc(prose)} — <b>sold and lost work included</b>, which is what makes this different from the open-pipeline figure above. One number per customer per rep: correcting an amount is not a second quote.</div>
-    ${seg}
-    <div class="stat-grid" style="margin-bottom:14px">
-      <div class="stat-tile"><div class="lbl">Gross quoted · ${esc(prose)}</div>
-        <div class="val">${money(t$)}</div>
-        <div class="sub">${tQ} quote${tQ===1?'':'s'} · ${active.length} rep${active.length===1?'':'s'} quoting</div></div>
-      <div class="stat-tile"><div class="lbl">Signed from those quotes</div>
-        <div class="val green">${money(w$)}</div>
-        <div class="sub">${wN} of ${tQ}${conv!=null?` · ${conv}% of quoted $`:''}</div></div>
-      <div class="stat-tile"><div class="lbl">Still open</div>
-        <div class="val blue">${money(o$)}</div>
-        <div class="sub">${oN} quote${oN===1?'':'s'} still to earn</div></div>
-      <div class="stat-tile"><div class="lbl">Went another way</div>
-        <div class="val">${money(l$)}</div>
-        <div class="sub">${lN} quote${lN===1?'':'s'} in the lost file</div></div>
-    </div>
-    ${rows.map(r => {
-      const pager = D.roster && D.roster[String(r.rep_id)];
-      const qn = +r.quotes;
-      if (!qn) return `<div class="rep-row" style="opacity:.75">
-        <div class="rep-head"><div class="nm">${esc(r.name)}</div>
-          <div class="amt"><span style="color:var(--text-dim)">no quotes captured</span></div></div>
-        <div class="tgt-cap"><span>Nothing on file for ${esc(prose)} — the amounts are captured in the app at the estimate, so an empty row is an empty window, not a broken feed.</span><span></span></div>
-      </div>`;
-      const rc = +r.dollars > 0 ? Math.round(+r.won_dollars / +r.dollars * 100) : null;
-      const avg = +r.dollars / qn;
-      return `<div class="rep-row${pager?' acc':''}"${pager?` onclick="openRep('${esc(String(r.rep_id))}')"`:''}>
-        <div class="rep-head"><div class="nm">${esc(r.name)}</div>
-          <div class="amt">${money(+r.dollars)} <span>· ${qn} quote${qn===1?'':'s'}</span>${pager?'<span class="acc-chev">›</span>':''}</div></div>
-        <div class="tgt-cap"><span>${+r.won?`<b style="color:var(--green-soft)">${money(+r.won_dollars)} signed</b> · ${r.won} of ${qn}${rc!=null?` · ${rc}% of quoted $`:''}`:'none signed from these quotes yet'}</span><span>avg ${money(avg)}${+r.open_dollars>0?` · ${money(+r.open_dollars)} open`:''}${+r.lost_dollars>0?` · ${money(+r.lost_dollars)} lost`:''}</span></div>
-      </div>`; }).join('')}
-    <div class="note"><b>Quoted dollars, never signed money.</b> “Signed from those quotes” is the <b>quoted value</b> of deals that later signed — not their contract amount and not revenue. The hero, brand mix and quota fleet remain the only authority on money; nothing on this card is folded into them, and the two must not be added together.<br/><br/><b>What is counted (migration 144).</b> One number per customer per rep — the <b>latest capture inside the window</b>, because <code>estimates</code> is append-only and an amount edit is a new row, so a plain sum would count a corrected quote twice and reward the typo. <b>Sold and lost work stays in</b>: a quote that closed is still a quote that was given, and that is the whole difference between this card and the open-pipeline figure above it. Signed is read from the CC job feed and from the rep’s own WON tap, so a rung sale counts from the moment it is rung. A property quoted by two reps counts for each of them, so the team total is <b>quotes given</b>, not properties. Appointments are not involved at all — a backfilled paper estimate counts the same as one typed in the driveway, by ruling.</div>
   </div>`;
 }
 
@@ -2770,44 +2717,6 @@ function cardConsistency(){
         <div class="tgt-cap"><span>goal ${r.goal}/day</span><span class="${p>=80?'hit':'miss'}">${p}%</span></div>
       </div>`; }).join('')}
     <div class="note">From <b>touch_streaks()</b> (119). The app's streak ring lives on each rep's own device; this is the official team-visible count, same rules — hit your own goal, working days only.</div>
-  </div>`;
-}
-
-/* BOOK COVERAGE · GOING COLD — where money quietly dies. Counts only, no
-   dollar figure: nothing in the schema carries an estimate amount, and a
-   guessed value would violate the actuals law. */
-function cardCoverage(){
-  if (!EFF_INTEL) return '';
-  const cov = EFF_INTEL.cover;
-  if (!cov) return effAwait('Book coverage · going cold',
-    'The coverage feed (migration 119, <b>book_coverage</b>) did not answer.');
-  const rows = cov.filter(r => +r.book > 0);
-  if (!rows.length) return `<div class="card full">
-    <div class="card-title">Book coverage · going cold<span class="feed-tag none">no live book</span></div>
-    <div class="withheld"><div class="wt">Honest zero</div><div class="wx">No seller carries open customers in the appointment-derived book.</div></div></div>`;
-  const tB = rows.reduce((n,r)=>n+ +r.book,0), tT = rows.reduce((n,r)=>n+ +r.touched_7d,0), tC = rows.reduce((n,r)=>n+ +r.cold,0);
-  return `<div class="card full">
-    <div class="card-title">Book coverage · going cold<span class="feed-tag">live · db</span></div>
-    <div class="card-sub">Share of each rep's open book touched in the last 7 days — and customers going cold: 7+ days untouched, no decision either way. Signed and lost customers are out; this is live pipeline only.</div>
-    <div class="stat-grid" style="margin-bottom:14px">
-      <div class="stat-tile"><div class="lbl">Going cold · team</div>
-        <div class="val ${tC?'red':''}">${tC}</div>
-        <div class="sub">open customers 7+ days untouched</div></div>
-      <div class="stat-tile"><div class="lbl">Book touched · 7d</div>
-        <div class="val ${tB&&tT/tB>=.3?'blue':''}">${tB?Math.round(100*tT/tB):0}%</div>
-        <div class="sub">of ${tB} open customer${tB===1?'':'s'}</div></div>
-    </div>
-    ${rows.map(r => {
-      const b = Math.max(1, +r.book);
-      const p = Math.round(100*+r.touched_7d/b);
-      const pager = D.roster && D.roster[String(r.rep_id)];
-      return `<div class="rep-row${pager?' acc':''}"${pager?` onclick="openRep('${esc(String(r.rep_id))}')"`:''}>
-        <div class="rep-head"><div class="nm">${esc(r.name)}</div>
-          <div class="amt">${p}% <span>touched · </span><b style="color:var(--red)">${r.cold} cold</b>${pager?'<span class="acc-chev">›</span>':''}</div></div>
-        <div class="meter"><div class="meter-fill" style="width:${p}%;background:${p>=60?'#6cc28b':p>=30?'#6ba8c9':'#d4b15a'}"></div></div>
-        <div class="tgt-cap"><span>${r.touched_7d} of ${r.book} open book</span><span></span></div>
-      </div>`; }).join('')}
-    <div class="note">From <b>book_coverage()</b> (119): the appointment-derived book, minus signed CC jobs and set dispositions. "Cold" falls straight out of touch timestamps — no new logging needed. Counts only, no customer names, pending Kevin's ruling on the named list. No dollar figure: nothing carries an estimate amount, and absent beats faked.</div>
   </div>`;
 }
 
@@ -2888,6 +2797,74 @@ function cardQuadrant(){
   </div>`;
 }
 
+/* ── THE EFFORT ROOM ─────────────────────────────────────────────────────────
+   Seven instruments, one drawer, shut by default.
+
+   None of this stopped being true and none of it is deleted — it stopped being
+   the first thing. The console's reading order is now what needs him, the money,
+   who sold it, what marketing produced, and where effort and results disagree.
+   The working — who dialled, who finished the play, who captured the number, how
+   fast the first touch went out — is what he opens when one of those six bands
+   raises a question, so it lives behind one tap instead of under six scrolls.
+
+   The room keeps carrying its number while shut, the same rule every fold on
+   this page keeps: a fold that drops its figure is not a fold, it is a thing to
+   remember to go and check. Each card inside is exactly the card its own
+   function builds — same numbers, same source badges, same notes — it loses only
+   its box, because bordered cards inside a bordered card read as clutter.
+
+   Open/shut is remembered per device, like the other folds. Default shut is the
+   ruling, not a preference: the drawer is the point. ────────────────────────── */
+const ROOM_STORE = 'lcc.room';
+let ROOM_OPEN = (() => { try { return localStorage.getItem(ROOM_STORE) === '1'; } catch (e) { return false; } })();
+
+function toggleRoom(){
+  const el = document.getElementById('effort-room');
+  if (!el) return;
+  ROOM_OPEN = !el.classList.contains('open');
+  el.classList.toggle('open', ROOM_OPEN);
+  try { localStorage.setItem(ROOM_STORE, ROOM_OPEN ? '1' : '0'); } catch (e) {}
+  /* A canvas measured while its container was display:none has no size to draw
+     into. Anything the room grows later redraws the moment it can be measured. */
+  if (ROOM_OPEN && el.querySelector('canvas')) drawCharts();
+}
+
+function effortRoom(){
+  const E = D.effort;
+  const K = EFFWIN;
+  const label = { day:'today', week:'this week', month:'this month', year:'this year' }[K] || '';
+  const t = E ? E.rows.reduce((n, r) => n + r[K].t, 0) : 0;
+  const span = E && E.spans ? (E.spans[K] || 1) : 1;
+  const onStd = E ? E.rows.filter(r => (r.goal ?? E.defaultGoal) * span > 0
+                                    && r[K].t >= (r.goal ?? E.defaultGoal) * span).length : 0;
+  /* The shut line reads the same D.effort the board inside reads, so opening the
+     room can never contradict the row that opened it. */
+  const sum = E && E.rows.length
+    ? `${t} touch${t === 1 ? '' : 'es'} ${esc(label)} · ${onStd} of ${E.activeReps} on standard`
+    : 'awaiting logging';
+  const body = [
+    prodBand(),
+    cardChannelMix(),
+    cardTouchLight(),
+    cardEffort(),
+    cardTouchProof(),
+    cardEstimates(),
+    cardSpeed(),
+    cardConsistency(),
+  ].join('');
+  return `<div class="room${ROOM_OPEN ? ' open' : ''}" id="effort-room">
+    <div class="room-head" onclick="toggleRoom()">
+      <div class="card-title">The Effort Room</div>
+      <div class="room-sum">${sum}</div>
+      <span class="room-chev">›</span>
+    </div>
+    <div class="room-body">
+      <div class="card-sub" style="margin-top:0">Channel mix, the 4-Touch Light, the effort board, touches per close, estimates on file, speed to first touch and the streaks — the working behind the six bands above. Nothing here is summarised or reduced; these are the same instruments, folded away rather than removed.</div>
+      ${body}
+    </div>
+  </div>`;
+}
+
 /* ── LEAD SOURCES · MARKETING. The ids are complete on every job; the names are
       what CC will not return. Shown by id rather than withheld, because which
       ids carry the revenue is exactly what decides which ones are worth
@@ -2912,9 +2889,36 @@ function cardLeads(){
   const unmappedRevAll = unmappedAll.reduce((n,r) => n + r.rev, 0);
   const revAll = T.allTime.reduce((n,r) => n + r.rev, 0);
   const biggestUnmapped = [...unmappedAll].sort((a,b) => b.rev - a.rev)[0];
+  /* ── ALL COMPANIES FIRST. The brand toggle below answers "which sources does
+     THIS trade buy"; it could never answer "what did marketing produce", which
+     is the question the owner arrives with. So the card opens the way every
+     other instrument on this page opens: the whole business on the top row,
+     the three brands beneath it, all four windows across — then the trade
+     detail. Read from the same D.leadSources the rows below read: the
+     company-wide window for the total, each trade's own window for its row, so
+     the band and the list can never disagree. */
+  const LWINS = [['day','Day'],['week','Week'],['month','Month'],['ytd','YTD']];
+  const sumWin = list => (list || []).reduce((a, r) => ({ rev: a.rev + r.rev, signed: a.signed + r.signed }), { rev:0, signed:0 });
+  const allWins = Object.fromEntries(LWINS.map(([k]) => [k, sumWin(L.windows[k])]));
+  const brandWins = BRAND_ORDER.map(b => ({ id:b, m:brandOf(b),
+    wins: Object.fromEntries(LWINS.map(([k]) => [k, sumWin((L.byTrade[b] || { windows:{} }).windows[k])])) }));
+  const sumCell = c => `<div class="col${c.rev ? '' : ' zero'}">${c.rev ? short(c.rev) : '—'}<i>${c.signed ? `${c.signed} signed` : 'none'}</i></div>`;
+  /* A job on a company id outside the three brands is counted in the total and
+     in no brand row. Rather than let the arithmetic look broken, the gap is
+     named — on the YTD window, which is the one wide enough to hold any. */
+  const ytdGap = allWins.ytd.rev - brandWins.reduce((n, b) => n + b.wins.ytd.rev, 0);
   return `<div class="card full">
     <div class="card-title">Leads by source<span class="feed-tag cc">live · cc</span></div>
-    <div class="card-sub">Fencing and roofing buy leads in different markets, so this is one trade at a time — never a blended list. Close rate is that source's contracts against every lead it has produced.</div>
+    <div class="card-sub">All three companies first, then one trade at a time — fencing and roofing buy leads in different markets, so the source list is never a blended one. Close rate is that source's contracts against every lead it has produced.</div>
+
+    <div class="lsum">
+      <div class="lsum-head"><div>Signed from leads</div>${LWINS.map(([,l]) => `<div>${l}</div>`).join('')}</div>
+      <div class="lsum-row all"><div class="nm">All companies</div>${LWINS.map(([k]) => sumCell(allWins[k])).join('')}</div>
+      ${brandWins.map(b => `<div class="lsum-row${b.id === LEADTRADE ? ' sel' : ''}">
+        <div class="nm"><span class="tdot" style="background:${b.m.c}"></span>${esc(b.m.n)}</div>
+        ${LWINS.map(([k]) => sumCell(b.wins[k])).join('')}</div>`).join('')}
+    </div>
+    ${ytdGap > 0 ? `<div class="note" style="margin-top:0">The all-companies row is ${short(ytdGap)} above the three brands added up, year to date: that much signed value sits on a company id outside Fencing, Oasis and Pro-Tec. It is counted in the total and in no brand row, said here rather than quietly dropped from one side or the other.</div>` : ''}
 
     <div class="seg">
       ${BRAND_ORDER.map(b=>`<button class="${b===LEADTRADE?'on':''}" onclick="setTrade('${b}')">${esc(brandOf(b).s)}</button>`).join('')}
@@ -3526,7 +3530,9 @@ function cardAttention(){
   take1(mktRows[1]);
   take1(found[1]);
   const rows = chosen.sort((a, b) => (a.ord ?? 9) - (b.ord ?? 9));
-  return `<div class="card attn">
+  /* `lead` is the headline scale. The board sits second on the page now — under
+     the ask box, above the money — so it is set to be read, not scanned past. */
+  return `<div class="card attn lead">
     <div class="card-title">Attention<span class="feed-tag cc">tap any line for the working</span></div>
     ${rows.length ? rows.map(attnRow).join('')
       : '<div class="nofires" style="margin-top:10px">Nothing off its rhythm — revenue, builds, receivables and bookings are all inside the range of the last four months.</div>'}
@@ -4233,84 +4239,56 @@ function render(){
     drawCharts();
     return;
   }
-  /* Headline figures for the folded rows. A fold has to keep carrying its
-     number, or it stops being a fold and becomes a thing he has to remember to
-     go and check. Each of these is read from the same data its card reads, so
-     the row and the opened card can never disagree. */
-  const _W = w();
-  /* cardWow is a WEEK card — it calls wk(), not w(), and always has. Reading its
-     summary from w() put the month's $736K on a row titled "this week vs last
-     week". A folded row that disagrees with the card it opens is worse than no
-     row at all, so this reads from wk() exactly as the card does. */
-  const _Wk = wk(), _pv = _Wk.prev;
-  const _d = _pv.rev ? Math.round((_Wk.rev - _pv.rev) / _pv.rev * 100) : null;
-  const _mixTot = _W.brands.reduce((n, b) => n + b.rev, 0);
-  const _E = D.effort, _eT = _E.rows.reduce((n, r) => n + r[EFFWIN].t, 0);
-  const _eOn = _E.rows.filter(r => r[EFFWIN].t > 0).length;
-  const _cats = D.leadSources.categories.filter(c => c.rev > 0);
+  /* ── THE SIX BANDS ──────────────────────────────────────────────────────────
+     The console reads top to bottom as one argument, and the order is the whole
+     statement:
 
+       1  the ask box            — the question he arrived with, always first
+       2  ATTENTION              — what is off its rhythm, at headline size. It
+                                   was a footnote under the money; it is the
+                                   reason he opened the page, so it leads.
+       3  the money row          — Signed · Appointments · Built · Open A/R,
+                                   brand split on every tile, one window switch
+                                   across all four
+       4  Sales by rep           — who put it on the board
+       5  marketing              — leads by source (all companies first, then
+                                   the three trades) and appointments by
+                                   company. It was at the very bottom, which is
+                                   the wrong place for the thing that decides
+                                   whether band 3 has anything in it next month.
+       6  Effort × results       — where effort and money disagree, kept in the
+                                   open because it is the one card that reads
+                                   both halves of the page at once.
+
+     Then THE EFFORT ROOM: the working, folded shut. Nothing was reduced to a
+     summary and nothing was thrown away — the room holds each instrument whole.
+
+     Three instruments were deleted outright in this rebuild, because a console
+     that says the same thing twice teaches nobody to trust it: Touches that hit
+     by channel (the channel mix already answers it), Quoted volume (Estimates
+     on file carries the quoting story with the window that suits it), and Book
+     coverage / going cold (the TruOdds cooling book owns that question now).
+     ────────────────────────────────────────────────────────────────────────── */
   document.getElementById('app').innerHTML =
-    hdrTitle() + askBar() + cardAttention() + hdr() + '<div class="stack">' + [
-      /* Order is a statement of what matters, and now so is what stays open.
-         The cockpit at cruise: what needs him, the appointments his week turns
-         on, and the money already on the board. The month so far and Trending
-         to Finish moved up next to Appointments (27 Jul, mobile parity): on a
-         phone the page is one column, and sitting behind six cards put the
-         actual revenue and the projection where nobody scrolled. Analysis
-         reads top-down now — what happened, what it means, where it lands. */
-      /* THE sales box, directly under Attention and above Appointments —
-         Kevin: "move sales above the appointments box, remove the double." */
+    hdrTitle() + askBar() + cardAttention() + hdr() + '<div class="stack bands">' + [
+      /* 4 · WHO SOLD IT */
       cardReps(),
 
-      /* THE TOUCH SUITE — directly under sales, Kevin 5 Aug: "all the touch
-         data of who's doing what needs to be underneath sales… I want touch
-         data to be no different than sales data, marketing data on the
-         dashboard… Let's put them all in. Blend them in, and then we'll edit
-         it from there." Order: the branded band (this page gets filmed), the
-         board, the humongous proof number, then the working set. Every card
-         renders honest absence until its feed answers. */
-      prodBand(),
-      cardEffort(),
-      cardTouchProof(),
-      cardChannelMix(),
-      cardHitRates(),
-      cardTouchLight(),
-      /* ESTIMATES ON FILE rides with the accountability set — Kevin, 6 Aug:
-         "make sure all estimate numbers get put in the customer files." */
-      cardEstimates(),
-      /* …and the gross total right under it, because the card above answers
-         "did today's numbers get captured" while this one answers "how much
-         has each rep quoted" — Kevin, 12 Aug. Different question, different
-         window, deliberately its own switcher. */
-      cardQuoteVolume(),
-      cardConsistency(),
-      cardCoverage(),
-      cardSpeed(),
+      /* 5 · MARKETING — what produced the appointments the money came from.
+         Leads by source opens with the all-companies row over all four windows,
+         the way every other instrument on this page opens; appointments by
+         company sits directly under it, because "which sources ran" and "which
+         company got the appointments" are one question asked twice. */
+      cardLeads(),
+      cardApptByCompany(),
+
+      /* 6 · WHERE EFFORT AND RESULTS DISAGREE. Stays visible even though the
+         rest of the effort suite folded: this is the card that reads both
+         halves of the page at once, and it is no use behind a tap. */
       cardQuadrant(),
 
-      cardApptByCompany(),
-      /* The QUOTA FLEET rides in the first masonry tier, beside The month so
-         far and Trending to finish — Kevin (28 Jul): "there's a ton of room up
-         to the right of where the sales guys are — move that box up." And the
-         close trend lives INSIDE it now, one compressed line under each rep's
-         revenue bar ("put the closing percentage underneath it… static, all
-         the time, kinda trending") — the same trailing windows the folded
-         Closing momentum table states in full. On a phone this order simply
-         reads: money, then the sellers, which is the same statement of
-         priority. */
-
-      /* Leads by company — unfolded at Kevin's request ("break the lead sources
-         by company"). It was buried in the quiet strip, which is why he could
-         not find it; it is a sibling of Appointments by company, so it sits high
-         in the open flow rather than behind a click at the bottom. */
-      cardLeads(),
-
-      /* Everything below folds, and folds together, so they land as one quiet
-         strip rather than as short rows scattered through the columns. None of
-         it is less true — it is the working rather than the reading, and he
-         opens it when he wants it. Booked-by-week/month and calendar load
-         folded 28 Jul — Kevin: consolidate the abundance of appointment data;
-         the main instrument and the by-company band carry the story. */
+      /* …and the drawer. Shut by default, carrying its own number while shut. */
+      effortRoom(),
     ].join('') + '</div>' +
     `<div class="foot">Trust the instrument, not the retelling<br/>
       Read ${new Date(D.generatedAt).toLocaleString('en-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'})} ·
@@ -4328,7 +4306,6 @@ function keepScroll(fn){
   window.scrollTo({ top: y });
 }
 function setEff(k){ keepScroll(() => { EFFWIN = k; }); loadEffortIntel(); }
-function setQvol(d){ keepScroll(() => { QVOL_DAYS = d; }); loadQuoteVolume(); }
 function setApptCo(k){ keepScroll(() => { APPTCOWIN = k; }); }
 function setQuota(k){ keepScroll(() => { QUOTAWIN = k; }); }
 function setLead(k){ keepScroll(() => { LEADWIN = k; }); }
@@ -4730,7 +4707,7 @@ addEventListener('resize', () => {
    server for hours while Kevin looked at yesterday's build and reported the bug
    as unfixed. That happened. The page now checks version.json on every load and
    reloads itself once if the deployed build is newer than the one running. */
-const BUILD = '2026-08-14T14:30Z-deals-day-by-day';
+const BUILD = '2026-08-15T21:45Z-owner-console-bands';
 const SB_URL = 'https://lzegjjbkfuecrhdvlvay.supabase.co';
 /* The one page that can finish a password reset. Hard-coded rather than derived,
    because every derivation of it so far has been a source of bugs: a bare origin
@@ -7188,7 +7165,6 @@ async function loadAll(){
   D = buildData(RAW);
   render();
   loadEffortIntel();   // after first paint — a missing 108/119 can never block the page
-  loadQuoteVolume();   // same rule: 144 unapplied must never block the page
 }
 
 /* Reload once if the server has a newer build than the one running. Guarded by a
