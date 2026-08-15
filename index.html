@@ -407,6 +407,61 @@
   .apco-cap .s { display: block; margin-top: 3px; opacity: .8; }
   .apco-pending { font-family: 'JetBrains Mono', monospace; font-size: 10.5px; font-style: italic; color: var(--text-dim); margin-top: 14px; padding-top: 13px; border-top: 1px solid var(--line); display: flex; align-items: baseline; gap: 7px; line-height: 1.5; }
   .apco-pending .d { width: 6px; height: 6px; border-radius: 50%; background: #8aa094; flex-shrink: 0; position: relative; top: 3px; }
+  /* ── THE MARKETING DRAWER ──────────────────────────────────────────────────
+     Same shelf language as the Effort Room — two boards behind a preview shelf
+     that is always drawn. Both boards are TABLES, not meter rows: a source is
+     judged spend-against-return on one line, and columns are what make twelve
+     sources (or a rep × source matrix) comparable at a glance. Wide content
+     scrolls INSIDE its own container; the page never scrolls sideways. */
+  .mkt-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; margin-top: 12px;
+    border: 1px solid var(--line); border-radius: 10px; }
+  .mkt-tbl { width: 100%; border-collapse: separate; border-spacing: 0; min-width: 740px; }
+  .mkt-tbl th { font-family: 'JetBrains Mono', monospace; font-size: 8.5px; letter-spacing: .11em;
+    text-transform: uppercase; color: var(--text-dim); text-align: right; padding: 8px 10px;
+    border-bottom: 1px solid var(--line); white-space: nowrap; background: var(--bg-card-hi); }
+  .mkt-tbl th:first-child, .mkt-tbl td:first-child { text-align: left; }
+  .mkt-tbl td { padding: 9px 10px; text-align: right; font-family: 'JetBrains Mono', monospace;
+    font-size: 12px; border-bottom: 1px solid var(--line); white-space: nowrap; color: var(--text); }
+  .mkt-tbl tr:last-child td { border-bottom: none; }
+  .mkt-tbl td.dim, .mkt-tbl td .dim { color: var(--text-dim); }
+  .mkt-src { font-family: 'Inter Tight', sans-serif; font-size: 13px; font-weight: 500; white-space: nowrap; }
+  .mkt-src.sub { display: block; font-family: 'JetBrains Mono', monospace; font-size: 8px;
+    letter-spacing: .08em; text-transform: uppercase; color: var(--text-dim); margin-top: 2px; font-weight: 400; }
+  /* ROI wears the verdict. Ten is the KILL LINE, not a preference: at or above
+     it reads green, below reads red, and the closer to ten the more neutral —
+     a 9× is a conversation, a 3× is a funeral, and the colour says which. */
+  .mkt-roi { font-weight: 600; font-size: 13px; }
+  .mkt-roi.na { color: var(--text-dim); font-weight: 400; }
+  .mkt-chip { display: inline-block; margin-left: 6px; font-family: 'JetBrains Mono', monospace;
+    font-size: 7.5px; letter-spacing: .1em; text-transform: uppercase; color: var(--blue);
+    border: 1px solid rgba(107,168,201,0.3); border-radius: 100px; padding: 1px 5px; vertical-align: middle; }
+  .mkt-chip.office { color: var(--gold); border-color: rgba(212,177,90,0.3); }
+  .mkt-chip.wait { color: var(--text-dim); border-color: rgba(255,255,255,0.12); }
+  .mkt-enter { background: none; border: 1px dashed rgba(212,177,90,0.5); color: var(--gold);
+    font-family: 'JetBrains Mono', monospace; font-size: 9px; letter-spacing: .08em;
+    text-transform: uppercase; border-radius: 100px; padding: 3px 9px; cursor: pointer; }
+  @media (hover: hover) { .mkt-enter:hover { border-style: solid; } }
+  .mkt-in { width: 86px; background: var(--bg-deep); border: 1px solid var(--gold); color: var(--text);
+    font-family: 'JetBrains Mono', monospace; font-size: 12px; border-radius: 7px; padding: 4px 7px; text-align: right; }
+  .mkt-save { background: var(--gold); border: none; color: #14261c; font-family: 'JetBrains Mono', monospace;
+    font-size: 9px; letter-spacing: .08em; text-transform: uppercase; font-weight: 600;
+    border-radius: 100px; padding: 4px 10px; margin-left: 6px; cursor: pointer; }
+  .mkt-cancel { background: none; border: none; color: var(--text-dim); font-size: 12px;
+    margin-left: 2px; cursor: pointer; }
+  /* the rep × source grid. First column stays put while the sources scroll,
+     because a percentage with no name beside it belongs to nobody. */
+  .mg-tbl { min-width: 0; }
+  .mg-tbl th.mg-rep, .mg-tbl td.mg-rep { position: sticky; left: 0; z-index: 2;
+    background: var(--bg-card); text-align: left; font-family: 'Inter Tight', sans-serif;
+    font-size: 12.5px; font-weight: 500; border-right: 1px solid var(--line); }
+  .mg-tbl th.mg-rep { background: var(--bg-card-hi); }
+  .mg-tbl td, .mg-tbl th { min-width: 86px; }
+  .mg-pct { font-size: 13px; font-weight: 600; line-height: 1; }
+  .mg-pct.thin { color: var(--text-dim); font-weight: 400; }
+  .mg-n { font-family: 'JetBrains Mono', monospace; font-size: 8px; color: var(--text-dim); margin-top: 3px; }
+  .mg-ran { font-family: 'JetBrains Mono', monospace; font-size: 7.5px; letter-spacing: .04em;
+    color: var(--text-dim); opacity: .75; margin-top: 3px; white-space: normal; line-height: 1.35; }
+  .mg-empty { color: var(--text-dim); font-size: 11px; }
   .brand-tile { background: var(--bg-card-hi); border: 1px solid var(--line); border-radius: 12px; padding: 14px; margin-bottom: 10px; }
   .brand-tile:last-child { margin-bottom: 0; }
   .brand-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; }
@@ -1183,7 +1238,7 @@ function monthBanner(){
 }
 // Card-scoped windows. The page as a whole stays MTD per the model; only the
 // scoreboard and the lead-source table carry their own range.
-let EFFWIN = 'month', LEADWIN = 'month', LEADTRADE = '1461';
+let EFFWIN = 'month';
 /* Defaults to month: it is where Kevin's question started ("month-to-date
    doesn't break down per company") and the most stable of the three — a single
    day of bookings is noisy and half-filled, a month-to-date is not. */
@@ -3129,116 +3184,235 @@ function effortRoom(){
   </div>`;
 }
 
-/* ── LEAD SOURCES · MARKETING. The ids are complete on every job; the names are
-      what CC will not return. Shown by id rather than withheld, because which
-      ids carry the revenue is exactly what decides which ones are worth
-      naming. ─────────────────────────────────────────────────────────────── */
-/* Kevin: "Make sure we seperate lead sources by trade. Fencing and roofing are
-   different animals." One trade at a time, never a blended company-wide list. */
-function cardLeads(){
-  const L = D.leadSources;
-  const T = L.byTrade[LEADTRADE] || { allTime:[], windows:{}, distinct:0, namedIds:0, namedRevShare:0, jobs:0 };
-  const m = brandOf(LEADTRADE);
-  const rows = (T.windows[LEADWIN] || []).slice(0, 12);
-  const label = { day:'today', week:'this week', month:mSpan(), ytd:'year to date' }[LEADWIN];
-  const tot = rows.reduce((n,r) => n + r.rev, 0);
-  const mx = Math.max(1, ...rows.map(r => r.rev));
-  /* Unmapped share for THIS company, all-time, by signed value. The map now
-     covers Fencing and Pro-Tec effectively in full; Oasis is the outlier — one
-     dropdown id (#35082) carries the majority of its signed value with no name
-     in our sync, though the office masterlist shows real values for it. The
-     "#none" bucket (no source set at all) is a different thing from an unnamed
-     id and is not lumped in with it. */
-  const unmappedAll = T.allTime.filter(r => !r.name && r.id !== 'none');
-  const unmappedRevAll = unmappedAll.reduce((n,r) => n + r.rev, 0);
-  const revAll = T.allTime.reduce((n,r) => n + r.rev, 0);
-  const biggestUnmapped = [...unmappedAll].sort((a,b) => b.rev - a.rev)[0];
-  /* ── ALL COMPANIES FIRST. The brand toggle below answers "which sources does
-     THIS trade buy"; it could never answer "what did marketing produce", which
-     is the question the owner arrives with. So the card opens the way every
-     other instrument on this page opens: the whole business on the top row,
-     the three brands beneath it, all four windows across — then the trade
-     detail. Read from the same D.leadSources the rows below read: the
-     company-wide window for the total, each trade's own window for its row, so
-     the band and the list can never disagree. */
-  const LWINS = [['day','Day'],['week','Week'],['month','Month'],['ytd','YTD']];
-  const sumWin = list => (list || []).reduce((a, r) => ({ rev: a.rev + r.rev, signed: a.signed + r.signed }), { rev:0, signed:0 });
-  const allWins = Object.fromEntries(LWINS.map(([k]) => [k, sumWin(L.windows[k])]));
-  const brandWins = BRAND_ORDER.map(b => ({ id:b, m:brandOf(b),
-    wins: Object.fromEntries(LWINS.map(([k]) => [k, sumWin((L.byTrade[b] || { windows:{} }).windows[k])])) }));
-  const sumCell = c => `<div class="col${c.rev ? '' : ' zero'}">${c.rev ? short(c.rev) : '—'}<i>${c.signed ? `${c.signed} signed` : 'none'}</i></div>`;
-  /* A job on a company id outside the three brands is counted in the total and
-     in no brand row. Rather than let the arithmetic look broken, the gap is
-     named — on the YTD window, which is the one wide enough to hold any. */
-  const ytdGap = allWins.ytd.rev - brandWins.reduce((n, b) => n + b.wins.ytd.rev, 0);
+/* ── THE MARKETING DRAWER ────────────────────────────────────────────────────
+   Replaces the Leads-by-Source card. Kevin's verdict on that card: a source
+   with a dollar amount beside it and no COST beside it is revenue wearing a
+   marketing label. Marketing is spend against return, so the drawer's first
+   board puts them on one line — spend · leads · appointments set · closed ·
+   closed $ · ROI — and judges every ROI against the same line: TEN. At or
+   above ten reads green, below reads red, and the closer to ten the more
+   neutral, because ten is the kill threshold, not a preference.
+
+   The second board is the rep × source grid: who closes which source, so
+   appointments can be jockeyed to the right people. Two denominators are
+   drawn per cell — signed ÷ leads assigned (live), and signed ÷ appointments
+   RAN, which has NO FEED: CC logs no appointment outcome anywhere in its
+   payload (docs/NUMBERS-TRUTH.md). That column is built and wired to nothing,
+   and every cell says so in words. Substituting appointments SET would put a
+   plausible wrong number where an honest absence belongs.
+
+   Same shelf pattern as the Effort Room: two miniatures always drawn, a tile
+   opens its board alone, the control opens both. State is per device. ────── */
+const MKT_STORE = 'lcc.mkt';
+let MKT_VIEW = (() => {
+  try {
+    const raw = localStorage.getItem(MKT_STORE);
+    const v = raw ? JSON.parse(raw) : null;
+    if (v && (v.mode === 'all' || v.mode === 'none')) return v;
+    if (v && v.mode === 'solo' && ['roi','grid'].includes(v.key)) return v;
+  } catch (e) {}
+  return { mode: 'none' };
+})();
+function mktSave(){ try { localStorage.setItem(MKT_STORE, JSON.stringify(MKT_VIEW)); } catch (e) {} }
+function mktSolo(key){
+  MKT_VIEW = (MKT_VIEW.mode === 'solo' && MKT_VIEW.key === key) ? { mode:'none' } : { mode:'solo', key };
+  SPEND_EDIT = null; mktSave(); keepScroll(() => {});
+}
+function mktAll(){
+  MKT_VIEW = MKT_VIEW.mode === 'all' ? { mode:'none' } : { mode:'all' };
+  SPEND_EDIT = null; mktSave(); keepScroll(() => {});
+}
+
+const MKT_KIT = [
+  { key:'roi',  name:'Source ROI · spend vs signed',  card: cardMktSources, tile: mtRoiTile },
+  { key:'grid', name:'Rep × source · who closes what', card: cardMktGrid,   tile: mtGridTile },
+];
+
+function marketingRoom(){
+  const all = MKT_VIEW.mode === 'all';
+  const solo = MKT_VIEW.mode === 'solo' ? MKT_KIT.find(i => i.key === MKT_VIEW.key) : null;
+  const tiles = MKT_KIT.map(i => {
+    const on = !!solo && solo.key === i.key;
+    return `<button type="button" class="ptile${on ? ' on' : ''}" onclick="mktSolo('${i.key}')"
+      aria-expanded="${on ? 'true' : 'false'}">
+      <div class="pt-h">${esc(i.name)}</div>
+      <div class="pt-b">${i.tile()}</div>
+    </button>`;
+  }).join('');
+  let body = '';
+  if (all) {
+    body = `<div class="room-body">
+      <div class="room-open-head"><div class="ttl">Both boards, full size</div>
+        <button type="button" class="shelf-all" onclick="mktClose()">Close</button></div>
+      ${MKT_KIT.map(i => i.card()).join('')}
+    </div>`;
+  } else if (solo) {
+    body = `<div class="room-body">
+      <div class="room-open-head"><div class="ttl">${esc(solo.name)}</div>
+        <button type="button" class="shelf-all" onclick="mktClose()">Close</button></div>
+      ${solo.card()}
+    </div>`;
+  }
+  return `<div class="room" id="marketing-room">
+    <div class="shelf-head">
+      <div class="shelf-titles">
+        <div class="card-title">Marketing · spend against return</div>
+        <div class="card-sub">Every source on one line — what it cost, what it produced, what that multiple is against the ten-times line. Then who closes which source, so the appointments go to the right people. Google's spend arrives by itself through Windsor; everything on a card gets typed in at month close.</div>
+      </div>
+      <button type="button" class="shelf-all" onclick="mktAll()">${all ? 'Close both' : 'Open both boards'}</button>
+    </div>
+    <div class="shelf-grid">${tiles}</div>
+    ${body}
+  </div>`;
+}
+function mktClose(){ MKT_VIEW = { mode:'none' }; SPEND_EDIT = null; mktSave(); keepScroll(() => {}); }
+
+/* the two miniatures. Same law as the effort shelf: an instrument with nothing
+   behind it says so in words, never a zeroed shape. */
+function mtRoiTile(){
+  const M = D.marketing;
+  if (!M || M.spendState === 'missing')
+    return `<div class="pt-empty">No spend book yet — migration 162 creates it. The board opens with every source's ROI reading “not entered”, never zero.</div>`;
+  if (!M.judged)
+    return `<div class="pt-empty">No spend entered for ${esc(M.monthLabel)} yet. Enter it at month close and every ROI computes on the spot.</div>`;
+  return `<div class="pt-num ${M.atLine === M.judged ? 'green' : M.atLine ? 'gold' : 'red'}">${M.atLine}/${M.judged}</div>
+    <div class="pt-cap">priced sources at or above the 10× line, ${esc(M.monthLabel)}</div>`;
+}
+function mtGridTile(){
+  const G = D.marketing && D.marketing.grid;
+  const best = G && G.best;
+  if (!best) return `<div class="pt-empty">Not enough matured leads to rank a rep on a source yet — a thin cell is not a verdict.</div>`;
+  return `<div class="pt-num accent">${best.pct}%</div>
+    <div class="pt-cap">${esc(best.rep)} on ${esc(best.src)} — best qualified pairing · signed ÷ assigned, ${G.spanCap}</div>`;
+}
+
+/* ── BOARD 1 · THE SOURCE ROW ──────────────────────────────────────────────── */
+/* ROI wears its colour by distance from the line: ten is neutral ground, and
+   conviction grows as the multiple leaves it in either direction. */
+function mktRoiStyle(x){
+  const d = Math.max(-1, Math.min(1, (x - 10) / 10));
+  const a = 0.35 + 0.65 * Math.abs(d);
+  const c = d >= 0 ? '108,194,139' : '217,106,94';
+  return `color:rgba(${c},${a.toFixed(2)})`;
+}
+let SPEND_EDIT = null;
+function mktEditSpend(name){ SPEND_EDIT = name; keepScroll(() => {}); }
+function mktCancelSpend(){ SPEND_EDIT = null; keepScroll(() => {}); }
+async function mktSaveSpend(name){
+  const el = document.getElementById('spendin');
+  const v = el ? Number(el.value) : NaN;
+  if (!isFinite(v) || v < 0) return;
+  const s = sess.get(); if (!s) return;
+  const W = D.windows.month;
+  const month = `${W.from.getFullYear()}-${String(W.from.getMonth()+1).padStart(2,'0')}-01`;
+  let sub = null;
+  try { sub = JSON.parse(atob(s.access_token.split('.')[1].replace(/-/g,'+').replace(/_/g,'/'))).sub; } catch(e){}
+  try {
+    const r = await fetch(`${SB_URL}/rest/v1/marketing_spend`, {
+      method: 'POST',
+      headers: { apikey: SB_KEY, Authorization: 'Bearer ' + s.access_token,
+                 'Content-Type': 'application/json', Prefer: 'resolution=merge-duplicates' },
+      body: JSON.stringify({ source_name: name, month, amount: v,
+                             entered_at: new Date().toISOString(), ...(sub ? { entered_by: sub } : {}) }),
+    });
+    if (!r.ok) throw new Error('save → ' + r.status);
+    RAW.mktSpend = (RAW.mktSpend || []).filter(x => !(x.source_name === name && String(x.month).slice(0,7) === month.slice(0,7)));
+    RAW.mktSpend.push({ source_name: name, month, amount: v, entered_at: new Date().toISOString() });
+    SPEND_EDIT = null;
+    keepScroll(() => { D = buildData(RAW); });
+  } catch (e) {
+    const err = document.getElementById('spenderr');
+    if (err) err.textContent = 'Could not save — ' + (e.message || e);
+  }
+}
+
+function cardMktSources(){
+  const M = D.marketing;
+  if (!M) return '';
+  const W = D.windows.month;
+  const spendCell = r => {
+    const s = r.spend;
+    if (s.state === 'windsor')
+      return `${short(s.amount)}<span class="mkt-chip">windsor</span>${s.through ? `<div class="mg-n">through ${esc(s.through)}</div>` : ''}`;
+    if (s.state === 'windsor-stale')
+      return `<span class="dim">feed stale</span><span class="mkt-chip wait">windsor</span><div class="mg-n">${s.last ? `last row ${esc(s.last)}` : 'no rows yet'}</div>`;
+    if (s.state === 'free') return '<span class="dim">—</span>';
+    if (s.state === 'na') return '<span class="dim">—</span>';
+    if (SPEND_EDIT === r.key)
+      return `<input id="spendin" class="mkt-in" type="number" min="0" step="1" value="${s.state === 'typed' ? s.amount : ''}"
+          aria-label="Spend for ${esc(r.name)} ${esc(M.monthLabel)}" onkeydown="if(event.key==='Enter')mktSaveSpend('${esc(r.key)}')"/>
+        <button class="mkt-save" onclick="mktSaveSpend('${esc(r.key)}')">Save</button>
+        <button class="mkt-cancel" onclick="mktCancelSpend()" aria-label="Cancel">✕</button>`;
+    if (s.state === 'typed')
+      return `${short(s.amount)}<span class="mkt-chip office">office</span>
+        <button class="mkt-cancel" onclick="mktEditSpend('${esc(r.key)}')" aria-label="Edit spend">✎</button>`;
+    return `<button class="mkt-enter" onclick="mktEditSpend('${esc(r.key)}')">enter</button>`;
+  };
+  const roiCell = r => {
+    const roi = r.roi;
+    if (roi.state === 'roi') return `<span class="mkt-roi" style="${mktRoiStyle(roi.xr)}">${roi.xr < 1 ? '<1' : roi.xr}x</span>`;
+    if (roi.state === 'free') return '<span class="mkt-roi na">—</span>';
+    if (roi.state === 'unentered') return '<span class="mkt-roi na">not entered</span>';
+    if (roi.state === 'stale') return '<span class="mkt-roi na">awaiting windsor</span>';
+    return '<span class="mkt-roi na">—</span>';
+  };
   return `<div class="card full">
-    <div class="card-title">Leads by source<span class="feed-tag cc">live · cc</span></div>
-    <div class="card-sub">All three companies first, then one trade at a time — fencing and roofing buy leads in different markets, so the source list is never a blended one. Close rate is that source's contracts against every lead it has produced.</div>
-
-    <div class="lsum">
-      <div class="lsum-head"><div>Signed from leads</div>${LWINS.map(([,l]) => `<div>${l}</div>`).join('')}</div>
-      <div class="lsum-row all"><div class="nm">All companies</div>${LWINS.map(([k]) => sumCell(allWins[k])).join('')}</div>
-      ${brandWins.map(b => `<div class="lsum-row${b.id === LEADTRADE ? ' sel' : ''}">
-        <div class="nm"><span class="tdot" style="background:${b.m.c}"></span>${esc(b.m.n)}</div>
-        ${LWINS.map(([k]) => sumCell(b.wins[k])).join('')}</div>`).join('')}
+    <div class="card-title">Source ROI · ${esc(M.monthLabel)}<span class="feed-tag cc">cc</span><span class="feed-tag">windsor</span><span class="feed-tag qb">office</span></div>
+    <div class="card-sub">One row per source: spend beside return, judged as a multiple against the <b>10×</b> line. Referral and Previous Customer carry no spend — they are the free revenue, shown beside the paid sources on purpose. A source with no spend entered reads <b>not entered</b>, never zero and never infinite.</div>
+    <div class="mnav" style="margin-top:10px">
+      <button class="mn-btn" ${MONTHOFF>=12?'disabled':''} onclick="setMonthOff(MONTHOFF+1)" aria-label="Previous month">‹</button>
+      <span class="mn-cur${MONTHOFF?' back':''}">${MONTHOFF ? esc(W.label) : 'This month'}</span>
+      <button class="mn-btn" ${MONTHOFF?'':'disabled'} onclick="setMonthOff(MONTHOFF-1)" aria-label="Next month">›</button>
+      ${MONTHOFF?`<button class="mn-now" onclick="setMonthOff(0)">back to now</button>`:''}
     </div>
-    ${ytdGap > 0 ? `<div class="note" style="margin-top:0">The all-companies row is ${short(ytdGap)} above the three brands added up, year to date: that much signed value sits on a company id outside Fencing, Oasis and Pro-Tec. It is counted in the total and in no brand row, said here rather than quietly dropped from one side or the other.</div>` : ''}
-
-    <div class="seg">
-      ${BRAND_ORDER.map(b=>`<button class="${b===LEADTRADE?'on':''}" onclick="setTrade('${b}')">${esc(brandOf(b).s)}</button>`).join('')}
-    </div>
-    <div class="seg">
-      ${[['day','Day'],['week','Week'],['month','Month'],['ytd','YTD']]
-        .map(([k,l])=>`<button class="${k===LEADWIN?'on':''}" onclick="setLead('${k}')">${l}</button>`).join('')}
-    </div>
-
-    <div class="tradehead">
-      <span class="tdot" style="background:${m.c}"></span>${esc(m.n)}
-      <span class="tmeta">${T.jobs.toLocaleString()} leads · ${T.distinct} sources · ${T.namedIds} named</span>
-    </div>
-
-    ${rows.length ? rows.map(r => {
-      const all = T.allTime.find(a => a.id === r.id);
-      const conv = all && all.jobs ? Math.round(all.signed / all.jobs * 100) : null;
-      return `<div class="rep-row">
-        <div class="rep-head">
-          <div class="nm">${r.name ? esc(r.name) : (r.id==='none'?'No source on the job':'#'+esc(r.id))}
-            ${r.name ? (r.category?`<span class="brand">${esc(r.category)}${r.inferred?' ·inferred':''}</span>`:'')
-                     : '<span class="brand">unmapped</span>'}</div>
-          <div class="amt">${short(r.rev)} <span>· ${r.signed} signed</span></div>
-        </div>
-        <div class="meter"><div class="meter-fill" style="width:${Math.round(r.rev/mx*100)}%;background:${r.name?(r.rev===mx?m.c:'#6ba8c9'):'#8aa094'}"></div></div>
-        <div class="tgt-cap">
-          <span>${pct(r.rev,tot)}% of ${esc(m.s)} signed ${esc(label)}${all?` · ${all.jobs.toLocaleString()} leads all time`:''}</span>
-          <span class="${conv===null?'':conv>=50?'hit':''}">${conv===null?'':conv+'% close'}</span>
-        </div>
-      </div>`}).join('') : `<div class="card-sub" style="margin:0">${esc(m.n)} signed nothing ${esc(label)} to attribute.</div>`}
-
-    ${unmappedRevAll > 0 ? `<div class="withheld"><div class="wt">${(100-T.namedRevShare) >= 40 ? 'Most of this company sits on an unnamed source' : 'Not every source is named'}</div><div class="wx">
-      <b>${short(unmappedRevAll)}</b> of ${esc(m.s)}'s signed value — <b>${pct(unmappedRevAll,revAll)}%</b> of it — sits on ${unmappedAll.length===1?'a source id':'source ids'} our sync carries no name for${biggestUnmapped?`, nearly all of it on <b>#${esc(biggestUnmapped.id)}</b> (${biggestUnmapped.jobs.toLocaleString()} leads · ${short(biggestUnmapped.rev)} signed)`:''}. The office masterlist shows real values for these — Google, Saving Safari and the like — but the warehouse has not mapped them yet, so they keep their raw id rather than being folded into "other". A source you cannot name is still one you are paying for.</div></div>` : ''}
-
-    <div class="note">${esc(m.n)}: <b>${T.namedIds} of ${T.distinct}</b> sources named, covering <b>${T.namedRevShare}%</b> of its signed value. The map now holds <b>${L.mapSize}</b> names and covers Fencing and Pro-Tec effectively in full; Oasis is the one still leaning on an unmapped dropdown id. Categories marked <b>·inferred</b> were guessed rather than set by hand, so a guess never reads as a decision.</div>
+    <div id="spenderr" class="mg-n" style="color:var(--red)"></div>
+    <div class="mkt-scroll"><table class="mkt-tbl">
+      <thead><tr><th>Source</th><th>Spend</th><th>Leads</th><th>Appts set</th><th>Closed</th><th>Closed $</th><th>ROI</th></tr></thead>
+      <tbody>
+      ${M.rows.map(r => `<tr>
+        <td><span class="mkt-src">${esc(r.name)}</span>${r.sub ? `<span class="mkt-src sub">${esc(r.sub)}</span>` : ''}</td>
+        <td>${spendCell(r)}</td>
+        <td${r.leads ? '' : ' class="dim"'}>${r.leads || '0'}</td>
+        <td${r.appts ? '' : ' class="dim"'}>${r.appts || '0'}</td>
+        <td${r.signed ? '' : ' class="dim"'}>${r.signed || '0'}</td>
+        <td${r.dollars ? '' : ' class="dim"'}>${r.dollars ? short(r.dollars) : '$0'}</td>
+        <td>${roiCell(r)}</td>
+      </tr>`).join('')}
+      </tbody>
+    </table></div>
+    ${M.spendState === 'missing' ? `<div class="note"><b>The spend book is not on live yet.</b> Migration 162 creates <b>marketing_spend</b>; until it applies, every typed source reads “not entered” and nothing here is a zero.</div>` : ''}
+    <div class="note"><b>ROI = closed dollars ÷ spend</b>, as a whole multiple. <b>Ten is the line</b> — at or above earns its budget, below is on notice. Spend is one number per source per month, typed at month close from the card statements; <b>Google is not typeable</b> — its spend rides in from Windsor daily${M.gadsLast ? ` (feed currently through <b>${esc(M.gadsLast)}</b>)` : ''}. Leads count CC projects created in the window on that source; appointments count bookings on those projects; closed counts signed contracts and CC signed dollars. Oasis dollars here are CC-signed amounts — the lead-source id lives only on the CC job, so this board reads the one feed that carries a source.</div>
   </div>`;
 }
 
-/* Channel view — the question "which kind of marketing earns" rather than
-   "which individual source". Categories come from the same map. */
-function cardLeadCategories(){
-  const cats = D.leadSources.categories.filter(c=>c.rev>0);
-  if (!cats.length) return '';
-  const tot = cats.reduce((n,c)=>n+c.rev,0);
-  return `<div class="card">
-    <div class="card-title">By channel · all time<span class="feed-tag cc">live · cc</span></div>
-    <div class="card-sub">Signed value grouped by the kind of source it came from.</div>
-    ${cats.map(c=>`<div class="rep-row">
-      <div class="rep-head">
-        <div class="nm">${esc(c.category)}<span class="brand">${c.sources} source${c.sources===1?'':'s'}</span></div>
-        <div class="amt">${short(c.rev)} <span>· ${c.signed} signed</span></div>
-      </div>
-      <div class="meter"><div class="meter-fill" style="width:${pct(c.rev,tot)}%;background:${c.category==='Unmapped'?'#8aa094':'#f0834a'}"></div></div>
-      <div class="tgt-cap"><span>${pct(c.rev,tot)}% of signed value</span>
-        <span>${c.jobs?Math.round(c.signed/c.jobs*100):0}% close</span></div>
-    </div>`).join('')}
+/* ── BOARD 2 · THE REP × SOURCE GRID ───────────────────────────────────────── */
+function cardMktGrid(){
+  const G = D.marketing && D.marketing.grid;
+  if (!G) return '';
+  const medStr = G.median == null ? null : Math.round(G.median * 100) + '%';
+  const cellHtml = c => {
+    if (!c || !c.n) return `<div class="mg-empty">·</div>`;
+    const pctN = Math.round(c.pct * 100);
+    if (c.n < G.minCell)
+      return `<div class="mg-pct thin">${pctN}%</div><div class="mg-n">${c.s}/${c.n} · thin</div><div class="mg-ran">ran: no outcome logged</div>`;
+    const d = G.median == null ? 0 : c.pct - G.median;
+    const a = 0.35 + 0.65 * Math.min(1, Math.abs(d) / 0.25);
+    const col = Math.abs(d) < 0.02 ? 'var(--text)' : d > 0 ? `rgba(108,194,139,${a.toFixed(2)})` : `rgba(217,106,94,${a.toFixed(2)})`;
+    return `<div class="mg-pct" style="color:${col}">${pctN}%</div><div class="mg-n">${c.s}/${c.n}</div><div class="mg-ran">ran: no outcome logged</div>`;
+  };
+  return `<div class="card full">
+    <div class="card-title">Rep × source · who closes what<span class="feed-tag cc">live · cc</span></div>
+    <div class="card-sub">Each cell is that rep's closing on that source, on two denominators. <b>Signed ÷ leads assigned</b> is live. <b>Signed ÷ appointments run</b> has no feed — CC logs no appointment outcome anywhere in its payload, so that read is built, wired to nothing, and says so in every cell rather than borrowing “appointments set” and calling it close. The point of this grid is to jockey appointments to the people who close that source.</div>
+    <div class="mkt-scroll"><table class="mkt-tbl mg-tbl">
+      <thead><tr><th class="mg-rep">Rep</th>${G.cols.map(c => `<th>${esc(c.name)}<div class="mg-n">${c.total} leads</div></th>`).join('')}</tr></thead>
+      <tbody>
+      ${G.rows.map(r => `<tr>
+        <td class="mg-rep">${esc(r.name)}</td>
+        ${G.cols.map(c => `<td>${cellHtml(r.cells[c.key])}</td>`).join('')}
+      </tr>`).join('')}
+      </tbody>
+    </table></div>
+    <div class="note">Cohort math, ${G.spanCap}: a lead counts in its own arrival window and a signing counts with its own lead, so the newest leads — which have not had time to close — sit outside the window rather than dragging every rate down (maturity is <b>${G.mature} days</b>, measured from the brands' own median days-to-close, not guessed). A cell needs at least <b>${G.minCell} leads</b> before it reads as good or bad — under that, one deal swings the number by ${Math.round(100/G.minCell)}+ points, so it reads <b>thin</b> instead. Colour is against the grid's own median${medStr ? ` (<b>${medStr}</b>)` : ''}, brighter the further from it.${G.dropped ? ` Sources under ${G.minColLeads} assigned leads in the window are left off the columns — ${G.dropped} of them, ${G.droppedLeads} leads in total, too few per rep to say anything about anybody.` : ''}</div>
   </div>`;
 }
 
@@ -4515,12 +4689,17 @@ function render(){
                                    brand split on every tile, one window switch
                                    across all four
        4  Sales by rep           — who put it on the board
-       5  marketing              — leads by source (all companies first, then
-                                   the three trades) and appointments by
-                                   company. It was at the very bottom, which is
-                                   the wrong place for the thing that decides
-                                   whether band 3 has anything in it next month.
-       6  Effort × results       — where effort and money disagree, kept in the
+       5  appointments by company — Kevin's favourite band, moved up to sit
+                                   directly under the sales it explains; it was
+                                   too low, after the marketing detail.
+       6  THE MARKETING DRAWER   — spend against return, behind the same
+                                   preview shelf the Effort Room ships. It
+                                   replaces the Leads-by-Source card: revenue
+                                   with no cost beside it was revenue wearing
+                                   a marketing label. Two boards — the source
+                                   ROI row against the 10× line, and the
+                                   rep × source closing grid.
+       7  Effort × results       — where effort and money disagree, kept in the
                                    open because it is the one card that reads
                                    both halves of the page at once.
 
@@ -4541,13 +4720,15 @@ function render(){
       /* 4 · WHO SOLD IT */
       cardReps(),
 
-      /* 5 · MARKETING — what produced the appointments the money came from.
-         Leads by source opens with the all-companies row over all four windows,
-         the way every other instrument on this page opens; appointments by
-         company sits directly under it, because "which sources ran" and "which
-         company got the appointments" are one question asked twice. */
-      cardLeads(),
+      /* 5 · APPOINTMENTS BY COMPANY — directly under the sales it explains.
+         This band is the one Kevin reads first; it sat below the marketing
+         detail, which is the wrong side of the fold for a favourite. */
       cardApptByCompany(),
+
+      /* 6 · THE MARKETING DRAWER — spend against return. Replaces the
+         Leads-by-Source card (revenue with no cost beside it is not a
+         marketing read). Behind a preview shelf like the Effort Room. */
+      marketingRoom(),
 
       /* 6 · WHERE EFFORT AND RESULTS DISAGREE. Stays visible even though the
          rest of the effort suite folded: this is the card that reads both
@@ -4576,8 +4757,6 @@ function keepScroll(fn){
 function setEff(k){ keepScroll(() => { EFFWIN = k; }); loadEffortIntel(); }
 function setApptCo(k){ keepScroll(() => { APPTCOWIN = k; }); }
 function setQuota(k){ keepScroll(() => { QUOTAWIN = k; }); }
-function setLead(k){ keepScroll(() => { LEADWIN = k; }); }
-function setTrade(b){ keepScroll(() => { LEADTRADE = b; }); }
 
 /* ── charts. Kevin's Chart.js idiom: mono ticks, #1c3528 tooltips. ─────────
       If the CDN is blocked or offline, every chart says so out loud instead of
@@ -4975,7 +5154,7 @@ addEventListener('resize', () => {
    server for hours while Kevin looked at yesterday's build and reported the bug
    as unfixed. That happened. The page now checks version.json on every load and
    reloads itself once if the deployed build is newer than the one running. */
-const BUILD = '2026-08-15T22:25Z-effort-room-preview-shelf';
+const BUILD = '2026-08-16T00:40Z-marketing-drawer';
 const SB_URL = 'https://lzegjjbkfuecrhdvlvay.supabase.co';
 /* The one page that can finish a password reset. Hard-coded rather than derived,
    because every derivation of it so far has been a source of bugs: a bare origin
@@ -5158,7 +5337,7 @@ async function q(path, { retry = true, onPage } = {}){
 /* ── aggregation. Mirrors console/build-console.mjs so the figures on the
       phone are the same figures, computed the same way, just client-side. ── */
 function buildData(raw){
-  const { jobs: allJobs, appts, reps: allReps, touches, repTargets, playComponents, leadNames, qbInv, qbError, billdu, claims, bank } = raw;
+  const { jobs: allJobs, appts, reps: allReps, touches, repTargets, playComponents, leadNames, qbInv, qbError, billdu, claims, bank, mktSpend, gads, mktSpendErr, gadsErr } = raw;
 
   /* PHANTOM REPS OUT FIRST. Migration 011 tagged the roster the same way 009
      tagged jobs: a rep linked to a real Contractors Cloud user is source='cc';
@@ -6249,6 +6428,156 @@ function buildData(raw){
       })) };
   })();
 
+  /* ── MARKETING · the drawer's two boards ──────────────────────────────────
+     Board 1 (source ROI) rides the MONTH window — spend is a monthly fact, so
+     the judgment is monthly, and the month pager reaches every closed month.
+     Board 2 (rep × source) is a COHORT read over the trailing 12 months,
+     ending MATURE days back — the same maturity convention the discovery
+     board uses (measured from closeLag, never guessed), because a lead from
+     yesterday that has not signed yet is not evidence against anybody.
+
+     Names, not ids: CC fragments one channel across many ids (Google spans
+     31864/33983/35082/35131/35813 — docs/LEAD-SOURCE-AUDIT.md). Everything
+     here rolls up to the lead_sources NAME, with the two Google ids the
+     lookup table historically missed carried as a fallback so the rollup is
+     whole even before migration 162's data fix lands. */
+  const marketing = (() => {
+    const AUDIT_NAMES = { '35082': 'Google', '35813': 'Google' };  // CC's own lookup, 15 Aug audit
+    const lmap = Object.fromEntries(leadNames.map(e => [String(e.cc_lead_id), e]));
+    const norm = n => n ? String(n).replace(/\s*\(.*\)\s*$/, '').trim() : null;
+    const srcOf = j => {
+      const k = String(j.cc_lead_source_id || '');
+      if (!k) return { key: 'none', name: null };
+      const nm = norm((lmap[k] || {}).name) || AUDIT_NAMES[k] || null;
+      return nm ? { key: nm, name: nm } : { key: '#' + k, name: null };
+    };
+    /* The free revenue. Referral and Previous Customer by Kevin's framing;
+       self-generated referrals are the same class — a rep's own hustle is not
+       a line on a card statement. Free sources carry an em-dash, never a zero
+       and never "not entered": there is nothing to enter. */
+    const FREE = new Set(['Referral', 'Previous Customer', 'Referral- Self Generated']);
+    const GOOGLE = 'Google';
+    const jobByProj = {};
+    for (const j of jobs) if (j.cc_project_id != null) jobByProj[String(j.cc_project_id)] = j;
+
+    /* ---- board 1 · the month in view */
+    const W = WINS.month;
+    const mKey = `${W.from.getFullYear()}-${String(W.from.getMonth() + 1).padStart(2, '0')}`;
+    const typed = {};
+    for (const r of (mktSpend || []))
+      if (String(r.month).slice(0, 7) === mKey) typed[norm(r.source_name)] = { amount: Number(r.amount || 0), at: r.entered_at };
+    const gRows = (gads || []).filter(r => inRDate(r.date, W.from, W.to));
+    const gSpend = gRows.reduce((n, r) => n + Number(r.spend || 0), 0);
+    const gLast = (gads || []).reduce((m, r) => (r.date && r.date > m ? r.date : m), '');
+    const gCovered = gLast && new Date(gLast + 'T00:00') >= new Date(Math.min(W.to.getTime() - 86400000, sod(NOW).getTime() - 86400000));
+
+    const stats = {};
+    const bump = (key, name) => (stats[key] ??= { key, name: name || key, leads: 0, appts: 0, signed: 0, dollars: 0 });
+    for (const j of jobs) {
+      const s = srcOf(j);
+      const nm = s.name || (s.key === 'none' ? 'No source on the job' : s.key + ' · unmapped');
+      const st = bump(s.key, nm);
+      if (inR(j.lead_created, W.from, W.to)) st.leads++;
+      if (inR(j.contract_signed_at, W.from, W.to)) { st.signed++; st.dollars += Number(j.fin_sold_amount || 0); }
+    }
+    for (const a of appts) {
+      if (a.is_internal || !inR(a.cc_created_at, W.from, W.to)) continue;
+      const j = jobByProj[String(a.cc_project_id)]; if (!j) continue;
+      const s = srcOf(j);
+      bump(s.key, s.name || (s.key === 'none' ? 'No source on the job' : s.key + ' · unmapped')).appts++;
+    }
+    for (const nm of Object.keys(typed)) bump(nm);
+    bump(GOOGLE);
+
+    const spendState = mktSpendErr ? 'missing' : 'live';
+    const spendOf = r => {
+      if (r.key === GOOGLE) {
+        if (gadsErr) return { state: 'windsor-stale', last: null };
+        if (!gRows.length) return { state: 'windsor-stale', last: gLast || null };
+        return { state: 'windsor', amount: gSpend, through: gCovered ? null : gLast };
+      }
+      if (FREE.has(r.key)) return { state: 'free' };
+      if (r.key.startsWith('#') || r.key === 'none') return { state: 'na' };
+      const t = typed[r.key];
+      return t ? { state: 'typed', amount: t.amount } : { state: 'unentered' };
+    };
+    const roiOf = (r, s) => {
+      if (s.state === 'free' || s.state === 'na') return { state: 'free' };
+      if (s.state === 'windsor-stale') return { state: 'stale' };
+      if (s.state === 'unentered') return { state: 'unentered' };
+      if (!(s.amount > 0)) return { state: 'free' };          // a $0 month cost nothing — em-dash, never ∞
+      /* xr is what the board PRINTS, so xr is what the colour and the tile
+         judge — a 9.8× that prints "10x" must never print it in red. */
+      const x = r.dollars / s.amount;
+      return { state: 'roi', x, xr: x < 0.5 ? 0 : Math.round(x) };
+    };
+    let rows = Object.values(stats)
+      .filter(r => r.leads || r.appts || r.signed || r.dollars || r.key === GOOGLE || typed[r.key] || FREE.has(r.key))
+      .map(r => {
+        const s = spendOf(r);
+        const roi = roiOf(r, s);
+        const sub = r.key === GOOGLE ? 'windsor · auto' : s.state === 'typed' ? 'card · typed' : s.state === 'unentered' ? 'card · month close' : FREE.has(r.key) ? 'free' : null;
+        return { ...r, spend: s, roi, sub };
+      });
+    /* Sources with spend sort above sources without; inside each group the
+       biggest signed dollars lead. The free rows sit beside the paid ones —
+       Kevin wants their volume in view — and the leftovers (unmapped ids, a
+       job with no source) stay at the bottom, named rather than dropped. */
+    const grp = r => (r.spend.state === 'typed' || r.spend.state === 'windsor') ? 0
+      : r.spend.state === 'unentered' || r.spend.state === 'windsor-stale' ? 1
+      : FREE.has(r.key) ? 2 : 3;
+    rows.sort((a, b) => grp(a) - grp(b) || b.dollars - a.dollars || b.leads - a.leads);
+    const judged = rows.filter(r => r.roi.state === 'roi').length;
+    const atLine = rows.filter(r => r.roi.state === 'roi' && r.roi.xr >= 10).length;
+
+    /* ---- board 2 · the rep × source cohort grid */
+    const lagMax = Math.max(0, ...Object.values(closeLag.byBrand).map(x => x.median || 0));
+    const MATURE = Math.min(21, Math.max(7, Math.ceil(lagMax * 1.5)));
+    const gTo = addD(sod(NOW), -MATURE), gFrom = addD(gTo, -365);
+    const sellers = reps.filter(r => r.active && (r.sells || /\bgio\b/i.test(r.name || '')));
+    const sellerIds = new Set(sellers.map(r => r.id));
+    const cells = {}; const colTotals = {};
+    for (const j of jobs) {
+      if (!sellerIds.has(j.rep_id)) continue;
+      const s = srcOf(j); if (!s.name) continue;             // the grid ranks real channels only
+      if (!inR(j.lead_created, gFrom, gTo)) continue;
+      const ck = j.rep_id + '|' + s.key;
+      (cells[ck] ??= { n: 0, s: 0 });
+      cells[ck].n++; if (j.contract_signed_at) cells[ck].s++;
+      colTotals[s.key] = (colTotals[s.key] || 0) + 1;
+    }
+    const MIN_CELL = 8, MIN_COL = 10;
+    const allCols = Object.entries(colTotals).sort((a, b) => b[1] - a[1]);
+    const cols = allCols.filter(([, n]) => n >= MIN_COL).map(([key, total]) => ({ key, name: key, total }));
+    const droppedCols = allCols.filter(([, n]) => n < MIN_COL);
+    const gridRows = sellers.map(r => {
+      const mine = {};
+      for (const c of cols) {
+        const cell = cells[r.id + '|' + c.key];
+        if (cell) mine[c.key] = { n: cell.n, s: cell.s, pct: cell.s / cell.n };
+      }
+      return { id: r.id, name: r.name, cells: mine, total: Object.values(mine).reduce((n, c) => n + c.n, 0) };
+    }).filter(r => r.total > 0).sort((a, b) => b.total - a.total);
+    const qual = gridRows.flatMap(r => Object.values(r.cells)).filter(c => c.n >= MIN_CELL).map(c => c.pct).sort((a, b) => a - b);
+    const median = qual.length ? (qual.length % 2 ? qual[(qual.length - 1) / 2] : (qual[qual.length / 2 - 1] + qual[qual.length / 2]) / 2) : null;
+    let best = null;
+    for (const r of gridRows) for (const [k, c] of Object.entries(r.cells))
+      if (c.n >= MIN_CELL && (!best || c.pct > best.p)) best = { rep: r.name, src: k, p: c.pct, pct: Math.round(c.pct * 100) };
+    const fmtD = d => `${MNAMES[d.getMonth()].slice(0, 3)} ${d.getDate()} ${d.getFullYear()}`;
+
+    return {
+      monthLabel: W.label, mKey, rows, judged, atLine, spendState,
+      gadsLast: gLast || null,
+      grid: {
+        mature: MATURE, minCell: MIN_CELL, minColLeads: MIN_COL, median, best,
+        spanCap: `leads ${fmtD(gFrom)} → ${fmtD(gTo)}`,
+        cols, rows: gridRows,
+        dropped: droppedCols.length,
+        droppedLeads: droppedCols.reduce((n, [, c]) => n + c, 0),
+      },
+    };
+  })();
+
   /* QuickBooks. qb_invoices currently has RLS policies but no GRANT to the
      authenticated role, so this 403s for every logged-in user. Reported as
      unreadable rather than drawn as zero — a missing grant and no money are
@@ -7228,7 +7557,7 @@ function buildData(raw){
       apptsWithRep: appts.filter(a=>a.rep_id).length, touches: touches.length,
       // Coverage of the field every dollar on this page is actually built from.
       jobsWithSold: jobs.filter(j=>Number(j.fin_sold_amount)>0).length },
-    weeks, daily, monthly, cadence, targets, monthShape, quotaBoard, effort, leadSources, qb, appointments,
+    weeks, daily, monthly, cadence, targets, monthShape, quotaBoard, effort, leadSources, marketing, qb, appointments,
     // window bounds as plain YYYY-MM-DD, so the Billdu feed (whose dates are
     // already resolved to Eastern) can be filtered without re-parsing timezones
     windowRange: Object.fromEntries(Object.entries(WINS).map(([k,wv]) =>
@@ -7314,7 +7643,11 @@ async function loadAll(){
     // reporting_excluded comes down WITH the rows rather than being filtered in
     // the query, so the console can say how much it left out instead of silently
     // showing a smaller number than last time.
-    qp('jobs?select=cc_company_id,cc_project_id,rep_id,contract_signed_at,completed_at,cc_lead_source_id,fin_sold_amount,reporting_excluded,reporting_exclusion_reason,title&source=eq.cc'),
+    // lead_created is CC's own project_created_at, read straight off the raw
+    // payload — the one date every job carries (11,558/11,558 on live). It is
+    // when the LEAD arrived, which is the marketing drawer's denominator date;
+    // our row's created_at is just when the sync first saw it.
+    qp('jobs?select=cc_company_id,cc_project_id,rep_id,contract_signed_at,completed_at,cc_lead_source_id,fin_sold_amount,reporting_excluded,reporting_exclusion_reason,title,lead_created:cc_raw->>project_created_at&source=eq.cc'),
     // cc_created_at is what makes a like-for-like booking comparison possible:
     // "what was on the books last Monday" has to count only what was booked BY
     // last Monday, not what the week eventually filled with.
@@ -7428,8 +7761,22 @@ async function loadAll(){
   } catch(e){ claims = []; bank = []; }
   /* RAW is kept so the month time machine can rebuild every window client-side
      — a shift is a re-slice of rows already in memory, never a refetch. */
+  /* THE MARKETING DRAWER'S SPEND FEEDS. Both optional on the qb_invoices rule:
+     an unreadable table is reported as its own state, never drawn as $0.
+     marketing_spend does not exist until migration 162 applies — until then the
+     drawer's ROI column reads "not entered" on every typed source and says the
+     book is missing. google_ads_daily is Windsor's Google Ads landing table
+     (584 rows on live as of this build, stale since 20 Jul — the drawer states
+     the feed's last row rather than presenting a short month as a cheap one). */
+  let mktSpend = [], gads = [], mktSpendErr = null, gadsErr = null;
+  try { mktSpend = await qp('marketing_spend?select=source_name,month,amount,entered_at'); }
+  catch(e){ mktSpendErr = e.status === 404 ? 'not-created' : String(e.message || e); }
+  try { gads = await qp('google_ads_daily?select=date,spend'); }
+  catch(e){ gadsErr = String(e.message || e); }
+
   RAW = { jobs, appts, reps, touches, repTargets, playComponents,
-    leadNames, qbInv, qbError, billdu, claims, bank };
+    leadNames, qbInv, qbError, billdu, claims, bank,
+    mktSpend, gads, mktSpendErr, gadsErr };
   D = buildData(RAW);
   render();
   loadEffortIntel();   // after first paint — a missing 108/119 can never block the page
