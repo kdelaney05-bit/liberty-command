@@ -1,0 +1,29 @@
+# THE REASON THIS FILE EXISTS.
+#
+# This repository is public, and the README's first promise is that no business
+# data is in it: no data snapshot, no exported report, no figure of any kind
+# baked into the markup. Every number the console shows is fetched at view time
+# under the reader's own login, and row-level security decides what they see.
+#
+# Rendering the console offline — for a layout check or a screenshot — needs
+# real rows, and the natural way to get them is to dump a series into a file
+# beside index.html. Such a file is exactly the data snapshot the README says is
+# not here: __harness.js at the time of writing held ~900 days of signed and
+# invoiced dollars per brand. It was never committed, but nothing stopped it
+# either, and one `git add -A` from any session would have published it.
+#
+# Keep render harnesses OUT of the working tree where possible (a scratch
+# directory outside the repo is better). When one must live here, it matches a
+# pattern below and stays untracked.
+__harness.js
+*-harness.html
+*-harness.js
+harness-data.*
+console-data.json
+series.txt
+*.local.json
+
+# OS / editor noise
+.DS_Store
+Thumbs.db
+*.swp
