@@ -1734,9 +1734,15 @@ function ekgSpark(days, { id, w = 280, h = 48, mini = false, color = 'var(--gree
 
    The number lives ON the bar, per Kevin: "the chart pic doesn't show it… I have
    to guess based on the graph." */
-function rhythmBars(items, { w = 280, h = 62, refDash = true, color = 'var(--blue)' } = {}){
+function rhythmBars(items, { w = 280, h = 62, mini = false, refDash = true, color = 'var(--blue)' } = {}){
   if (!items || !items.length) return '';
-  const padT = 13, padB = 12, padX = 2;
+  /* The padding buys room for the number above each bar and the label below it.
+     The mini spark on a brand row hides both (see .alloc-spark in the CSS), and
+     at h=22 the full padding is 25px — taller than the chart, which drove every
+     bar height negative and clamped it to zero. The brand rows rendered as a
+     dashed line floating over nothing. Mini keeps a hairline of breathing room
+     and gives the rest to the bars. */
+  const padT = mini ? 2 : 13, padB = mini ? 2 : 12, padX = 2;
   const vals = items.flatMap(i => [i.v, i.ref]).filter(v => v != null);
   if (!vals.length) return '';
   const vmax = Math.max(1, ...vals) * 1.18;
@@ -1789,7 +1795,13 @@ function rhythmGap(cur, norm, what){
   return { tone: d > 0 ? 'up' : 'down',
            txt: `${d > 0 ? '+' : '−'}${Math.abs(d)} ${d > 0 ? 'above' : 'below'} ${what}` };
 }
-const rhySamples = n => `your last ${n} `;
+/* "your last 8 Mondays" — the COUNT is always spoken, because a normal built from
+   five samples and one built from eight are not the same claim and the reader is
+   owed the difference. Returns the stem so the caller appends the plural noun;
+   at one sample there is no plural to append and the caller is told so, since
+   "your last 1 Mondays" reads like a bug and undermines every other number on
+   the card. */
+const rhySamples = (n, noun) => n === 1 ? `your last ${noun}` : `your last ${n} ${noun}s`;
 
 function heroAppts(k){
   const A = D.appointments;
@@ -1827,21 +1839,30 @@ function heroAppts(k){
     const items = RA.samples.map(s => ({ label:s.label, v:s.byHour, ref:RA.norm, dim:true }))
       .concat([{ label:'today', v:RA.soFar, ref:RA.norm, hot:true }]);
     rTop = rhythmBars(items);
-    rCap = `booked by ${hourLabel(RA.hour)}, so far today<span class="ekg-cap-ref">╌╌ median of ${rhySamples(RA.n)}${esc(RA.dowName)}s</span>`;
+    /* No samples yet means rmed() returned null and NO dashed line was drawn, so
+       the caption must not name a reference the chart does not carry. */
+    rCap = `booked by ${hourLabel(RA.hour)}, so far today${RA.n
+      ? `<span class="ekg-cap-ref">╌╌ ${RA.n === 1 ? '' : 'median of '}${esc(rhySamples(RA.n, RA.dowName))}</span>` : ''}`;
     rGap = RA.n ? rhythmGap(RA.soFar, RA.norm, `your ${RA.dowName} normal by ${hourLabel(RA.hour)}`) : null;
     rTypical = RA.n ? RA.norm : null;
   } else if (RA && k === 'week'){
     const items = RA.days.map((x, i) => ({ label:x.label, v:x.v, ref:RA.ref[i],
       hot:x.today, dim:x.weekend && !x.today }));
     rTop = rhythmBars(items);
-    rCap = `booked per day this week<span class="ekg-cap-ref">╌╌ median shape of ${rhySamples(RA.n)}weeks</span>`;
+    rCap = `booked per day this week${RA.n
+      ? `<span class="ekg-cap-ref">╌╌ ${RA.n === 1 ? 'the shape of ' : 'median shape of '}${rhySamples(RA.n, 'week')}</span>` : ''}`;
     rGap = RA.n ? rhythmGap(RA.cur, RA.norm,
-      `your ${RA.n}-week normal for the same ${RA.elapsed} day${RA.elapsed===1?'':'s'}`) : null;
+      `your ${RA.n === 1 ? 'prior week' : `${RA.n}-week normal`} for the same ${RA.elapsed} day${RA.elapsed===1?'':'s'}`) : null;
     rTypical = RA.n ? RA.norm : null;
   } else if (RA && k === 'ytd'){
     const items = RA.months.map(m => ({ label:m.label, v:m.n, ref:m.prior, hot:m.current }));
     rTop = rhythmBars(items);
-    rCap = `booked per month this year<span class="ekg-cap-ref">╌╌ same month last year</span>`;
+    /* The current month's bar is SHORT because the month is short, not because
+       bookings fell off a cliff, and eleven full bars beside one part-bar reads
+       as a collapse every single month. The reference under it is already the
+       same part-month a year ago — the arithmetic was never wrong — but the bar
+       could not say so, so the caption does. */
+    rCap = `booked per month${RA.elapsed ? ` · ${esc(RA.curLabel)} is ${RA.elapsed} day${RA.elapsed===1?'':'s'} so far` : ''}<span class="ekg-cap-ref">╌╌ same span last year</span>`;
     /* curCmp, never cur: the gap counts only the months last year can answer for.
        And when some month has no last-year twin, the headline drops the "of N
        normal" chip entirely — a year total sitting beside a partial-year baseline
@@ -1875,13 +1896,13 @@ function heroAppts(k){
            one a week must not be judged against the house shape. */
         : rb && k === 'week'
           ? rhythmBars(rb.days.map((x,i) => ({ label:'', v:x.v, ref:rb.ref[i], dim:x.weekend && !x.today, hot:x.today })),
-              { w:64, h:22, color:r.m.c })
+              { w:64, h:22, mini:true, color:r.m.c })
         : rb && k === 'ytd'
           ? rhythmBars(rb.months.map(m => ({ label:'', v:m.n, ref:m.prior, hot:m.current })),
-              { w:64, h:22, color:r.m.c })
+              { w:64, h:22, mini:true, color:r.m.c })
         : rb && k === 'day'
           ? rhythmBars(rb.samples.map(s => ({ label:'', v:s.byHour, ref:rb.norm, dim:true }))
-              .concat([{ label:'', v:rb.soFar, ref:rb.norm, hot:true }]), { w:64, h:22, color:r.m.c })
+              .concat([{ label:'', v:rb.soFar, ref:rb.norm, hot:true }]), { w:64, h:22, mini:true, color:r.m.c })
         : '';
       /* The brand's own normal, at this window's grain. rmed already answers null
          where the brand has no history, so a young brand shows its count and no
@@ -1898,12 +1919,17 @@ function heroAppts(k){
         <div class="alloc-dot" style="background:${r.m.c}"></div>
         <div class="name">${esc(r.m.s)}</div>
         ${trace ? `<div class="alloc-spark">${trace}</div>` : ''}
-        ${/* A brand whose normal is a true zero is not "below normal" — it did
-              not trade in the comparison period at all. Oasis booked nothing
-              before December, so "937 · norm 0" invites a comparison that means
-              nothing. Say what actually happened instead. */''}
+        ${/* A YTD normal of a true zero is not a normal anybody can be under.
+              Oasis booked nothing at all in 2025, so "963 · norm 0" reads as a
+              comparison and is not one. Say what the feed actually holds — no
+              bookings last year — and stop there, rather than inferring the
+              brand did not exist, which an appointment feed cannot know.
+
+              Only YTD. On Today and Week a normal of zero is an ordinary fact
+              about a quiet weekday, and "norm 0" states it correctly: the brand
+              is not new, it just does not usually book on a Sunday. */''}
         <div class="val">${rb
-          ? (bn === 0 && bv > 0 ? `${bv} · new since ${k === 'ytd' ? 'last year' : 'then'}`
+          ? (k === 'ytd' && bn === 0 && bv > 0 ? `${bv} · none last year`
              : bv || bn ? `${bv}${bn != null ? ` · norm ${Math.round(bn)}` : ''}` : '—')
           : (r.n ? `${r.n}${r.typ ? ` · typ ${Math.round(r.typ)}` : ''}` : '—')}</div>
       </div>`; }).join('')}${unknown ? `
@@ -6322,7 +6348,7 @@ addEventListener('resize', () => {
    the last one, it is to tell a human which build is on the server and when it
    got there. A number nobody clocked cannot answer that, and the first time it
    is asked in anger will be the morning a stale build is being chased. */
-const BUILD = '2026-08-16T17:18Z-trace-geometry';
+const BUILD = '2026-08-16T17:46Z-rhythm-mini-samples';
 const SB_URL = 'https://lzegjjbkfuecrhdvlvay.supabase.co';
 /* The one page that can finish a password reset. Hard-coded rather than derived,
    because every derivation of it so far has been a source of bugs: a bare origin
@@ -7874,6 +7900,8 @@ function buildData(raw){
            different hat. */
         cur: months.reduce((a, x) => a + x.n, 0),
         curCmp: withPrior.length ? withPrior.reduce((a, x) => a + x.n, 0) : null,
+        // so the caption can say which bar is the part-month, and how short it is
+        curLabel: MON3[T.getMonth()], elapsed: elapsedMo,
         norm: withPrior.length ? withPrior.reduce((a, x) => a + x.prior, 0) : null,
         normSpan: withPrior.map(x => x.label) };
     };
