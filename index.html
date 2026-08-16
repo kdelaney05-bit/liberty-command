@@ -133,11 +133,29 @@
   .alloc-dot { width: 10px; height: 10px; border-radius: 3px; flex-shrink: 0; }
   .alloc-row .name { flex: 1; } .alloc-row .val { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--text-dim); }
   .alloc-spark { flex-shrink: 0; line-height: 0; }
+  /* ── TRACE WIDTH IS CAPPED, AND THE CAP IS THE POINT ──────────────────────
+     A trace with a fixed number of days and no width limit is a different chart
+     at every viewport. The same fourteen points that read as a heartbeat at
+     390px stretch across 1,300px on a desktop and flatten into a horizon: same
+     data, same y-range, and a slope four times shallower purely because the
+     window is wider. A reader who learns the shape on their phone then cannot
+     recognise it on their laptop, which makes the shape useless as a signal.
+
+     So every full-width trace stops at 560px and stays left-aligned in its row.
+     The CARD keeps its full width — only the drawing is capped, because the
+     prose and the numbers beside it genuinely do want the room. Above roughly a
+     600px viewport every trace is then pixel-identical: same width, same
+     spacing per point, same slope. Below it the trace is as wide as the phone
+     allows, which is the widest it can honestly be.
+
+     Fixed-width sparks (.ekg-mini on the brand rows, 64px) never had this
+     problem and are left alone. */
+  :root { --trace-max: 560px; }
   /* ── EKG trace ── the heartbeat, not a bar chart. Reference line drawn first
      and stays a line, actual trace on top, glowing dot on today. Zero-baselined
      by ekgSpark()'s own math — nothing here truncates the axis. */
   .ekg-wrap { margin: 8px 0 4px; }
-  .ekg { display: block; width: 100%; height: 48px; overflow: visible; }
+  .ekg { display: block; width: 100%; max-width: var(--trace-max); height: 48px; overflow: visible; }
   .ekg-mini { width: 64px; height: 22px; overflow: visible; }
   .ekg-typ { stroke: var(--gold); stroke-opacity: 0.5; stroke-width: 1.2; stroke-dasharray: 3,3; }
   .ekg-line { stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
@@ -192,8 +210,15 @@
   /* ── ONE TRACE ──
      The SVG stretches to the rail's width; the endpoint rides on top as a fixed
      overlay so it stays a circle. overflow stays visible so the halo is not
-     sliced at the top and bottom of the band. */
-  .ptrace { position: relative; width: 100%; overflow: visible; }
+     sliced at the top and bottom of the band.
+
+     Capped and left-aligned — see --trace-max above for why a trace that grows
+     with the viewport is a different chart at every width. `margin-right: auto`
+     is explicit rather than inherited: .pv-head is a flex column, and a stretch
+     alignment would have re-centred the capped box the moment anyone added an
+     align-items rule to the rail. */
+  .ptrace { position: relative; width: 100%; max-width: var(--trace-max);
+    margin-right: auto; overflow: visible; }
   .ptrace .pt-svg { display: block; width: 100%; height: 100%; overflow: visible; }
   .pt-line { stroke-linecap: round; stroke-linejoin: round; fill: none; }
   .pt-edge { stroke-width: 1; vector-effect: non-scaling-stroke; }
@@ -6285,7 +6310,19 @@ addEventListener('resize', () => {
    server for hours while Kevin looked at yesterday's build and reported the bug
    as unfixed. That happened. The page now checks version.json on every load and
    reloads itself once if the deployed build is newer than the one running. */
-const BUILD = '2026-08-16T20:50Z-pulse-traces';
+/* THE RULE: this stamp is the ACTUAL UTC clock time at commit, never hand-set,
+   so the cache check below is anchored to a real moment and can be trusted.
+
+   It had already stopped being one. Two stamps were typed by hand on the same
+   afternoon — 02:30Z, then 20:50Z on the branch after it — and neither was a
+   time anything actually happened; the second was hours ahead of the real clock
+   when it was written. checkBuild() compares for INEQUALITY, not order, so the
+   reload still fired and nothing broke. That is precisely why this went unseen,
+   and why it had to be written down: the stamp's job is not only to differ from
+   the last one, it is to tell a human which build is on the server and when it
+   got there. A number nobody clocked cannot answer that, and the first time it
+   is asked in anger will be the morning a stale build is being chased. */
+const BUILD = '2026-08-16T17:18Z-trace-geometry';
 const SB_URL = 'https://lzegjjbkfuecrhdvlvay.supabase.co';
 /* The one page that can finish a password reset. Hard-coded rather than derived,
    because every derivation of it so far has been a source of bugs: a bare origin
