@@ -132,6 +132,21 @@
   .alloc-row { display: flex; align-items: center; gap: 10px; font-size: 13px; }
   .alloc-dot { width: 10px; height: 10px; border-radius: 3px; flex-shrink: 0; }
   .alloc-row .name { flex: 1; } .alloc-row .val { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--text-dim); }
+  .alloc-spark { flex-shrink: 0; line-height: 0; }
+  /* ── EKG trace ── the heartbeat, not a bar chart. Reference line drawn first
+     and stays a line, actual trace on top, glowing dot on today. Zero-baselined
+     by ekgSpark()'s own math — nothing here truncates the axis. */
+  .ekg-wrap { margin: 8px 0 4px; }
+  .ekg { display: block; width: 100%; height: 48px; overflow: visible; }
+  .ekg-mini { width: 64px; height: 22px; overflow: visible; }
+  .ekg-typ { stroke: var(--gold); stroke-opacity: 0.5; stroke-width: 1.2; stroke-dasharray: 3,3; }
+  .ekg-line { stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+  .ekg-mini .ekg-line { stroke-width: 1.5; }
+  .ekg-dot-glow { opacity: 0.55; transform-box: fill-box; transform-origin: center; animation: ekg-pulse 1.8s ease-in-out infinite; }
+  @keyframes ekg-pulse { 0%, 100% { opacity: .35; transform: scale(0.85); } 50% { opacity: .8; transform: scale(1.2); } }
+  @media (prefers-reduced-motion: reduce) { .ekg-dot-glow { animation: none; opacity: .5; } }
+  .ekg-cap { font-family: 'JetBrains Mono', monospace; font-size: 8px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-dim); margin-top: 3px; }
+  .ekg-cap-ref { margin-left: 10px; color: var(--gold); opacity: 0.85; letter-spacing: normal; text-transform: none; }
   .rep-row { margin-bottom: 12px; } .rep-row:last-child { margin-bottom: 0; }
   .rep-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 5px; }
   .rep-head .nm { font-size: 13px; font-weight: 500; }
@@ -1522,12 +1537,42 @@ function hdr(){
       Reads D.appointments.byCompany — the same feed, windows and measured
       typical the by-company band in the marketing band reads, so the tile and
       the band can never disagree. ─────────────────────────────────────────── */
+/* ── EKG sparkline — the trace, not the axis ─────────────────────────────────
+   A day-bucketed count drawn as a continuous line instead of bars, with a
+   faint dashed twin underneath for the typical pace, so ahead/behind reads as
+   the GAP BETWEEN TWO LINES rather than a number in a footnote. Zero-
+   baselined — 0 is always the floor of the y-axis, never the series' own
+   minimum, so the shape can never be made to look steeper than it is. The
+   reference line is drawn first and stays a line, never a second bar. `id`
+   just needs to be unique per instance on the page — this card only ever
+   draws four (one hero trace, three brand minis). */
+function ekgSpark(days, { id, w = 280, h = 48, mini = false, color = 'var(--green)', glow = 'var(--accent)' } = {}) {
+  if (!days || days.length < 2) return '';
+  const pad = mini ? 1.5 : 3;
+  const vMax = Math.max(1, ...days.map(x=>x.v), ...days.map(x=>x.t)) * 1.18;
+  const n = days.length, stepX = (w - pad*2) / (n - 1);
+  const X = i => pad + i * stepX;
+  const Y = v => h - pad - (Math.max(0,v) / vMax) * (h - pad*2);
+  const actual  = days.map((x,i)=>`${X(i).toFixed(1)},${Y(x.v).toFixed(1)}`).join(' ');
+  const typical = days.map((x,i)=>`${X(i).toFixed(1)},${Y(x.t).toFixed(1)}`).join(' ');
+  const lastX = X(n-1), lastY = Y(days[n-1].v);
+  return `<svg class="ekg${mini?' ekg-mini':''}" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" role="img" aria-hidden="true">
+    <defs><filter id="${id}-glow" x="-80%" y="-80%" width="260%" height="260%">
+      <feGaussianBlur stdDeviation="${mini?1.4:2.6}"/>
+    </filter></defs>
+    <polyline points="${typical}" class="ekg-typ" fill="none" vector-effect="non-scaling-stroke"/>
+    <polyline points="${actual}" class="ekg-line" fill="none" vector-effect="non-scaling-stroke"
+      style="stroke:${color};filter:drop-shadow(0 0 ${mini?2:3}px ${color})"/>
+    <circle cx="${lastX.toFixed(1)}" cy="${lastY.toFixed(1)}" r="${mini?3.4:6}" class="ekg-dot-glow" style="fill:${glow}" filter="url(#${id}-glow)"/>
+    <circle cx="${lastX.toFixed(1)}" cy="${lastY.toFixed(1)}" r="${mini?1.6:2.8}" style="fill:${glow}"/>
+  </svg>`;
+}
 function heroAppts(k){
   const A = D.appointments;
   if (!A || !A.byCompany || !A.byCompany[k]) return '';
   const W = A.byCompany[k];
   const label = { day:'Today', week:'This week', month: MONTHOFF ? D.windows.month.label : 'MTD', ytd:'YTD' }[k] || '';
-  const rows = BRAND_ORDER.map(b => ({ m: brandOf(b), n: W.counts[b] || 0, typ: (W.typ[b] || {}).mean || 0 }));
+  const rows = BRAND_ORDER.map(b => ({ b, m: brandOf(b), n: W.counts[b] || 0, typ: (W.typ[b] || {}).mean || 0 }));
   const unknown = W.counts.unknown || 0;
   const branded = rows.reduce((n, r) => n + r.n, 0);
   const tot = branded + unknown;
@@ -1539,15 +1584,31 @@ function heroAppts(k){
      it. YTD declines a baseline outright: appointment history reaches 13 months,
      which cannot cover last year's same span. */
   const d = typ ? Math.round((branded - typ) / typ * 100) : null;
+  /* The trace only exists for the live MTD window — the one grain this page
+     keeps day by day (A.bookedSeriesMTD, built from the same createdOn/
+     projBrand rows the totals above already read). Today, Week, YTD and a
+     closed month keep the same static read they always have rather than a
+     line built from a day-count that was never kept at their grain. */
+  const mtdDays = (k === 'month' && !MONTHOFF) ? A.bookedSeriesMTD : null;
+  const headline = mtdDays && mtdDays.length > 1
+    ? ekgSpark(mtdDays.map(x => ({ v: x.n, t: x.typ })), { id:'hero-appts', w:280, h:48 })
+    : '';
   return `<button class="snap bigsnap" onclick="openWindow('${k}')" aria-label="Appointments ${esc(label)} — open details">
     <div class="snap-k" style="color:var(--blue)">Appointments · ${esc(label)}</div>
     <div class="snap-v" style="color:var(--blue)">${tot}${typ ? ` <span style="font-size:16px;color:var(--text-dim)">of ${Math.round(typ)} typical</span>` : ''}</div>
-    <div class="alloc-legend mml" style="margin:10px 0 8px">${rows.map(r => `
+    ${headline ? `<div class="ekg-wrap">${headline}<div class="ekg-cap">booked per day, month to date<span class="ekg-cap-ref">╌╌ typical for that weekday</span></div></div>` : ''}
+    <div class="alloc-legend mml" style="margin:10px 0 8px">${rows.map(r => {
+      const trace = mtdDays && mtdDays.length > 1
+        ? ekgSpark(mtdDays.map(x => ({ v: x.byBrand[r.b] || 0, t: x.typByBrand[r.b] || 0 })),
+            { id:`hero-appts-${r.b}`, w:64, h:22, mini:true, color:r.m.c, glow:r.m.c })
+        : '';
+      return `
       <div class="alloc-row" ${r.n ? '' : 'style="opacity:.55"'}>
         <div class="alloc-dot" style="background:${r.m.c}"></div>
         <div class="name">${esc(r.m.s)}</div>
+        ${trace ? `<div class="alloc-spark">${trace}</div>` : ''}
         <div class="val">${r.n ? `${r.n}${r.typ ? ` · typ ${Math.round(r.typ)}` : ''}` : '—'}</div>
-      </div>`).join('')}${unknown ? `
+      </div>`; }).join('')}${unknown ? `
       <div class="alloc-row" title="Appointments booked against projects the sync has not delivered yet">
         <div class="alloc-dot" style="background:#8aa094"></div>
         <div class="name">counting…</div>
@@ -5624,7 +5685,7 @@ addEventListener('resize', () => {
    server for hours while Kevin looked at yesterday's build and reported the bug
    as unfixed. That happened. The page now checks version.json on every load and
    reloads itself once if the deployed build is newer than the one running. */
-const BUILD = '2026-08-16T03:40Z-marketing-drawer';
+const BUILD = '2026-08-16T05:10Z-appointments-ekg';
 const SB_URL = 'https://lzegjjbkfuecrhdvlvay.supabase.co';
 /* The one page that can finish a password reset. Hard-coded rather than derived,
    because every derivation of it so far has been a source of bugs: a bare origin
@@ -6583,6 +6644,30 @@ function buildData(raw){
       bookedSeries.push({ label:`${d.getMonth()+1}/${d.getDate()}`, dow:DOW2[d.getDay()], dowN:d.getDay(),
                           n:createdOn(ymdL(d)).length,
                           today:i===0, weekend:d.getDay()===0||d.getDay()===6 }); }
+    /* ── MTD, day by day, per brand ──────────────────────────────────────────
+       For the EKG trace on the Appointments hero tile. No new feed: same
+       createdOn/projBrand walk bookedByBrandInRange already does day-by-day,
+       just keeping each day instead of collapsing it into one range total.
+       Reference value per day is that weekday's own measured median
+       (dowNorm/brandDowNorm, computed above) — the same "typical" the rest of
+       this card already trusts, not a second definition of the word. */
+    const bookedSeriesMTD = [];
+    for (let d = new Date(som(T)); d <= T; d = addD(d, 1)) {
+      const key = ymdL(d), dow = d.getDay();
+      const byBrand = {}; for (const b of BRAND_ORDER) byBrand[b] = 0;
+      let unknown = 0;
+      for (const r of createdOn(key)) {
+        const b = projBrand[String(r.cc_project_id)];
+        if (b) byBrand[b] = (byBrand[b] || 0) + 1; else unknown++;
+      }
+      bookedSeriesMTD.push({
+        date: key, day: d.getDate(), dow,
+        n: Object.values(byBrand).reduce((a,c)=>a+c,0) + unknown, byBrand, unknown,
+        typ: dowNorm[dow] || 0,
+        typByBrand: Object.fromEntries(BRAND_ORDER.map(b => [b, brandDowNorm[b][dow] || 0])),
+        today: key === todayStr, weekend: dow === 0 || dow === 6,
+      });
+    }
     // forward calendar: today + the next 7 days, the "is the diary filling" read
     const aheadSeries = [];
     for (let i = 0; i <= 7; i++) { const d = addD(T,i);
@@ -6648,7 +6733,7 @@ function buildData(raw){
       bookedVsNorm: bookedNormHour ? Math.round((bookedToday - bookedNormHour)/bookedNormHour*100) : null,
       dowNorm, dowNormHour, todayDow: TDOW, todayDowName: DOWFULL[TDOW],
       nowHour: NOWH,
-      bookedByBrand, bookedSeries, aheadSeries, bookedWeekly, bookedMonthly, brandNorm,
+      bookedByBrand, bookedSeries, bookedSeriesMTD, aheadSeries, bookedWeekly, bookedMonthly, brandNorm,
       lastCreatedAt: bookedTodayRows.map(a=>a.cc_created_at).sort().pop() || null,
       // calendar basis — what the crews are driving to
       today: count(T, addD(T,1)),
