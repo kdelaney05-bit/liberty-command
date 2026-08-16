@@ -148,20 +148,15 @@
   .ekg-cap { font-family: 'JetBrains Mono', monospace; font-size: 8px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-dim); margin-top: 3px; }
   .ekg-cap-ref { margin-left: 10px; color: var(--gold); opacity: 0.85; letter-spacing: normal; text-transform: none; }
   /* ── THE PULSE ─────────────────────────────────────────────────────────────
-     A vitals monitor reads top-down in one glance, so the composite trace gets
-     the width and the five vitals below it are rails, not cards. Nothing here
-     scrolls sideways and nothing depends on colour alone — every band carries a
-     number and a word beside its dot. */
+     A vitals monitor reads top-down in one glance, so the five vitals are rails,
+     not cards. Nothing here scrolls sideways and nothing depends on colour alone
+     — every band carries a number and a word beside its dot.
+
+     THE COMPOSITE TRACE IS HELD, and its geometry is deliberately gone rather
+     than parked. Kevin, 16 Aug: a single line over the whole business implies it
+     read the whole business, and today only two of five vitals have a feed. It
+     returns when four of five are real; recover the trace from 7840c0e. */
   .pulse-card { margin-bottom: 14px; }
-  .pulse-trace { display: block; width: 100%; height: 132px; margin: 4px 0 0; }
-  .pt-green { fill: rgba(108,194,139,0.10); }
-  .pt-amber { fill: rgba(212,177,90,0.14); }
-  .pt-red   { fill: rgba(217,106,94,0.17); }
-  .pt-rule  { stroke: rgba(255,255,255,0.10); stroke-width: 1; }
-  .pt-zero  { stroke: rgba(255,255,255,0.28); stroke-width: 1; stroke-dasharray: 4,4; }
-  .pt-line  { stroke: var(--text); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
-  .pulse-axis { display: flex; justify-content: space-between; font-family: 'JetBrains Mono', monospace;
-    font-size: 8px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-dim); margin: 2px 2px 12px; }
   .pulse-vitals { display: flex; flex-direction: column; gap: 1px; }
   .pulse-vital { border-radius: 8px; overflow: hidden; background: rgba(255,255,255,0.015); }
   .pv-head { display: grid; grid-template-columns: 10px 96px 58px 1fr 120px 12px; align-items: center; gap: 10px;
@@ -216,7 +211,6 @@
     .pv-head { grid-template-columns: 10px 1fr 46px 12px; gap: 8px; row-gap: 2px; padding: 8px; }
     .pv-word { grid-column: 2 / 4; font-size: 11px; }
     .pv-spark { display: none; }
-    .pulse-trace { height: 104px; }
     .pulse-vital.open .pv-drill-in { padding: 2px 10px 12px 18px; }
     .pd-brand { flex-wrap: wrap; }
   }
@@ -4449,13 +4443,18 @@ const RHY_SEV  = { hot:'good', warm:'good', flat:'watch', cooling:'watch', cold:
 const rhyTick = d => d === null ? 'flat'
   : d >= 8 ? `▲${d}%` : d <= -8 ? `▼${Math.abs(d)}%` : 'flat';
 /* ── THE PULSE, drawn ────────────────────────────────────────────────────────
-   One composite trace on top — the whole business as a single line — with the
-   five vitals stacked beneath it. Glance at the top; drill down only if it
-   wobbles. Every row is a symptom and a place to look, never an instruction.
+   Five vitals stacked as rails. Glance down the dots; drill into whichever one
+   is not green. Every row is a symptom and a place to look, never an instruction.
+
+   NO COMPOSITE TRACE. It was built and then held (Kevin, 16 Aug): one line over
+   "the whole business" is a claim to have measured the whole business, and three
+   of these five vitals still have no feed. Averaging two live vitals into a
+   confident-looking line is precisely the lie the rest of this card refuses. The
+   composite ships when four of five are real.
 
    A vital with no feed behind it draws NOTHING. Not a flat line, not a zero, not
    a greyed guess — an empty rail and the reason in words. A drawn line is a
-   claim that something was measured, and three of these five have not been. */
+   claim that something was measured. */
 const PULSE_BAND_C = { green:'var(--green)', amber:'var(--gold)', red:'var(--red)', none:'var(--text-dim)' };
 
 function pulseWord(z, band){
@@ -4467,46 +4466,9 @@ function pulseWord(z, band){
 }
 const pulseZ = z => z === null ? '—' : (z >= 0 ? '+' : '−') + Math.abs(z).toFixed(1);
 
-/* The composite trace. Zero is the centre line and it is drawn, because on a
+/* A vital's own trace, at rail size. Zero is the centre line, because on a
    deviation score zero IS the baseline — "normal" is a real place on this axis,
-   not a truncation. The ±1 and ±2 bands are shaded behind the line so the
-   reading needs no legend and no axis labels. */
-function pulseTraceSvg(points, { w = 640, h = 132 } = {}){
-  const zs = points.map(p => p.z).filter(z => z !== null);
-  if (zs.length < 2) return '';
-  const pad = 10;
-  const zMax = Math.max(3, Math.ceil(Math.max(...zs.map(Math.abs))));
-  const n = points.length, stepX = (w - pad*2) / (n - 1);
-  const X = i => pad + i * stepX;
-  const Y = z => h/2 - (Math.max(-zMax, Math.min(zMax, z)) / zMax) * (h/2 - pad);
-  const segs = []; let cur = [];
-  points.forEach((p, i) => {
-    if (p.z === null){ if (cur.length > 1) segs.push(cur); cur = []; }
-    else cur.push(`${X(i).toFixed(1)},${Y(p.z).toFixed(1)}`);
-  });
-  if (cur.length > 1) segs.push(cur);
-  const last = points.reduce((a, p, i) => p.z !== null ? i : a, -1);
-  const band = pBand(last >= 0 ? points[last].z : null);
-  /* y is the UPPER of the two edges — Y() inverts, so Y(2) sits below Y(3) and
-     taking Y(b) blindly drew every band displaced downward by its own height. */
-  const rect = (a, b, cls) => `<rect x="0" y="${Math.min(Y(a), Y(b)).toFixed(1)}" width="${w}" height="${Math.abs(Y(a)-Y(b)).toFixed(1)}" class="${cls}"/>`;
-  return `<svg class="pulse-trace" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" role="img"
-      aria-label="Composite pulse, ${points.length} days, currently ${pulseZ(last>=0?points[last].z:null)} standard deviations from normal">
-    ${rect(zMax, 2, 'pt-red')}${rect(2, 1, 'pt-amber')}${rect(1, -1, 'pt-green')}${rect(-1, -2, 'pt-amber')}${rect(-2, -zMax, 'pt-red')}
-    ${[1,-1,2,-2].map(v => `<line x1="0" y1="${Y(v).toFixed(1)}" x2="${w}" y2="${Y(v).toFixed(1)}" class="pt-rule"/>`).join('')}
-    <line x1="0" y1="${Y(0)}" x2="${w}" y2="${Y(0)}" class="pt-zero"/>
-    ${segs.map(s => `<polyline points="${s.join(' ')}" class="pt-line" fill="none" vector-effect="non-scaling-stroke"/>`).join('')}
-    ${/* A vertical tick, not a dot: the viewBox is stretched horizontally to the
-          card width, which turns any circle into an ellipse. A tick is honest at
-          every width. */''}
-    ${last >= 0 ? `<line x1="${X(last).toFixed(1)}" y1="${(Y(points[last].z)-6).toFixed(1)}"
-        x2="${X(last).toFixed(1)}" y2="${(Y(points[last].z)+6).toFixed(1)}"
-        vector-effect="non-scaling-stroke" style="stroke:${PULSE_BAND_C[band]};stroke-width:2.5"/>` : ''}
-  </svg>`;
-}
-
-/* A vital's own trace, at rail size. Same zero-centred geometry as the composite
-   so the two are read with one habit, not two. */
+   not a truncation. */
 function pulseSparkSvg(spark, band, { w = 120, h = 30 } = {}){
   const zs = spark.map(p => p.z).filter(z => z !== null);
   if (zs.length < 2) return '';
@@ -4531,16 +4493,25 @@ function pulseDrill(key){
   if (el) el.classList.toggle('open');
 }
 
+/* Two kinds of sub-vital share this row, and they must not be made to look
+   alike. A z-scored one reads "how unusual is this against our own history"; a
+   threshold one reads "did this clear a line Kevin drew". Printing a z beside a
+   number that was never z-scored would invent a precision the second kind does
+   not have, so a threshold sub shows its measured value and its word, and no z
+   at all. */
 function pulseSubRow(s){
   const val = !s.live ? '' : s.unit === '$' ? short(s.value)
     : s.unit === 'd' ? (s.value >= 0 ? '+' : '−') + Math.abs(s.value).toFixed(1) + ' days'
     : Math.round(s.value);
+  const live = s.kind === 'band'
+    ? `<span class="pd-sub-z" style="color:${PULSE_BAND_C[s.band]}">${esc(s.valText)}</span>
+       <span class="pd-sub-v">${esc(s.wordText)}</span>`
+    : `<span class="pd-sub-z" style="color:${PULSE_BAND_C[s.band]}">${pulseZ(s.z)}</span>
+       <span class="pd-sub-v">${val} over 7 days · ${pulseWord(s.z, s.band)}</span>`;
   return `<div class="pd-sub${s.live ? '' : ' off'}">
     <div class="pd-sub-h">
       <span class="pd-sub-n">${esc(s.name)}</span>
-      ${s.live ? `<span class="pd-sub-z" style="color:${PULSE_BAND_C[s.band]}">${pulseZ(s.z)}</span>
-                  <span class="pd-sub-v">${val} over 7 days · ${pulseWord(s.z, s.band)}</span>`
-               : `<span class="pd-wire">WIRING UP</span>`}
+      ${s.live ? live : `<span class="pd-wire">WIRING UP</span>`}
     </div>
     ${s.note ? `<div class="pd-sub-note">${s.note}</div>` : ''}
   </div>`;
@@ -4559,15 +4530,22 @@ function pulseBrandRow(b){
 function cardPulse(){
   const P = D.pulse;
   if (!P) return '';
-  const head = P.z === null
+  /* No composite reading, because there is no composite. The header counts what
+     is measured and what is not, which is the honest one-line summary of a card
+     that is three-fifths unwired. */
+  const worst = P.vitals.filter(v => v.live && v.band !== 'green').length;
+  const head = !P.live
     ? 'No vital has enough history behind it to claim a normal yet.'
-    : `The business is <b style="color:${PULSE_BAND_C[P.band]}">${pulseWord(P.z, P.band)}</b> — ${pulseZ(P.z)} against its own normal for this point in the month, across the ${P.live} vital${P.live === 1 ? '' : 's'} that have a feed.`;
+    : `${P.live} of ${P.total} vitals have a feed. ` + (worst
+        ? `<b style="color:var(--gold)">${worst}</b> of them ${worst === 1 ? 'is' : 'are'} off their rhythm — open the rail to see where.`
+        : `All ${P.live} are in rhythm.`);
 
   const rows = P.vitals.map(v => {
-    const open = v.live ? '' : '';
+    const zTxt = v.zText != null ? esc(v.zText) : pulseZ(v.z);
+    const wTxt = v.wordText != null ? esc(v.wordText) : pulseWord(v.z, v.band);
     const body = v.live
-      ? `<span class="pv-z" style="color:${PULSE_BAND_C[v.band]}">${pulseZ(v.z)}</span>
-         <span class="pv-word">${pulseWord(v.z, v.band)}</span>
+      ? `<span class="pv-z" style="color:${PULSE_BAND_C[v.band]}">${zTxt}</span>
+         <span class="pv-word">${wTxt}</span>
          <span class="pv-spark">${pulseSparkSvg(v.spark, v.band)}</span>`
       : `<span class="pv-wire">WIRING UP</span><span class="pv-word off">draws nothing</span><span class="pv-spark"></span>`;
     const drill = [
@@ -4598,16 +4576,17 @@ function cardPulse(){
   return `<div class="card pulse-card">
     <div class="card-title">The pulse · vitals</div>
     <div class="card-sub">${head}</div>
-    ${pulseTraceSvg(P.trace)}
-    <div class="pulse-axis"><span>90 days ago</span><span>normal</span><span>${esc(endTxt)}</span></div>
     <div class="pulse-vitals">${rows}</div>
     <div class="pulse-foot">
-      Each vital is a trailing 7-day window scored against its own history for this
-      point in the month — median and MAD, so one large job cannot redefine normal.
-      Green within 1, amber past 1, red past 2, the same arithmetic on all five.
-      Windows end <b>${esc(endTxt)}</b>: a window holding a partial today reads low for
-      no reason but the clock. ${P.live} of ${P.total} vitals have a feed behind them;
-      the rest say so and draw nothing.
+      Most vitals are a trailing 7-day window scored against their own history for
+      this point in the month — median and MAD, so one large job cannot redefine
+      normal. Green within 1, amber past 1, red past 2. <b>Days out is the
+      exception</b>: it is judged against a fixed 2–3 day band, not against history,
+      because a business that has always booked eight days out would score its own
+      chronic problem as normal. Windows end <b>${esc(endTxt)}</b>: a window holding a
+      partial today reads low for no reason but the clock. ${P.live} of ${P.total}
+      vitals have a feed behind them; the rest say so and draw nothing. No composite
+      line until four of five are real.
     </div>
   </div>`;
 }
@@ -5928,7 +5907,7 @@ addEventListener('resize', () => {
    server for hours while Kevin looked at yesterday's build and reported the bug
    as unfixed. That happened. The page now checks version.json on every load and
    reloads itself once if the deployed build is newer than the one running. */
-const BUILD = '2026-08-16T18:40Z-the-pulse';
+const BUILD = '2026-08-16T21:15Z-pulse-lead-lanes';
 const SB_URL = 'https://lzegjjbkfuecrhdvlvay.supabase.co';
 /* The one page that can finish a password reset. Hard-coded rather than derived,
    because every derivation of it so far has been a source of bugs: a bare origin
@@ -6228,6 +6207,7 @@ function buildPulse(jobs, qbInv){
   const signed = jobs.filter(j => j.contract_signed_at);
   const done   = jobs.filter(j => j.completed_at);
   const sMap = agg(signed, 'contract_signed_at', j => Number(j.fin_sold_amount || 0));
+  const sMapN = agg(signed, 'contract_signed_at', () => 1);
   const cMap = agg(done,   'completed_at',       () => 1);
   const iMap = agg((qbInv || []).filter(r => !r.reporting_excluded), 'txn_date', r => Number(r.total_amt || 0));
 
@@ -6284,16 +6264,6 @@ function buildPulse(jobs, qbInv){
     return { name, live: !!l, z: l ? l.z : null, band: pBand(l ? l.z : null),
              value: l ? l.v : null, unit, dir, note, spark: tail(r, true) }; };
 
-  const marketing = { key:'marketing', name:'MARKETING', label:'the inflow system', live:false,
-    z:null, band:'none', spark:[],
-    why:'No sub-vital has a day-grain feed with enough history to carry a normal.',
-    subs:[
-      { name:'Leads / day', live:false, note:'<code>customers.created_at</code> is the sync import stamp — 10,914 of 11,322 rows (96.4%) landed on 2026-07-20. Only 19 genuine days behind it, against the ~24 windows a normal needs.' },
-      { name:'Speed to appointment', live:false, note:'There is no inbound clock in the database to measure from — the only candidate is the import stamp above. The booking stamp is unreliable on its own terms too: 986 appointments (10.2%) were created <em>after</em> the appointment had already started.' },
-      { name:'Answer rate', live:false, note:'No phone system feed. <code>text_messages</code> holds 4 rows and <code>cc_tasks</code> is workflow checklists with no call outcomes.' },
-      { name:'Cost ratio vs the 10% line', live:false, note:'<code>marketing_spend</code> is an empty table (0 rows) and month-grain by design; <code>google_ads_daily</code> is day-grain but only 87 days and Google alone. The numerator barely exists.' },
-    ] };
-
   /* DECOMPOSITION. A red vital has to point somewhere, so each brand is scored
      by the same arithmetic as its parent rather than merely listed with a share:
      a brand holding 12% of the money can still be the whole of the problem. */
@@ -6306,9 +6276,94 @@ function buildPulse(jobs, qbInv){
              live: !!l, z: l ? l.z : null, band: pBand(l ? l.z : null), value: l ? l.v : null };
   });
 
+  /* DAYS OUT is judged against a FIXED BAND, not against its own history, and
+     that is the one deliberate break from the arithmetic everything else uses.
+     Kevin set 2–3 days by hand. A z-score here would be self-defeating: a shop
+     that has always booked eight days out has a "normal" of eight, and scoring
+     against it would report a chronic problem as perfectly healthy. A target
+     nobody can drift away from is the whole point of a target.
+
+     THE WINDOW IS SETTLED, NOT TRAILING. A lead booked into an appointment takes
+     time to acquire one, so a window ending yesterday contains leads that simply
+     have not been booked YET — and dropping them keeps only the fast ones, which
+     drags the median down exactly when booking is slipping. That is the failure
+     direction that matters, so the window ends 7 days back instead: 92.2% of
+     leads that ever get an appointment have it within 7 days, and with the median
+     sitting near 3 that is far past the half-way mark the median needs. It costs
+     a week of latency on a number that moves over months. */
+  const DO_SETTLE = 7;
+  const doBand = m => m === null ? 'none' : m < 2 ? 'amber' : m <= 3 ? 'green' : m < 5 ? 'amber' : 'red';
+  const doWord = m => m === null ? '' : m < 2 ? 'capacity idle — need leads'
+    : m <= 3 ? 'in band' : m < 5 ? 'slipping out' : 'booking past the line';
+
+  const marketing = (() => {
+    const leadRows = jobs.filter(j => j.lead_at);
+    const lMap = agg(leadRows, 'lead_at', () => 1);
+    const L = lMap.size ? pulseScore(lMap, { from: from(first(lMap)), to: end }) : null;
+    const leads = sub('Leads / day', L, 'n', -1,
+      'Dated by <code>cc_raw.project_created_at</code> — Contractors Cloud\'s own lead stamp, 11,558 of 11,558 populated across 609 days. Not <code>customers.created_at</code>, which is our import stamp and puts 96% of the history on one Monday in July.');
+
+    /* Whole days, floor'd, from lead to the first appointment DATE — the same
+       units the 2-3 day band is written in. A same-day booking is 0, not 0.4. */
+    const doEnd = pDayAdd(+end, -DO_SETTLE), doStart = pDayAdd(doEnd, -(PULSE_WIN - 1));
+    const lags = []; let backwards = 0, booked = 0;
+    for (const j of leadRows){
+      if (!j.lead_appt_at) continue;
+      const l = sod(new Date(j.lead_at)), a = sod(new Date(j.lead_appt_at));
+      if (isNaN(+l) || isNaN(+a) || +l < doStart || +l > doEnd) continue;
+      booked++;
+      /* Appointment dated BEFORE its own lead — 4.2% of bookings. CC lets an
+         appointment be attached to a project created after the fact, so these are
+         real records of a real visit with an unusable clock. Counted out loud on
+         the card rather than quietly folded in as zeros, which would drag the
+         median toward "instant" and flatter the number. */
+      const d = pDayDiff(+a, +l);
+      if (d < 0){ backwards++; continue; }
+      lags.push(d);
+    }
+    const med = lags.length >= 5 ? pMedian(lags) : null;
+    const dOut = { name:'Days out · lead to appointment', kind:'band', live: med !== null,
+      band: doBand(med), valText: med === null ? '—' : med.toFixed(1) + ' d',
+      wordText: doWord(med),
+      note: med === null
+        ? `Fewer than 5 bookable leads in the settled window — no median worth printing.`
+        : `Median of <b>${lags.length}</b> lead${lags.length === 1 ? '' : 's'} created in the 7 days ending ${new Date(doEnd).toLocaleDateString('en-US',{month:'short',day:'numeric'})}, each given 7 days to be booked. Target band 2–3 days: green through 3, amber at 4, red at 5 and beyond. Under 2 is not a better score — it means the calendar is not full.` +
+          (backwards ? ` <b>${backwards}</b> of ${booked} (${(100*backwards/booked).toFixed(1)}%) excluded: the appointment is dated before its own lead, so the interval is unusable.` : '') };
+
+    const est = { name:'Estimate clock · appointment to estimate', live:false,
+      note:'The app\'s touch log has no estimate event. <code>app_private.touches</code> records five plays — <code>thankyou</code>, <code>forgot</code>, <code>untilyes</code>, <code>direct</code>, <code>digital</code> — and every one is follow-up cadence; delivering an estimate is not among them, folded in or otherwise. The one distinct stamp that exists is <code>geo_events.kind=\'estimate_capture\'</code>, and it holds 123 rows over 8 days from 5 reps, fires only when GPS capture succeeds, and carries a null <code>job_id</code> on every row. That is the wire to run, not a feed to draw.' };
+
+    const cost = { name:'Cost ratio vs the 10% line', live:false,
+      note:'<code>marketing_spend</code> is empty (0 rows), so every non-Google channel is missing from the numerator. <code>google_ads_daily</code> covers 87 days and is uneven by brand — Pro-Tec from 22 May, Fencing from 21 Jun, Oasis only from 3 Aug. A Google-only numerator can only ever read LOW, which would paint a green ratio over spending that is actually above the line. Held deliberately: no number beats a flattering one.' };
+
+    const subs = [leads, dOut, est, cost];
+    const rank = { none:0, green:1, amber:2, red:3 };
+    const liveSubs = subs.filter(s => s.live);
+    const lead = liveSubs.slice().sort((a,b) => rank[b.band] - rank[a.band])[0] || null;
+    /* The rail wears the worst live sub-vital's reading. When that is days out it
+       shows days and a word, because it never had a z to show. */
+    return { key:'marketing', name:'MARKETING', label:'the inflow system',
+      live: liveSubs.length > 0,
+      z: leads.live ? leads.z : null,
+      band: lead ? lead.band : 'none',
+      zText: lead && lead.kind === 'band' ? lead.valText : null,
+      wordText: lead && lead.kind === 'band' ? lead.wordText : null,
+      spark: leads.live ? leads.spark : [],
+      half: 'Two of the four sub-vitals are wired. The estimate clock and the cost ratio draw nothing and say why below.',
+      subs,
+      brands: brandCut(leadRows, 'lead_at', () => 1) };
+  })();
+
+  /* THE LUMP RULE, on a rail. Dollars alone cannot distinguish a good week from
+     one $200K roof, so the unit count rides alongside the money it came from —
+     the same reason the signed-by-day skyline carries both. It is a stated
+     count, not a second score: two numbers scored separately would just be two
+     vitals wearing one name. */
   const sales = (() => { const s = sub('Signed dollars / day', S, '$', -1, null);
+    const u = sub('Contracts signed / day', sMapN.size ? pulseScore(sMapN, { from: from(first(sMapN)), to: end }) : null, 'n', -1,
+      'The count behind the dollars. When these two disagree — money up, contracts flat — the week is one large job rather than a broad one.');
     return { key:'sales', name:'SALES', label:'signed dollars a day', live:s.live, z:s.z, band:s.band,
-             spark:s.spark, value:s.value, subs:[s],
+             spark:s.spark, value:s.value, subs:[s, u],
              brands: brandCut(signed, 'contract_signed_at', j => Number(j.fin_sold_amount || 0)) }; })();
 
   const production = (() => {
@@ -6345,21 +6400,11 @@ function buildPulse(jobs, qbInv){
 
   const vitals = [marketing, sales, production, collections, payables];
 
-  /* THE COMPOSITE. The mean of whichever vitals scored that day — the whole
-     business as one line. It is a mean and not a worst-of because a worst-of is
-     just the loudest vital wearing a composite's name, and the five stacked
-     beneath already say which one is loudest. n is carried so the trace can say
-     how many vitals are actually behind it. */
-  const live = vitals.filter(v => v.live && v.spark.length);
-  const trace = [];
-  for (let t = pDayAdd(+end, -(PULSE_TRACE-1)); t <= +end; t = pDayAdd(t, 1)){
-    const zs = live.map(v => (v.spark.find(p => p.k === t) || {}).z).filter(z => z !== null && z !== undefined);
-    trace.push({ k: t, z: zs.length ? zs.reduce((a,b) => a+b, 0) / zs.length : null, n: zs.length });
-  }
-  const last = [...trace].reverse().find(p => p.z !== null) || null;
-
-  return { end, trace, vitals, live: live.length, total: vitals.length,
-           z: last ? last.z : null, band: pBand(last ? last.z : null),
+  /* No composite is computed, not merely not drawn. A mean of two live vitals is
+     a number this file could print at any time; the reason it does not exist is
+     that printing it would answer "how is the business" using two fifths of the
+     business. Held until four of five are real. */
+  return { end, vitals, live: vitals.filter(v => v.live).length, total: vitals.length,
            poolN: S ? S.pool : 0 };
 }
 
@@ -8577,7 +8622,22 @@ async function loadAll(){
     // reporting_excluded comes down WITH the rows rather than being filtered in
     // the query, so the console can say how much it left out instead of silently
     // showing a smaller number than last time.
-    qp('jobs?select=cc_company_id,cc_project_id,rep_id,contract_signed_at,completed_at,cc_lead_source_id,fin_sold_amount,reporting_excluded,reporting_exclusion_reason,title&source=eq.cc'),
+    /* lead_at / lead_appt_at are lifted OUT of cc_raw by PostgREST rather than
+       pulling the blob: cc_raw is the whole CC project payload and fetching it
+       for 11.5K rows would roughly double what a phone downloads on every open.
+       Two scalar fields cost about 50 bytes a row.
+
+       THESE ARE THE ONLY HONEST LEAD CLOCK IN THE DATABASE. Not
+       `customers.created_at` and not `jobs.created_at` — both are our row-insert
+       time, and the warehouse was backfilled in one shot on 20 Jul 2026 (10,914
+       of 11,322 customers on that single day), so either one dates 96% of the
+       history to a Monday in July. `cc_raw->>project_created_at` is CC's own
+       stamp and survives the import: 11,558 of 11,558 populated across 609
+       distinct days, no spike on the backfill date (30 leads, against 29 the
+       following Monday), and a real business week behind it — Mon 25.9%, Sat
+       1.2%, Sun 0.8%, with 1,512 distinct clock times across 1,561 Monday rows.
+       A batch stamp cannot look like that. */
+    qp('jobs?select=cc_company_id,cc_project_id,rep_id,contract_signed_at,completed_at,cc_lead_source_id,fin_sold_amount,reporting_excluded,reporting_exclusion_reason,title,lead_at:cc_raw->>project_created_at,lead_appt_at:cc_raw->>project_first_appointment_at&source=eq.cc'),
     // cc_created_at is what makes a like-for-like booking comparison possible:
     // "what was on the books last Monday" has to count only what was booked BY
     // last Monday, not what the week eventually filled with.
