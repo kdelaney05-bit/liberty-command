@@ -167,29 +167,72 @@
   /* ── THE PULSE ─────────────────────────────────────────────────────────────
      A vitals monitor reads top-down in one glance, so the five vitals are rails,
      not cards. Nothing here scrolls sideways and nothing depends on colour alone
-     — every band carries a number and a word beside its dot.
+     — every rail carries a shape, a plain-English read and a unit beside its dot.
 
-     THE COMPOSITE TRACE IS HELD, and its geometry is deliberately gone rather
-     than parked. Kevin, 16 Aug: a single line over the whole business implies it
-     read the whole business, and today only two of five vitals have a feed. It
-     returns when four of five are real; recover the trace from 7840c0e. */
+     THE RAIL IS A COLUMN, NOT A ROW. It was a six-column grid ending in a 120px
+     spark that the phone breakpoint then deleted outright — which meant the one
+     device Kevin actually reads this on got the version with no picture at all.
+     Now the trace spans the full rail width at every size and the phone loses
+     nothing. Mobile is the design target here, not the fallback. */
   .pulse-card { margin-bottom: 14px; }
   .pulse-vitals { display: flex; flex-direction: column; gap: 1px; }
   .pulse-vital { border-radius: 8px; overflow: hidden; background: rgba(255,255,255,0.015); }
-  .pv-head { display: grid; grid-template-columns: 10px 96px 58px 1fr 120px 12px; align-items: center; gap: 10px;
-    width: 100%; padding: 9px 10px; background: none; border: 0; cursor: pointer; text-align: left;
+  .pv-head { display: flex; flex-direction: column; gap: 5px;
+    width: 100%; padding: 10px; background: none; border: 0; cursor: pointer; text-align: left;
     color: var(--text); font: inherit; }
+  .pv-top { display: grid; grid-template-columns: 8px auto 1fr 12px; align-items: center; gap: 8px; }
   .pv-dot { width: 8px; height: 8px; border-radius: 50%; }
   .pv-name { font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 0.14em; }
-  .pv-z { font-family: 'JetBrains Mono', monospace; font-size: 14px; font-weight: 600; text-align: right; }
-  .pv-word { font-size: 12px; color: var(--text-dim); }
-  .pv-word.off { font-style: italic; }
-  .pv-wire { font-family: 'JetBrains Mono', monospace; font-size: 8px; letter-spacing: 0.14em;
-    color: var(--gold); opacity: 0.8; text-align: right; white-space: nowrap; }
-  .pv-spark { display: block; height: 30px; }
-  .pulse-spark { display: block; width: 100%; height: 30px; overflow: visible; }
-  .ps-zero { stroke: rgba(255,255,255,0.14); stroke-width: 1; }
-  .ps-line { stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+  .pv-read { font-family: 'Inter Tight', sans-serif; font-size: 12.5px; font-weight: 600;
+    text-align: right; line-height: 1.25; }
+  .pv-unit { font-size: 10.5px; color: var(--text-dim); line-height: 1.3; }
+  .pulse-vital.off .pv-unit { font-style: italic; }
+  .pv-wire { font-family: 'Inter Tight', sans-serif; font-size: 12.5px; font-style: italic;
+    color: var(--text-dim); text-align: right; white-space: nowrap; }
+  /* ── ONE TRACE ──
+     The SVG stretches to the rail's width; the endpoint rides on top as a fixed
+     overlay so it stays a circle. overflow stays visible so the halo is not
+     sliced at the top and bottom of the band. */
+  .ptrace { position: relative; width: 100%; overflow: visible; }
+  .ptrace .pt-svg { display: block; width: 100%; height: 100%; overflow: visible; }
+  .pt-line { stroke-linecap: round; stroke-linejoin: round; fill: none; }
+  .pt-edge { stroke-width: 1; vector-effect: non-scaling-stroke; }
+  .pt-flat { stroke: var(--text-dim); stroke-opacity: 0.35; stroke-width: 1;
+    vector-effect: non-scaling-stroke; }
+  .pt-end { position: absolute; line-height: 0; pointer-events: none;
+    transform: translate(-50%, -50%); }
+  .pt-end svg { display: block; overflow: visible; }
+  /* THE ONLY MOTION ON THE CARD. transform and opacity only, on a 14px halo — no
+     layout property is touched, so nothing here can trigger a repaint of the
+     rail, let alone the card. transform-box: fill-box makes the SVG circle scale
+     about its own centre rather than the viewport origin, which is what turns a
+     lurch into a breath. The solid core underneath never moves, so the endpoint
+     stays exactly readable as a position while the halo breathes around it. */
+  .pt-halo { opacity: 0.55; transform-box: fill-box; transform-origin: center;
+    animation: pt-breathe 2.2s ease-in-out infinite; will-change: transform, opacity; }
+  @keyframes pt-breathe {
+    0%, 100% { transform: scale(1);   opacity: 0.55; }
+    50%      { transform: scale(1.6); opacity: 1; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .pt-halo { animation: none; opacity: 0.5; }
+  }
+  /* ── THE COMPOSITE ──
+     Taller and set apart above the rails, because it is a different question. */
+  .pulse-comp { margin: 12px 0 10px; padding: 12px 10px 10px;
+    border: 1px solid var(--line); border-radius: 10px;
+    background: rgba(255,255,255,0.02); }
+  /* STACKED, NOT SPLIT. Side by side, "THE BUSINESS · ONE LINE" and a read as
+     long as "steady on average — rails disagree" cannot both fit a 390px rail,
+     and it was the label that wrapped — the one string on the card that must
+     never look broken. Label over read costs one line and always fits. */
+  .pc-head { display: flex; flex-direction: column; align-items: flex-start;
+    gap: 3px; margin-bottom: 9px; }
+  .pc-name { font-family: 'JetBrains Mono', monospace; font-size: 9.5px;
+    letter-spacing: 0.16em; color: var(--text-dim); white-space: nowrap; }
+  .pc-read { font-family: 'Inter Tight', sans-serif; font-size: 15px; font-weight: 600;
+    line-height: 1.2; }
+  .pc-note { font-size: 10.5px; line-height: 1.5; color: var(--text-dim); margin-top: 9px; }
   .pv-chev { color: var(--text-dim); font-size: 14px; transition: transform 0.15s; }
   .pulse-vital.open .pv-chev { transform: rotate(90deg); }
   .pulse-vital.off .pv-name { color: var(--text-dim); }
@@ -222,12 +265,15 @@
   .pulse-foot { font-size: 11px; line-height: 1.65; color: var(--text-dim); margin-top: 12px;
     padding-top: 10px; border-top: 1px solid var(--line); }
   @media (max-width: 700px) {
-    /* The spark loses its column before the number or the word does — a rail that
-       says "−2.4, far below its rhythm" with no picture still answers the
-       question; a picture with no number does not. */
-    .pv-head { grid-template-columns: 10px 1fr 46px 12px; gap: 8px; row-gap: 2px; padding: 8px; }
-    .pv-word { grid-column: 2 / 4; font-size: 11px; }
-    .pv-spark { display: none; }
+    /* THE TRACE NEVER LEAVES. The previous rule deleted it here, which meant the
+       phone — the only place this card is actually read — was the one size with
+       no picture. It is the shape that carries the meaning; the words tighten
+       instead. */
+    .pv-head { padding: 9px 8px; gap: 4px; }
+    .pv-top { gap: 7px; }
+    .pv-read, .pv-wire { font-size: 12px; }
+    .pv-unit { font-size: 10px; }
+    .pulse-comp { padding: 11px 8px 9px; }
     .pulse-vital.open .pv-drill-in { padding: 2px 10px 12px 18px; }
     .pd-brand { flex-wrap: wrap; }
   }
@@ -4609,19 +4655,39 @@ const RHY_SEV  = { hot:'good', warm:'good', flat:'watch', cooling:'watch', cold:
 const rhyTick = d => d === null ? 'flat'
   : d >= 8 ? `▲${d}%` : d <= -8 ? `▼${Math.abs(d)}%` : 'flat';
 /* ── THE PULSE, drawn ────────────────────────────────────────────────────────
-   Five vitals stacked as rails. Glance down the dots; drill into whichever one
-   is not green. Every row is a symptom and a place to look, never an instruction.
+   Five vitals stacked as rails, with the whole business as one trace on top.
+   Glance down the shapes; drill into whichever one is not green. Every row is a
+   symptom and a place to look, never an instruction.
 
-   NO COMPOSITE TRACE. It was built and then held (Kevin, 16 Aug): one line over
-   "the whole business" is a claim to have measured the whole business, and three
-   of these five vitals still have no feed. Averaging two live vitals into a
-   confident-looking line is precisely the lie the rest of this card refuses. The
-   composite ships when four of five are real.
+   IT DRAWS BEFORE IT READS. The card shipped first as a status list — a dot, a
+   name, and a bare z-score — and a list is read word by word, in order, which is
+   the opposite of what a vitals monitor is for. A heartbeat is recognised as a
+   SHAPE, before any word on the card is read, so every live vital carries its
+   own 14-day line and the eye can run down the column and stop at the one that
+   is not like the others.
 
-   A vital with no feed behind it draws NOTHING. Not a flat line, not a zero, not
-   a greyed guess — an empty rail and the reason in words. A drawn line is a
-   claim that something was measured. */
+   THE BAND IS WHAT MAKES A SHAPE MEAN ANYTHING. A line alone is just a wiggle:
+   nothing on screen says whether it is a big wiggle. Behind every trace sits
+   that vital's normal range — median ± 1 MAD, the same arithmetic the score
+   already uses — as a faint filled band. In z-space that band is exactly −1 to
+   +1 by construction, which is why it can be drawn without a second pass over
+   the data. A line inside the band barely registers. A line punching out of it
+   is visible across the room, which is the entire design.
+
+   NO NAKED Z AT RAIL LEVEL. "−2.4" is a number about a number; "38% below your
+   normal" is a fact about the business, and Kevin reads this at 390px on a
+   phone. The z is the same arithmetic underneath and it survives in the tap
+   detail, where a reader who wants the machinery can find it.
+
+   A vital with no feed behind it draws NOTHING that could be mistaken for a
+   measurement. Payables gets a flat hairline where the trace would be — a line
+   that visibly says "no signal", not a healthy calm. */
 const PULSE_BAND_C = { green:'var(--green)', amber:'var(--gold)', red:'var(--red)', none:'var(--text-dim)' };
+/* The same four tokens as channels, because a band fill has to be that colour at
+   7% and CSS custom properties cannot be given an alpha without colour-mix. Kept
+   adjacent to the map above so the two can never drift apart. */
+const PULSE_BAND_RGB = { green:'108,194,139', amber:'212,177,90', red:'217,106,94', none:'138,160,148' };
+const PULSE_DAYS = 14;   // days drawn in every trace, composite included
 
 function pulseWord(z, band){
   if (z === null) return '';
@@ -4632,27 +4698,123 @@ function pulseWord(z, band){
 }
 const pulseZ = z => z === null ? '—' : (z >= 0 ? '+' : '−') + Math.abs(z).toFixed(1);
 
-/* A vital's own trace, at rail size. Zero is the centre line, because on a
-   deviation score zero IS the baseline — "normal" is a real place on this axis,
-   not a truncation. */
-function pulseSparkSvg(spark, band, { w = 120, h = 30 } = {}){
-  const zs = spark.map(p => p.z).filter(z => z !== null);
-  if (zs.length < 2) return '';
-  const pad = 3, zMax = Math.max(3, Math.ceil(Math.max(...zs.map(Math.abs))));
-  const n = spark.length, stepX = (w - pad*2) / (n - 1);
-  const X = i => pad + i * stepX, Y = z => h/2 - (Math.max(-zMax, Math.min(zMax, z)) / zMax) * (h/2 - pad);
-  const segs = []; let cur = [];
-  spark.forEach((p, i) => { if (p.z === null){ if (cur.length > 1) segs.push(cur); cur = []; }
-    else cur.push(`${X(i).toFixed(1)},${Y(p.z).toFixed(1)}`); });
-  if (cur.length > 1) segs.push(cur);
-  const last = spark.reduce((a, p, i) => p.z !== null ? i : a, -1);
-  return `<svg class="pulse-spark" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" aria-hidden="true">
-    <line x1="0" y1="${Y(0)}" x2="${w}" y2="${Y(0)}" class="ps-zero"/>
-    ${segs.map(s => `<polyline points="${s.join(' ')}" fill="none" class="ps-line"
-      style="stroke:${PULSE_BAND_C[band]}" vector-effect="non-scaling-stroke"/>`).join('')}
-    ${last >= 0 ? `<circle cx="${X(last).toFixed(1)}" cy="${Y(spark[last].z).toFixed(1)}" r="2.4" style="fill:${PULSE_BAND_C[band]}"/>` : ''}
-  </svg>`;
+/* THE READ, in English. Inside the band there is no number worth printing —
+   "3% above normal" invites a reaction to noise — so it says "in rhythm" and
+   stops. Outside it, the distance is stated in the metric's own terms.
+
+   A percentage needs a normal that is not zero, and a week can be a multiple of
+   a small normal rather than a percentage of it, so the two ends are handled
+   rather than allowed to print Infinity or "1,400%". */
+function pulseReadText(r){
+  if (!r) return '';
+  if (r.speak === 'text') return r.text || '';
+  if (r.band === 'green') return 'in rhythm';
+  const dir = (r.z != null ? r.z : 0) >= 0 ? 'above' : 'below';
+  /* BACKLOG AGE GETS WORDS, NOT A NUMBER, and that is a correction rather than a
+     shortcut. Its value is a rolling window over a series that is ITSELF a
+     7-day difference, so the figure is a sum of overlapping deltas — it printed
+     as "74.0 days above your normal", which a reader can only take to mean the
+     backlog got 74 days older in a week. It does not mean that, and no honest
+     rewording of that quantity fits on a rail. A percentage is no better: the
+     normal it would divide by is a movement centred on zero. What the number
+     genuinely establishes is a DIRECTION and that the direction is unusual, so
+     that is exactly what it says, and the drill below carries the arithmetic. */
+  if (r.speak === 'drift')
+    return dir === 'above' ? 'aging faster than normal' : 'clearing faster than normal';
+  const n = Number(r.norm), v = Number(r.value);
+  if (!isFinite(n) || !isFinite(v) || n <= 0) return `${dir} your normal`;
+  const ratio = v / n;
+  if (ratio >= 5) return `${(ratio).toFixed(1)}× your normal`;
+  const pct = Math.round(Math.abs(ratio - 1) * 100);
+  return `${pct}% ${dir} your normal`;
 }
+
+/* ONE TRACE. Fourteen days of z over its own normal band.
+
+   The SVG is stretched horizontally (preserveAspectRatio="none") so the line
+   fills whatever width the rail has, and the viewBox height is the rendered
+   pixel height, which keeps the vertical mapping 1:1 — that is what lets the lit
+   endpoint be positioned in CSS pixels from the same Y the polyline used.
+
+   Y-RANGE IS PER TRACE, so a peak reads as a peak. A shared axis would flatten
+   every quiet vital into a nub at 390px, which is where this is actually read.
+
+   THE AXIS IS LINEAR THROUGH THE BAND AND COMPRESSED OUTSIDE IT, which is the
+   one piece of geometry here that had to be argued for. Two obvious axes both
+   fail on real numbers. A plain data-driven axis: a dead week on signings scores
+   z −19 (the scoring note puts a dead week at −19 to −27), and against a −19
+   domain the ±1 band renders about three pixels tall — the one thing the reader
+   needs to see becomes a hairline exactly when the vital is in the most trouble.
+   Clamping the line at ±3 instead: the band survives, but every extreme trace
+   flattens onto the frame and a fortnight of shape is destroyed, which is the
+   whole reason the card was rebuilt.
+
+   So: linear out to ±1.5, log beyond. Distances inside and just outside normal
+   are true to scale, the band never falls below about a third of the height, and
+   the excursion keeps its shape — a line that dives and recovers still visibly
+   dives and recovers at z −19, it simply does not need twenty times the room to
+   say so. The transform is monotonic, so nothing ever crosses out of order.
+
+   FLOOR ±1.5, so a fortnight spent entirely inside normal still has daylight
+   above and below the band. Without it the band fills the frame edge to edge and
+   "inside it" stops looking like inside anything. */
+const PULSE_Z_LIN = 1.5;
+const pulseWarp = z => { const a = Math.abs(z);
+  return (z < 0 ? -1 : 1) * (a <= PULSE_Z_LIN ? a : PULSE_Z_LIN + Math.log1p(a - PULSE_Z_LIN)); };
+function pulseTrace(spark, band, { h = 36, sw = 1.6, dot = 7 } = {}){
+  const pts = (spark || []).slice(-PULSE_DAYS);
+  const zs = pts.map(p => p.z).filter(z => z !== null);
+  if (zs.length < 2) return '';
+  const c = PULSE_BAND_C[band] || PULSE_BAND_C.none;
+  const rgb = PULSE_BAND_RGB[band] || PULSE_BAND_RGB.none;
+  const ws = zs.map(pulseWarp);
+  const lo0 = Math.min(-PULSE_Z_LIN, ...ws), hi0 = Math.max(PULSE_Z_LIN, ...ws);
+  const padZ = (hi0 - lo0) * 0.10;
+  const lo = lo0 - padZ, hi = hi0 + padZ;
+  const padY = 3;                        // px of headroom for the endpoint halo
+  const Y = z => padY + (hi - pulseWarp(z)) / (hi - lo) * (h - padY*2);
+  /* Percent x, inset at both ends: the lit endpoint is an absolutely positioned
+     overlay at the last point's x, and a dot centred on 100% would hang half its
+     width past the card. 3% clears the halo at every width this card renders. */
+  const n = pts.length, PADX = 3;
+  const X = i => PADX + (i / (n - 1)) * (100 - PADX*2);
+  const segs = []; let cur = [];
+  pts.forEach((p, i) => { if (p.z === null){ if (cur.length > 1) segs.push(cur); cur = []; }
+    else cur.push(`${X(i).toFixed(2)},${Y(p.z).toFixed(2)}`); });
+  if (cur.length > 1) segs.push(cur);
+  const last = pts.reduce((a, p, i) => p.z !== null ? i : a, -1);
+  const bTop = Y(1), bBot = Y(-1);
+  const svg = `<svg class="pt-svg" viewBox="0 0 100 ${h}" preserveAspectRatio="none" aria-hidden="true">
+    <rect x="0" y="${bTop.toFixed(2)}" width="100" height="${(bBot - bTop).toFixed(2)}"
+      fill="rgba(${rgb},0.07)"/>
+    <line x1="0" y1="${bTop.toFixed(2)}" x2="100" y2="${bTop.toFixed(2)}"
+      class="pt-edge" style="stroke:rgba(${rgb},0.14)"/>
+    <line x1="0" y1="${bBot.toFixed(2)}" x2="100" y2="${bBot.toFixed(2)}"
+      class="pt-edge" style="stroke:rgba(${rgb},0.14)"/>
+    ${segs.map(s => `<polyline points="${s.join(' ')}" fill="none" class="pt-line"
+      style="stroke:${c};stroke-width:${sw}" vector-effect="non-scaling-stroke"/>`).join('')}
+  </svg>`;
+  /* The lit endpoint lives OUTSIDE the stretched SVG on purpose. Inside it, the
+     same horizontal stretch that makes the line fill the rail would flatten the
+     dot into an ellipse, by a factor that depends on the viewport and so cannot
+     be corrected in the markup. A fixed-size overlay stays round at every width,
+     and it is the only thing on this card that moves. */
+  const end = last < 0 ? '' : `<span class="pt-end" style="left:${X(last).toFixed(2)}%;top:${Y(pts[last].z).toFixed(2)}px">
+    <svg viewBox="0 0 ${dot*2} ${dot*2}" width="${dot*2}" height="${dot*2}" aria-hidden="true">
+      <circle class="pt-halo" cx="${dot}" cy="${dot}" r="${(dot*0.62).toFixed(1)}" style="fill:${c}"/>
+      <circle cx="${dot}" cy="${dot}" r="${(dot*0.34).toFixed(1)}" style="fill:${c}"/>
+    </svg></span>`;
+  return `<div class="ptrace" style="height:${h}px">${svg}${end}</div>`;
+}
+
+/* Payables draws this instead. A hairline at 35% and no dot: it has to be
+   visibly a placeholder, because a centred flat line at full strength is what a
+   perfectly steady vital would look like, and Payables is not steady — it is
+   unmeasured. */
+const pulseFlat = (h = 36) => `<div class="ptrace" style="height:${h}px">
+  <svg class="pt-svg" viewBox="0 0 100 ${h}" preserveAspectRatio="none" aria-hidden="true">
+    <line x1="0" y1="${h/2}" x2="100" y2="${h/2}" class="pt-flat"/>
+  </svg></div>`;
 
 function pulseDrill(key){
   const el = document.getElementById('pulse-' + key);
@@ -4669,11 +4831,17 @@ function pulseSubRow(s){
   const val = !s.live ? '' : s.unit === '$' ? short(s.value)
     : s.unit === 'd' ? (s.value >= 0 ? '+' : '−') + Math.abs(s.value).toFixed(1) + ' days'
     : Math.round(s.value);
+  /* THE TAP DETAIL IS WHERE THE Z LIVES. It is banished from the rails because a
+     deviation score is a number about a number, and the rail has one job: be
+     read at a glance. Down here the reader has already asked for the machinery,
+     so the plain read leads and the z follows it in the dim line as `z −2.4`,
+     labelled, never floating on its own where it could be mistaken for the
+     measurement itself. */
   const live = s.kind === 'band'
-    ? `<span class="pd-sub-z" style="color:${PULSE_BAND_C[s.band]}">${esc(s.valText)}</span>
-       <span class="pd-sub-v">${esc(s.wordText)}</span>`
-    : `<span class="pd-sub-z" style="color:${PULSE_BAND_C[s.band]}">${pulseZ(s.z)}</span>
-       <span class="pd-sub-v">${val} over 7 days · ${pulseWord(s.z, s.band)}</span>`;
+    ? `<span class="pd-sub-z" style="color:${PULSE_BAND_C[s.band]}">${esc(s.wordText)}</span>
+       <span class="pd-sub-v">${esc(s.readUnit || s.valText)}</span>`
+    : `<span class="pd-sub-z" style="color:${PULSE_BAND_C[s.band]}">${esc(pulseReadText(pulseReadOf(s)))}</span>
+       <span class="pd-sub-v">${val} over 7 days · ${pulseWord(s.z, s.band)} · z ${pulseZ(s.z)}</span>`;
   return `<div class="pd-sub${s.live ? '' : ' off'}">
     <div class="pd-sub-h">
       <span class="pd-sub-n">${esc(s.name)}</span>
@@ -4687,8 +4855,8 @@ function pulseBrandRow(b){
   return `<div class="pd-brand${b.live ? '' : ' off'}">
     <span class="pd-dot" style="background:${b.colour}"></span>
     <span class="pd-brand-n">${esc(b.name)}</span>
-    ${b.live ? `<span class="pd-brand-z" style="color:${PULSE_BAND_C[b.band]}">${pulseZ(b.z)}</span>
-                <span class="pd-brand-v">${short(b.value)} over 7 days</span>`
+    ${b.live ? `<span class="pd-brand-z" style="color:${PULSE_BAND_C[b.band]}">${esc(pulseReadText(pulseReadOf(b)))}</span>
+                <span class="pd-brand-v">${short(b.value)} over 7 days · z ${pulseZ(b.z)}</span>`
              : `<span class="pd-wire">no history yet</span>`}
   </div>`;
 }
@@ -4707,13 +4875,17 @@ function cardPulse(){
         : `All ${P.live} are in rhythm.`);
 
   const rows = P.vitals.map(v => {
-    const zTxt = v.zText != null ? esc(v.zText) : pulseZ(v.z);
-    const wTxt = v.wordText != null ? esc(v.wordText) : pulseWord(v.z, v.band);
+    /* The rail reads NAME · plain-English read on one line, the trace across the
+       full width under it, and the unit beneath that. The read sits on the label
+       line rather than under the trace because at 390px the label line is the
+       only row guaranteed to be scanned. */
     const body = v.live
-      ? `<span class="pv-z" style="color:${PULSE_BAND_C[v.band]}">${zTxt}</span>
-         <span class="pv-word">${wTxt}</span>
-         <span class="pv-spark">${pulseSparkSvg(v.spark, v.band)}</span>`
-      : `<span class="pv-wire">WIRING UP</span><span class="pv-word off">draws nothing</span><span class="pv-spark"></span>`;
+      ? `<span class="pv-read" style="color:${PULSE_BAND_C[v.band]}">${esc(pulseReadText(v.read))}</span>`
+      : `<span class="pv-wire">wiring up</span>`;
+    const trace = v.live ? pulseTrace(v.spark, v.band) : pulseFlat();
+    const unit = v.live
+      ? (v.read && v.read.readUnit ? esc(v.read.readUnit) : '')
+      : 'no feed behind it — it draws nothing';
     const drill = [
       v.why ? `<div class="pd-why">${v.why}</div>` : '',
       v.half ? `<div class="pd-why">${v.half}</div>` : '',
@@ -4726,10 +4898,14 @@ function cardPulse(){
     ].join('');
     return `<div class="pulse-vital band-${v.band}${v.live ? '' : ' off'}" id="pulse-${v.key}">
       <button class="pv-head" onclick="pulseDrill('${v.key}')" aria-expanded="false">
-        <span class="pv-dot" style="background:${PULSE_BAND_C[v.band]}"></span>
-        <span class="pv-name">${esc(v.name)}</span>
-        ${body}
-        <span class="pv-chev">›</span>
+        <span class="pv-top">
+          <span class="pv-dot" style="background:${PULSE_BAND_C[v.band]}"></span>
+          <span class="pv-name">${esc(v.name)}</span>
+          ${body}
+          <span class="pv-chev">›</span>
+        </span>
+        ${trace}
+        <span class="pv-unit">${unit}</span>
       </button>
       <div class="pv-drill"><div class="pv-drill-in">
         <div class="pd-label">${esc(v.label)}</div>
@@ -4738,21 +4914,55 @@ function cardPulse(){
     </div>`;
   }).join('');
 
+  /* THE COMPOSITE, on top and taller than anything under it, because it answers
+     the coarsest question — is anything wrong at all — and the rails answer
+     where. The sentence underneath is not decoration: a line called "the
+     business" that quietly leaves a fifth of the business out would be the exact
+     kind of confident summary this card was built to refuse, so what it blends
+     and what it excludes is stated in words, under the line, every time. */
+  const C = P.comp;
+  /* A calm mean over disagreeing rails is not an all-clear, so it is neither
+     worded nor coloured as one: the read says the rails disagree and takes the
+     amber, which is the same colour the reader has already learned means "look
+     closer". Only a genuinely quiet business gets the green. */
+  const cQuiet = C && C.band === 'green' && !C.dissent;
+  const cRead = !C ? '' : C.band !== 'green' ? `${C.z >= 0 ? 'above' : 'below'} its normal`
+    : C.dissent ? 'steady on average — rails disagree' : 'in rhythm';
+  const cTone = !C ? 'none' : cQuiet ? 'green' : C.band === 'green' ? 'amber' : C.band;
+  const comp = !C ? '' : `<div class="pulse-comp">
+    <div class="pc-head">
+      <span class="pc-name">THE BUSINESS · ONE LINE</span>
+      <span class="pc-read" style="color:${PULSE_BAND_C[cTone]}">${esc(cRead)}</span>
+    </div>
+    ${pulseTrace(C.spark, C.band, { h:64, sw:2, dot:8 })}
+    <div class="pc-note">${C.n === 4
+      ? 'Blend of the four live vitals. Payables excluded — it has no feed yet.'
+      : `Blend of the ${C.n} live vital${C.n === 1 ? '' : 's'} — ${esc(C.names.join(', '))}. The rest are excluded: they have no feed yet.`}${
+      C.dissent && C.band === 'green'
+        ? ` A mean cancels: ${C.dissent} of the ${C.n} ${C.dissent === 1 ? 'is' : 'are'} off ${C.dissent === 1 ? 'its' : 'their'} own rhythm in opposite directions, so read the rails below, not this line.`
+        : ''}</div>
+  </div>`;
+
   const endTxt = P.end.toLocaleDateString('en-US', { month:'short', day:'numeric' });
   return `<div class="card pulse-card">
     <div class="card-title">The pulse · vitals</div>
     <div class="card-sub">${head}</div>
+    ${comp}
     <div class="pulse-vitals">${rows}</div>
     <div class="pulse-foot">
       Most vitals are a trailing 7-day window scored against their own history for
       this point in the month — median and MAD, so one large job cannot redefine
-      normal. Green within 1, amber past 1, red past 2. <b>Days out is the
-      exception</b>: it is judged against a fixed 2–3 day band, not against history,
-      because a business that has always booked eight days out would score its own
-      chronic problem as normal. Windows end <b>${esc(endTxt)}</b>: a window holding a
-      partial today reads low for no reason but the clock. ${P.live} of ${P.total}
-      vitals have a feed behind them; the rest say so and draw nothing. The composite
-      trace — the whole business as one line — is <b>held</b> pending Kevin's go.
+      normal. The shaded band behind each trace <b>is</b> that normal range, median
+      ± 1 MAD: a line inside it is ordinary, a line clear of it is not. Reads are
+      that same arithmetic said in English — green inside the band, amber past 1,
+      red past 2 — and each trace is scaled to its own range, so heights compare
+      within a rail and never across them. <b>Days out is the exception</b>: it is
+      judged against a fixed 2–3 day band, not against history, because a business
+      that has always booked eight days out would score its own chronic problem as
+      normal. Windows end <b>${esc(endTxt)}</b>: a window holding a partial today
+      reads low for no reason but the clock. ${P.live} of ${P.total} vitals have a
+      feed behind them; the rest say so and draw nothing. Open a rail for the
+      z-score and the sub-vitals behind its reading.
     </div>
   </div>`;
 }
@@ -5567,12 +5777,14 @@ function render(){
      statement:
 
        1  the ask box            — the question he arrived with, always first
-       1b THE PULSE              — five vitals as one trace, scored against their
-                                   own normal for this point in the month. It
+       1b THE PULSE              — the whole business as one heartbeat trace,
+                                   over five vitals each drawn against its own
+                                   normal band for this point in the month. It
                                    sits above ATTENTION because it answers a
-                                   coarser question first: is anything wrong at
-                                   all. ATTENTION then says what, in words. The
-                                   pulse shows symptoms and never prescribes.
+                                   coarser question first, and answers it as a
+                                   SHAPE: is anything wrong at all. ATTENTION
+                                   then says what, in words. The pulse shows
+                                   symptoms and never prescribes.
        2  ATTENTION              — what is off its rhythm, at headline size. It
                                    was a footnote under the money; it is the
                                    reason he opened the page, so it leads.
@@ -6073,7 +6285,7 @@ addEventListener('resize', () => {
    server for hours while Kevin looked at yesterday's build and reported the bug
    as unfixed. That happened. The page now checks version.json on every load and
    reloads itself once if the deployed build is newer than the one running. */
-const BUILD = '2026-08-17T02:30Z-rhythm-comparisons';
+const BUILD = '2026-08-16T20:50Z-pulse-traces';
 const SB_URL = 'https://lzegjjbkfuecrhdvlvay.supabase.co';
 /* The one page that can finish a password reset. Hard-coded rather than derived,
    because every derivation of it so far has been a source of bugs: a bare origin
@@ -6324,15 +6536,20 @@ const pMedian = a => { if (!a.length) return null;
    for well-behaved data — that is what lets "past 1" and "past 2" keep their
    ordinary meaning. MAD collapses to zero when over half the pool is identical
    (a metric that is usually nothing); SD is the fallback, and if that is zero
-   too the honest answer is no score rather than an infinite one. */
-function pRobustZ(x, pool){
+   too the honest answer is no score rather than an infinite one.
+
+   RETURNS THE CENTRE AND THE SPREAD, not just the score. The card no longer
+   prints z at rail level — it prints "22% above your normal" — and a percent
+   needs the normal itself, in the metric's own units, not merely the distance
+   to it. Same arithmetic as before; it now hands back what it already knew. */
+function pRobustStat(pool){
   const m = pMedian(pool); if (m === null) return null;
   let s = 1.4826 * (pMedian(pool.map(v => Math.abs(v - m))) || 0);
   if (!(s > 0)){
     const mean = pool.reduce((a,b) => a+b, 0) / pool.length;
     s = Math.sqrt(pool.reduce((a,b) => a + (b-mean)*(b-mean), 0) / Math.max(1, pool.length - 1));
   }
-  return s > 0 ? (x - m) / s : null;
+  return s > 0 ? { m, s } : null;
 }
 
 /* Circular day-of-month distance, so the 1st pools with the 30th and 31st. A
@@ -6367,15 +6584,42 @@ function pulseScore(daily, { log = true, from, to }){
     const out = [];
     byDom.forEach((arr, d) => { if (pDomDist(d, dom) <= PULSE_DOMTOL) out.push(...arr); });
     pools.set(dom, out); return out; };
-  const z = keys.map((k, i) => {
-    if (x[i] === null) return null;
-    const p = poolFor(new Date(k).getDate());
-    return p.length < PULSE_MINPOOL ? null : pRobustZ(x[i], p);
+  /* Memoised per day-of-month, because the pool already is. The previous pass
+     re-derived the median and the MAD from scratch on every one of up to 1,200
+     days even though there are only 31 distinct pools behind them — and it now
+     has to derive them twice, once for the score and once for the normal the
+     percent read is against. Cached, that second use costs nothing. */
+  const stats = new Map();
+  const statFor = dom => { if (stats.has(dom)) return stats.get(dom);
+    const p = poolFor(dom);
+    const st = p.length < PULSE_MINPOOL ? null : pRobustStat(p);
+    stats.set(dom, st); return st; };
+  const z = [], norm = [];
+  keys.forEach((k, i) => {
+    const st = x[i] === null ? null : statFor(new Date(k).getDate());
+    z.push(st ? (x[i] - st.m) / st.s : null);
+    /* The normal, back in the metric's own units. Everything but the backlog
+       delta is scored on log1p dollars or counts, so the centre has to come back
+       through expm1 before it can be divided into a week's actual total — a
+       median of logs is not the log of a median, and printing one as the other
+       would put a wrong denominator under every percentage on the card. */
+    norm.push(st ? (log ? Math.expm1(st.m) : st.m) : null);
   });
-  return { keys, win, z, pool: keys.length ? poolFor(new Date(keys[keys.length-1]).getDate()).length : 0 };
+  return { keys, win, z, norm, log,
+           pool: keys.length ? poolFor(new Date(keys[keys.length-1]).getDate()).length : 0 };
 }
 
 const pBand = z => z === null ? 'none' : Math.abs(z) <= 1 ? 'green' : Math.abs(z) <= 2 ? 'amber' : 'red';
+
+/* A sub-vital's reading, lifted to rail level as ONE shape whichever kind it is,
+   so the renderer never has to ask what it was handed. Everything the read needs
+   to be said in English travels together: the week's value, the normal it is
+   against, the band that colours it, and the unit line under it. */
+const pulseReadOf = s => !s || !s.live ? null
+  : s.speak === 'text'
+    ? { speak:'text', text: s.wordText, band: s.band, readUnit: s.readUnit }
+    : { speak: s.speak || 'pct', value: s.value, norm: s.norm, z: s.z,
+        band: s.band, readUnit: s.readUnit };
 
 function buildPulse(jobs, qbInv){
   const DAY = 86400000;
@@ -6432,20 +6676,36 @@ function buildPulse(jobs, qbInv){
      transform of a negative number is not a number. */
   const A = ageDelta.size ? pulseScore(ageDelta, { log:false, from: from(new Date(Math.min(...ageDelta.keys()))), to: end }) : null;
 
-  const tail = (r, pick) => { if (!r) return [];
+  /* EVERY TAIL WALKS THE SAME CALENDAR — same end date, same length, one entry
+     per day. That is not tidiness: the composite averages these series BY INDEX,
+     so index i has to be the same calendar day in all four or the blend is of
+     different days pretending to be one. A day with no score comes back as a
+     null in place, never as a shorter array. */
+  const tail = r => { if (!r) return [];
     const out = [];
     for (let t = pDayAdd(+end, -(PULSE_TRACE-1)); t <= +end; t = pDayAdd(t, 1)){
       const i = r.keys.indexOf(t);
-      out.push({ k: t, z: i < 0 ? null : r.z[i], v: i < 0 ? null : (pick ? r.win[i] : null) });
+      out.push({ k: t, z: i < 0 ? null : r.z[i], v: i < 0 ? null : r.win[i],
+                 n: i < 0 ? null : r.norm[i] });
     }
     return out; };
   const lastOf = r => { if (!r) return null;
-    for (let i = r.z.length - 1; i >= 0; i--) if (r.z[i] !== null) return { z: r.z[i], v: r.win[i] };
+    for (let i = r.z.length - 1; i >= 0; i--)
+      if (r.z[i] !== null) return { z: r.z[i], v: r.win[i], n: r.norm[i] };
     return null; };
 
-  const sub = (name, r, unit, dir, note) => { const l = lastOf(r);
+  /* `speak` is how far-from-normal gets said in English. 'pct' for anything on a
+     ratio scale — dollars and counts have a true zero, so "22% above your
+     normal" is a sentence with a meaning. 'drift' for the backlog movement,
+     which has neither a true zero nor a quantity a reader can hold; see
+     pulseReadText for why it gets a direction instead of a figure. `readUnit` is
+     the sub-line under the read, naming what was measured, because "22% above
+     normal" with no unit attached is half a fact. */
+  const sub = (name, r, unit, dir, note, readUnit) => { const l = lastOf(r);
     return { name, live: !!l, z: l ? l.z : null, band: pBand(l ? l.z : null),
-             value: l ? l.v : null, unit, dir, note, spark: tail(r, true) }; };
+             value: l ? l.v : null, norm: l ? l.n : null,
+             speak: unit === 'd' ? 'drift' : 'pct', readUnit,
+             unit, dir, note, spark: tail(r) }; };
 
   /* DECOMPOSITION. A red vital has to point somewhere, so each brand is scored
      by the same arithmetic as its parent rather than merely listed with a share:
@@ -6455,8 +6715,12 @@ function buildPulse(jobs, qbInv){
     const m = agg(mine, field, val);
     const r = m.size ? pulseScore(m, { from: from(first(m)), to: end }) : null;
     const l = lastOf(r);
+    /* norm rides along so a brand can be read in the same English as its parent.
+       Every brand cut is dollars or counts — ratio scale, true zero — so 'pct'
+       is always the right way to say it here. */
     return { id, name: brandOf(id).s, colour: brandOf(id).c,
-             live: !!l, z: l ? l.z : null, band: pBand(l ? l.z : null), value: l ? l.v : null };
+             live: !!l, z: l ? l.z : null, band: pBand(l ? l.z : null),
+             value: l ? l.v : null, norm: l ? l.n : null, speak: 'pct' };
   });
 
   /* DAYS OUT is judged against a FIXED BAND, not against its own history, and
@@ -6484,7 +6748,8 @@ function buildPulse(jobs, qbInv){
     const lMap = agg(leadRows, 'lead_at', () => 1);
     const L = lMap.size ? pulseScore(lMap, { from: from(first(lMap)), to: end }) : null;
     const leads = sub('Leads / day', L, 'n', -1,
-      'Dated by <code>cc_raw.project_created_at</code> — Contractors Cloud\'s own lead stamp, 11,558 of 11,558 populated across 609 days. Not <code>customers.created_at</code>, which is our import stamp and puts 96% of the history on one Monday in July.');
+      'Dated by <code>cc_raw.project_created_at</code> — Contractors Cloud\'s own lead stamp, 11,558 of 11,558 populated across 609 days. Not <code>customers.created_at</code>, which is our import stamp and puts 96% of the history on one Monday in July.',
+      'leads, last 7 days');
 
     /* Whole days, floor'd, from lead to the first appointment DATE — the same
        units the 2-3 day band is written in. A same-day booking is 0, not 0.4. */
@@ -6508,6 +6773,14 @@ function buildPulse(jobs, qbInv){
     const dOut = { name:'Days out · lead to appointment', kind:'band', live: med !== null,
       band: doBand(med), valText: med === null ? '—' : med.toFixed(1) + ' d',
       wordText: doWord(med),
+      /* No percent read here, and that is the point. Days out is the one vital
+         with no historical normal to be a percentage of — it is measured against
+         a line Kevin drew. "12% above your normal" would quietly re-baseline the
+         target onto the shop's own habit, which is the exact failure the fixed
+         band exists to prevent. It speaks in days and in the word. */
+      speak:'text',
+      readUnit: med === null ? 'lead to appointment · not enough bookable leads'
+        : `median ${med.toFixed(1)} days, lead to appointment · target 2–3`,
       note: med === null
         ? `Fewer than 5 bookable leads in the settled window — no median worth printing.`
         : `Median of <b>${lags.length}</b> lead${lags.length === 1 ? '' : 's'} created in the 7 days ending ${new Date(doEnd).toLocaleDateString('en-US',{month:'short',day:'numeric'})}, each given 7 days to be booked. Target band 2–3 days: green through 3, amber at 4, red at 5 and beyond. Under 2 is not a better score — it means the calendar is not full.` +
@@ -6524,13 +6797,17 @@ function buildPulse(jobs, qbInv){
     const liveSubs = subs.filter(s => s.live);
     const lead = liveSubs.slice().sort((a,b) => rank[b.band] - rank[a.band])[0] || null;
     /* The rail wears the worst live sub-vital's reading. When that is days out it
-       shows days and a word, because it never had a z to show. */
+       shows the word and the days, because it never had a z to show — and now
+       never had a percent either. The TRACE under it stays the leads series
+       regardless: days out is a settled 7-days-back median, one number, and has
+       no daily line to draw. The sub-line says which of the two is being read,
+       so a trace of leads under a read about booking lag cannot be mistaken for
+       a picture of that read. */
     return { key:'marketing', name:'MARKETING', label:'the inflow system',
       live: liveSubs.length > 0,
       z: leads.live ? leads.z : null,
       band: lead ? lead.band : 'none',
-      zText: lead && lead.kind === 'band' ? lead.valText : null,
-      wordText: lead && lead.kind === 'band' ? lead.wordText : null,
+      read: pulseReadOf(lead),
       spark: leads.live ? leads.spark : [],
       half: 'Two of the four sub-vitals are wired. The estimate clock and the cost ratio draw nothing and say why below.',
       subs,
@@ -6542,26 +6819,28 @@ function buildPulse(jobs, qbInv){
      the same reason the signed-by-day skyline carries both. It is a stated
      count, not a second score: two numbers scored separately would just be two
      vitals wearing one name. */
-  const sales = (() => { const s = sub('Signed dollars / day', S, '$', -1, null);
+  const sales = (() => { const s = sub('Signed dollars / day', S, '$', -1, null, 'signed dollars, last 7 days');
     const u = sub('Contracts signed / day', sMapN.size ? pulseScore(sMapN, { from: from(first(sMapN)), to: end }) : null, 'n', -1,
-      'The count behind the dollars. When these two disagree — money up, contracts flat — the week is one large job rather than a broad one.');
+      'The count behind the dollars. When these two disagree — money up, contracts flat — the week is one large job rather than a broad one.',
+      'contracts, last 7 days');
     return { key:'sales', name:'SALES', label:'signed dollars a day', live:s.live, z:s.z, band:s.band,
-             spark:s.spark, value:s.value, subs:[s, u],
+             spark:s.spark, value:s.value, read: pulseReadOf(s), subs:[s, u],
              brands: brandCut(signed, 'contract_signed_at', j => Number(j.fin_sold_amount || 0)) }; })();
 
   const production = (() => {
-    const c = sub('Completions / day', C, 'n', -1, null);
+    const c = sub('Completions / day', C, 'n', -1, null, 'completions, last 7 days');
     const a = sub('Backlog age · 7-day movement', A, 'd', 1,
-      'Ages upward when signings outrun completions. 188 of the open jobs are over a year old ($581K of them) — almost certainly never-closed records rather than live work. They are counted in, not dropped: the level they inflate is not what is scored here, the movement is.');
+      'Ages upward when signings outrun completions. 188 of the open jobs are over a year old ($581K of them) — almost certainly never-closed records rather than live work. They are counted in, not dropped: the level they inflate is not what is scored here, the movement is.',
+      'mean backlog age, 7-day movement · scored against its own history');
     const live = c.live || a.live;
     const lead = [c, a].filter(x => x.live).sort((p,q) => Math.abs(q.z) - Math.abs(p.z))[0] || null;
     return { key:'production', name:'PRODUCTION', label:'completions against signings, and backlog age',
              live, z: lead ? lead.z : null, band: pBand(lead ? lead.z : null),
-             spark: lead ? lead.spark : [], subs:[c, a] }; })();
+             spark: lead ? lead.spark : [], read: pulseReadOf(lead), subs:[c, a] }; })();
 
-  const collections = (() => { const i = sub('Invoiced dollars / day', I, '$', -1, null);
+  const collections = (() => { const i = sub('Invoiced dollars / day', I, '$', -1, null, 'invoiced dollars, last 7 days');
     return { key:'collections', name:'COLLECTIONS', label:'cash in against invoiced',
-             live:i.live, z:i.z, band:i.band, spark:i.spark, value:i.value,
+             live:i.live, z:i.z, band:i.band, spark:i.spark, value:i.value, read: pulseReadOf(i),
              half:'Only the invoiced half is wired. Cash <em>in</em> draws nothing: no payment date exists anywhere in the schema — <code>qb_invoices.balance</code> is a snapshot with no date attached, its <code>raw</code> JSON carries no <code>LinkedTxn</code>, and <code>jobs.fin_received_amount</code> is a snapshot too. Cash collected on a given day is not computable.',
              subs:[ i, { name:'Cash in / day', live:false, note:'No payment-date feed — see above.' } ],
              brands: brandCut((qbInv || []).filter(r => !r.reporting_excluded), 'txn_date', r => Number(r.total_amt || 0)),
@@ -6583,11 +6862,53 @@ function buildPulse(jobs, qbInv){
 
   const vitals = [marketing, sales, production, collections, payables];
 
-  /* No composite is computed, not merely not drawn. A mean of two live vitals is
-     a number this file could print at any time; the reason it does not exist is
-     that printing it would answer "how is the business" using two fifths of the
-     business. Held until four of five are real. */
-  return { end, vitals, live: vitals.filter(v => v.live).length, total: vitals.length,
+  /* ── THE COMPOSITE ─────────────────────────────────────────────────────────
+     The whole business as one line. Held since 16 Aug on the grounds that a
+     composite over two live vitals answers "how is the business" with two fifths
+     of the business; four of the five now carry a feed, and Kevin has given the
+     go, so it draws.
+
+     A MEAN OF Z, NOT A MEAN OF THE NUMBERS. Dollars, leads, completions and
+     invoices cannot be added — the sum would be dollars with some counts stirred
+     in. Each vital's z is already unit-free and already scaled to its OWN
+     spread, which is exactly the property that makes them addable: a 1 on
+     signings and a 1 on leads both mean "one MAD out for this metric".
+
+     ALL FOUR OR NOTHING, PER DAY. A day where one contributor has no score is
+     null rather than a mean of the three that do — otherwise the line silently
+     changes what it is a mean of partway along, and a step in the trace would
+     read as a change in the business when it was a change in the roster. That
+     rule is why the tails are index-aligned above.
+
+     PAYABLES IS NOT IN IT and the card says so in words underneath. Averaging in
+     a vital with no feed as if it were a calm zero would be the one lie this
+     card exists to refuse. */
+  const comp = (() => {
+    const parts = [marketing, sales, production, collections]
+      .filter(v => v.live && v.spark && v.spark.length === PULSE_TRACE);
+    if (parts.length < 2) return null;
+    const spark = [];
+    for (let i = 0; i < PULSE_TRACE; i++){
+      const zs = parts.map(v => v.spark[i].z).filter(z => z !== null);
+      spark.push({ k: parts[0].spark[i].k,
+                   z: zs.length === parts.length ? zs.reduce((a,b) => a+b, 0) / zs.length : null });
+    }
+    let last = null;
+    for (let i = spark.length - 1; i >= 0; i--) if (spark[i].z !== null){ last = spark[i].z; break; }
+    if (last === null) return null;
+    /* A MEAN CANCELS, and the card has to know when it has. Signings far down
+       and backlog far up average to something that looks perfectly calm: the
+       first render of this composite read "in rhythm" in green with four red
+       rails directly beneath it. The arithmetic was right and the sentence was a
+       lie. Counting the contributors that are out of their own band costs
+       nothing and lets the read say "steady on average — rails disagree", which
+       is what a mean of opposing excursions actually means. */
+    return { z: last, band: pBand(last), spark, n: parts.length,
+             dissent: parts.filter(v => v.band !== 'green').length,
+             names: parts.map(v => v.name.toLowerCase()) };
+  })();
+
+  return { end, vitals, comp, live: vitals.filter(v => v.live).length, total: vitals.length,
            poolN: S ? S.pool : 0 };
 }
 
