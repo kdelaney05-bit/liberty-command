@@ -147,6 +147,23 @@
   @media (prefers-reduced-motion: reduce) { .ekg-dot-glow { animation: none; opacity: .5; } }
   .ekg-cap { font-family: 'JetBrains Mono', monospace; font-size: 8px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-dim); margin-top: 3px; }
   .ekg-cap-ref { margin-left: 10px; color: var(--gold); opacity: 0.85; letter-spacing: normal; text-transform: none; }
+  /* ── RHYTHM BARS ──────────────────────────────────────────────────────────
+     Today / Week / YTD comparison shapes. The dashed reference is gold and the
+     same weight as the EKG's "typical" line, so a reader who has learned one
+     card has learned this one. */
+  .rbars { display: block; width: 100%; height: auto; overflow: visible; }
+  .alloc-spark .rbars { width: 64px; }
+  .rb-base { stroke: rgba(255,255,255,0.14); stroke-width: 1; }
+  .rb-ref { stroke: var(--gold); stroke-opacity: 0.75; stroke-width: 1.3;
+    stroke-dasharray: 3,3; vector-effect: non-scaling-stroke; }
+  .rb-num { font-family: 'JetBrains Mono', monospace; font-size: 8.5px; font-weight: 600;
+    fill: #e8efe9; text-anchor: middle; }
+  .rb-lab { font-family: 'JetBrains Mono', monospace; font-size: 7px; fill: var(--text-dim);
+    text-anchor: middle; letter-spacing: 0.04em; }
+  .alloc-spark .rb-num, .alloc-spark .rb-lab { display: none; }
+  .rb-note { font-size: 10.5px; line-height: 1.55; color: var(--text-dim);
+    background: rgba(212,177,90,0.05); border: 1px solid rgba(212,177,90,0.20);
+    border-radius: 7px; padding: 6px 8px; margin: 2px 0 8px; }
   /* ── THE PULSE ─────────────────────────────────────────────────────────────
      A vitals monitor reads top-down in one glance, so the five vitals are rails,
      not cards. Nothing here scrolls sideways and nothing depends on colour alone
@@ -1634,6 +1651,75 @@ function ekgSpark(days, { id, w = 280, h = 48, mini = false, color = 'var(--gree
     <circle cx="${lastX.toFixed(1)}" cy="${lastY.toFixed(1)}" r="${mini?1.6:2.8}" style="fill:${glow}"/>
   </svg>`;
 }
+/* ── RHYTHM BARS ────────────────────────────────────────────────────────────
+   The comparison shape for Today, Week and YTD. Bars, because an appointment
+   count is an AMOUNT — adding two of them means something — which is the test
+   THE TOPS OF MOUNTAINS sets for whether a number may be a bar at all. The
+   normal rides as a dashed reference LINE, never a second bar, so "how many"
+   and "was that normal" stay two different questions with two different marks.
+
+   ZERO BASELINE, ALWAYS. Bars are read by height off a shared floor; lifting
+   that floor lies with the exact mechanism that makes them readable.
+
+   The number lives ON the bar, per Kevin: "the chart pic doesn't show it… I have
+   to guess based on the graph." */
+function rhythmBars(items, { w = 280, h = 62, refDash = true, color = 'var(--blue)' } = {}){
+  if (!items || !items.length) return '';
+  const padT = 13, padB = 12, padX = 2;
+  const vals = items.flatMap(i => [i.v, i.ref]).filter(v => v != null);
+  if (!vals.length) return '';
+  const vmax = Math.max(1, ...vals) * 1.18;
+  const n = items.length, bw = (w - padX*2) / n;
+  const Y = v => h - padB - (Math.max(0, v) / vmax) * (h - padT - padB);
+  const cx = i => padX + i*bw + bw/2;
+  const bars = items.map((it, i) => {
+    if (it.v == null) return '';
+    const y = Y(it.v), bh = (h - padB) - y;
+    const fill = it.hot ? 'var(--accent)' : it.dim ? 'rgba(138,160,148,0.30)' : color;
+    return `<rect x="${(padX + i*bw + bw*0.16).toFixed(1)}" y="${y.toFixed(1)}"
+      width="${(bw*0.68).toFixed(1)}" height="${Math.max(0, bh).toFixed(1)}" rx="2" fill="${fill}"/>`;
+  }).join('');
+  const nums = items.map((it, i) => it.v == null ? '' :
+    `<text x="${cx(i).toFixed(1)}" y="${(Y(it.v)-3.5).toFixed(1)}" class="rb-num"
+      ${it.hot ? 'style="fill:var(--accent)"' : it.dim ? 'style="fill:rgba(138,160,148,0.6)"' : ''}>${it.v}</text>`).join('');
+  const labs = items.map((it, i) =>
+    `<text x="${cx(i).toFixed(1)}" y="${h-2.5}" class="rb-lab"
+      ${it.hot ? 'style="fill:var(--accent)"' : ''}>${esc(it.label)}</text>`).join('');
+  // the reference: a per-slot shape when the slots differ, a flat line when one
+  // normal governs the whole set
+  let refMark = '';
+  const refs = items.map(i => i.ref);
+  if (refDash && refs.some(r => r != null)){
+    const pts = refs.map((r, i) => r == null ? null : `${cx(i).toFixed(1)},${Y(r).toFixed(1)}`);
+    const segs = []; let cur = [];
+    pts.forEach(p => { if (p == null){ if (cur.length) segs.push(cur); cur = []; } else cur.push(p); });
+    if (cur.length) segs.push(cur);
+    refMark = segs.map(s => s.length === 1
+      ? `<line x1="${s[0].split(',')[0] - bw*0.4}" y1="${s[0].split(',')[1]}" x2="${+s[0].split(',')[0] + bw*0.4}" y2="${s[0].split(',')[1]}" class="rb-ref"/>`
+      : `<polyline points="${s.join(' ')}" class="rb-ref" fill="none"/>`).join('');
+  }
+  /* Uniform scaling, NOT preserveAspectRatio="none". Stretching the viewBox to
+     the card width would stretch the numbers on the bars with it — and the
+     numbers are the point of drawing them there. The svg scales as a whole and
+     the type stays the shape it was drawn. */
+  return `<svg class="rbars" viewBox="0 0 ${w} ${h}" role="img" aria-hidden="true">
+    <line x1="0" y1="${h-padB}" x2="${w}" y2="${h-padB}" class="rb-base"/>
+    ${bars}${refMark}${nums}${labs}
+  </svg>`;
+}
+
+/* The gap read, in words. Never a naked index: "+3 above your Monday normal"
+   says the size, the direction and what it is measured against in one line. A
+   percentage of a median of two is arithmetic nobody can act on. */
+function rhythmGap(cur, norm, what){
+  if (norm == null) return { tone:'flat', txt:`no ${what} to compare against yet` };
+  const d = cur - norm;
+  if (d === 0) return { tone:'flat', txt:`level with ${what}` };
+  return { tone: d > 0 ? 'up' : 'down',
+           txt: `${d > 0 ? '+' : '−'}${Math.abs(d)} ${d > 0 ? 'above' : 'below'} ${what}` };
+}
+const rhySamples = n => `your last ${n} `;
+
 function heroAppts(k){
   const A = D.appointments;
   if (!A || !A.byCompany || !A.byCompany[k]) return '';
@@ -1648,41 +1734,121 @@ function heroAppts(k){
      the sync has not resolved to a project has no typical to sit against. It
      still counts in the headline figure and is named on its own line — counted,
      never quietly dropped, and never measured against a baseline built without
-     it. YTD declines a baseline outright: appointment history reaches 13 months,
-     which cannot cover last year's same span. */
+     it. */
   const d = typ ? Math.round((branded - typ) / typ * 100) : null;
-  /* The trace only exists for the live MTD window — the one grain this page
-     keeps day by day (A.bookedSeriesMTD, built from the same createdOn/
-     projBrand rows the totals above already read). Today, Week, YTD and a
-     closed month keep the same static read they always have rather than a
-     line built from a day-count that was never kept at their grain. */
+  /* MTD keeps its EKG exactly as it was — it is the one grain this page has
+     always kept day by day and Kevin reads it as-is. The other three tabs used
+     to fall through to a bare number; they now draw their own rhythm at their
+     own grain. See A.rhythm. */
   const mtdDays = (k === 'month' && !MONTHOFF) ? A.bookedSeriesMTD : null;
   const headline = mtdDays && mtdDays.length > 1
     ? ekgSpark(mtdDays.map(x => ({ v: x.n, t: x.typ })), { id:'hero-appts', w:280, h:48 })
     : '';
+  const R = A.rhythm && (k === 'day' || k === 'week' || k === 'ytd') ? A.rhythm[k] : null;
+  const RA = R ? R.all : null;
+  /* One normal per window, never two. The old byCompany typ (a MEAN of the prior
+     4 weeks) and the rhythm normal (a MEDIAN of the last 8) would otherwise both
+     print the word "typical" on one tile with two different numbers — the exact
+     confusion this card already warns about for the daily alarm. Where a rhythm
+     exists it owns the comparison outright; MTD keeps the original. */
+  let rTop = '', rCap = '', rGap = null, rTypical = null;
+  if (RA && k === 'day'){
+    const items = RA.samples.map(s => ({ label:s.label, v:s.byHour, ref:RA.norm, dim:true }))
+      .concat([{ label:'today', v:RA.soFar, ref:RA.norm, hot:true }]);
+    rTop = rhythmBars(items);
+    rCap = `booked by ${hourLabel(RA.hour)}, so far today<span class="ekg-cap-ref">╌╌ median of ${rhySamples(RA.n)}${esc(RA.dowName)}s</span>`;
+    rGap = RA.n ? rhythmGap(RA.soFar, RA.norm, `your ${RA.dowName} normal by ${hourLabel(RA.hour)}`) : null;
+    rTypical = RA.n ? RA.norm : null;
+  } else if (RA && k === 'week'){
+    const items = RA.days.map((x, i) => ({ label:x.label, v:x.v, ref:RA.ref[i],
+      hot:x.today, dim:x.weekend && !x.today }));
+    rTop = rhythmBars(items);
+    rCap = `booked per day this week<span class="ekg-cap-ref">╌╌ median shape of ${rhySamples(RA.n)}weeks</span>`;
+    rGap = RA.n ? rhythmGap(RA.cur, RA.norm,
+      `your ${RA.n}-week normal for the same ${RA.elapsed} day${RA.elapsed===1?'':'s'}`) : null;
+    rTypical = RA.n ? RA.norm : null;
+  } else if (RA && k === 'ytd'){
+    const items = RA.months.map(m => ({ label:m.label, v:m.n, ref:m.prior, hot:m.current }));
+    rTop = rhythmBars(items);
+    rCap = `booked per month this year<span class="ekg-cap-ref">╌╌ same month last year</span>`;
+    /* curCmp, never cur: the gap counts only the months last year can answer for.
+       And when some month has no last-year twin, the headline drops the "of N
+       normal" chip entirely — a year total sitting beside a partial-year baseline
+       reads as one comparison and is not one. The note below names the gap. */
+    rGap = RA.norm !== null ? rhythmGap(RA.curCmp, RA.norm,
+      RA.missing.length
+        ? `the same ${RA.normSpan.length} month${RA.normSpan.length===1?'':'s'} last year`
+        : 'the same months last year') : null;
+    rTypical = RA.missing.length ? null : RA.norm;
+  }
   return `<button class="snap bigsnap" onclick="openWindow('${k}')" aria-label="Appointments ${esc(label)} — open details">
     <div class="snap-k" style="color:var(--blue)">Appointments · ${esc(label)}</div>
-    <div class="snap-v" style="color:var(--blue)">${tot}${typ ? ` <span style="font-size:16px;color:var(--text-dim)">of ${Math.round(typ)} typical</span>` : ''}</div>
+    ${/* TODAY shows what has been booked BY NOW, because that is the number the
+          comparison beneath it is made against. The window total and the
+          by-this-hour total are the same figure in production — nothing can be
+          stamped an hour that has not happened — but printing the window total
+          beside an hourly normal would let one clock-skewed row put a headline
+          and its own gap read in contradiction. One basis, stated. */''}
+    <div class="snap-v" style="color:var(--blue)">${RA && k === 'day' ? RA.soFar : tot}${
+      rTypical != null ? ` <span style="font-size:16px;color:var(--text-dim)">of ${Math.round(rTypical)} normal</span>`
+      : typ ? ` <span style="font-size:16px;color:var(--text-dim)">of ${Math.round(typ)} typical</span>` : ''}</div>
     ${headline ? `<div class="ekg-wrap">${headline}<div class="ekg-cap">booked per day, month to date<span class="ekg-cap-ref">╌╌ typical for that weekday</span></div></div>` : ''}
+    ${rTop ? `<div class="ekg-wrap">${rTop}<div class="ekg-cap">${rCap}</div></div>` : ''}
+    ${RA && k === 'ytd' && RA.missing.length ? `<div class="rb-note">No last-year reference for ${esc(RA.missing.join(', '))} — the appointment feed does not reach back that far. Those bars stand alone rather than against a zero.</div>` : ''}
     <div class="alloc-legend mml" style="margin:10px 0 8px">${rows.map(r => {
+      const rb = R ? R.brands[r.b] : null;
       const trace = mtdDays && mtdDays.length > 1
         ? ekgSpark(mtdDays.map(x => ({ v: x.byBrand[r.b] || 0, t: x.typByBrand[r.b] || 0 })),
             { id:`hero-appts-${r.b}`, w:64, h:22, mini:true, color:r.m.c, glow:r.m.c })
+        /* Per-brand rhythm, from that brand's OWN history — a brand that books
+           one a week must not be judged against the house shape. */
+        : rb && k === 'week'
+          ? rhythmBars(rb.days.map((x,i) => ({ label:'', v:x.v, ref:rb.ref[i], dim:x.weekend && !x.today, hot:x.today })),
+              { w:64, h:22, color:r.m.c })
+        : rb && k === 'ytd'
+          ? rhythmBars(rb.months.map(m => ({ label:'', v:m.n, ref:m.prior, hot:m.current })),
+              { w:64, h:22, color:r.m.c })
+        : rb && k === 'day'
+          ? rhythmBars(rb.samples.map(s => ({ label:'', v:s.byHour, ref:rb.norm, dim:true }))
+              .concat([{ label:'', v:rb.soFar, ref:rb.norm, hot:true }]), { w:64, h:22, color:r.m.c })
         : '';
+      /* The brand's own normal, at this window's grain. rmed already answers null
+         where the brand has no history, so a young brand shows its count and no
+         baseline rather than a baseline of zero. YTD additionally withholds the
+         normal whenever any month lacks a last-year twin: the row's value is the
+         brand's whole year, and printing a partial-year reference beside it would
+         invite exactly the subtraction the headline refuses to do. */
+      const bn = !rb ? null
+               : k === 'ytd' ? (RA && RA.missing.length ? null : rb.norm)
+               : rb.norm;
+      const bv = !rb ? r.n : k === 'day' ? rb.soFar : rb.cur;
       return `
-      <div class="alloc-row" ${r.n ? '' : 'style="opacity:.55"'}>
+      <div class="alloc-row" ${(rb ? bv : r.n) ? '' : 'style="opacity:.55"'}>
         <div class="alloc-dot" style="background:${r.m.c}"></div>
         <div class="name">${esc(r.m.s)}</div>
         ${trace ? `<div class="alloc-spark">${trace}</div>` : ''}
-        <div class="val">${r.n ? `${r.n}${r.typ ? ` · typ ${Math.round(r.typ)}` : ''}` : '—'}</div>
+        ${/* A brand whose normal is a true zero is not "below normal" — it did
+              not trade in the comparison period at all. Oasis booked nothing
+              before December, so "937 · norm 0" invites a comparison that means
+              nothing. Say what actually happened instead. */''}
+        <div class="val">${rb
+          ? (bn === 0 && bv > 0 ? `${bv} · new since ${k === 'ytd' ? 'last year' : 'then'}`
+             : bv || bn ? `${bv}${bn != null ? ` · norm ${Math.round(bn)}` : ''}` : '—')
+          : (r.n ? `${r.n}${r.typ ? ` · typ ${Math.round(r.typ)}` : ''}` : '—')}</div>
       </div>`; }).join('')}${unknown ? `
       <div class="alloc-row" title="Appointments booked against projects the sync has not delivered yet">
         <div class="alloc-dot" style="background:#8aa094"></div>
         <div class="name">counting…</div>
         <div class="val">${unknown} awaiting project sync</div>
       </div>` : ''}</div>
-    <div class="snap-s">new appointments booked${typ ? ` · measured against ${esc(W.typLabel)}` : ''}</div>
-    ${d === null
+    <div class="snap-s">new appointments booked${
+      rGap ? ' · your rhythm against your normal rhythm'
+      : typ ? ` · measured against ${esc(W.typLabel)}` : ''}</div>
+    ${rGap
+      ? `<div class="snap-d ${rGap.tone}">${rGap.txt}</div>`
+      : RA
+      ? `<div class="snap-d flat">not enough history yet to set a normal</div>`
+      : d === null
       ? `<div class="snap-d flat">${esc(W.typLabel)}</div>`
       : `<div class="snap-d ${d >= 0 ? 'up' : 'down'}">${d >= 0 ? '▲' : '▼'} ${Math.abs(d)}% vs typical${unknown ? ' · on the brand-attributed count' : ''}</div>`}
     <div class="snap-go">details <span class="go-chev">›</span></div>
@@ -1823,7 +1989,7 @@ function cardAppointments(){
     ${stale?`<div class="withheld"><div class="wt">Read this number knowing when it was taken</div><div class="wx">
       The appointment feed last synced <b>${A.staleHours<24?`${Math.round(A.staleHours)} hours`:`${Math.round(A.staleHours/24)} days`} ago</b>. Anything booked since then is not counted here, so the week ahead can only look thinner than it is — never fuller.</div></div>`:''}
 
-    <div class="note">Appointments are booked a median of <b>${A.leadMedianDays} days</b> ahead, which is why the forward number means something: most of a week is not booked the morning of. Of the <b>${A.coverage.dated.toLocaleString()}</b> appointments in the last 13 months — the span this page reads, since nothing here looks further back — <b>${A.coverage.withProject.toLocaleString()}</b> resolve to a brand, and the rest are left out of the brand split rather than bucketed as unknown.</div>
+    <div class="note">Appointments are booked a median of <b>${A.leadMedianDays} days</b> ahead, which is why the forward number means something: most of a week is not booked the morning of. Of the <b>${A.coverage.dated.toLocaleString()}</b> appointments since <b>${esc(APPT_SINCE_LABEL)}</b> — the span this page reads, since nothing here looks further back — <b>${A.coverage.withProject.toLocaleString()}</b> resolve to a brand, and the rest are left out of the brand split rather than bucketed as unknown.</div>
   </div>`;
 }
 
@@ -5907,18 +6073,35 @@ addEventListener('resize', () => {
    server for hours while Kevin looked at yesterday's build and reported the bug
    as unfixed. That happened. The page now checks version.json on every load and
    reloads itself once if the deployed build is newer than the one running. */
-const BUILD = '2026-08-16T21:15Z-pulse-lead-lanes';
+const BUILD = '2026-08-17T02:30Z-rhythm-comparisons';
 const SB_URL = 'https://lzegjjbkfuecrhdvlvay.supabase.co';
 /* The one page that can finish a password reset. Hard-coded rather than derived,
    because every derivation of it so far has been a source of bugs: a bare origin
    404s (there is no user-root Pages site), and a path-derived value sends resets
    requested from invite.html back to invite.html. */
 const CONSOLE_HOME = 'https://kdelaney05-bit.github.io/liberty-command/';
-/* How far back appointments are read. The deepest appointment view on the page
-   is the 12-month chart, so 13 months covers everything with a month spare. */
+/* How far back appointments are read. Was 13 months, which covered the deepest
+   chart on the page with a month spare — and nothing else.
+
+   The YTD rhythm comparison needs last year's SAME MONTHS, so for a January it
+   has to reach back 24 months, not 13. January 1st of the prior year is exactly
+   that floor and no more. Measured cost: the fetch goes from 5,451 rows to 7,702
+   — real weight on a phone, and paid deliberately, because the alternative was a
+   YTD tab that either drew no reference at all or drew one from months the fetch
+   had never asked for. A zero that means "not fetched" is the single most
+   dangerous number this page could print.
+
+   Anything earlier than this stays genuinely unavailable, and the YTD card names
+   the months it cannot cover rather than showing them as zero. */
 const APPT_SINCE = (() => { const d = new Date();
-  return `${d.getFullYear() - 1}-${String(d.getMonth() + 1).padStart(2,'0')}-01`; })();
-const SB_KEY = 'sb_publishable_kToiGqET7XzO2It9evStJw_kYzvjSF8';
+  return `${d.getFullYear() - 1}-01-01`; })();
+/* The reach, in words, for the copy that used to hard-code "the last 13 months".
+   That sentence stopped being true the moment the floor moved, and a page whose
+   first promise is that every number is interrogable cannot state its own span
+   wrong. Derived from the floor, so it can never drift from it again. */
+const APPT_SINCE_LABEL = new Date(APPT_SINCE + 'T00:00:00')
+  .toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+const SB_KEY ='sb_publishable_kToiGqET7XzO2It9evStJw_kYzvjSF8';
 const SKEY = 'lcc.session';
 
 const gate = document.getElementById('gate');
@@ -7166,12 +7349,14 @@ function buildData(raw){
           typ: Object.fromEntries(BRAND_ORDER.map(b => [b, priorMean(b, starts, elapsedMo)])),
         };
       })(),
-      /* YTD counts are real; a like-for-like baseline is NOT — appointment
-         history reaches 13 months back, which cannot cover last year's same
-         span. The baseline is declined rather than invented. */
+      /* This mean-of-prior-periods baseline is still declined for YTD, and always
+         will be: there is no "prior 3 YTDs" to average. What changed is that the
+         feed now reaches last January, so the tile draws a real month-by-month
+         comparison against last year's same months instead — see rhythm.ytd. This
+         entry stays zero so the two never print a baseline each. */
       ytd: {
-        typLabel: 'year to date — no like-for-like baseline, history reaches 13 months',
-        sampleLabel: 'no baseline', partial: true,
+        typLabel: `year to date — compared month by month against last year, back to ${APPT_SINCE_LABEL}`,
+        sampleLabel: 'same months last year', partial: true,
         counts: bookedByBrandInRange(soy(T), winEnd),
         typ: Object.fromEntries(BRAND_ORDER.map(b => [b, { mean: 0, vals: null }])),
       },
@@ -7209,6 +7394,139 @@ function buildData(raw){
         today: key === todayStr, weekend: dow === 0 || dow === 6,
       });
     }
+    /* ── RHYTHM COMPARISONS ──────────────────────────────────────────────────
+       Kevin: "my rhythm vs my normal rhythm." Today, Week and YTD used to show a
+       number with no shape beside it — only the live MTD window drew a trace, so
+       three of the four tabs asked him to judge a count against nothing.
+
+       Every window here compares against its OWN TRAILING NORMAL at its OWN
+       GRAIN: today against the last 8 of today's weekday, this week's seven days
+       against the last 8 weeks, each month against the same month a year back.
+       No new feed — the same createdOn / projBrand walk the totals already do.
+
+       MEDIAN, NOT MEAN, everywhere. One monster Monday must not raise the bar
+       every other Monday is judged against; this is the same rule THE PULSE
+       settled on for the same reason.
+
+       PARTIAL PERIODS ARE COMPARED PARTIAL. A day in progress against eight
+       finished ones is the same lie as a truncated axis, so today reads by the
+       hour it actually is (CC stamps Eastern local, so hourOf is honest without
+       timezone maths), the week reads only its elapsed days against the same
+       elapsed days of the prior eight, and the current month reads against the
+       same day-count of the prior year's month. Each label says which. */
+    const RHY_N = 8;
+    const cntOn   = (key, b) => b
+      ? createdOn(key).filter(r => (projBrand[String(r.cc_project_id)]||'unknown') === b).length
+      : createdOn(key).length;
+    const cntOnBy = (key, h, b) => b
+      ? createdOnBy(key, h).filter(r => (projBrand[String(r.cc_project_id)]||'unknown') === b).length
+      : createdOnBy(key, h).length;
+    /* The feed floor. Reading a date the fetch never covered returns zero, and a
+       zero that means "not fetched" is the one number this page must never print
+       as if it meant "none booked". Anything earlier is declined, not guessed.
+
+       TWO FLOORS, AND THE LATER ONE WINS. APPT_SINCE is how far back we ASKED;
+       the earliest row we actually hold is how far back the business has any
+       record. They are not the same — Contractors Cloud's own history starts in
+       April 2024 — so asking for January 2024 would return an honest-looking
+       zero for months that simply predate the company's data. Taking the later
+       of the two makes "no reference" mean it, and keeps the YTD card's
+       missing-months note truthful instead of decorative. */
+    const firstCreatedKey = Object.keys(createdIdx).sort()[0];
+    const FEED0 = new Date(Math.max(
+      +new Date(APPT_SINCE + 'T00:00:00'),
+      firstCreatedKey ? +new Date(firstCreatedKey + 'T00:00:00') : 0));
+    /* med() above answers 0 for an empty set, which is right where it is used —
+       a weekday with no samples in the lookback genuinely booked nothing. Here it
+       is wrong, and dangerously so: a brand with no history at all would get a
+       normal of 0 and the card would draw a dashed reference line along the floor
+       as if that were a measured baseline. No samples means NO REFERENCE, and the
+       card says so in words. */
+    const rmed = a => a.length ? med(a) : null;
+
+    const rhyDay = b => {
+      const samples = [];
+      for (let i = 7; samples.length < RHY_N && i <= RHY_N * 7; i += 7) {
+        const d = addD(T, -i); if (d < FEED0) break;
+        const key = ymdL(d);
+        samples.push({ label:`${d.getMonth()+1}/${d.getDate()}`,
+                       full: cntOn(key, b), byHour: cntOnBy(key, NOWH, b) });
+      }
+      samples.reverse();
+      return { dow: TDOW, dowName: DOWFULL[TDOW], hour: NOWH,
+        soFar: cntOnBy(todayStr, NOWH, b), full: cntOn(todayStr, b),
+        norm: rmed(samples.map(s => s.byHour)), normFull: rmed(samples.map(s => s.full)),
+        n: samples.length, samples };
+    };
+
+    const rhyWeek = b => {
+      const w0 = sow(T), days = [];
+      for (let i = 0; i < 7; i++) {
+        const d = addD(w0, i), future = d > T;
+        days.push({ label: DOW2[d.getDay()], dow: d.getDay(),
+                    v: future ? null : cntOn(ymdL(d), b), today: ymdL(d) === todayStr,
+                    future, weekend: d.getDay() === 0 || d.getDay() === 6 });
+      }
+      const starts = [];
+      for (let k2 = 1; k2 <= RHY_N; k2++) { const s = addD(w0, -7*k2); if (s < FEED0) break; starts.push(s); }
+      /* One reference per weekday slot — the shape of a normal week, not a flat
+         line. TODAY'S SLOT IS THE EXCEPTION: its bar holds a day still in
+         progress, so measuring it against a finished weekday would draw every
+         Thursday afternoon as a collapse. That slot alone is referenced against
+         where the weekday normally stands BY THIS HOUR, so the bar and the mark
+         above it are the same kind of number. */
+      const ref = [];
+      for (let i = 0; i < 7; i++) {
+        const isToday = ymdL(addD(w0, i)) === todayStr;
+        ref.push(rmed(starts.map(s => isToday
+          ? cntOnBy(ymdL(addD(s, i)), NOWH, b)
+          : cntOn(ymdL(addD(s, i)), b))));
+      }
+      const cur = days.slice(0, elapsedWk).reduce((n, d) => n + (d.v || 0), 0);
+      const priorElapsed = starts.map(s => { let n = 0;
+        for (let i = 0; i < elapsedWk; i++) n += cntOn(ymdL(addD(s, i)), b); return n; });
+      return { days, ref, cur, norm: rmed(priorElapsed), n: starts.length, elapsed: elapsedWk };
+    };
+
+    const MON3 = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    const rhyYtd = b => {
+      const yr = T.getFullYear(), months = [];
+      for (let m = 0; m <= T.getMonth(); m++) {
+        const s = new Date(yr, m, 1), e = addM(s, 1), current = m === T.getMonth();
+        let n = 0;
+        for (let d = new Date(s); d < e && d <= T; d = addD(d, 1)) n += cntOn(ymdL(d), b);
+        /* Prior-year same month. The current month is only ever compared against
+           the same DAY COUNT of last year's month — half of August against all of
+           last August would invent a collapse every month, on the first. */
+        const ps = new Date(yr - 1, m, 1), pe = current ? addD(ps, elapsedMo) : addM(ps, 1);
+        const covered = ps >= FEED0;
+        let p = 0;
+        if (covered) for (let d = new Date(ps); d < pe; d = addD(d, 1)) p += cntOn(ymdL(d), b);
+        months.push({ label: MON3[m], n, prior: covered ? p : null, current });
+      }
+      const withPrior = months.filter(x => x.prior !== null);
+      return { months,
+        missing: months.filter(x => x.prior === null).map(x => x.label),
+        /* Two totals, deliberately. `cur` is the year — it is what the headline
+           number counts and it includes every month whether or not last year can
+           answer for it. `curCmp` is the only total the GAP may use: the same
+           months the reference covers. Summing eight months of this year against
+           five of last year would print a rise made entirely of the three months
+           last year never had, which is the fake-reference failure wearing a
+           different hat. */
+        cur: months.reduce((a, x) => a + x.n, 0),
+        curCmp: withPrior.length ? withPrior.reduce((a, x) => a + x.n, 0) : null,
+        norm: withPrior.length ? withPrior.reduce((a, x) => a + x.prior, 0) : null,
+        normSpan: withPrior.map(x => x.label) };
+    };
+
+    const perBrand = fn => Object.fromEntries(BRAND_ORDER.map(b => [b, fn(b)]));
+    const rhythm = {
+      day:  { all: rhyDay(null),  brands: perBrand(rhyDay) },
+      week: { all: rhyWeek(null), brands: perBrand(rhyWeek) },
+      ytd:  { all: rhyYtd(null),  brands: perBrand(rhyYtd) },
+    };
+
     // forward calendar: today + the next 7 days, the "is the diary filling" read
     const aheadSeries = [];
     for (let i = 0; i <= 7; i++) { const d = addD(T,i);
@@ -7308,6 +7626,7 @@ function buildData(raw){
         }];
       })),
       leadMedianDays: 3,
+      rhythm,
       coverage: { total: appts.length, dated: live.length,
                   withProject: live.filter(a=>projBrand[String(a.cc_project_id)]).length },
       syncedAt: newest, staleHours,
@@ -8641,12 +8960,14 @@ async function loadAll(){
     // cc_created_at is what makes a like-for-like booking comparison possible:
     // "what was on the books last Monday" has to count only what was booked BY
     // last Monday, not what the week eventually filled with.
-    /* Appointments only as far back as anything on the page displays. The
-       furthest-back appointment view is the 12-month calendar-load chart, so a
-       13-month window covers every surface with a month to spare. That is 5,587
-       rows instead of 9,225 — four fewer sequential round trips. Kept on EITHER
-       date, since the booked series is creation-dated and the calendar series is
-       appointment-dated, and a row can be recent by one and not the other. */
+    /* Appointments only as far back as anything on the page displays. That used
+       to be the 12-month calendar-load chart, and a 13-month window covered it
+       with a month to spare. The YTD rhythm comparison now reaches further — it
+       needs last year's same months — so the floor is January 1st of the prior
+       year (see APPT_SINCE), which is the deepest surface plus nothing. Kept on
+       EITHER date, since the booked series is creation-dated and the calendar
+       series is appointment-dated, and a row can be recent by one and not the
+       other. */
     qp(`cc_appointments?select=rep_id,starts_at,cc_project_id,cc_created_at,synced_at,is_internal&or=(starts_at.gte.${APPT_SINCE},cc_created_at.gte.${APPT_SINCE})`),
     // source is the sample/real tag from migration 011; sells is Kevin's build-36
     // ruling on who belongs on a seller board (077). Both come down so the
