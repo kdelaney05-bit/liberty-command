@@ -5236,6 +5236,28 @@ function drawCharts(){
      beside it. Three shapes: a plain/ grouped bar labels each bar; a stacked bar
      labels the column total; a highlighted bar (today/current) draws in accent.
      A per-bar flag series is optional and only tunes colour and the TODAY tag. */
+  /* ── THE TOPS OF MOUNTAINS (Kevin, 16 Aug: "we see the top of the bar which
+     is all that matters") — which numbers get to be a bar chart at all.
+     Bars on a shared zero baseline are the most accurately read form there is:
+     one glance gives the value AND the skyline across the period. But the form
+     only tells the truth for some numbers, so:
+     (a) BAR THE AMOUNT, NEVER THE RATE. If adding two bars gives a meaningful
+         number (dollars, leads, appts, signings, backlog), it may be a bar.
+         If adding them is nonsense (close %, ROI multiple, share, averages),
+         it is a figure beside its denominator, coloured against a threshold —
+         the marketing drawer's ROI column is the pattern.
+     (b) WHERE "ENOUGH" EXISTS, DRAW IT. A bar answers how much; a reference
+         line/tick (typical, goal, capacity) answers whether it cleared — the
+         appointments-by-company tick is the pattern. The reference is a line,
+         never a second bar.
+     (c) THE LUMP RULE. If the tallest bar is ~4-5x the median bar, the chart
+         is drawing one deal, not a pattern — say so on the card (lumpwarn) or
+         switch that view to units. One $200K roof makes every other day a stub.
+     (d) ZERO BASELINE, ALWAYS. A truncated bar axis lies with the exact
+         mechanism that makes bars readable. Lines may truncate; bars never.
+     (e) TWO DIMENSIONS = SMALL MULTIPLES. Source x month is not a grouped bar
+         forest; it is one tiny chart per source on a SHARED y-scale (mini4),
+         so the cross-source comparison happens by eye with no labels. */
   function barLabels(chart, { series, fmt = String, todayTag = false, skipZero = false, size = 9 } = {}){
     const ctx = chart.ctx; ctx.save(); ctx.textAlign = 'center';
     chart.data.datasets.forEach((ds, di) => {
