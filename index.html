@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
@@ -458,30 +458,125 @@
   .money-totals .col { width: 92px; text-align: right; }
   .money-totals .col.inv { color: var(--green-soft); font-weight: 600; }
   .money-totals .col.ar { color: var(--accent-soft); font-weight: 600; }
-  /* ── THE ALL-COMPANIES ROW ON LEADS BY SOURCE. Every other instrument on this
-     page states the whole business first and the brands under it; marketing was
-     the one that opened straight into a single trade, so "what did marketing
-     produce" had to be added up by hand across three toggle taps. Same money
-     type as the table above — mono values, 8px uppercase heads, green for
-     signed — laid out four windows wide so a phone still reads it. */
-  .lsum { margin: 4px 0 16px; }
-  .lsum-head, .lsum-row { display: grid; grid-template-columns: minmax(66px, 1.1fr) repeat(4, minmax(44px, 1fr));
-    gap: 6px; align-items: baseline; }
-  .lsum-head { padding-bottom: 8px; border-bottom: 1px solid rgba(255,255,255,0.08); }
-  .lsum-head div { font-family: 'JetBrains Mono', monospace; font-size: 8px; letter-spacing: 0.1em;
+  /* ── THE MARKETING DRAWER ───────────────────────────────────────────────────
+     Replaces "Leads by source", which the owner rejected: a source with a dollar
+     amount beside it and no cost beside that is revenue wearing a marketing
+     label. Two boards, both behind the Effort Room's preview-shelf pattern —
+     the .room / .shelf-* / .ptile / .pt-* classes above are reused wholesale so
+     the two drawers are the same object, not two things that look alike.
+
+     BOARD 1 · the source row. Seven columns, mono figures, right-aligned money.
+     Scrolls inside its own box on a narrow screen rather than squeezing the
+     figures — a marketing number that has to be guessed at is not a number. */
+  .mk-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; margin: 0 -16px; padding: 0 16px; }
+  /* The spend column is wider than the rest on purpose: it holds a text input
+     whose placeholder is the word "not entered", and a placeholder clipped to
+     "not enter" is exactly the kind of half-read absence this board exists to
+     avoid. */
+  .mk-row, .mk-head { display: grid; gap: 10px; align-items: baseline; min-width: 700px;
+    grid-template-columns: minmax(128px, 1.5fr) minmax(100px, 1.15fr) repeat(5, minmax(60px, 1fr)); }
+  .mk-head { padding-bottom: 8px; border-bottom: 1px solid rgba(255,255,255,0.08); }
+  .mk-head div { font-family: 'JetBrains Mono', monospace; font-size: 8px; letter-spacing: 0.1em;
     text-transform: uppercase; color: var(--text-dim); text-align: right; }
-  .lsum-head div:first-child { text-align: left; }
-  .lsum-row { padding: 10px 0; border-bottom: 1px solid var(--line); }
-  .lsum-row:last-child { border-bottom: none; }
-  .lsum-row .nm { display: flex; align-items: center; gap: 7px; font-size: 13px; font-weight: 500; min-width: 0; }
-  .lsum-row .nm .tdot { width: 8px; height: 8px; border-radius: 2px; flex-shrink: 0; }
-  .lsum-row .col { font-family: 'JetBrains Mono', monospace; font-size: 11px; text-align: right; color: var(--green-soft); }
-  .lsum-row .col.zero { color: var(--text-dim); }
-  .lsum-row .col i { display: block; font-style: normal; font-size: 8px; color: var(--text-dim); margin-top: 2px; }
-  .lsum-row.all { border-bottom: 1px solid rgba(255,255,255,0.08); }
-  .lsum-row.all .nm { font-family: 'Fraunces', serif; font-size: 15px; }
-  .lsum-row.all .col { font-size: 13px; font-weight: 600; }
-  .lsum-row.sel .nm { color: var(--accent-soft); }
+  .mk-head div:first-child { text-align: left; }
+  .mk-row { padding: 11px 0; border-bottom: 1px solid var(--line); }
+  .mk-row:last-child { border-bottom: none; }
+  /* The free sources sit below the paid ones behind a labelled rule: their
+     volume is the point, their ROI does not exist. */
+  .mk-row.free { opacity: 0.92; }
+  .mk-sep { font-family: 'JetBrains Mono', monospace; font-size: 8px; letter-spacing: 0.12em;
+    text-transform: uppercase; color: var(--text-dim); padding: 14px 0 6px; border-top: 1px solid rgba(255,255,255,0.08); margin-top: 4px; }
+  .mk-row .nm { display: flex; align-items: center; gap: 7px; font-size: 13.5px; font-weight: 500; min-width: 0; }
+  .mk-row .nm .cat { font-family: 'JetBrains Mono', monospace; font-size: 7.5px; letter-spacing: .08em;
+    text-transform: uppercase; color: var(--text-dim); border: 1px solid var(--line); border-radius: 100px; padding: 1px 6px; }
+  .mk-row .col { font-family: 'JetBrains Mono', monospace; font-size: 11.5px; text-align: right; color: var(--text); }
+  .mk-row .col.dim { color: var(--text-dim); }
+  .mk-row .col.money { color: var(--green-soft); }
+  /* "Not entered" and "—" are different claims and never share a colour with a
+     figure: an absence must not read as a small number. */
+  .mk-row .col.absent { color: var(--text-dim); font-size: 9px; letter-spacing: .04em; line-height: 1.35; }
+  .mk-roi { font-family: 'Fraunces', serif; font-size: 17px; font-weight: 600; text-align: right; letter-spacing: -0.01em; }
+  .mk-roi.hit { color: var(--green-soft); } .mk-roi.miss { color: var(--red); }
+  .mk-roi.near { color: var(--text); } .mk-roi.none { font-family: 'JetBrains Mono', monospace; font-size: 9px; color: var(--text-dim); font-weight: 400; }
+  /* Spend entry. A typed source is an input; Google is a plain figure with an
+     automation badge, and the two must never look alike or the office will try
+     to type into the one the database refuses. */
+  .mk-spend { display: flex; align-items: center; justify-content: flex-end; gap: 5px; }
+  .mk-spend input { width: 100%; max-width: 98px; min-width: 0; background: var(--bg-deep);
+    border: 1px solid var(--line); border-radius: 6px;
+    color: var(--text); font-family: 'JetBrains Mono', monospace; font-size: 10.5px; padding: 5px 7px;
+    text-align: right; -moz-appearance: textfield; }
+  .mk-spend input::placeholder { color: var(--text-dim); opacity: 1; }
+  .mk-spend input::-webkit-outer-spin-button, .mk-spend input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+  .mk-spend input:focus { outline: none; border-color: var(--accent); }
+  .mk-spend input.saving { border-color: var(--gold); }
+  .mk-spend input.saved { border-color: var(--green); }
+  .mk-spend input.failed { border-color: var(--red); }
+  .mk-auto { font-family: 'JetBrains Mono', monospace; font-size: 7.5px; letter-spacing: .1em;
+    text-transform: uppercase; color: var(--blue); display: block; margin-top: 3px; }
+  .mk-auto.stale { color: var(--gold); }
+  .mk-monthbar { display: flex; align-items: center; gap: 10px; margin: 2px 0 14px; }
+  .mk-monthbar .mn-cur { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: .08em;
+    text-transform: uppercase; color: var(--accent-soft); min-width: 108px; text-align: center; }
+
+  /* BOARD 2 · the rep × source grid. Reps down, sources across. Wide by nature,
+     so it scrolls horizontally at desk width and TRANSPOSES on a phone (see the
+     700px block) — every number survives either way; nothing is truncated. */
+  .mkg-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; margin: 0 -16px; padding: 0 16px 4px; }
+  .mkg { border-collapse: separate; border-spacing: 0; min-width: 100%; }
+  .mkg th, .mkg td { padding: 0; }
+  .mkg thead th { font-family: 'JetBrains Mono', monospace; font-size: 7.5px; letter-spacing: .09em;
+    text-transform: uppercase; color: var(--text-dim); font-weight: 400; text-align: center;
+    padding: 0 4px 8px; vertical-align: bottom; width: 78px; line-height: 1.35; }
+  .mkg thead th.rep-h { text-align: left; width: 118px; position: sticky; left: 0; background: var(--bg-card); z-index: 2; padding-left: 0; }
+  .mkg tbody th { text-align: left; font-size: 12.5px; font-weight: 500; color: var(--text);
+    padding: 0 10px 0 0; position: sticky; left: 0; background: var(--bg-card); z-index: 1; white-space: nowrap; }
+  .mkg tbody tr td { border-top: 1px solid var(--line); }
+  .mkg tbody tr th { border-top: 1px solid var(--line); }
+  .mkc { margin: 4px 3px; border-radius: 8px; padding: 7px 4px 6px; text-align: center;
+    background: rgba(255,255,255,0.025); }
+  .mkc .p { font-family: 'Fraunces', serif; font-size: 15.5px; font-weight: 600; line-height: 1; letter-spacing: -0.01em; }
+  .mkc .n { font-family: 'JetBrains Mono', monospace; font-size: 8px; color: var(--text-dim); margin-top: 3px; }
+  /* The RAN half of every cell. It is wired to nothing on purpose — see
+     mkRanCell(). It renders in words, never as a figure or a dash that could be
+     mistaken for zero. */
+  .mkc .ran { font-family: 'JetBrains Mono', monospace; font-size: 7px; letter-spacing: .04em;
+    color: var(--text-dim); margin-top: 5px; padding-top: 5px; border-top: 1px solid var(--line);
+    line-height: 1.3; opacity: .85; }
+  .mkc.strong { background: rgba(108,194,139,0.13); } .mkc.strong .p { color: var(--green-soft); }
+  .mkc.weak { background: rgba(217,106,94,0.12); } .mkc.weak .p { color: var(--red); }
+  .mkc.mid .p { color: var(--text); }
+  /* Too few jobs behind it to be either. Grey, and it says the count rather
+     than a percentage — a rate off four leads is not a rate. */
+  .mkc.thin { background: rgba(255,255,255,0.02); }
+  .mkc.thin .p { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--text-dim); font-weight: 400; }
+  .mkc.none { background: none; }
+  .mkc.none .p { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: rgba(255,255,255,0.14); font-weight: 400; }
+  .mk-legend { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 12px; font-family: 'JetBrains Mono', monospace;
+    font-size: 8.5px; letter-spacing: .06em; text-transform: uppercase; color: var(--text-dim); align-items: center; }
+  .mk-legend i { display: inline-block; width: 9px; height: 9px; border-radius: 3px; margin-right: 5px; vertical-align: -1px; }
+  /* The phone transposition: one block per rep, that rep's sources as rows. */
+  .mkg-phone { display: none; }
+  .mkp-rep { border: 1px solid var(--line); border-radius: 12px; padding: 12px 13px; margin-top: 10px; background: var(--bg-card-hi); }
+  .mkp-nm { font-size: 14px; font-weight: 500; margin-bottom: 8px; }
+  .mkp-row { display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: baseline;
+    padding: 8px 0; border-top: 1px solid var(--line); }
+  .mkp-row .s { font-size: 12px; color: var(--text-dim); min-width: 0; }
+  .mkp-row .v { text-align: right; }
+  .mkp-row .v .p { font-family: 'Fraunces', serif; font-size: 15px; font-weight: 600; }
+  .mkp-row .v .p.strong { color: var(--green-soft); } .mkp-row .v .p.weak { color: var(--red); }
+  .mkp-row .v .p.thin { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--text-dim); font-weight: 400; }
+  .mkp-row .v .n { font-family: 'JetBrains Mono', monospace; font-size: 8px; color: var(--text-dim); margin-top: 2px; }
+  .mkp-row .v .ran { font-family: 'JetBrains Mono', monospace; font-size: 7px; color: var(--text-dim); margin-top: 3px; opacity: .85; }
+  .mkp-thin { font-family: 'JetBrains Mono', monospace; font-size: 8.5px; line-height: 1.6; color: var(--text-dim);
+    margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--line); }
+  .mkp-thin b { color: var(--text); font-weight: 600; }
+  @media (max-width: 700px) {
+    .mk-row, .mk-head { min-width: 560px; }
+    .mkg-wrap { display: none; }
+    .mkg-phone { display: block; }
+    .mk-monthbar .mn-cur { min-width: 88px; font-size: 10px; }
+  }
   .flag-row { display: flex; gap: 10px; padding: 9px 0; border-bottom: 1px solid var(--line); }
   .flag-row:last-child { border-bottom: none; }
   .flag-dot { width: 7px; height: 7px; border-radius: 50%; margin-top: 5px; flex-shrink: 0; }
@@ -1202,7 +1297,10 @@ function monthBanner(){
 }
 // Card-scoped windows. The page as a whole stays MTD per the model; only the
 // scoreboard and the lead-source table carry their own range.
-let EFFWIN = 'month', LEADWIN = 'month', LEADTRADE = '1461';
+/* LEADWIN / LEADTRADE retired 16 Aug 2026 with cardLeads() — they were that
+   card's window and trade toggles and nothing else read them. The marketing
+   drawer keeps its own month in MKTOFF. */
+let EFFWIN = 'month';
 /* Defaults to month: it is where Kevin's question started ("month-to-date
    doesn't break down per company") and the most stable of the three — a single
    day of bookings is noisy and half-filled, a month-to-date is not. */
@@ -2542,6 +2640,93 @@ async function loadEffortIntel(){
   render();
 }
 
+/* ── THE MARKETING DRAWER · FEEDS ────────────────────────────────────────────
+   Kevin rejected the old "Leads by source" card in one line: a source with a
+   dollar amount next to it and no cost beside it is revenue wearing a marketing
+   label. Two boards replace it, and both hang off ONE basis so they can never
+   tell him different stories about the same source.
+
+   THE BASIS: a signing is a row in `rpt_signings` with confirmed = true,
+   resolved to its source through `jobs.cc_lead_source_id` →
+   `lead_sources.rollup_name`. Never the raw `ls.name` — CC fragments one
+   channel across many ids (Google is five of them, Angi three), and grouping by
+   the raw name splits Angi into 1,451 / 199 / 18 instead of reading it as one
+   source at 1,668. Migration 163 established the rollup and 165 taught the RPC
+   to use it; this drawer is the third surface on that same key.
+
+   WHY rpt_signings AND NOT jobs.contract_signed_at, which is already in memory
+   and would have cost nothing: Oasis sells through Billdu, not Contractors
+   Cloud. Measured against live, 227 of Google's confirmed signings are
+   `billdu_accepted` and 32 of those sit on jobs with NO contract_signed_at at
+   all — so a jobs-only grid silently marks Oasis reps down for deals they
+   actually closed. The whole point of board 2 is deciding who gets which
+   appointments; a denominator that penalises a brand for its paperwork route
+   would aim that decision backwards.
+
+   The signings set is DISTINCT BY PROJECT. Migration 150 splits an amended
+   invoice into one signing row per late bell, so a repeat sale is legitimately
+   two rows of money — but it is still ONE closed job, and counting rows would
+   push a rep's closing rate above 100%. Money counts rows; a rate counts jobs.
+
+   Loaded after first paint like the effort suite, so a missing migration or a
+   dead feed can never block the page. */
+let MKT = null;                 // { roi, spend, ads, signed, month, err }
+let MKT_LOADING = false;
+/* Default to the LAST COMPLETE MONTH, not this one. Spend is typed at month
+   close by definition, so opening on a month nobody could have entered yet
+   would show a board of "not entered" and teach the owner the feature is
+   broken. 1 = last month; the stepper goes back 12, which is also as far as the
+   appointment feed reaches (see APPT_SINCE). */
+let MKTOFF = 1;
+
+/* PostgREST returns a scalar-jsonb RPC as the body itself, not as a row array,
+   so q() — which pages and spreads each page into a list — cannot read one.
+   One request, no paging, the parsed body back. */
+async function qOne(path){
+  const s = sess.get();
+  if (!s) throw new Error('not signed in');
+  const go = async tok => fetch(`${SB_URL}/rest/v1/${path}`, {
+    headers: { apikey: SB_KEY, Authorization: 'Bearer ' + tok } });
+  let r = await go(s.access_token);
+  if (r.status === 401 && await refresh()) r = await go(sess.get().access_token);
+  if (!r.ok) { const e = new Error(`${path.split('?')[0]} → ${r.status}`); e.status = r.status; throw e; }
+  return r.json();
+}
+
+const mkMonthStart = off => { const d = new Date(); return new Date(d.getFullYear(), d.getMonth() - off, 1); };
+const mkISO = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+const mkMonthLabel = off => { const d = mkMonthStart(off); return `${MNAMES[d.getMonth()]} ${d.getFullYear()}`; };
+
+async function loadMarketing(){
+  MKT_LOADING = true;
+  const start = mkMonthStart(MKTOFF), end = new Date(start.getFullYear(), start.getMonth() + 1, 0);
+  const monthKey = mkISO(start);
+  /* Each feed fails on its own. A drawer where one dead feed blanks the other
+     board would hide a live number behind an unrelated outage. */
+  const [roi, spend, ads, signed] = await Promise.all([
+    qOne(`rpc/rpt_report_marketing_roi?win_start=${mkISO(start)}&win_end=${mkISO(end)}`).catch(e => ({ __err: e.status || 'x' })),
+    /* 404/PGRST205 until migration 166 is applied — that is a real state, not an
+       error to swallow: every spend cell then reads "not entered", which is
+       exactly what an unapplied spend book means. */
+    q('marketing_spend?select=source_name,month,amount,note').catch(() => null),
+    q('google_ads_daily?select=date,spend').catch(() => null),
+    /* Board 2 is all-time (see cardRepGrid) so this is fetched once and reused
+       across month steps. */
+    (MKT && MKT.signed) ? Promise.resolve(MKT.signed)
+      : q('rpt_signings?select=cc_project_id&confirmed=is.true').catch(() => null),
+  ]);
+  MKT = { roi: (roi && roi.__err) ? null : roi, roiErr: (roi && roi.__err) || null,
+          spend, ads, signed, month: monthKey };
+  MKT_LOADING = false;
+  render();
+}
+
+function setMktOff(n){
+  if (n < 0 || n > 12) return;
+  MKTOFF = n; MKT = MKT ? { ...MKT, roi: null, roiErr: null } : null;
+  mktRedraw(); loadMarketing();
+}
+
 /* A feed that errored (missing migration, offline) says so in the card's own
    skin instead of vanishing — Kevin asked for these cards by name, so an
    empty slot would read as "not built" when the truth is "no feed". */
@@ -3148,97 +3333,509 @@ function effortRoom(){
   </div>`;
 }
 
-/* ── LEAD SOURCES · MARKETING. The ids are complete on every job; the names are
-      what CC will not return. Shown by id rather than withheld, because which
-      ids carry the revenue is exactly what decides which ones are worth
-      naming. ─────────────────────────────────────────────────────────────── */
-/* Kevin: "Make sure we seperate lead sources by trade. Fencing and roofing are
-   different animals." One trade at a time, never a blended company-wide list. */
-function cardLeads(){
-  const L = D.leadSources;
-  const T = L.byTrade[LEADTRADE] || { allTime:[], windows:{}, distinct:0, namedIds:0, namedRevShare:0, jobs:0 };
-  const m = brandOf(LEADTRADE);
-  const rows = (T.windows[LEADWIN] || []).slice(0, 12);
-  const label = { day:'today', week:'this week', month:mSpan(), ytd:'year to date' }[LEADWIN];
-  const tot = rows.reduce((n,r) => n + r.rev, 0);
-  const mx = Math.max(1, ...rows.map(r => r.rev));
-  /* Unmapped share for THIS company, all-time, by signed value. The map now
-     covers Fencing and Pro-Tec effectively in full; Oasis is the outlier — one
-     dropdown id (#35082) carries the majority of its signed value with no name
-     in our sync, though the office masterlist shows real values for it. The
-     "#none" bucket (no source set at all) is a different thing from an unnamed
-     id and is not lumped in with it. */
-  const unmappedAll = T.allTime.filter(r => !r.name && r.id !== 'none');
-  const unmappedRevAll = unmappedAll.reduce((n,r) => n + r.rev, 0);
-  const revAll = T.allTime.reduce((n,r) => n + r.rev, 0);
-  const biggestUnmapped = [...unmappedAll].sort((a,b) => b.rev - a.rev)[0];
-  /* ── ALL COMPANIES FIRST. The brand toggle below answers "which sources does
-     THIS trade buy"; it could never answer "what did marketing produce", which
-     is the question the owner arrives with. So the card opens the way every
-     other instrument on this page opens: the whole business on the top row,
-     the three brands beneath it, all four windows across — then the trade
-     detail. Read from the same D.leadSources the rows below read: the
-     company-wide window for the total, each trade's own window for its row, so
-     the band and the list can never disagree. */
-  const LWINS = [['day','Day'],['week','Week'],['month','Month'],['ytd','YTD']];
-  const sumWin = list => (list || []).reduce((a, r) => ({ rev: a.rev + r.rev, signed: a.signed + r.signed }), { rev:0, signed:0 });
-  const allWins = Object.fromEntries(LWINS.map(([k]) => [k, sumWin(L.windows[k])]));
-  const brandWins = BRAND_ORDER.map(b => ({ id:b, m:brandOf(b),
-    wins: Object.fromEntries(LWINS.map(([k]) => [k, sumWin((L.byTrade[b] || { windows:{} }).windows[k])])) }));
-  const sumCell = c => `<div class="col${c.rev ? '' : ' zero'}">${c.rev ? short(c.rev) : '—'}<i>${c.signed ? `${c.signed} signed` : 'none'}</i></div>`;
-  /* A job on a company id outside the three brands is counted in the total and
-     in no brand row. Rather than let the arithmetic look broken, the gap is
-     named — on the YTD window, which is the one wide enough to hold any. */
-  const ytdGap = allWins.ytd.rev - brandWins.reduce((n, b) => n + b.wins.ytd.rev, 0);
+/* ════ THE MARKETING DRAWER ══════════════════════════════════════════════════
+   Two boards behind the same preview-shelf pattern the Effort Room uses.
+
+   BOARD 1 · THE SOURCE ROW — what each source cost and what it returned.
+   BOARD 2 · THE REP × SOURCE GRID — who closes what, so appointments can be
+             jockeyed to the right people.
+
+   TEN IS THE LINE. The owner decides spend by whether a source returns ten
+   times what it cost, so every source is judged against ten on sight rather
+   than against each other: at or above reads green, below reads red, and within
+   ±1 of the line reads neutral because at 9.6x versus 10.4x the difference is a
+   single deal, not a decision. ─────────────────────────────────────────────── */
+
+/* Kevin's ruling, and it is a RULING, not a lookup: Referral and Previous
+   Customer are free revenue. They have no spend and therefore no ROI, and their
+   cells read an em-dash — never 0, never "not entered", and never excluded from
+   the board, because their VOLUME beside the paid sources is the comparison he
+   wants. Adding a name to this set changes what the owner is told a channel
+   costs, so it needs his word, not a code change. Note what is deliberately NOT
+   here: "Referral- Self Generated", "Yard Sign" and "BNI" are plausibly free
+   too and are left as paid-until-typed, because guessing free would make a
+   channel look costless — the error that runs in the direction of overspending. */
+const MK_FREE = new Set(['Referral', 'Previous Customer']);
+const MK_LINE = 10;   // the kill threshold
+const MK_NEAR = 1;    // ±this around the line reads neutral
+/* THE THIN FLOOR — 10 leads behind a cell before it may be coloured.
+   Chosen off the shape of the live grid, not picked round: at n=10 one extra
+   close moves a cell 10 points, which is wider than the whole ±8 neutral band
+   below it. So under 10 the cell literally cannot tell "strong" from "median",
+   and colouring it would be reading noise as a verdict — the same failure as
+   the "closes better on lighter weeks" finding that shipped off 17
+   appointments. 53 of the 106 live cells clear this; the rest keep their raw
+   counts and stay grey. */
+const MK_THIN = 10;
+const MK_BAND = 8;    // points either side of the grid median before a cell earns a colour
+
+/* ⚠️ THE LEADS COLUMN IS BLIND BEFORE THIS MONTH, AND IT SAYS SO.
+   rpt_report_marketing_roi windows leads on `jobs.created_at` — the timestamp
+   OUR ROW was inserted, not when the lead arrived at CC. The warehouse was
+   loaded in one shot on 20 Jul 2026 (11,119 of 11,558 rows carry a created_at
+   before 21 Jul), so every lead in company history is stamped July 2026:
+     · a JULY window returns the whole backfill — Google reads 4,282 leads
+       against a true 253, seventeen times over;
+     · any month BEFORE July 2026 returns zero leads, not "no data";
+     · August 2026 onward is correct — measured 112 true vs 113 reported.
+   The true date is `cc_raw->>'project_created_at'`, populated on all 11,558
+   rows back to Jun 2024, but it is inside a jsonb the console deliberately
+   does not download (cc_raw is the biggest column in the table and this page
+   already reads ~5.8MB).
+   So the board REFUSES the figure for contaminated months rather than printing
+   it or quietly swapping in a different source. ROI is unaffected — it is
+   closed dollars ÷ spend, and closed dollars are dated by rpt_signings.signed_on,
+   which is correct in every window. Fixing this properly is a new RPC that
+   windows on project_created_at; it is written up in the PR, not bodged here. */
+const MK_LEADS_FROM = '2026-08';   // first month whose lead counts are real
+
+/* Eastern, matching the window the RPC buckets leads in (`at time zone
+   'America/New_York'`). A UTC month key would drift the boundary by 4-5 hours
+   and move deals between months at the seam. en-CA renders YYYY-MM-DD. */
+const mkET = ts => { try { return new Date(ts).toLocaleDateString('en-CA', { timeZone:'America/New_York' }); }
+                     catch (e) { return String(ts).slice(0, 10); } };
+
+const mkRoiClass = roi => Math.abs(roi - MK_LINE) <= MK_NEAR ? 'near' : (roi >= MK_LINE ? 'hit' : 'miss');
+
+/* Typed spend for one source in one month. null means NO ROW — which renders
+   "not entered", never zero. A zero-spend month is a thing the office can
+   actually type, and it is a different claim from never having typed. */
+function mkSpendOf(src, monthKey){
+  if (!MKT || !Array.isArray(MKT.spend)) return null;
+  const r = MKT.spend.find(s => s.source_name === src && String(s.month).slice(0, 10) === monthKey);
+  return r ? Number(r.amount) : null;
+}
+
+/* GOOGLE IS NOT TYPEABLE. Its spend arrives through Windsor into
+   google_ads_daily, and migration 166 refuses a typed Google row with a CHECK
+   so a second surface can never fork the number.
+
+   Three states, and the third is the one that matters. A feed that has stopped
+   delivering is NOT the same fact as a month nobody entered: collapsing them
+   would hide a dead integration behind a data-entry prompt, which is exactly
+   how the "3-week export lag" survived for weeks while the real cause was our
+   own sync dropping a column. Verified against live 16 Aug: the table holds 584
+   rows spanning 22 May → 20 Jul 2026 and last synced 21 Jul, so today it is
+   STALE and every recent month says so out loud. */
+function mkGoogleSpend(monthKey){
+  const ads = MKT && MKT.ads;
+  if (!Array.isArray(ads) || !ads.length) return { state:'nofeed' };
+  const pre = monthKey.slice(0, 7);
+  const inM = ads.filter(a => String(a.date).slice(0, 7) === pre);
+  const last = ads.reduce((m, a) => String(a.date) > m ? String(a.date) : m, '');
+  if (!inM.length) return { state:'stale', last };
+  return { state:'live', amount: inM.reduce((n, a) => n + Number(a.spend || 0), 0), last };
+}
+
+/* project → rolled-up source, off the slim projection built in buildData. */
+function mkSrcByProject(){
+  const rollup = D.mktRollup || {}, out = Object.create(null);
+  for (const j of (D.mktJobs || [])) { const s = rollup[j.l]; if (s) out[j.p] = s; }
+  return out;
+}
+
+/* Appointments SET (booked) per source in the month — the setters' output off
+   each channel. Booked, not run: the console keeps those two facts apart
+   everywhere, and outcomes are not logged anyway (see mkRanCell). */
+function mkApptsBySource(monthKey){
+  const src = mkSrcByProject(), pre = monthKey.slice(0, 7), out = Object.create(null);
+  for (const a of (D.mktAppts || [])) {
+    if (mkET(a.c).slice(0, 7) !== pre) continue;
+    const s = src[a.p]; if (!s) continue;
+    out[s] = (out[s] || 0) + 1;
+  }
+  return out;
+}
+
+/* ── BOARD 1 · THE SOURCE ROW ─────────────────────────────────────────────── */
+function cardSourceRow(){
+  const monthKey = mkISO(mkMonthStart(MKTOFF));
+  const bar = `<div class="mk-monthbar">
+    <button class="mn-btn" ${MKTOFF >= 12 ? 'disabled' : ''} onclick="setMktOff(MKTOFF+1)" aria-label="Previous month">‹</button>
+    <span class="mn-cur">${esc(mkMonthLabel(MKTOFF))}</span>
+    <button class="mn-btn" ${MKTOFF <= 0 ? 'disabled' : ''} onclick="setMktOff(MKTOFF-1)" aria-label="Next month">›</button>
+    ${MKTOFF !== 1 ? `<button class="linkbtn" onclick="setMktOff(1)">last full month</button>` : ''}
+  </div>`;
+
+  if (!MKT || (!MKT.roi && !MKT.roiErr)) return `<div class="card full">
+    <div class="card-title">Return by source<span class="feed-tag cc">live · cc</span></div>${bar}
+    <div class="card-sub" style="margin:0">Reading…</div></div>`;
+
+  if (MKT.roiErr) return `<div class="card full">
+    <div class="card-title">Return by source<span class="feed-tag none">no feed</span></div>${bar}
+    <div class="withheld"><div class="wt">Withheld</div><div class="wx">
+      <b>rpt_report_marketing_roi</b> did not answer (${esc(String(MKT.roiErr))}). That RPC is migration 160 as
+      corrected by 165; if it is missing here the board says so rather than
+      drawing the half of the picture it can still reach.</div></div></div>`;
+
+  const rows = ((MKT.roi.sections || {}).by_source || []);
+  const appts = mkApptsBySource(monthKey);
+  const spendBook = Array.isArray(MKT.spend);
+
+  const enrich = r => {
+    const src = r.source_name, free = MK_FREE.has(src), isG = src === 'Google';
+    const g = isG ? mkGoogleSpend(monthKey) : null;
+    const spend = free ? null : isG ? (g.state === 'live' ? g.amount : null) : mkSpendOf(src, monthKey);
+    const dollars = Number(r.signed_dollars || 0);
+    const roi = (spend && spend > 0) ? dollars / spend : null;
+    return { ...r, src, free, isG, g, spend, dollars, roi, appts: appts[src] || 0 };
+  };
+  /* SOURCES WITH SPEND SORT ABOVE SOURCES WITHOUT — the paid channels are the
+     ones a spend decision gets made about, so they are never below the free
+     ones on the page. Within each group, biggest return first. */
+  const all = rows.map(enrich);
+  const paid = all.filter(r => r.spend != null).sort((a, b) => (b.roi || 0) - (a.roi || 0));
+  const unpriced = all.filter(r => r.spend == null && !r.free).sort((a, b) => b.dollars - a.dollars);
+  const free = all.filter(r => r.spend == null && r.free).sort((a, b) => b.dollars - a.dollars);
+
+  const spendCell = r => {
+    if (r.free) return `<div class="col absent">—</div>`;
+    if (r.isG) {
+      if (r.g.state === 'live') return `<div class="col money">${money(r.spend)}<span class="mk-auto">auto · windsor</span></div>`;
+      if (r.g.state === 'stale') return `<div class="col absent">no windsor data<span class="mk-auto stale">feed last delivered ${esc(r.g.last)}</span></div>`;
+      return `<div class="col absent">no feed<span class="mk-auto stale">windsor never delivered</span></div>`;
+    }
+    if (!spendBook) return `<div class="col absent">not entered<span class="mk-auto stale">spend book not applied</span></div>`;
+    const v = mkSpendOf(r.src, monthKey);
+    return `<div class="col"><div class="mk-spend">
+      <input type="number" min="0" step="1" inputmode="decimal" value="${v == null ? '' : v}"
+        placeholder="not entered" aria-label="Spend for ${esc(r.src)}, ${esc(mkMonthLabel(MKTOFF))}"
+        onchange="saveSpend(${JSON.stringify(r.src).replace(/"/g, '&quot;')}, '${monthKey}', this)"></div></div>`;
+  };
+
+  /* Contaminated months show the refusal, not the figure — see MK_LEADS_FROM. */
+  const leadsBlind = monthKey.slice(0, 7) < MK_LEADS_FROM;
+  const leadsCell = r => leadsBlind
+    ? `<div class="col absent" title="rpt_report_marketing_roi windows leads on jobs.created_at, which is our row-insert time. The warehouse was backfilled in one shot on 20 Jul 2026, so this month's count is the backfill, not the month.">backfill-dated</div>`
+    : `<div class="col">${Number(r.leads || 0).toLocaleString()}</div>`;
+
+  const line = r => `<div class="mk-row${r.free ? ' free' : ''}">
+    <div class="nm">${esc(r.src)}${r.category && r.category !== '—' ? `<span class="cat">${esc(r.category)}</span>` : ''}</div>
+    ${spendCell(r)}
+    ${leadsCell(r)}
+    <div class="col${r.appts ? '' : ' dim'}">${r.appts ? r.appts.toLocaleString() : '0'}</div>
+    <div class="col${r.signed_jobs ? '' : ' dim'}">${r.signed_jobs ? Number(r.signed_jobs).toLocaleString() : '0'}</div>
+    <div class="col money">${r.dollars ? short(r.dollars) : '<span class="dim">—</span>'}</div>
+    ${r.roi != null
+      ? `<div class="mk-roi ${mkRoiClass(r.roi)}">${Math.round(r.roi)}x</div>`
+      : `<div class="mk-roi none">${r.free ? '—' : 'no spend'}</div>`}
+  </div>`;
+
+  const head = `<div class="mk-head">
+    <div>Source</div><div>Spend</div><div>Leads</div><div>Appts set</div>
+    <div>Closed</div><div>Closed $</div><div>ROI</div></div>`;
+
   return `<div class="card full">
-    <div class="card-title">Leads by source<span class="feed-tag cc">live · cc</span></div>
-    <div class="card-sub">All three companies first, then one trade at a time — fencing and roofing buy leads in different markets, so the source list is never a blended one. Close rate is that source's contracts against every lead it has produced.</div>
-
-    <div class="lsum">
-      <div class="lsum-head"><div>Signed from leads</div>${LWINS.map(([,l]) => `<div>${l}</div>`).join('')}</div>
-      <div class="lsum-row all"><div class="nm">All companies</div>${LWINS.map(([k]) => sumCell(allWins[k])).join('')}</div>
-      ${brandWins.map(b => `<div class="lsum-row${b.id === LEADTRADE ? ' sel' : ''}">
-        <div class="nm"><span class="tdot" style="background:${b.m.c}"></span>${esc(b.m.n)}</div>
-        ${LWINS.map(([k]) => sumCell(b.wins[k])).join('')}</div>`).join('')}
+    <div class="card-title">Return by source<span class="feed-tag cc">live · cc</span></div>
+    <div class="card-sub">What each source cost and what it gave back, for one month at a time. <b>Ten is the line</b> — at or above it the source earns its money, below it does not. Spend is typed at month close; Google's arrives on its own.</div>
+    ${bar}
+    <div class="mk-scroll">
+      ${head}
+      ${paid.map(line).join('')}
+      ${unpriced.length ? `<div class="mk-sep">No spend entered for ${esc(mkMonthLabel(MKTOFF))}</div>${unpriced.map(line).join('')}` : ''}
+      ${free.length ? `<div class="mk-sep">Free — no spend, no ROI</div>${free.map(line).join('')}` : ''}
     </div>
-    ${ytdGap > 0 ? `<div class="note" style="margin-top:0">The all-companies row is ${short(ytdGap)} above the three brands added up, year to date: that much signed value sits on a company id outside Fencing, Oasis and Pro-Tec. It is counted in the total and in no brand row, said here rather than quietly dropped from one side or the other.</div>` : ''}
-
-    <div class="seg">
-      ${BRAND_ORDER.map(b=>`<button class="${b===LEADTRADE?'on':''}" onclick="setTrade('${b}')">${esc(brandOf(b).s)}</button>`).join('')}
-    </div>
-    <div class="seg">
-      ${[['day','Day'],['week','Week'],['month','Month'],['ytd','YTD']]
-        .map(([k,l])=>`<button class="${k===LEADWIN?'on':''}" onclick="setLead('${k}')">${l}</button>`).join('')}
-    </div>
-
-    <div class="tradehead">
-      <span class="tdot" style="background:${m.c}"></span>${esc(m.n)}
-      <span class="tmeta">${T.jobs.toLocaleString()} leads · ${T.distinct} sources · ${T.namedIds} named</span>
-    </div>
-
-    ${rows.length ? rows.map(r => {
-      const all = T.allTime.find(a => a.id === r.id);
-      const conv = all && all.jobs ? Math.round(all.signed / all.jobs * 100) : null;
-      return `<div class="rep-row">
-        <div class="rep-head">
-          <div class="nm">${r.name ? esc(r.name) : (r.id==='none'?'No source on the job':'#'+esc(r.id))}
-            ${r.name ? (r.category?`<span class="brand">${esc(r.category)}${r.inferred?' ·inferred':''}</span>`:'')
-                     : '<span class="brand">unmapped</span>'}</div>
-          <div class="amt">${short(r.rev)} <span>· ${r.signed} signed</span></div>
-        </div>
-        <div class="meter"><div class="meter-fill" style="width:${Math.round(r.rev/mx*100)}%;background:${r.name?(r.rev===mx?m.c:'#6ba8c9'):'#8aa094'}"></div></div>
-        <div class="tgt-cap">
-          <span>${pct(r.rev,tot)}% of ${esc(m.s)} signed ${esc(label)}${all?` · ${all.jobs.toLocaleString()} leads all time`:''}</span>
-          <span class="${conv===null?'':conv>=50?'hit':''}">${conv===null?'':conv+'% close'}</span>
-        </div>
-      </div>`}).join('') : `<div class="card-sub" style="margin:0">${esc(m.n)} signed nothing ${esc(label)} to attribute.</div>`}
-
-    ${unmappedRevAll > 0 ? `<div class="withheld"><div class="wt">${(100-T.namedRevShare) >= 40 ? 'Most of this company sits on an unnamed source' : 'Not every source is named'}</div><div class="wx">
-      <b>${short(unmappedRevAll)}</b> of ${esc(m.s)}'s signed value — <b>${pct(unmappedRevAll,revAll)}%</b> of it — sits on ${unmappedAll.length===1?'a source id':'source ids'} our sync carries no name for${biggestUnmapped?`, nearly all of it on <b>#${esc(biggestUnmapped.id)}</b> (${biggestUnmapped.jobs.toLocaleString()} leads · ${short(biggestUnmapped.rev)} signed)`:''}. The office masterlist shows real values for these — Google, Saving Safari and the like — but the warehouse has not mapped them yet, so they keep their raw id rather than being folded into "other". A source you cannot name is still one you are paying for.</div></div>` : ''}
-
-    <div class="note">${esc(m.n)}: <b>${T.namedIds} of ${T.distinct}</b> sources named, covering <b>${T.namedRevShare}%</b> of its signed value. The map now holds <b>${L.mapSize}</b> names and covers Fencing and Pro-Tec effectively in full; Oasis is the one still leaning on an unmapped dropdown id. Categories marked <b>·inferred</b> were guessed rather than set by hand, so a guess never reads as a decision.</div>
+    ${!rows.length ? `<div class="card-sub" style="margin:12px 0 0">No lead carried a source in ${esc(mkMonthLabel(MKTOFF))}.</div>` : ''}
+    ${!spendBook ? `<div class="withheld"><div class="wt">The spend book is not on live yet</div><div class="wx">
+      Every typed source reads <b>not entered</b> because <b>marketing_spend</b> (migration <b>166</b>) has not been applied — the table the office types into does not exist yet, so no ROI on this board can be computed. This is the honest state, not a zero: a source with no cost recorded is not a free source. Apply 166 and the inputs go live with no further deploy.</div></div>` : ''}
+    ${leadsBlind ? `<div class="withheld"><div class="wt">The leads column is withheld for ${esc(mkMonthLabel(MKTOFF))}</div><div class="wx">
+      <b>rpt_report_marketing_roi</b> dates a lead by <b>jobs.created_at</b> — when OUR row was written, not when the lead came in. The warehouse was loaded in one shot on <b>20 Jul 2026</b> (11,119 of 11,558 rows), so a July window returns the entire backfill: Google reads <b>4,282</b> against a true <b>253</b>. Months before July return zero, which is not the same as none. From <b>August 2026</b> the column is real — measured 112 true against 113 reported — so it renders there and is refused here. Closed jobs, closed dollars and therefore <b>ROI are unaffected</b>: they are dated by <b>rpt_signings.signed_on</b>, which is correct in every window.</div></div>` : ''}
+    <div class="note">Closed jobs, closed dollars and the source list come from <b>rpt_report_marketing_roi</b> (160, corrected by <b>165</b>), grouped on <b>lead_sources.rollup_name</b> — migration 163's canonical rollup, never the raw CC name, which splits Angi three ways and Google five. Appointments set are counted client-side by when the appointment was <b>booked</b>, off the same project→source join. ROI is closed dollars ÷ spend for the month shown, rounded to a whole multiple; within ±${MK_NEAR} of ${MK_LINE}x it reads neutral because one deal moves a small source across the line. Leads exclude the 12 reporting_excluded batch-entry anomalies, matching the RPC${leadsBlind ? ', and are withheld this month — see above' : ''}.</div>
   </div>`;
 }
+
+/* ── BOARD 2 · THE REP × SOURCE GRID ──────────────────────────────────────── */
+/* ALL-TIME, deliberately, and not windowed like board 1. A month-sliced rep ×
+   source grid is n=2 in most cells: it would be a wall of noise wearing
+   percentage signs, and the board exists to move real appointments to real
+   people. Same reasoning as the cohort rule — a verdict needs a denominator on
+   both sides. */
+function mkGridData(){
+  const rollup = D.mktRollup || {};
+  const signed = new Set(((MKT && MKT.signed) || []).map(s => String(s.cc_project_id)));
+  const cells = Object.create(null);
+  for (const j of (D.mktJobs || [])) {
+    if (!j.r) continue;
+    const s = rollup[j.l]; if (!s) continue;
+    const byRep = cells[j.r] || (cells[j.r] = Object.create(null));
+    const c = byRep[s] || (byRep[s] = { leads: 0, signed: 0 });
+    c.leads++; if (signed.has(j.p)) c.signed++;
+  }
+  const sellers = (D.mktSellers || []).filter(r => cells[r.id]);
+  /* Column set: a source earns a column when at least one seller has enough
+     volume on it to be read. Sources below that are NOT silently dropped — the
+     count and their combined leads are stated under the grid. */
+  const tot = Object.create(null), qual = Object.create(null);
+  for (const r of sellers) for (const [s, c] of Object.entries(cells[r.id])) {
+    tot[s] = (tot[s] || 0) + c.leads;
+    if (c.leads >= MK_THIN) qual[s] = (qual[s] || 0) + 1;
+  }
+  const cols = Object.keys(qual).sort((a, b) => tot[b] - tot[a]);
+  const dropped = Object.keys(tot).filter(s => !qual[s]);
+  const droppedLeads = dropped.reduce((n, s) => n + tot[s], 0);
+  /* Median over the cells that CAN be read. Letting thin cells vote would move
+     the reference line with noise and then colour every other cell against it. */
+  const pcts = [];
+  for (const r of sellers) for (const s of cols) {
+    const c = cells[r.id][s]; if (c && c.leads >= MK_THIN) pcts.push(100 * c.signed / c.leads);
+  }
+  pcts.sort((a, b) => a - b);
+  const median = pcts.length ? (pcts.length % 2 ? pcts[(pcts.length - 1) / 2]
+    : (pcts[pcts.length / 2 - 1] + pcts[pcts.length / 2]) / 2) : null;
+  return { cells, sellers, cols, median, dropped, droppedLeads, readable: pcts.length,
+           total: sellers.reduce((n, r) => n + Object.keys(cells[r.id]).length, 0) };
+}
+
+/* THE APPOINTMENTS-RAN HALF OF EVERY CELL — WIRED TO NOTHING, ON PURPOSE.
+   ⚠️ DO NOT WIRE THIS TO cc_appointments.cc_result_id. That column exists and
+   looks exactly like an outcome log, which is the trap: it is populated on 83
+   of 9,627 appointments — 0.86% — across three distinct values, and it trails
+   off after Jul 2026. Verified against live 16 Aug 2026. A denominator that
+   thin would produce confident, wrong closing rates on a board whose whole job
+   is deciding who gets the next appointment.
+   ⚠️ DO NOT SUBSTITUTE APPOINTMENTS SET. Set and ran are different
+   denominators; a rep who books ten and runs six is not the same rep as one who
+   books ten and runs ten, and that difference is the entire reason this column
+   was asked for.
+   ⚠️ DO NOT DERIVE IT. There is no ran field in the CC payload.
+   An empty column that says why is the deliverable. A plausible number is not.
+   When CC starts logging outcomes, this is the one function to change. */
+const mkRanCell = () => `<div class="ran">no outcome logged</div>`;
+
+function cardRepGrid(){
+  if (!MKT || !MKT.signed) return `<div class="card full">
+    <div class="card-title">Who closes what<span class="feed-tag cc">live · cc</span></div>
+    <div class="card-sub" style="margin:0">Reading…</div></div>`;
+
+  const G = mkGridData();
+  if (!G.sellers.length || !G.cols.length) return `<div class="card full">
+    <div class="card-title">Who closes what<span class="feed-tag cc">live · cc</span></div>
+    <div class="withheld"><div class="wt">Nothing to rank yet</div><div class="wx">
+      No seller carries ${MK_THIN} leads on any single source, so no cell on this grid can be read.</div></div></div>`;
+
+  const cellOf = (rep, src) => {
+    const c = (G.cells[rep.id] || {})[src];
+    if (!c || !c.leads) return `<div class="mkc none"><div class="p">·</div></div>`;
+    if (c.leads < MK_THIN) return `<div class="mkc thin" title="${c.signed} of ${c.leads} — too few to read">
+      <div class="p">${c.signed}/${c.leads}</div><div class="n">thin</div>${mkRanCell()}</div>`;
+    const p = 100 * c.signed / c.leads;
+    const k = G.median == null ? 'mid' : p >= G.median + MK_BAND ? 'strong' : p <= G.median - MK_BAND ? 'weak' : 'mid';
+    return `<div class="mkc ${k}"><div class="p">${Math.round(p)}%</div>
+      <div class="n">${c.signed}/${c.leads}</div>${mkRanCell()}</div>`;
+  };
+
+  const table = `<div class="mkg-wrap"><table class="mkg">
+    <thead><tr><th class="rep-h">Rep</th>${G.cols.map(s => `<th>${esc(s)}</th>`).join('')}</tr></thead>
+    <tbody>${G.sellers.map(r => `<tr><th>${esc(r.name)}</th>
+      ${G.cols.map(s => `<td>${cellOf(r, s)}</td>`).join('')}</tr>`).join('')}</tbody>
+  </table></div>`;
+
+  /* THE PHONE TRANSPOSITION. A rep × source matrix cannot be squeezed into
+     390px without either shrinking the figures past reading or hiding columns
+     behind a scroller nobody discovers. So on a phone it becomes one block per
+     rep with that rep's sources listed down — the same cells, the same colours,
+     the same thin rule, read one person at a time. Nothing is dropped: the
+     owner is usually asking about ONE rep on a phone anyway. */
+  const phone = `<div class="mkg-phone">${G.sellers.map(r => {
+    const mine = G.cols.map(s => [s, (G.cells[r.id] || {})[s]]).filter(([, c]) => c && c.leads);
+    if (!mine.length) return '';
+    /* The readable cells get a full row each; the thin ones collapse to one
+       line that still carries every count. Giving a 3-lead cell the same three
+       lines as a 791-lead one turned this into a 4,300px scroll where the
+       cells that can actually be acted on were buried among ones that cannot
+       be read at all. Nothing is dropped — the thin line names each source and
+       its raw counts, and says the ran state once for the group rather than
+       repeating it down a column of unreadable cells. */
+    const readable = mine.filter(([, c]) => c.leads >= MK_THIN);
+    const thin = mine.filter(([, c]) => c.leads < MK_THIN);
+    return `<div class="mkp-rep"><div class="mkp-nm">${esc(r.name)}</div>
+      ${readable.map(([s, c]) => {
+        const p = 100 * c.signed / c.leads;
+        const k = G.median == null ? '' : p >= G.median + MK_BAND ? 'strong' : p <= G.median - MK_BAND ? 'weak' : '';
+        return `<div class="mkp-row"><div class="s">${esc(s)}</div>
+          <div class="v"><div class="p ${k}">${Math.round(p)}%</div>
+            <div class="n">${c.signed} of ${c.leads}</div>
+            <div class="ran">ran: no outcome logged</div></div></div>`;
+      }).join('')}
+      ${readable.length ? '' : `<div class="mkp-thin">No source with ${MK_THIN} leads or more yet.</div>`}
+      ${thin.length ? `<div class="mkp-thin"><b>Too few to read</b> — ${thin.map(([s, c]) =>
+        `${esc(s)} ${c.signed}/${c.leads}`).join(' · ')}. No outcome is logged on these either.</div>` : ''}
+    </div>`;
+  }).join('')}</div>`;
+
+  return `<div class="card full">
+    <div class="card-title">Who closes what<span class="feed-tag cc">live · cc</span></div>
+    <div class="card-sub">Every seller against every source they carry real volume on — so an appointment can go to the person who closes that kind of lead. Each cell shows two denominators: signed against <b>leads assigned</b>, and signed against <b>appointments ran</b>.</div>
+    ${table}${phone}
+    <div class="mk-legend">
+      <span><i style="background:rgba(108,194,139,0.4)"></i>${MK_BAND}+ pts above the grid median</span>
+      <span><i style="background:rgba(217,106,94,0.4)"></i>${MK_BAND}+ pts below</span>
+      <span><i style="background:rgba(255,255,255,0.06)"></i>fewer than ${MK_THIN} leads · thin, not good or bad</span>
+      <span>median ${G.median == null ? 'n/a' : Math.round(G.median) + '%'} of ${G.readable} readable cells</span>
+    </div>
+    <div class="withheld"><div class="wt">Appointments ran is empty, and that is the finding</div><div class="wx">
+      The second denominator has <b>no feed anywhere</b>. Contractors Cloud does not log appointment outcomes — there is no ran field in the payload — so every cell says so in words rather than showing a number. <b>cc_appointments.cc_result_id</b> exists and looks like an outcome log; it is populated on <b>83 of 9,627</b> appointments and trails off after July, so it is not a denominator and this board deliberately does not read it. Appointments <i>set</i> is not substituted either: a rep who books ten and runs six is not the rep who books ten and runs ten, and that gap is the reason the column was asked for.</div></div>
+    <div class="note">Signed is <b>rpt_signings</b> where confirmed, matched to the job by <b>cc_project_id</b> — the same basis board 1 reads, so the two boards cannot disagree about who closed what. It is counted <b>distinct by project</b>: migration 150 splits an amended invoice into a signing row per late bell, which is right for money and would push a closing rate past 100%. Not <b>jobs.contract_signed_at</b>, which would understate Oasis — 227 of Google's confirmed signings arrive through Billdu and 32 of those sit on jobs with no contract date at all. All-time, not monthly: a month-sliced cell is n=2 and reads as noise. Sellers only (098). ${G.dropped.length ? `<b>${G.dropped.length}</b> source${G.dropped.length === 1 ? '' : 's'} ${G.dropped.length === 1 ? 'is' : 'are'} not a column here — no seller carries ${MK_THIN} leads on ${G.dropped.length === 1 ? 'it' : 'any of them'} (${G.droppedLeads.toLocaleString()} leads between them): ${esc(G.dropped.join(', '))}.` : ''}</div>
+  </div>`;
+}
+
+/* ── SPEND ENTRY ──────────────────────────────────────────────────────────── */
+/* Upsert on (source_name, month) — the table's primary key — so re-typing a
+   month corrects it rather than stacking a second row. Google is not reachable
+   from here: it has no input to type into, and migration 166 refuses it at the
+   database besides. */
+async function saveSpend(src, monthKey, el){
+  const raw = String(el.value).trim();
+  el.className = 'saving';
+  const s = sess.get();
+  try {
+    if (!s) throw new Error('not signed in');
+    if (raw === '') { el.className = ''; return; }   // cleared, not zero — leave the row alone
+    const amount = Number(raw);
+    if (!isFinite(amount) || amount < 0) throw new Error('bad amount');
+    const r = await fetch(`${SB_URL}/rest/v1/marketing_spend?on_conflict=source_name,month`, {
+      method: 'POST',
+      headers: { apikey: SB_KEY, Authorization: 'Bearer ' + s.access_token,
+                 'Content-Type': 'application/json',
+                 Prefer: 'resolution=merge-duplicates,return=minimal' },
+      body: JSON.stringify({ source_name: src, month: monthKey, amount }),
+    });
+    if (!r.ok) throw new Error(`${r.status}`);
+    el.className = 'saved';
+    /* Re-read rather than patching the local array: the ROI beside it must come
+       from what the database actually holds, not from what was typed at it. */
+    MKT.spend = await q('marketing_spend?select=source_name,month,amount,note').catch(() => MKT.spend);
+    mktRedraw();
+  } catch (e) {
+    el.className = 'failed';
+    el.title = `Not saved (${e.message}). If this reads 404, migration 166 is not applied yet.`;
+  }
+}
+
+/* ── THE ROOM ─────────────────────────────────────────────────────────────── */
+/* Same one-value state machine as the Effort Room: nothing open, one board
+   open, or both. The body is built from exactly one branch, so opening a tile
+   and then expanding all cannot render a board twice. */
+const MKT_STORE = 'lcc.mkt';
+let MKT_VIEW = (() => {
+  try { const j = JSON.parse(localStorage.getItem(MKT_STORE) || 'null');
+    if (j && j.mode === 'all') return { mode:'all' };
+    if (j && j.mode === 'solo' && j.key) return { mode:'solo', key:j.key };
+  } catch (e) {}
+  return { mode:'none' };
+})();
+function mktSave(){ try { localStorage.setItem(MKT_STORE, JSON.stringify(MKT_VIEW)); } catch (e) {} }
+function mktRedraw(){
+  const el = document.getElementById('marketing-room');
+  if (!el) { render(); return; }
+  const y = window.scrollY;
+  el.outerHTML = marketingRoom();
+  window.scrollTo({ top: y });
+}
+function mktSolo(key){
+  MKT_VIEW = (MKT_VIEW.mode === 'solo' && MKT_VIEW.key === key) ? { mode:'none' } : { mode:'solo', key };
+  mktSave(); mktRedraw();
+}
+function mktAll(){ MKT_VIEW = MKT_VIEW.mode === 'all' ? { mode:'none' } : { mode:'all' }; mktSave(); mktRedraw(); }
+function mktClose(){ MKT_VIEW = { mode:'none' }; mktSave(); mktRedraw(); }
+
+/* The tiles. Same three states the effort shelf keeps: reading, nothing behind
+   it (said in words), or the shape. */
+function ptSourceRow(){
+  if (!MKT || (!MKT.roi && !MKT.roiErr)) return ptEmptyBox('Reading…');
+  if (MKT.roiErr) return ptEmptyBox('The ROI feed did not answer');
+  const rows = ((MKT.roi.sections || {}).by_source || []);
+  if (!rows.length) return ptEmptyBox(`No sourced lead in ${mkMonthLabel(MKTOFF)}`);
+  const monthKey = mkISO(mkMonthStart(MKTOFF));
+  const priced = rows.map(r => {
+    const isG = r.source_name === 'Google', g = isG ? mkGoogleSpend(monthKey) : null;
+    const sp = MK_FREE.has(r.source_name) ? null
+      : isG ? (g.state === 'live' ? g.amount : null) : mkSpendOf(r.source_name, monthKey);
+    return sp && sp > 0 ? Number(r.signed_dollars || 0) / sp : null;
+  }).filter(v => v != null);
+  /* No spend anywhere is the headline when it is true — the board's whole
+     premise is cost, so an empty spend book is the fact, not a zero. */
+  if (!priced.length) return ptEmptyBox(`No spend entered for ${mkMonthLabel(MKTOFF)} — no ROI to read`);
+  const hit = priced.filter(v => v >= MK_LINE).length;
+  return ptNum(`${hit}/${priced.length}`, hit === priced.length ? 'green' : hit ? 'gold' : 'red') +
+    ptCap(`priced sources at or above ${MK_LINE}x<br/>${esc(mkMonthLabel(MKTOFF))}`);
+}
+
+function ptRepGrid(){
+  if (!MKT || !MKT.signed) return ptEmptyBox('Reading…');
+  const G = mkGridData();
+  if (!G.readable) return ptEmptyBox(`No seller carries ${MK_THIN} leads on one source yet`);
+  let strong = 0, weak = 0;
+  for (const r of G.sellers) for (const s of G.cols) {
+    const c = (G.cells[r.id] || {})[s]; if (!c || c.leads < MK_THIN) continue;
+    const p = 100 * c.signed / c.leads;
+    if (p >= G.median + MK_BAND) strong++; else if (p <= G.median - MK_BAND) weak++;
+  }
+  return ptNum(Math.round(G.median) + '%', 'accent') +
+    `<div class="pt-seg">
+      ${strong ? `<i style="width:${100 * strong / G.readable}%;background:var(--green)"></i>` : ''}
+      ${weak ? `<i style="width:${100 * weak / G.readable}%;background:var(--red)"></i>` : ''}
+      <i style="width:${100 * (G.readable - strong - weak) / G.readable}%;background:rgba(255,255,255,0.10)"></i>
+    </div>` +
+    ptCap(`grid median · ${strong} strong · ${weak} weak<br/>of ${G.readable} readable cells`);
+}
+
+const MKT_KIT = [
+  { key:'src',  name:'Return by source · vs 10x', card: cardSourceRow, tile: ptSourceRow },
+  { key:'grid', name:'Who closes what',           card: cardRepGrid,   tile: ptRepGrid },
+];
+
+function marketingRoom(){
+  const all = MKT_VIEW.mode === 'all';
+  const solo = MKT_VIEW.mode === 'solo' ? MKT_KIT.find(i => i.key === MKT_VIEW.key) : null;
+  const tiles = MKT_KIT.map(i => {
+    const on = !!solo && solo.key === i.key;
+    return `<button type="button" class="ptile${on ? ' on' : ''}" onclick="mktSolo('${i.key}')"
+      aria-expanded="${on ? 'true' : 'false'}">
+      <div class="pt-h">${esc(i.name)}</div>
+      <div class="pt-b">${i.tile()}</div>
+    </button>`;
+  }).join('');
+
+  let body = '';
+  if (all) {
+    body = `<div class="room-body">
+      <div class="room-open-head"><div class="ttl">Both boards, full size</div>
+        <button type="button" class="shelf-all" onclick="mktClose()">Close</button></div>
+      ${MKT_KIT.map(i => i.card()).join('')}
+    </div>`;
+  } else if (solo) {
+    body = `<div class="room-body">
+      <div class="room-open-head"><div class="ttl">${esc(solo.name)}</div>
+        <button type="button" class="shelf-all" onclick="mktClose()">Close</button></div>
+      ${solo.card()}
+    </div>`;
+  }
+
+  return `<div class="room" id="marketing-room">
+    <div class="shelf-head">
+      <div class="shelf-titles">
+        <div class="card-title">Marketing · what it cost and what it gave back</div>
+        <div class="card-sub">Two boards: what each source returned against the ten-times line, and which rep closes which kind of lead. Tap one to open it, or open both.</div>
+      </div>
+      <button type="button" class="shelf-all" onclick="mktAll()">${all ? 'Close both' : 'Open both'}</button>
+    </div>
+    <div class="shelf-grid">${tiles}</div>
+    ${body}
+  </div>`;
+}
+
+/* ── cardLeads() — "Leads by source" — DELETED 16 Aug 2026 ───────────────────
+   The owner rejected it in one line: a source with a dollar amount next to it
+   and no cost beside it is revenue wearing a marketing label. It ranked sources
+   by signed value with no spend anywhere on the card, so the biggest source
+   always looked like the best one — which is the opposite of the decision he
+   makes with it. Replaced by the MARKETING DRAWER above (cardSourceRow +
+   cardRepGrid), where every paid source is judged against the 10x line.
+   Also gone with it: LEADWIN / LEADTRADE and their setters, which nothing else
+   read. D.leadSources STAYS — diveMarketing() renders it inside every drill-in
+   and the intel board's "money on a bare id" finding reads byTrade, so the
+   loader is still live. It is not orphaned; do not remove it chasing this. */
 
 /* Channel view — the question "which kind of marketing earns" rather than
    "which individual source". Categories come from the same map. */
@@ -4534,11 +5131,19 @@ function render(){
                                    brand split on every tile, one window switch
                                    across all four
        4  Sales by rep           — who put it on the board
-       5  marketing              — leads by source (all companies first, then
-                                   the three trades) and appointments by
-                                   company. It was at the very bottom, which is
-                                   the wrong place for the thing that decides
-                                   whether band 3 has anything in it next month.
+       4b appointments by company — MOVED UP to sit directly under sales by rep
+                                   (Kevin: it is his favourite and it sat too
+                                   low). "Who sold it" and "who got the at-bats"
+                                   are the same question one step apart, so they
+                                   now read as one pair with nothing between.
+       5  marketing              — THE MARKETING DRAWER. Replaces the old "Leads
+                                   by source" card, which the owner rejected: a
+                                   source with a dollar amount next to it and no
+                                   cost beside it is revenue wearing a marketing
+                                   label. Two boards behind a preview shelf —
+                                   return against the 10x line, and who closes
+                                   what — so the full boards are one tap away
+                                   rather than sprawled down the main page.
        6  Effort × results       — where effort and money disagree, kept in the
                                    open because it is the one card that reads
                                    both halves of the page at once.
@@ -4560,13 +5165,18 @@ function render(){
       /* 4 · WHO SOLD IT */
       cardReps(),
 
-      /* 5 · MARKETING — what produced the appointments the money came from.
-         Leads by source opens with the all-companies row over all four windows,
-         the way every other instrument on this page opens; appointments by
-         company sits directly under it, because "which sources ran" and "which
-         company got the appointments" are one question asked twice. */
-      cardLeads(),
+      /* 4b · WHO GOT THE AT-BATS. Moved up out of the marketing band to sit
+         directly under sales by rep — Kevin's favourite band and it was sitting
+         too far down the page. It belongs here anyway: "who put it on the
+         board" and "who was given the chances" are one question one step
+         apart, and reading them as a pair is the whole point. */
       cardApptByCompany(),
+
+      /* 5 · MARKETING — what produced the appointments the money came from,
+         and what it cost. A DRAWER, not a card: the preview shelf carries a
+         live miniature of each board and the full boards open on a tap, so the
+         main page keeps its shape. The old cardLeads() is gone with it. */
+      marketingRoom(),
 
       /* 6 · WHERE EFFORT AND RESULTS DISAGREE. Stays visible even though the
          rest of the effort suite folded: this is the card that reads both
@@ -4595,8 +5205,6 @@ function keepScroll(fn){
 function setEff(k){ keepScroll(() => { EFFWIN = k; }); loadEffortIntel(); }
 function setApptCo(k){ keepScroll(() => { APPTCOWIN = k; }); }
 function setQuota(k){ keepScroll(() => { QUOTAWIN = k; }); }
-function setLead(k){ keepScroll(() => { LEADWIN = k; }); }
-function setTrade(b){ keepScroll(() => { LEADTRADE = b; }); }
 
 /* ── charts. Kevin's Chart.js idiom: mono ticks, #1c3528 tooltips. ─────────
       If the CDN is blocked or offline, every chart says so out loud instead of
@@ -4994,7 +5602,7 @@ addEventListener('resize', () => {
    server for hours while Kevin looked at yesterday's build and reported the bug
    as unfixed. That happened. The page now checks version.json on every load and
    reloads itself once if the deployed build is newer than the one running. */
-const BUILD = '2026-08-15T23:05Z-attention-headline-scale';
+const BUILD = '2026-08-16T03:40Z-marketing-drawer';
 const SB_URL = 'https://lzegjjbkfuecrhdvlvay.supabase.co';
 /* The one page that can finish a password reset. Hard-coded rather than derived,
    because every derivation of it so far has been a source of bugs: a bare origin
@@ -7247,6 +7855,34 @@ function buildData(raw){
       apptsWithRep: appts.filter(a=>a.rep_id).length, touches: touches.length,
       // Coverage of the field every dollar on this page is actually built from.
       jobsWithSold: jobs.filter(j=>Number(j.fin_sold_amount)>0).length },
+    /* ── FEEDS FOR THE MARKETING DRAWER ──────────────────────────────────────
+       Slim projections, not the raw rows. The drawer needs a project→source
+       join and a project→rep join that nothing else on the page computes, and
+       holding the full 11.5k job objects alive after buildData returns to get
+       four fields off each one is weight a phone carries for the whole session.
+       Each row here is exactly what the two boards read and nothing else.
+
+       reporting_excluded is held out at the source, matching what
+       rpt_report_marketing_roi's `led` CTE does — the 012 batch-entry anomalies
+       are 12 jobs, all Google, and leaving them in would make board 1's own
+       leads column disagree with the RPC feeding the row beside it. */
+    mktJobs: allJobs
+      .filter(j => !j.reporting_excluded && j.cc_lead_source_id && j.cc_project_id)
+      .map(j => ({ p: String(j.cc_project_id), r: j.rep_id ? String(j.rep_id) : null,
+                   l: String(j.cc_lead_source_id) })),
+    /* Booked, not run: "appointments set" is what the setters produced off a
+       source, so it dates by cc_created_at. The console keeps these two facts
+       apart everywhere else (see cardApptByCompany) and this board does too. */
+    mktAppts: appts.filter(a => a.cc_project_id && a.cc_created_at && !a.is_internal)
+      .map(a => ({ p: String(a.cc_project_id), c: a.cc_created_at })),
+    /* Sellers only — migration 098's roster law. A non-selling manager has no
+       closing rate to read and would land a row of blanks across the grid. */
+    mktSellers: allReps.filter(r => r.active && r.sells)
+      .map(r => ({ id: String(r.id), name: r.name || '—' })),
+    /* cc_lead_id → rollup_name, migration 163's canonical grouping. Falls back
+       to `name` only if a row somehow has no rollup; never the other way. */
+    mktRollup: Object.fromEntries(leadNames.map(e =>
+      [String(e.cc_lead_id), e.rollup_name || e.name || null])),
     weeks, daily, monthly, cadence, targets, monthShape, quotaBoard, effort, leadSources, qb, appointments,
     // window bounds as plain YYYY-MM-DD, so the Billdu feed (whose dates are
     // already resolved to Eastern) can be filtered without re-parsing timezones
@@ -7354,9 +7990,12 @@ async function loadAll(){
     qp('touches?select=rep_id,play,occurred_at&source_kind=neq.app_sample'),
     qp('rep_targets?select=rep_id,daily_touch_goal,goal_source'),
     qp('score_components?select=key,title,weight&kind=eq.touch&order=ordinal'),
-    // The real lead-source name map: 22 rows, name + category + whether the
-    // category came from Kevin or was inferred.
-    qp('lead_sources?select=cc_lead_id,name,category,category_from'),
+    // The real lead-source name map: name + category + whether the category came
+    // from Kevin or was inferred, and — since migration 163 — `rollup_name`, the
+    // canonical grouping the marketing drawer and report 10 both key off. CC
+    // fragments one channel across many ids (Google is five, Angi three), so a
+    // board grouped by `name` splits the two biggest paid sources apart.
+    qp('lead_sources?select=cc_lead_id,name,category,category_from,rollup_name'),
   ]);
   // Oasis sells through Billdu and Contractors Cloud imports it late, so a CC
   // zero for Oasis is not the same claim as "Oasis sold nothing". Optional:
@@ -7452,6 +8091,7 @@ async function loadAll(){
   D = buildData(RAW);
   render();
   loadEffortIntel();   // after first paint — a missing 108/119 can never block the page
+  loadMarketing();     // likewise: an unapplied 166 leaves the drawer honest, never blank
 }
 
 /* Reload once if the server has a newer build than the one running. Guarded by a
