@@ -3620,6 +3620,19 @@ function setMktOff(n){
    thing that cannot be drawn, and the board says so where it would have sat
    rather than borrowing this series to stand in for it.
 
+   BUT THE RPC'S by_source SECTION IS NOT SAFE FOR EVERY WINDOW — it is a
+   different bug from the leads column's. `by_source` is built by joining
+   signed dollars onto a `led` (leads) CTE that is itself keyed on
+   jobs.created_at, and every job's created_at was stamped in one shot on
+   20 Jul 2026 (the warehouse backfill). So a pre-July window's `led` is
+   empty and `by_source` comes back `[]` even though the signed dollars are
+   real. Migration 172 backfilled Mar–Jun into
+   rpt_marketing_revenue_by_source_month straight from jobs.contract_signed_at
+   / cc_lead_source_id (neither touched by the created_at backfill — verified
+   against a live Contractors Cloud pull, see docs/roi-board/handoff-source-backfill.md),
+   applying signedUnion() money rules. Those four months are read from that
+   table below; the RPC still drives whatever month is still open.
+
    Six windows, not five: the board's matrix runs Apr→Aug and the sixth slot
    carries the current month so "went quiet" can tell a source that stopped
    from a source that simply has not signed yet this month. Loaded after the
@@ -3632,12 +3645,31 @@ const MK2_MONTHS = 6;
 async function loadMkt2(){
   if (MKT2 || MKT2_LOADING) return;
   MKT2_LOADING = true;
+  /* One cheap pull covers every backfilled month at once — no point walking
+     rpt_marketing_revenue_by_source_month window by window like the RPC. */
+  const backfill = await q('rpt_marketing_revenue_by_source_month?select=month,source_name,signed_jobs,signed_dollars')
+    .catch(() => null);
+  const backfillByMonth = Object.create(null);
+  for (const row of (backfill || [])) {
+    const key = String(row.month).slice(0, 7);
+    const bySrc = backfillByMonth[key] || (backfillByMonth[key] = Object.create(null));
+    /* Company rows fold together here — the matrix reads company-blind,
+       same as the RPC's own by_source (never filtered by company). */
+    const cur = bySrc[row.source_name] || { dollars: 0, jobs: 0 };
+    cur.dollars += Number(row.signed_dollars || 0);
+    cur.jobs += Number(row.signed_jobs || 0);
+    bySrc[row.source_name] = cur;
+  }
   /* Oldest first, so the matrix and the sparklines read left-to-right in time
      without the caller having to reverse them. */
   const offs = [];
   for (let i = MK2_MONTHS - 1; i >= 0; i--) offs.push(i);
   const got = await Promise.all(offs.map(async off => {
     const s = mkMonthStart(off), e = new Date(s.getFullYear(), s.getMonth() + 1, 0);
+    const key = mkISO(s).slice(0, 7);
+    if (backfillByMonth[key]) {
+      return { key, label: MNAMES[s.getMonth()], off, bySrc: backfillByMonth[key], backfilled: true };
+    }
     try {
       const r = await qOne(`rpc/rpt_report_marketing_roi?win_start=${mkISO(s)}&win_end=${mkISO(e)}`);
       const bySrc = Object.create(null);
@@ -3645,8 +3677,8 @@ async function loadMkt2(){
         bySrc[row.source_name] = { dollars: Number(row.signed_dollars || 0),
                                    jobs: Number(row.signed_jobs || 0) };
       }
-      return { key: mkISO(s).slice(0, 7), label: MNAMES[s.getMonth()], off, bySrc };
-    } catch (err) { return { key: mkISO(s).slice(0, 7), label: MNAMES[s.getMonth()], off, err: err.status || 'x' }; }
+      return { key, label: MNAMES[s.getMonth()], off, bySrc };
+    } catch (err) { return { key, label: MNAMES[s.getMonth()], off, err: err.status || 'x' }; }
   }));
   /* One dead window does not kill the section — it renders as a gap in the
      row with the month named, which is a different fact from a zero. */
@@ -5675,7 +5707,7 @@ function mkt2CardQuiet(){
     <div class="m2-card-sub" style="margin:0">Walking the last ${MK2_MONTHS} months…</div></div>`;
   if (MKT2.err) return mk2Withheld('Went quiet · sources that stopped', 'no feed',
     'The month walk did not answer',
-    `Every one of the ${MK2_MONTHS} windowed calls to <b>rpt_report_marketing_roi</b> failed (${esc(String(MKT2.err))}). That RPC is migration 160 as corrected by 165.`);
+    `Every one of the ${MK2_MONTHS} windowed calls to <b>rpt_report_marketing_roi</b> failed (${esc(String(MKT2.err))}), and <b>rpt_marketing_revenue_by_source_month</b> (172, the Mar–Jun backfill) did not answer either. That RPC is migration 160 as corrected by 165.`);
   const live = MKT2.series.filter(m => !m.err);
   if (live.length < 3) return mk2Withheld('Went quiet · sources that stopped', 'too few months',
     'Not enough months came back to call anything quiet',
@@ -5717,7 +5749,7 @@ function mkt2CardMatrix(){
     <div class="m2-card-sub" style="margin:0">Walking the last ${MK2_MONTHS} months…</div></div>`;
   if (MKT2.err) return mk2Withheld('Signed revenue by source · by month', 'no feed',
     'The month walk did not answer',
-    `Every one of the ${MK2_MONTHS} windowed calls to <b>rpt_report_marketing_roi</b> failed (${esc(String(MKT2.err))}).`);
+    `Every one of the ${MK2_MONTHS} windowed calls to <b>rpt_report_marketing_roi</b> failed (${esc(String(MKT2.err))}), and <b>rpt_marketing_revenue_by_source_month</b> (172, the Mar–Jun backfill) did not answer either.`);
   const live = MKT2.series;
   const names = [...new Set(live.filter(m => !m.err).flatMap(m => Object.keys(m.bySrc)))];
   if (!names.length) return mk2Withheld('Signed revenue by source · by month', 'no rows',
@@ -5729,7 +5761,7 @@ function mkt2CardMatrix(){
     <div class="m2-card-title">Signed revenue by source · by month<span class="m2-tag cc">live · cc</span></div>
     <div class="m2-card-sub">Every source, every month of the walk. <b>${esc(thisMonth.label)}</b> is partial — it is the month in progress.</div>
     <div class="m2-scroll"><table class="m2-mx">
-      <tr><th>Source</th>${live.map(m => `<th>${esc(m.label)}${m.off === 0 ? '*' : ''}</th>`).join('')}</tr>
+      <tr><th>Source</th>${live.map(m => `<th>${esc(m.label)}${m.off === 0 ? '*' : ''}${m.backfilled ? '†' : ''}</th>`).join('')}</tr>
       ${names.map(n => {
         const vals = live.map(m => m.err ? null : ((m.bySrc[n] || {}).dollars || 0));
         const peak = Math.max(...vals.map(v => v || 0));
@@ -5740,7 +5772,7 @@ function mkt2CardMatrix(){
           : `<td class="${v === peak ? 'pk' : ''}">${short(v)}</td>`).join('')}</tr>`;
       }).join('')}
     </table></div>
-    <div class="m2-note">Signed dollars per source per month, one windowed call to <b>rpt_report_marketing_roi</b> each, grouped on <b>lead_sources.rollup_name</b>. ${live.some(m => m.err) ? `<b>${live.filter(m => m.err).length}</b> window${live.filter(m => m.err).length === 1 ? '' : 's'} did not answer and read as a dot, not a zero. ` : ''}A source with no revenue in the month reads an em-dash. Dimmed rows have signed nothing in the last two months — see Went quiet above.</div>
+    <div class="m2-note">Signed dollars per source per month, one windowed call to <b>rpt_report_marketing_roi</b> each, grouped on <b>lead_sources.rollup_name</b>. ${live.some(m => m.err) ? `<b>${live.filter(m => m.err).length}</b> window${live.filter(m => m.err).length === 1 ? '' : 's'} did not answer and read as a dot, not a zero. ` : ''}A source with no revenue in the month reads an em-dash. Dimmed rows have signed nothing in the last two months — see Went quiet above.${live.some(m => m.backfilled) ? ` <b>†</b> — the RPC can't group these months by source (its <code>led</code> CTE keys on <code>jobs.created_at</code>, one-shot-backfilled to 20 Jul); read instead from <b>rpt_marketing_revenue_by_source_month</b> (migration 172), pulled straight from <code>jobs.contract_signed_at</code>/<code>cc_lead_source_id</code> and validated against a live Contractors Cloud pull. Cancelled contracts excluded; see <a href="docs/roi-board/handoff-source-backfill.md">the backfill handoff</a> for the June cross-foot against QB.` : ''}</div>
   </div>`;
 }
 
