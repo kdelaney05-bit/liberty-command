@@ -1384,6 +1384,16 @@
   .m2-tag.manual { color: var(--gold); border-color: rgba(212,177,90,0.3); }
   .m2-tag.none { color: var(--text-dim); border-color: rgba(255,255,255,0.12); }
 
+  /* The spend-freshness nag. Not in the approved standalone file — added after.
+     Deliberately NOT the .withheld skin: withheld (faint wash, dim prose) means
+     a feed cannot deliver; this louder amber strip means the book is live and a
+     person has not typed last month into it yet. */
+  .m2-nag { background: rgba(212,177,90,0.13); border: 1px solid rgba(212,177,90,0.55);
+    border-radius: 10px; padding: 10px 14px; margin-bottom: 14px;
+    font-family: 'JetBrains Mono', monospace; font-size: 11px; line-height: 1.5;
+    color: var(--gold); letter-spacing: 0.03em; }
+  .m2-nag b { color: #e8ca6e; font-weight: 600; }
+
   /* header */
   .m2-hdr { margin-bottom: 20px; padding-bottom: 16px; border-bottom: 1px solid var(--line); }
   .m2-eyebrow { font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 0.18em;
@@ -5028,13 +5038,32 @@ function mkt2Foot(){
   </div>`;
 }
 
+/* ── THE SPEND-FRESHNESS NAG ──────────────────────────────────────────────── */
+/* A nag, not a withheld feed, and deliberately not wearing that skin. It fires
+   when the spend book is applied, the previous calendar month has no row in it,
+   and today is past the 10th — ten days' grace to type a month before the
+   board starts asking. Always the previous CALENDAR month, whatever month the
+   board is browsing: freshness is a property of the book, not of the view.
+   It changes no number: no average steps in, no month is carried forward, and
+   every section below keeps its honest-empty state. The banner explains the
+   gap; it does not paper over it. A missing book is a different state — a feed
+   problem the refusal panels already name — so no nag is drawn for it: nagging
+   someone to type into a table that does not exist misnames whose move it is. */
+function mkt2Nag(){
+  if (!MKT || !Array.isArray(MKT.spend)) return '';
+  if (new Date().getDate() <= 10) return '';
+  const prevKey = mkISO(mkMonthStart(1));
+  if (MKT.spend.some(s => String(s.month).slice(0, 10) === prevKey)) return '';
+  return `<div class="m2-nag"><b>${esc(mkMonthLabel(1))} spend not entered</b> — return figures below are understated.</div>`;
+}
+
 /* ── THE BOARD, IN THE APPROVED ORDER ─────────────────────────────────────── */
 function mkt2Body(){
   if (!MKT || (!MKT.roi && !MKT.roiErr)) return `<div class="m2-card"><div class="m2-card-sub" style="margin:0">Reading…</div></div>`;
   if (MKT.roiErr) return mk2Withheld('Marketing board · ROI edition', 'no feed',
     'The whole board is withheld',
     `<b>rpt_report_marketing_roi</b> did not answer (${esc(String(MKT.roiErr))}). That RPC is <b>migration 160 as corrected by 165</b>; if it is missing here, apply those and the board goes live with no further deploy. Every section on this board reads from it, so none is drawn — half a picture of what marketing cost would be worse than none.`);
-  return mkt2Head() + `<div class="m2-stack">` + [
+  return mkt2Nag() + mkt2Head() + `<div class="m2-stack">` + [
     mkt2CardAsk(),
     mkt2CardThermo(),
     mkt2CardEarned(),
@@ -7325,7 +7354,7 @@ addEventListener('resize', () => {
    the last one, it is to tell a human which build is on the server and when it
    got there. A number nobody clocked cannot answer that, and the first time it
    is asked in anger will be the morning a stale build is being chased. */
-const BUILD = '2026-08-17T00:22Z-marketing-board-roi';
+const BUILD = '2026-08-17T01:05Z-spend-freshness-nag';
 const SB_URL = 'https://lzegjjbkfuecrhdvlvay.supabase.co';
 /* The one page that can finish a password reset. Hard-coded rather than derived,
    because every derivation of it so far has been a source of bugs: a bare origin
