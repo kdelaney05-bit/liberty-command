@@ -195,3 +195,92 @@ in-progress changes with it — a parallel editor and OneDrive both write to tha
 path. Editing outside the synced folder is the reason this commit is clean. If
 you run two sessions against this repo again, pause OneDrive sync or work in a
 worktree.
+
+---
+
+# Addendum — the overcorrection, corrected
+
+17 Aug 2026 · branch `claude/roi-board-period-roster`
+
+## The rule, third try
+
+The roster law has now been wrong in both directions. `active && sells` asked
+who works here **today** and deleted Jared's July book. The fix — every seller
+the roster has ever carried — swung past the target: *Who closes what*
+rendered every rep in company history. Gerardo Costas, Nick Campana, Mike
+Teixeira, Daniel Chase — desks cold for months, seated as rows on the board
+that decides who gets the **next** lead.
+
+> **A rep is on the grid IFF they signed ≥1 job in the selected period.**
+> Not "active user", not "exists in history". Zero production in the window
+> is no row, departed or not; one signing seats a departed rep beside the
+> live ones, tagged **departed** as before.
+
+Signings date on `contract_signed_at` (`j.d`) — the same clock as every unit
+and dollar on the rep board — and the roster follows the drawer's month
+selector. The **cells stay all-time**: a month-sliced rep × source cell is
+n=2, and that refusal was never about the roster. The month picks who is in
+the room; the book stays whole. A month with no signer renders a withheld
+card naming the rule, never an empty grid.
+
+The monthly **Rep board** (board 10) is untouched: it was already built from
+the period's data, and its lead-or-signing presence rule is its own — a rep
+who took 38 leads and signed nothing is that board's finding, not this
+grid's.
+
+## The phone stops transposing
+
+The transposition (one block per rep, sources down) was honest at 5 rows and
+absurd at a full roster — a four-screen vertical scroll. Deleted, CSS and
+all, per the standing practice of removing drawing code for surfaces that no
+longer exist. Every width now renders the **same heat map**:
+
+- **Top 8 by signed $ in the period**; the rest behind one counted
+  `› N more reps` row in the sticky name column — pure-DOM toggle
+  (`mkGridMore`), same disclosure grammar as the source ledger's fold, so
+  opening it cannot lose the browsed month or the scroll position.
+- Below 700px, columns narrow to the month's **active sources** —
+  `mkPeriodSrc()` re-asks the source ledger's own law (a cost in the book
+  this month OR a signed dollar this month). Hidden columns are counted and
+  named in the note; if the ROI feed has not answered, or the rule would
+  blank every column, nothing hides.
+- Phone cells tighten to 54px and drop the per-cell `no outcome logged` line;
+  the card's withheld block still states that fact once, in full. Desktop
+  cells are untouched.
+
+Ranking by period signed $ replaced roster order on both widths — the fold
+has to cut somewhere, and "biggest book first" is the only cut that means
+anything. Desktop layout is otherwise unchanged; the underlying query and
+the period selector are untouched.
+
+## The brief's numbers, again
+
+The brief seating this rule said Jared, July: **22 signed / $121,234**. Both
+instruments still say **26 / $137,116** (see "Numbers in the brief that live
+data does not support" above — nothing has changed since). The rule is
+satisfied either way — ≥1 signing seats him — and the board prints what it
+computes. If 22/$121,234 encodes a filter, it still needs naming before it
+goes on a screen.
+
+## Verified
+
+Real `mkGridData()` / `cardRepGrid()` / `mkGridMore()` exercised in the
+shipped `index.html` over CDP with a 14-seller fixture (10 July signers, 3
+long-departed ghosts, 1 active rep with zero July signings), true device
+metrics — `--window-size` under 500px still crops on Windows.
+
+| Check | 1400px | 390px |
+|---|---|---|
+| Rows rendered | 8 + `› 2 more reps` | same |
+| Jared present, tagged departed | yes | yes |
+| Ghosts (Gerardo/Nick/Daniel/Tim-active) | absent | absent |
+| Order | signed $ desc, Jared 2nd | same |
+| Period-inactive columns (Yard Sign, Porch) | visible | hidden, named in note |
+| Per-cell ran line | visible | hidden, withheld block carries it |
+| Page scrolls sideways | no | no — grid scrolls inside `.mkg-wrap` |
+| Fold toggle | 2 rows revealed | 2 rows revealed |
+| Month with no signer | — | withheld card names the rule |
+
+Screenshots: `grid-period-roster-390.png`, `grid-period-roster-1400-open.png`
+beside this file. Built in a worktree outside the OneDrive-synced folder, for
+the reason the previous section documents.

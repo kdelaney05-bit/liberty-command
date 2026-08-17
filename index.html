@@ -759,8 +759,12 @@
     text-transform: uppercase; color: var(--accent-soft); min-width: 108px; text-align: center; }
 
   /* BOARD 2 · the rep × source grid. Reps down, sources across. Wide by nature,
-     so it scrolls horizontally at desk width and TRANSPOSES on a phone (see the
-     700px block) — every number survives either way; nothing is truncated. */
+     so it scrolls horizontally — ONE rendering at every width. The phone used
+     to transpose into one block per rep, which at a full roster was a
+     four-screen vertical scroll; now the phone gets the same heat map,
+     compressed: cells tighten (see the 700px block) and columns narrow to the
+     sources active in the browsed month — the same ACTIVE law the source
+     ledger folds on. Hidden columns are named under the grid, never lost. */
   .mkg-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; margin: 0 -16px; padding: 0 16px 4px; }
   /* WIDTH: max-content, NOT min-width:100%. THAT WAS THE CLIPPING BUG.
      A table laid out `auto` inside a narrower box does not overflow — it
@@ -791,7 +795,7 @@
   /* A seller who has left the roster still holds the book they closed, and
      every surface that names them says so — otherwise a departed rep's row
      reads as a live desk to route the next appointment to. */
-  .mkg tbody th .gone, .mkp-nm .gone, .rep-head .nm .gone, .m2-rp-nm .gone {
+  .mkg tbody th .gone, .rep-head .nm .gone, .m2-rp-nm .gone {
     font-family: 'JetBrains Mono', monospace; font-size: 7.5px; letter-spacing: .1em;
     text-transform: uppercase; color: var(--gold); margin-left: 6px; font-weight: 400; }
   .mkg tbody tr td { border-top: 1px solid var(--line); }
@@ -818,27 +822,29 @@
   .mk-legend { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 12px; font-family: 'JetBrains Mono', monospace;
     font-size: 8.5px; letter-spacing: .06em; text-transform: uppercase; color: var(--text-dim); align-items: center; }
   .mk-legend i { display: inline-block; width: 9px; height: 9px; border-radius: 3px; margin-right: 5px; vertical-align: -1px; }
-  /* The phone transposition: one block per rep, that rep's sources as rows. */
-  .mkg-phone { display: none; }
-  .mkp-rep { border: 1px solid var(--line); border-radius: 12px; padding: 12px 13px; margin-top: 10px; background: var(--bg-card-hi); }
-  .mkp-nm { font-size: 14px; font-weight: 500; margin-bottom: 8px; }
-  .mkp-row { display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: baseline;
-    padding: 8px 0; border-top: 1px solid var(--line); }
-  .mkp-row .s { font-size: 12px; color: var(--text-dim); min-width: 0; }
-  .mkp-row .v { text-align: right; }
-  .mkp-row .v .p { font-family: 'Fraunces', serif; font-size: 15px; font-weight: 600; }
-  .mkp-row .v .p.strong { color: var(--green-soft); } .mkp-row .v .p.weak { color: var(--red); }
-  .mkp-row .v .p.thin { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--text-dim); font-weight: 400; }
-  .mkp-row .v .n { font-family: 'JetBrains Mono', monospace; font-size: 8px; color: var(--text-dim); margin-top: 2px; }
-  .mkp-row .v .ran { font-family: 'JetBrains Mono', monospace; font-size: 7px; color: var(--text-dim); margin-top: 3px; opacity: .85; }
-  .mkp-thin { font-family: 'JetBrains Mono', monospace; font-size: 8.5px; line-height: 1.6; color: var(--text-dim);
-    margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--line); }
-  .mkp-thin b { color: var(--text); font-weight: 600; }
+  /* The fold under the eighth rep. Same disclosure grammar as .mk-fold on the
+     source ledger: a counted row that opens on tap, folded never dropped. It
+     lives in the sticky name column so it cannot scroll out of reach sideways. */
+  .mkg-more { display: flex; align-items: center; gap: 7px; width: 100%; background: none; border: 0;
+    padding: 10px 10px 10px 0; cursor: pointer; font-family: 'JetBrains Mono', monospace; font-size: 9px;
+    letter-spacing: .08em; text-transform: uppercase; color: var(--text-dim); white-space: nowrap; }
+  .mkg-more .chev { display: inline-block; transition: transform .15s; }
+  .mkg-more.open .chev { transform: rotate(90deg); color: var(--accent); }
   @media (max-width: 700px) {
     .mk-row, .mk-head, .mk-fold { min-width: 560px; }
-    .mkg-wrap { display: none; }
-    .mkg-phone { display: block; }
     .mk-monthbar .mn-cur { min-width: 88px; font-size: 10px; }
+    /* The phone heat map: the SAME grid, tightened. Columns narrow to the
+       month's active sources (.off-p hides the rest — counted in the note),
+       cells drop to thumb width, and the per-cell ran line yields to the
+       card's own withheld block, which states the same fact once in full. */
+    .mkg .off-p { display: none; }
+    .mkg thead th { width: 54px; min-width: 54px; font-size: 6.5px; padding: 0 2px 6px; }
+    .mkg tbody td { min-width: 54px; }
+    .mkg thead th.rep-h, .mkg tbody th { width: 92px; min-width: 92px; }
+    .mkg tbody th { font-size: 11px; }
+    .mkc { margin: 3px 2px; padding: 6px 2px 5px; border-radius: 6px; }
+    .mkc .p { font-size: 13px; }
+    .mkc .ran { display: none; }
   }
   .flag-row { display: flex; gap: 10px; padding: 9px 0; border-bottom: 1px solid var(--line); }
   .flag-row:last-child { border-bottom: none; }
@@ -4650,12 +4656,23 @@ function mkTypeCost(btn){
 }
 
 /* ── BOARD 2 · THE REP × SOURCE GRID ──────────────────────────────────────── */
-/* ALL-TIME, deliberately, and not windowed like board 1. A month-sliced rep ×
-   source grid is n=2 in most cells: it would be a wall of noise wearing
-   percentage signs, and the board exists to move real appointments to real
-   people. Same reasoning as the cohort rule — a verdict needs a denominator on
-   both sides. */
-function mkGridData(){
+/* CELLS ALL-TIME, ROSTER BY PERIOD. The cells stay all-time, deliberately, and
+   not windowed like board 1: a month-sliced rep × source cell is n=2 — a wall
+   of noise wearing percentage signs — and the board exists to move real
+   appointments to real people. Same reasoning as the cohort rule: a verdict
+   needs a denominator on both sides.
+   The ROSTER is a different question, and it has now been wrong in both
+   directions. `active && sells` asked who works here TODAY and deleted Jared's
+   July book. The correction — every seller ever carried — swung past the
+   target: Gerardo Costas, Nick Campana, Mike Teixeira, Daniel Chase, desks
+   cold for months, rendered as rows on a board that decides who gets the NEXT
+   lead. The law both misses share: a rep is on this grid IFF they signed at
+   least one job in the BROWSED month. Not "active user", not "exists in
+   history" — zero signings in the window is no row, departed or not, and one
+   signing seats a departed rep beside the live ones, tagged. Signings date on
+   contract_signed_at (j.d), the same clock as every unit and dollar on the
+   rep board, and the roster follows the drawer's month selector. */
+function mkGridData(monthKey){
   const rollup = D.mktRollup || {};
   const signed = new Set(((MKT && MKT.signed) || []).map(s => String(s.cc_project_id)));
   const cells = Object.create(null);
@@ -4666,10 +4683,17 @@ function mkGridData(){
     const c = byRep[s] || (byRep[s] = { leads: 0, signed: 0 });
     c.leads++; if (signed.has(j.p)) c.signed++;
   }
-  /* PRESENCE IN THE DATA IS THE ROSTER. A seller earns a row here by carrying
-     leads on this grid, not by still being employed — see mktSellers for the
-     bug that rule replaced. Departed sellers keep their book and wear a tag. */
-  const sellers = (D.mktSellers || []).filter(r => cells[r.id]);
+  const pre = monthKey.slice(0, 7);
+  const inPeriod = Object.create(null);
+  for (const j of (D.mktJobs || [])) {
+    if (!j.r || !j.d || mkET(j.d).slice(0, 7) !== pre) continue;
+    const e = inPeriod[j.r] || (inPeriod[j.r] = { jobs: 0, rev: 0 });
+    e.jobs++; e.rev += Number(j.v || 0);
+  }
+  /* Ranked by what they signed in the month — the order the fold cuts at. */
+  const sellers = (D.mktSellers || []).filter(r => inPeriod[r.id] && cells[r.id])
+    .map(r => ({ ...r, mJobs: inPeriod[r.id].jobs, mRev: inPeriod[r.id].rev }))
+    .sort((a, b) => b.mRev - a.mRev);
   /* Column set: a source earns a column when at least one seller has enough
      volume on it to be read. Sources below that are NOT silently dropped — the
      count and their combined leads are stated under the grid. */
@@ -4710,13 +4734,42 @@ function mkGridData(){
    When CC starts logging outcomes, this is the one function to change. */
 const mkRanCell = () => `<div class="ran">no outcome logged</div>`;
 
+/* The month's ACTIVE sources — the source ledger's own law (see cardSourceRow:
+   a cost in the book this month OR a signed dollar this month), re-asked here
+   so the phone heat map can narrow to the columns a decision can be made
+   about. null when the ROI feed has not answered — then nothing is hidden,
+   because a hiding rule with no evidence is just hiding. */
+function mkPeriodSrc(monthKey){
+  const rows = ((MKT && MKT.roi && MKT.roi.sections) || {}).by_source || [];
+  if (!rows.length) return null;
+  const set = new Set();
+  for (const r of rows) {
+    const src = r.source_name, isG = src === 'Google';
+    const g = isG ? mkGoogleCard(monthKey) : null;
+    const spend = MK_FREE.has(src) ? null : isG ? (g ? g.total : null) : mkSpendOf(src, monthKey);
+    if (spend != null || Number(r.signed_dollars || 0) > 0) set.add(src);
+  }
+  return set;
+}
+
+/* How many reps the grid shows before the fold. Top 8 by signed $ in the
+   browsed month; the rest open on one counted tap, never dropped. */
+const MK_GRID_TOP = 8;
+
 function cardRepGrid(){
   if (!MKT || !MKT.signed) return `<div class="card full">
     <div class="card-title">Who closes what<span class="feed-tag cc">live · cc</span></div>
     <div class="card-sub" style="margin:0">Reading…</div></div>`;
 
-  const G = mkGridData();
-  if (!G.sellers.length || !G.cols.length) return `<div class="card full">
+  const monthKey = mkISO(mkMonthStart(MKTOFF));
+  const G = mkGridData(monthKey);
+  if (!G.sellers.length) return `<div class="card full">
+    <div class="card-title">Who closes what<span class="feed-tag cc">live · cc</span></div>
+    <div class="withheld"><div class="wt">No seller signed a job in ${esc(mkMonthLabel(MKTOFF))}</div><div class="wx">
+      A row on this grid is earned by signing at least one job in the browsed month — not by being on
+      today's payroll, and not by having ever sold here. ${esc(mkMonthLabel(MKTOFF))} has no signer yet,
+      so the grid has no rows, and nothing is inferred in their place.</div></div></div>`;
+  if (!G.cols.length) return `<div class="card full">
     <div class="card-title">Who closes what<span class="feed-tag cc">live · cc</span></div>
     <div class="withheld"><div class="wt">Nothing to rank yet</div><div class="wx">
       No seller carries ${MK_THIN} leads on any single source, so no cell on this grid can be read.</div></div></div>`;
@@ -4732,49 +4785,31 @@ function cardRepGrid(){
       <div class="n">${c.signed}/${c.leads}</div>${mkRanCell()}</div>`;
   };
 
-  const table = `<div class="mkg-wrap"><table class="mkg">
-    <thead><tr><th class="rep-h">Rep</th>${G.cols.map(s => `<th>${esc(s)}</th>`).join('')}</tr></thead>
-    <tbody>${G.sellers.map(r => `<tr><th>${esc(r.name)}${r.gone ? '<span class="gone">departed</span>' : ''}</th>
-      ${G.cols.map(s => `<td>${cellOf(r, s)}</td>`).join('')}</tr>`).join('')}</tbody>
-  </table></div>`;
+  /* The phone narrows to the month's active columns (.off-p hides below
+     700px). If the ROI feed has not answered, or the active rule would blank
+     every column, nothing is hidden — a phone with no columns is not compact,
+     it is blind. */
+  const act = mkPeriodSrc(monthKey);
+  const offSet = new Set(act ? G.cols.filter(s => !act.has(s)) : []);
+  if (offSet.size === G.cols.length) offSet.clear();
+  const colCls = s => offSet.has(s) ? ' class="off-p"' : '';
 
-  /* THE PHONE TRANSPOSITION. A rep × source matrix cannot be squeezed into
-     390px without either shrinking the figures past reading or hiding columns
-     behind a scroller nobody discovers. So on a phone it becomes one block per
-     rep with that rep's sources listed down — the same cells, the same colours,
-     the same thin rule, read one person at a time. Nothing is dropped: the
-     owner is usually asking about ONE rep on a phone anyway. */
-  const phone = `<div class="mkg-phone">${G.sellers.map(r => {
-    const mine = G.cols.map(s => [s, (G.cells[r.id] || {})[s]]).filter(([, c]) => c && c.leads);
-    if (!mine.length) return '';
-    /* The readable cells get a full row each; the thin ones collapse to one
-       line that still carries every count. Giving a 3-lead cell the same three
-       lines as a 791-lead one turned this into a 4,300px scroll where the
-       cells that can actually be acted on were buried among ones that cannot
-       be read at all. Nothing is dropped — the thin line names each source and
-       its raw counts, and says the ran state once for the group rather than
-       repeating it down a column of unreadable cells. */
-    const readable = mine.filter(([, c]) => c.leads >= MK_THIN);
-    const thin = mine.filter(([, c]) => c.leads < MK_THIN);
-    return `<div class="mkp-rep"><div class="mkp-nm">${esc(r.name)}${r.gone ? '<span class="gone">departed</span>' : ''}</div>
-      ${readable.map(([s, c]) => {
-        const p = 100 * c.signed / c.leads;
-        const k = G.median == null ? '' : p >= G.median + MK_BAND ? 'strong' : p <= G.median - MK_BAND ? 'weak' : '';
-        return `<div class="mkp-row"><div class="s">${esc(s)}</div>
-          <div class="v"><div class="p ${k}">${Math.round(p)}%</div>
-            <div class="n">${c.signed} of ${c.leads}</div>
-            <div class="ran">ran: no outcome logged</div></div></div>`;
-      }).join('')}
-      ${readable.length ? '' : `<div class="mkp-thin">No source with ${MK_THIN} leads or more yet.</div>`}
-      ${thin.length ? `<div class="mkp-thin"><b>Too few to read</b> — ${thin.map(([s, c]) =>
-        `${esc(s)} ${c.signed}/${c.leads}`).join(' · ')}. No outcome is logged on these either.</div>` : ''}
-    </div>`;
-  }).join('')}</div>`;
+  const row = (r, fold) => `<tr${fold ? ' data-foldrep hidden' : ''}><th>${esc(r.name)}${r.gone ? '<span class="gone">departed</span>' : ''}</th>
+      ${G.cols.map(s => `<td${colCls(s)}>${cellOf(r, s)}</td>`).join('')}</tr>`;
+  const shown = G.sellers.slice(0, MK_GRID_TOP), folded = G.sellers.slice(MK_GRID_TOP);
+  const table = `<div class="mkg-wrap"><table class="mkg">
+    <thead><tr><th class="rep-h">Rep</th>${G.cols.map(s => `<th${colCls(s)}>${esc(s)}</th>`).join('')}</tr></thead>
+    <tbody>${shown.map(r => row(r, false)).join('')}
+    ${folded.length ? `<tr><th><button type="button" class="mkg-more" onclick="mkGridMore(this)" aria-expanded="false"
+        title="Reps ranked ${MK_GRID_TOP + 1}+ by signed $ in ${esc(mkMonthLabel(MKTOFF))} — folded, not dropped"><span class="chev">›</span>${folded.length} more rep${folded.length === 1 ? '' : 's'}</button></th>
+      <td colspan="${G.cols.length}"></td></tr>
+    ${folded.map(r => row(r, true)).join('')}` : ''}</tbody>
+  </table></div>`;
 
   return `<div class="card full">
     <div class="card-title">Who closes what<span class="feed-tag cc">live · cc</span></div>
-    <div class="card-sub">Every seller against every source they carry real volume on — so an appointment can go to the person who closes that kind of lead. Each cell shows two denominators: signed against <b>leads assigned</b>, and signed against <b>appointments ran</b>.</div>
-    ${table}${phone}
+    <div class="card-sub">Every seller who <b>signed a job in ${esc(mkMonthLabel(MKTOFF))}</b>, ranked by what they signed, against every source they carry real volume on — so an appointment can go to the person who closes that kind of lead. The cells stay all-time evidence; the month picks who is in the room. Each cell shows two denominators: signed against <b>leads assigned</b>, and signed against <b>appointments ran</b>.</div>
+    ${table}
     <div class="mk-legend">
       <span><i style="background:rgba(108,194,139,0.4)"></i>${MK_BAND}+ pts above the grid median</span>
       <span><i style="background:rgba(217,106,94,0.4)"></i>${MK_BAND}+ pts below</span>
@@ -4783,8 +4818,19 @@ function cardRepGrid(){
     </div>
     <div class="withheld"><div class="wt">Appointments ran is empty, and that is the finding</div><div class="wx">
       The second denominator has <b>no feed anywhere</b>. Contractors Cloud does not log appointment outcomes — there is no ran field in the payload — so every cell says so in words rather than showing a number. <b>cc_appointments.cc_result_id</b> exists and looks like an outcome log; it is populated on <b>83 of 9,627</b> appointments and trails off after July, so it is not a denominator and this board deliberately does not read it. Appointments <i>set</i> is not substituted either: a rep who books ten and runs six is not the rep who books ten and runs ten, and that gap is the reason the column was asked for.</div></div>
-    <div class="note">Signed is <b>rpt_signings</b> where confirmed, matched to the job by <b>cc_project_id</b> — the same basis board 1 reads, so the two boards cannot disagree about who closed what. It is counted <b>distinct by project</b>: migration 150 splits an amended invoice into a signing row per late bell, which is right for money and would push a closing rate past 100%. Not <b>jobs.contract_signed_at</b>, which would understate Oasis — 227 of Google's confirmed signings arrive through Billdu and 32 of those sit on jobs with no contract date at all. All-time, not monthly: a month-sliced cell is n=2 and reads as noise. Sellers only (098) — but <b>every</b> seller the roster has carried, not only the ones still employed: a departed rep's book is some of the strongest evidence on this grid about which desk closes which lead, and filtering the roster to <code>active</code> used to delete it.${G.sellers.some(r => r.gone) ? ` <b>${G.sellers.filter(r => r.gone).map(r => esc(r.name)).join(', ')}</b> ${G.sellers.filter(r => r.gone).length === 1 ? 'has' : 'have'} left; ${G.sellers.filter(r => r.gone).length === 1 ? 'that row is' : 'those rows are'} tagged <b>departed</b> and ${G.sellers.filter(r => r.gone).length === 1 ? 'is' : 'are'} here for what the book proves, not as a desk to route to.` : ''} ${G.dropped.length ? `<b>${G.dropped.length}</b> source${G.dropped.length === 1 ? '' : 's'} ${G.dropped.length === 1 ? 'is' : 'are'} not a column here — no seller carries ${MK_THIN} leads on ${G.dropped.length === 1 ? 'it' : 'any of them'} (${G.droppedLeads.toLocaleString()} leads between them): ${esc(G.dropped.join(', '))}.` : ''}</div>
+    <div class="note">Signed is <b>rpt_signings</b> where confirmed, matched to the job by <b>cc_project_id</b> — the same basis board 1 reads, so the two boards cannot disagree about who closed what. It is counted <b>distinct by project</b>: migration 150 splits an amended invoice into a signing row per late bell, which is right for money and would push a closing rate past 100%. Not <b>jobs.contract_signed_at</b>, which would understate Oasis — 227 of Google's confirmed signings arrive through Billdu and 32 of those sit on jobs with no contract date at all. Cells are all-time, not monthly: a month-sliced cell is n=2 and reads as noise. The <b>rows</b> are monthly: a seller is here iff they signed at least one job in ${esc(mkMonthLabel(MKTOFF))} — not "active user", not "ever sold here". Zero signings in the window is no row, departed or not; the roster asked of today's payroll deleted Jared's July book, and the swing past it — every seller in company history — seated desks cold for months on a board that routes the next lead. Sellers only (098), and a departed rep's book is still some of the strongest evidence here about which desk closes which lead.${G.sellers.some(r => r.gone) ? ` <b>${G.sellers.filter(r => r.gone).map(r => esc(r.name)).join(', ')}</b> ${G.sellers.filter(r => r.gone).length === 1 ? 'has' : 'have'} left; ${G.sellers.filter(r => r.gone).length === 1 ? 'that row is' : 'those rows are'} tagged <b>departed</b> and ${G.sellers.filter(r => r.gone).length === 1 ? 'is' : 'are'} here for what the book proves, not as a desk to route to.` : ''} ${G.dropped.length ? `<b>${G.dropped.length}</b> source${G.dropped.length === 1 ? '' : 's'} ${G.dropped.length === 1 ? 'is' : 'are'} not a column here — no seller carries ${MK_THIN} leads on ${G.dropped.length === 1 ? 'it' : 'any of them'} (${G.droppedLeads.toLocaleString()} leads between them): ${esc(G.dropped.join(', '))}.` : ''}${folded.length ? ` The grid shows the top <b>${MK_GRID_TOP}</b> by signed $ in ${esc(mkMonthLabel(MKTOFF))}; <b>${folded.length}</b> more open${folded.length === 1 ? 's' : ''} on the fold — folded, never dropped.` : ''}${offSet.size ? ` On a phone the columns narrow to sources that cost or earned money in ${esc(mkMonthLabel(MKTOFF))} — the source ledger's own active rule — and <b>${offSet.size}</b> read${offSet.size === 1 ? 's' : ''} at desk width only: ${esc([...offSet].join(', '))}.` : ''}</div>
   </div>`;
+}
+
+/* The fold under the eighth rep — pure DOM, like mkFold: re-rendering the
+   drawer to open a disclosure would throw away the month the reader stepped
+   to and their scroll position with it. */
+function mkGridMore(btn){
+  const open = btn.getAttribute('aria-expanded') !== 'true';
+  btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+  btn.classList.toggle('open', open);
+  const tb = btn.closest('tbody');
+  if (tb) for (const tr of tb.querySelectorAll('tr[data-foldrep]')) tr.hidden = !open;
 }
 
 /* ── SPEND ENTRY ──────────────────────────────────────────────────────────── */
@@ -4877,7 +4923,8 @@ function ptSourceRow(){
 
 function ptRepGrid(){
   if (!MKT || !MKT.signed) return ptEmptyBox('Reading…');
-  const G = mkGridData();
+  const G = mkGridData(mkISO(mkMonthStart(MKTOFF)));
+  if (!G.sellers.length) return ptEmptyBox(`No seller signed a job in ${mkMonthLabel(MKTOFF)} yet`);
   if (!G.readable) return ptEmptyBox(`No seller carries ${MK_THIN} leads on one source yet`);
   let strong = 0, weak = 0;
   for (const r of G.sellers) for (const s of G.cols) {
