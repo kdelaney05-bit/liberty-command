@@ -1354,6 +1354,221 @@
   @media (min-width: 1700px) {
     .shell { max-width: 1560px; }
   }
+
+  /* ── THE MARKETING BOARD · ROI EDITION ────────────────────────────────────
+     Ported from the approved standalone board (liberty-command-marketing-
+     board-v2.html). Every declaration below is the approved one; the only
+     change is the `m2-` namespace on each selector.
+
+     That namespace is not cosmetic. The standalone board and this console
+     share 31 class names — .card, .card-title, .card-sub, .feed-tag, .stack,
+     .foot, .hdr, .shell, .nm, .amt, .on, .dim, .hot, .good, .bad, .free among
+     them — and every one of those is load-bearing somewhere else on this page.
+     Dropping the board's stylesheet in unprefixed would have restyled the
+     money row, the rep rows and the withheld panels across all six bands.
+
+     Two variables the standalone file used but never defined: --violet (this
+     console does define it, line 33) and --bg, which nothing defines anywhere.
+     --bg is mapped to --bg-deep below, which is what the standalone page
+     actually rendered against. */
+  .m2-stack { display: flex; flex-direction: column; gap: 12px; }
+  .m2-card { background: var(--bg-card); border: 1px solid var(--line); border-radius: 14px; padding: 16px; }
+  .m2-card-title { font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 0.18em;
+    text-transform: uppercase; color: var(--text-dim); margin-bottom: 4px; }
+  .m2-card-sub { font-size: 12px; color: var(--text-dim); margin-bottom: 12px; line-height: 1.45; }
+  .m2-tag { display: inline-block; margin-left: 6px; font-family: 'JetBrains Mono', monospace;
+    font-size: 8px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--green);
+    border: 1px solid rgba(108,194,139,0.3); border-radius: 100px; padding: 1px 6px; vertical-align: middle; }
+  .m2-tag.cc { color: var(--blue); border-color: rgba(107,168,201,0.3); }
+  .m2-tag.chase { color: var(--blue); border-color: rgba(107,168,201,0.3); }
+  .m2-tag.manual { color: var(--gold); border-color: rgba(212,177,90,0.3); }
+  .m2-tag.none { color: var(--text-dim); border-color: rgba(255,255,255,0.12); }
+
+  /* header */
+  .m2-hdr { margin-bottom: 20px; padding-bottom: 16px; border-bottom: 1px solid var(--line); }
+  .m2-eyebrow { font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 0.18em;
+    text-transform: uppercase; color: var(--accent); margin-bottom: 6px; }
+  .m2-hdr h1 { font-family: 'Fraunces', serif; font-weight: 400; font-size: 28px;
+    letter-spacing: -0.02em; line-height: 1.05; margin-bottom: 18px; }
+  .m2-hdr h1 em { font-style: italic; color: var(--accent-soft); font-weight: 300; }
+  .m2-nw-block { display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; }
+  .m2-nw-label { font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 0.18em;
+    text-transform: uppercase; color: var(--text-dim); margin-bottom: 4px; }
+  .m2-nw { font-family: 'Fraunces', serif; font-size: 34px; font-weight: 500; line-height: 1; }
+  .m2-nw-sub { font-family: 'JetBrains Mono', monospace; font-size: 9px; color: var(--text-dim); margin-top: 5px; }
+  .m2-nw-delta { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--green); text-align: right; line-height: 1.5; }
+  .m2-nw-delta b { color: var(--green-soft); font-weight: 600; font-size: 22px; font-family: 'Fraunces', serif; }
+
+  /* ROI thermometers */
+  .m2-thermo { margin-bottom: 15px; }
+  .m2-thermo:last-child { margin-bottom: 2px; }
+  .m2-th-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 6px; gap: 10px; }
+  .m2-th-name { font-family: 'Fraunces', serif; font-size: 15px; font-weight: 500; }
+  .m2-th-name small { font-family: 'JetBrains Mono', monospace; font-size: 9px; color: var(--text-dim); margin-left: 6px; }
+  .m2-th-roas { font-family: 'Fraunces', serif; font-size: 19px; font-weight: 600; color: var(--green-soft); white-space: nowrap; }
+  .m2-th-roas.hot { color: var(--gold); }
+  .m2-th-roas.cold { color: var(--red); }
+  .m2-th-roas.none { color: var(--text-dim); font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 400; }
+  .m2-th-bar { position: relative; height: 13px; background: #0f2419; border-radius: 100px; border: 1px solid var(--line); }
+  .m2-th-fill { position: absolute; left: 0; top: 0; height: 100%; border-radius: 100px;
+    background: linear-gradient(90deg, #3f8a5e, #8fd5a8); }
+  .m2-th-fill.cold { background: linear-gradient(90deg, #8a4a42, #d96a5e); }
+  .m2-th-fill.hot { background: linear-gradient(90deg, #9d8340, #e8ca6e); }
+  .m2-th-floor { position: absolute; top: -4px; width: 2px; height: 21px; background: var(--gold); }
+  .m2-th-floor::after { content: '10×'; position: absolute; top: -13px; left: 50%; transform: translateX(-50%);
+    font-family: 'JetBrains Mono', monospace; font-size: 8px; color: var(--gold); }
+  .m2-th-cap { display: flex; justify-content: space-between; gap: 8px; font-family: 'JetBrains Mono', monospace;
+    font-size: 9px; color: var(--text-dim); margin-top: 5px; }
+  .m2-th-cap b { color: var(--text); font-weight: 500; }
+
+  /* free / earned sources */
+  .m2-free-row { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 8px 0;
+    border-bottom: 1px solid var(--line); font-family: 'JetBrains Mono', monospace; font-size: 11px; }
+  .m2-free-row:last-child { border-bottom: none; }
+  .m2-free-row .nm { color: var(--text); }
+  .m2-free-row .nm small { color: var(--text-dim); font-size: 9px; margin-left: 6px; }
+  .m2-free-row .amt { color: var(--green-soft); font-weight: 600; white-space: nowrap; }
+
+  /* brand tiles */
+  .m2-brand-tile { background: var(--bg-card-hi); border: 1px solid var(--line); border-radius: 12px; padding: 13px 14px; margin-bottom: 9px; }
+  .m2-brand-tile:last-child { margin-bottom: 0; }
+  .m2-bt-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 9px; gap: 10px; }
+  .m2-bt-name { font-family: 'Fraunces', serif; font-size: 16px; font-weight: 500; }
+  .m2-bt-roas { font-family: 'Fraunces', serif; font-size: 20px; font-weight: 600; color: var(--green-soft); white-space: nowrap; }
+  .m2-bt-roas small { font-family: 'JetBrains Mono', monospace; font-size: 8px; color: var(--text-dim); font-weight: 400; }
+  .m2-bt-roas.none { color: var(--text-dim); font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 400; }
+  .m2-bt-rows { font-family: 'JetBrains Mono', monospace; font-size: 10px; }
+  .m2-bt-row { display: flex; justify-content: space-between; gap: 10px; padding: 3px 0; color: var(--text-dim); }
+  .m2-bt-row b { color: var(--text); font-weight: 500; }
+  .m2-bt-row b.g { color: var(--green-soft); }
+
+  /* chart */
+  .m2-chart-box { position: relative; width: 100%; height: 190px; margin-top: 6px; }
+
+  /* matrix / tables */
+  .m2-mx { width: 100%; border-collapse: collapse; font-family: 'JetBrains Mono', monospace; font-size: 9px; }
+  .m2-mx th { text-align: right; font-weight: 500; color: var(--text-dim); font-size: 8px; letter-spacing: 0.08em;
+    text-transform: uppercase; padding: 5px 3px; border-bottom: 1px solid var(--line); }
+  .m2-mx th:first-child { text-align: left; }
+  .m2-mx td { padding: 5px 3px; text-align: right; color: var(--text-dim); border-bottom: 1px solid var(--line); }
+  .m2-mx td:first-child { text-align: left; color: var(--text); font-size: 10px; }
+  .m2-mx td.z { color: rgba(217,106,94,0.75); }
+  .m2-mx td.pk { color: var(--green-soft); font-weight: 600; }
+  .m2-mx tr.dim td:first-child { color: var(--text-dim); }
+  .m2-note { font-family: 'JetBrains Mono', monospace; font-size: 8px; color: var(--text-dim); margin-top: 8px;
+    letter-spacing: 0.04em; line-height: 1.6; }
+  .m2-note b { color: var(--text); }
+
+  .m2-co { width: 100%; border-collapse: collapse; font-family: 'JetBrains Mono', monospace; font-size: 9.5px; }
+  .m2-co th { text-align: right; font-size: 8px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-dim);
+    font-weight: 500; padding: 6px 3px; border-bottom: 1px solid var(--line); }
+  .m2-co th:first-child { text-align: left; }
+  .m2-co td { padding: 6px 3px; text-align: right; color: var(--text-dim); border-bottom: 1px solid var(--line); }
+  .m2-co td:first-child { text-align: left; color: var(--text); font-family: 'Inter Tight', sans-serif; font-size: 11.5px; }
+  .m2-co td.pk { color: var(--green-soft); font-weight: 600; }
+  .m2-co td.z { color: rgba(255,255,255,0.13); }
+
+  /* cost per lead / unit */
+  .m2-cpu { width: 100%; border-collapse: collapse; font-family: 'JetBrains Mono', monospace; font-size: 10px; }
+  .m2-cpu th { text-align: right; font-weight: 500; color: var(--text-dim); font-size: 8px; letter-spacing: 0.08em;
+    text-transform: uppercase; padding: 6px 3px; border-bottom: 1px solid var(--line); }
+  .m2-cpu th:first-child { text-align: left; }
+  .m2-cpu td { padding: 7px 3px; text-align: right; border-bottom: 1px solid var(--line); color: var(--text-dim); }
+  .m2-cpu td:first-child { text-align: left; color: var(--text); font-family: 'Inter Tight', sans-serif; font-size: 12px; }
+  .m2-cpu td.u { color: var(--text); font-weight: 600; }
+  .m2-cpu td.good { color: var(--green-soft); font-weight: 600; }
+  .m2-cpu td.bad { color: var(--red); font-weight: 600; }
+  .m2-cpu td.free { color: var(--green-soft); font-style: italic; }
+  .m2-cpu td.absent { color: var(--text-dim); font-style: italic; }
+  .m2-cpu tr.tot td { border-top: 1px solid rgba(255,255,255,0.18); border-bottom: none;
+    padding-top: 9px; color: var(--text); font-weight: 600; }
+  .m2-cpu-split { display: flex; gap: 8px; margin-top: 12px; }
+  .m2-cs { flex: 1; background: var(--bg-card-hi); border: 1px solid var(--line); border-radius: 10px; padding: 11px; }
+  .m2-cs.earn { border-color: rgba(108,194,139,0.4); }
+  .m2-cs .k { font-family: 'JetBrains Mono', monospace; font-size: 8px; letter-spacing: 0.1em;
+    text-transform: uppercase; color: var(--text-dim); }
+  .m2-cs .v { font-family: 'Fraunces', serif; font-size: 19px; font-weight: 500; margin-top: 5px; }
+  .m2-cs.earn .v { color: var(--green-soft); }
+  .m2-cs .u2 { font-family: 'JetBrains Mono', monospace; font-size: 8px; color: var(--text-dim); margin-top: 4px; line-height: 1.4; }
+
+  /* company unit-econ blocks */
+  .m2-ue-blend { display: flex; gap: 8px; margin-bottom: 14px; }
+  .m2-ue-b { flex: 1; background: var(--bg-card-hi); border: 1px solid var(--line); border-radius: 10px; padding: 12px 10px; text-align: center; }
+  .m2-ue-b .k { font-family: 'JetBrains Mono', monospace; font-size: 8px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-dim); }
+  .m2-ue-b .v { font-family: 'Fraunces', serif; font-size: 22px; font-weight: 500; margin-top: 5px; }
+  .m2-ue-b .u2 { font-family: 'JetBrains Mono', monospace; font-size: 8px; color: var(--text-dim); margin-top: 4px; }
+  .m2-co-block { background: var(--bg-card-hi); border: 1px solid var(--line); border-radius: 12px; padding: 13px; margin-bottom: 11px; }
+  .m2-co-block:last-child { margin-bottom: 0; }
+  .m2-co-block.f { border-left: 3px solid var(--green); }
+  .m2-co-block.o { border-left: 3px solid var(--violet); }
+  .m2-co-block.r { border-left: 3px solid var(--gold); }
+  .m2-co-hd { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; gap: 10px; }
+  .m2-co-hd .nm { font-family: 'Fraunces', serif; font-size: 16px; font-weight: 500; }
+  .m2-co-hd .nm small { display: block; font-family: 'JetBrains Mono', monospace; font-size: 8px;
+    letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-dim); margin-top: 2px; }
+  .m2-co-kpi { display: flex; gap: 6px; }
+  .m2-co-kpi div { text-align: right; }
+  .m2-co-kpi .kk { font-family: 'JetBrains Mono', monospace; font-size: 7.5px; letter-spacing: 0.08em;
+    text-transform: uppercase; color: var(--text-dim); }
+  .m2-co-kpi .vv { font-family: 'Fraunces', serif; font-size: 16px; font-weight: 500; margin-top: 2px; }
+  .m2-co-kpi .vv.g { color: var(--green-soft); } .m2-co-kpi .vv.r { color: var(--red); }
+  .m2-co-kpi .vv.none { color: var(--text-dim); font-family: 'JetBrains Mono', monospace; font-size: 9px; }
+  .m2-src { width: 100%; border-collapse: collapse; font-family: 'JetBrains Mono', monospace; font-size: 9px; }
+  .m2-src th { text-align: right; font-size: 7.5px; letter-spacing: 0.06em; text-transform: uppercase;
+    color: var(--text-dim); font-weight: 500; padding: 4px 2px; border-bottom: 1px solid var(--line); }
+  .m2-src th:first-child { text-align: left; }
+  .m2-src td { padding: 5px 2px; text-align: right; color: var(--text-dim); border-bottom: 1px solid rgba(255,255,255,0.03); }
+  .m2-src td:first-child { text-align: left; color: var(--text); font-family: 'Inter Tight', sans-serif; font-size: 10.5px; }
+  .m2-src td.good { color: var(--green-soft); font-weight: 600; }
+  .m2-src td.bad { color: var(--red); font-weight: 600; }
+  .m2-src td.free { color: var(--green-soft); font-style: italic; }
+  .m2-src tr.tt td { border-top: 1px solid rgba(255,255,255,0.15); border-bottom: none; color: var(--text);
+    font-weight: 600; padding-top: 7px; }
+  .m2-co-read { font-family: 'JetBrains Mono', monospace; font-size: 8.5px; color: var(--text-dim);
+    line-height: 1.55; margin-top: 9px; padding-top: 9px; border-top: 1px dashed rgba(255,255,255,0.08); }
+  .m2-co-read b { color: var(--text); }
+
+  /* went quiet */
+  .m2-quiet-row { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--line); }
+  .m2-quiet-row:last-child { border-bottom: none; }
+  .m2-q-pulse { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  .m2-q-pulse.dead { background: var(--red); box-shadow: 0 0 0 3px rgba(217,106,94,0.15); }
+  .m2-q-pulse.fading { background: var(--gold); box-shadow: 0 0 0 3px rgba(212,177,90,0.15); }
+  .m2-q-body { flex: 1; min-width: 0; }
+  .m2-q-name { font-family: 'Fraunces', serif; font-size: 14px; font-weight: 500; }
+  .m2-q-meta { font-family: 'JetBrains Mono', monospace; font-size: 9px; color: var(--text-dim); margin-top: 3px; letter-spacing: 0.02em; }
+  .m2-q-spark { display: flex; align-items: flex-end; gap: 2px; height: 22px; width: 74px; flex-shrink: 0; }
+  .m2-q-spark i { flex: 1; background: var(--green-soft); border-radius: 1px; opacity: 0.85; min-height: 1px; }
+  .m2-q-spark i.z { background: rgba(217,106,94,0.45); height: 2px !important; }
+  .m2-q-lost { font-family: 'Fraunces', serif; font-size: 15px; font-weight: 600; color: var(--gold); width: 62px; text-align: right; flex-shrink: 0; }
+
+  /* flags */
+  .m2-flag { display: flex; gap: 10px; padding: 9px 0; border-bottom: 1px solid var(--line); font-size: 12px; line-height: 1.5; }
+  .m2-flag:last-child { border-bottom: none; }
+  .m2-flag .fnum { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--accent); font-weight: 600; flex-shrink: 0; padding-top: 1px; }
+  .m2-flag .ftxt { color: var(--text-dim); }
+  .m2-flag .ftxt b { color: var(--text); font-weight: 600; }
+  .m2-flag.hot .fnum, .m2-flag.hot .ftxt b { color: var(--gold); }
+
+  /* the board's own scroller for wide tables at 390px */
+  .m2-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .m2-scroll > table { min-width: 460px; }
+
+  .m2-foot { margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--line);
+    font-family: 'JetBrains Mono', monospace; font-size: 9px; color: var(--text-dim); line-height: 1.7; }
+  .m2-foot b { color: var(--text); font-weight: 500; }
+  .m2-foot .motto { display: block; margin-top: 10px; color: var(--accent-soft);
+    letter-spacing: 0.12em; text-transform: uppercase; font-size: 8px; }
+
+  @media (max-width: 560px) {
+    .m2-hdr h1 { font-size: 23px; }
+    .m2-nw { font-size: 28px; }
+    .m2-nw-block { flex-direction: column; align-items: flex-start; gap: 10px; }
+    .m2-nw-delta { text-align: left; }
+    .m2-cpu-split, .m2-ue-blend { flex-direction: column; }
+    .m2-co-hd { flex-direction: column; }
+    .m2-co-kpi { width: 100%; justify-content: space-between; }
+  }
 </style>
 </head>
 <body>
@@ -3157,6 +3372,53 @@ function setMktOff(n){
   mktRedraw(); loadMarketing();
 }
 
+/* ── THE ROI BOARD · THE FIVE-MONTH WALK ─────────────────────────────────────
+   The ROI board's two history sections — the Apr–Aug trend matrix and Went
+   Quiet — need signed dollars per source per month across a run of months.
+   rpt_report_marketing_roi is windowed, so that is one call per month.
+
+   THIS IS SAFE WHERE A LEADS SERIES WOULD NOT BE. Closed dollars are dated by
+   `rpt_signings.signed_on`, which is correct in every window — the same reason
+   the drawer's ROI column renders for months whose LEADS column is refused
+   (see MK_LEADS_FROM). A cost-per-lead series over these same months is the
+   thing that cannot be drawn, and the board says so where it would have sat
+   rather than borrowing this series to stand in for it.
+
+   Six windows, not five: the board's matrix runs Apr→Aug and the sixth slot
+   carries the current month so "went quiet" can tell a source that stopped
+   from a source that simply has not signed yet this month. Loaded after the
+   drawer, lazily, and only once — stepping the drawer's month does not
+   re-walk it. */
+let MKT2 = null;            // { series: [{key,label,bySrc:{}}], err }
+let MKT2_LOADING = false;
+const MK2_MONTHS = 6;
+
+async function loadMkt2(){
+  if (MKT2 || MKT2_LOADING) return;
+  MKT2_LOADING = true;
+  /* Oldest first, so the matrix and the sparklines read left-to-right in time
+     without the caller having to reverse them. */
+  const offs = [];
+  for (let i = MK2_MONTHS - 1; i >= 0; i--) offs.push(i);
+  const got = await Promise.all(offs.map(async off => {
+    const s = mkMonthStart(off), e = new Date(s.getFullYear(), s.getMonth() + 1, 0);
+    try {
+      const r = await qOne(`rpc/rpt_report_marketing_roi?win_start=${mkISO(s)}&win_end=${mkISO(e)}`);
+      const bySrc = Object.create(null);
+      for (const row of ((r.sections || {}).by_source || [])) {
+        bySrc[row.source_name] = { dollars: Number(row.signed_dollars || 0),
+                                   jobs: Number(row.signed_jobs || 0) };
+      }
+      return { key: mkISO(s).slice(0, 7), label: MNAMES[s.getMonth()], off, bySrc };
+    } catch (err) { return { key: mkISO(s).slice(0, 7), label: MNAMES[s.getMonth()], off, err: err.status || 'x' }; }
+  }));
+  /* One dead window does not kill the section — it renders as a gap in the
+     row with the month named, which is a different fact from a zero. */
+  MKT2 = { series: got, err: got.every(g => g.err) ? (got[0] || {}).err || 'x' : null };
+  MKT2_LOADING = false;
+  mkt2Redraw();
+}
+
 /* A feed that errored (missing migration, offline) says so in the card's own
    skin instead of vanishing — Kevin asked for these cards by name, so an
    empty slot would read as "not built" when the truth is "no feed". */
@@ -4253,6 +4515,659 @@ function marketingRoom(){
     <div class="shelf-grid">${tiles}</div>
     ${body}
   </div>`;
+}
+
+/* ═══ THE MARKETING BOARD · ROI EDITION ══════════════════════════════════════
+   The deep board behind the drawer. Layout, section order and copy are the
+   approved standalone board (liberty-command-marketing-board-v2.html); the
+   frozen numbers are replaced by the drawer's own feeds and nothing else.
+
+   ⚠️ READ THIS BEFORE CHANGING A NUMBER ON THIS BOARD.
+
+   The standalone board and this console do not measure the same thing, and the
+   gap is not small. The standalone board's footer states its own basis: a
+   one-off Contractors Cloud API probe walk of 2,500 projects taken 16 Aug
+   2026, priced against Chase Ink 1552/1571 and Amex Gold statements keyed by
+   hand. It says so in as many words — "Windsor CC held only 6 of 243 July
+   signings — rolling window, flagged dead for this job; probe walk is the
+   instrument of record."
+
+   This console reads rpt_report_marketing_roi (160/165) for revenue and
+   marketing_spend (166) + google_ads_daily (Windsor) for cost. Measured
+   against the same month, July 2026, Google:
+
+       standalone board   $588,592 signed · $50,994 spend · $11.54 back per $1
+       these feeds        $548K    signed · $15,856 spend · 35x
+
+   Revenue is close. SPEND IS 3.2x APART, so ROI is 3x apart. Two known reasons
+   and one unknown: the board folds agency fees (Liam / Gate Digital, $3,000)
+   into Google cost and this console does not; the board reads a card statement
+   and this console reads Windsor. Neither explains a $35,000 gap. Until that
+   is settled against live, THIS BOARD SHOWS THE WINDSOR NUMBER, because the
+   brief for this build named google_ads_daily as the feed and migration 166
+   refuses a typed Google row at the database precisely so a second surface
+   cannot fork it. The board says which instrument it is reading, out loud, in
+   its own footer — it does not silently pick one.
+
+   WHAT COULD NOT BE WIRED, AND WHY IT IS REFUSED RATHER THAN ESTIMATED.
+   Eight of the approved sections have no feed on this console at all. They are
+   still rendered, in their approved positions, in their approved order, saying
+   what is missing — because a board that quietly drops the eight sections it
+   cannot fill teaches the owner it was never asked for them:
+
+     · Vendor spend ledger   — marketing_spend is keyed (source_name, month).
+                               There is no vendor dimension and no brand
+                               column, so Next Level / CallFire / Mailchimp /
+                               Marlie / Zapier / GoDaddy / Canva cannot be
+                               named and no column can be split by brand.
+     · Cost-per-unit trend   — needs a leads series over May–Jul, and leads
+                               before Aug 2026 are backfill-dated (MK_LEADS_FROM).
+     · Speed to close        — no lead-to-signed median exists on this console.
+                               The Pulse's DAYS OUT is lead-to-APPOINTMENT,
+                               a different interval; substituting it would be
+                               the same class of error as swapping appointments
+                               set for appointments ran.
+     · Rep board (July)      — cardRepGrid is deliberately ALL-TIME because a
+                               month-sliced rep x source cell is n=2. The
+                               drawer already answers this correctly; pointing
+                               at it beats printing a noisier copy here.
+     · Who closes Google     — same rule, same pointer.
+     · The Stall             — no open-lead-age feed anywhere.
+     · Ask anything          — its FACTS array is a frozen snapshot of the
+                               eight sections above. It cannot be honest until
+                               they are.
+     · Brand-split SPEND     — see mkt2CardBrandTiles.
+
+   Nothing on this board is estimated, and nothing reads zero for want of a
+   feed. ══════════════════════════════════════════════════════════════════ */
+
+/* The board's own withheld skin — the console's .withheld panel wearing the
+   board's card. Same three-part shape every honest state on this page uses:
+   what it is, that it is absent, why. */
+function mk2Withheld(title, tag, head, why){
+  return `<div class="m2-card">
+    <div class="m2-card-title">${title}<span class="m2-tag none">${esc(tag)}</span></div>
+    <div class="withheld"><div class="wt">${head}</div><div class="wx">${why}</div></div>
+  </div>`;
+}
+
+/* Every paid source's spend for the month, resolved the same way the drawer
+   resolves it so the two surfaces cannot disagree: free sources are null,
+   Google comes from Windsor and never from a typed row, everything else is
+   the typed book. */
+function mkt2Rows(monthKey){
+  const rows = ((MKT.roi.sections || {}).by_source || []);
+  return rows.map(r => {
+    const src = r.source_name, free = MK_FREE.has(src), isG = src === 'Google';
+    const g = isG ? mkGoogleSpend(monthKey) : null;
+    const spend = free ? null : isG ? (g.state === 'live' ? g.amount : null) : mkSpendOf(src, monthKey);
+    const dollars = Number(r.signed_dollars || 0);
+    const jobs = Number(r.signed_jobs || 0);
+    return { src, free, isG, g, spend, dollars, jobs,
+             roi: (spend && spend > 0) ? dollars / spend : null };
+  });
+}
+
+/* ── HEADER · the net ─────────────────────────────────────────────────────── */
+function mkt2Head(){
+  const monthKey = mkISO(mkMonthStart(MKTOFF));
+  const all = mkt2Rows(monthKey);
+  const rev = all.reduce((n, r) => n + r.dollars, 0);
+  const spend = all.reduce((n, r) => n + (r.spend || 0), 0);
+  const net = spend > 0 ? rev / spend : null;
+  const pct = rev > 0 && spend > 0 ? 100 * spend / rev : null;
+  /* Named for what it actually is. The standalone board's header said "July
+     Signed / July Spend" against a hand-keyed card total; this one is priced
+     against whatever the spend book and Windsor actually hold, which is a
+     smaller and differently-defined number. Calling both "spend" without
+     saying which would be the fork this build exists to avoid. */
+  return `<div class="m2-hdr">
+    <div class="m2-eyebrow">Liberty Command · Marketing Board · ROI Edition</div>
+    <h1>The spend, the juice,<br/><em>and the squeeze.</em></h1>
+    <div class="m2-nw-block">
+      <div>
+        <div class="m2-nw-label">${esc(mkMonthLabel(MKTOFF))} signed ÷ ${esc(mkMonthLabel(MKTOFF))} priced spend</div>
+        <div class="m2-nw">${net != null ? '$' + net.toFixed(2) : '<span style="font-size:19px;color:var(--text-dim);font-family:\'JetBrains Mono\',monospace">no priced spend</span>'}</div>
+        <div class="m2-nw-sub">${net != null
+          ? `back per $1 · ${money(rev)} on ${money(spend)}`
+          : `${money(rev)} signed · no source carries a cost for this month`}</div>
+      </div>
+      <div class="m2-nw-delta">
+        ${pct != null ? `<b>${pct.toFixed(1)}%</b><br/>marketing as % of<br/>${esc(mkMonthLabel(MKTOFF))} signed revenue`
+                      : `<span style="color:var(--text-dim)">% of revenue<br/>needs a spend figure</span>`}
+      </div>
+    </div>
+  </div>`;
+}
+
+/* ── 1 · ROI THERMOMETERS ─────────────────────────────────────────────────── */
+function mkt2CardThermo(){
+  const monthKey = mkISO(mkMonthStart(MKTOFF));
+  /* The thermometer section is PRICED sources only, like the approved board:
+     Google always (it is paid by definition — when Windsor is down its row
+     says awaiting, it does not migrate to the earned card), and any source
+     with a typed row, zero included. A source with revenue and no cost sits in
+     the earned card's unpriced list instead — one home per state, never two
+     tellings of the same source. A priced source with zero dollars STAYS
+     (spend and nothing back is a 0x, the loudest read on the card). */
+  const paid = mkt2Rows(monthKey).filter(r => (r.isG || r.spend != null) && (r.dollars > 0 || (r.spend || 0) > 0))
+    .sort((a, b) => (b.roi || 0) - (a.roi || 0));
+  if (!paid.length) return mk2Withheld('ROI by paid source', 'no priced source',
+    'Nothing to price this month',
+    `No source in ${esc(mkMonthLabel(MKTOFF))} carries a cost — the spend book has no row for this month and Windsor delivered nothing in it. A source with revenue and no cost beside it is revenue wearing a marketing label — the reason this board exists — so none is drawn priced.`);
+  /* Scale runs to 20x, floor mark at 10x — the approved geometry. A source
+     above 20x pins at full width rather than rescaling the axis, because
+     moving the axis moves the 10x mark and the mark is the whole point. */
+  const bar = r => {
+    if (r.roi == null) return `<div class="m2-th-bar"><div class="m2-th-floor" style="left:50%"></div></div>`;
+    const w = Math.min(100, 100 * r.roi / 20);
+    const k = Math.abs(r.roi - MK_LINE) <= MK_NEAR ? '' : r.roi >= MK_LINE ? ' hot' : ' cold';
+    return `<div class="m2-th-bar"><div class="m2-th-fill${r.roi < MK_LINE ? ' cold' : k}" style="width:${w.toFixed(1)}%"></div>
+      <div class="m2-th-floor" style="left:50%"></div></div>`;
+  };
+  const spendCap = r => {
+    if (r.isG) {
+      if (r.g.state === 'live') return `spend <b>${money(r.spend)}</b> · windsor`;
+      if (r.g.state === 'stale') return `<span style="color:var(--gold)">no windsor data</span> · last ${esc(r.g.last)}`;
+      return `<span style="color:var(--gold)">no feed</span> · windsor never delivered`;
+    }
+    if (!Array.isArray(MKT.spend)) return `<span style="color:var(--gold)">spend book not applied</span>`;
+    return r.spend == null ? `<span style="color:var(--gold)">not entered</span>` : `spend <b>${money(r.spend)}</b>`;
+  };
+  return `<div class="m2-card">
+    <div class="m2-card-title">ROI by paid source<span class="m2-tag cc">live · cc</span>${
+      Array.isArray(MKT.ads) && MKT.ads.length ? '<span class="m2-tag">windsor</span>' : '<span class="m2-tag none">no windsor</span>'}</div>
+    <div class="m2-card-sub">${esc(mkMonthLabel(MKTOFF))} signed dollars ÷ ${esc(mkMonthLabel(MKTOFF))} spend. Gold mark = your $10-per-$1 floor. Scale runs to 20×.</div>
+    ${paid.map(r => {
+      /* The label states WHICH absent state this is — the three are different
+         facts and the brief names each: not entered (nobody typed), no spend
+         (a typed zero: ROI is a division by it and is refused, never printed
+         infinite), awaiting windsor (the feed is down, not the data absent). */
+      const roas = r.roi != null ? '$' + r.roi.toFixed(2)
+        : r.isG ? 'awaiting windsor'
+        : r.spend === 0 ? 'no spend'
+        : 'not entered';
+      return `<div class="m2-thermo">
+      <div class="m2-th-head">
+        <div class="m2-th-name">${esc(r.src)}</div>
+        <div class="m2-th-roas ${r.roi == null ? 'none' : r.roi >= MK_LINE + MK_NEAR ? 'hot' : r.roi < MK_LINE - MK_NEAR ? 'cold' : ''}">${roas}</div>
+      </div>
+      ${bar(r)}
+      <div class="m2-th-cap"><span>${spendCap(r)}</span><span>${r.jobs} job${r.jobs === 1 ? '' : 's'}</span><span>signed <b>${money(r.dollars)}</b></span></div>
+    </div>`; }).join('')}
+    <div class="m2-note">Signed dollars from <b>rpt_report_marketing_roi</b> (160/165), grouped on <b>lead_sources.rollup_name</b>. Google's cost is <b>google_ads_daily</b> (Windsor) and is raw ad spend only — agency management is not folded in here, so this reads higher than a card-statement ROI that includes it. Every other cost is the typed book, <b>marketing_spend</b> (166).</div>
+  </div>`;
+}
+
+/* ── 2 · EARNED REVENUE ───────────────────────────────────────────────────── */
+function mkt2CardEarned(){
+  const monthKey = mkISO(mkMonthStart(MKTOFF));
+  const all = mkt2Rows(monthKey);
+  const total = all.reduce((n, r) => n + r.dollars, 0);
+  /* Earned = the ruling set (Referral, Previous Customer) plus any source that
+     signed money and has no cost recorded against it. The second group is NOT
+     called free — it is called unpriced, because "nobody typed a cost" and
+     "there is no cost" are different claims and this console never merges
+     them. */
+  const free = all.filter(r => r.free && r.dollars > 0).sort((a, b) => b.dollars - a.dollars);
+  /* Never Google: a stale Windsor month leaves its spend null, but "the feed
+     is down" is not "nobody typed a cost" — Google stays on the priced card
+     saying awaiting windsor. A typed zero is priced too, at zero. */
+  const unpriced = all.filter(r => !r.free && !r.isG && r.spend == null && r.dollars > 0).sort((a, b) => b.dollars - a.dollars);
+  if (!free.length && !unpriced.length) return '';
+  const earned = free.reduce((n, r) => n + r.dollars, 0);
+  const row = (r, tag) => `<div class="m2-free-row">
+    <span class="nm">${esc(r.src)}<small>${r.jobs} job${r.jobs === 1 ? '' : 's'}${tag ? ' · ' + tag : ''}</small></span>
+    <span class="amt">${money(r.dollars)}</span></div>`;
+  return `<div class="m2-card">
+    <div class="m2-card-title">Earned revenue · no ad dollar attached<span class="m2-tag cc">live · cc</span></div>
+    <div class="m2-card-sub">${total > 0 ? `<b>${(100 * earned / total).toFixed(1)}%</b> of ${esc(mkMonthLabel(MKTOFF))} signed came in free.` : ''} Referral and Previous Customer are free by ruling — they have no spend and therefore no ROI.</div>
+    ${free.map(r => row(r, '')).join('')}
+    ${unpriced.length ? `<div class="m2-note" style="margin:12px 0 6px"><b>Not free — unpriced.</b> These signed money and carry no cost in the book. That is a data-entry state, not a costless channel, so they are listed apart from the two above.</div>
+      ${unpriced.map(r => row(r, 'no cost entered')).join('')}` : ''}
+  </div>`;
+}
+
+/* ── 3 · RETURN BY BRAND ──────────────────────────────────────────────────── */
+/* Revenue splits by brand; SPEND DOES NOT. marketing_spend is keyed
+   (source_name, month) with no company column, and the drawer reads
+   google_ads_daily as `date, spend` only. So this board can say what each
+   brand earned and must refuse what each brand spent — which means it must
+   also refuse the $/1 figure the approved tile carries, since that is the
+   division of the two. Showing signed-only under a "$23.19 /$1" heading would
+   be the flattering half of a number whose other half is missing. */
+function mkt2CardBrandTiles(){
+  const signed = new Set(((MKT && MKT.signed) || []).map(s => String(s.cc_project_id)));
+  const byBrand = Object.create(null);
+  for (const j of (D.mktJobs || [])) {
+    if (!signed.has(j.p)) continue;
+    const b = j.b || 'unknown';
+    byBrand[b] = (byBrand[b] || 0) + 1;
+  }
+  const any = BRAND_ORDER.some(b => byBrand[b]);
+  return `<div class="m2-card">
+    <div class="m2-card-title">Return by brand<span class="m2-tag cc">live · cc</span><span class="m2-tag none">spend: no feed</span></div>
+    <div class="m2-card-sub">A roof and a fence do not cost the same to sell. Signed volume splits by brand; the cost beside it does not exist yet.</div>
+    ${!any ? `<div class="withheld"><div class="wt">No signed job carries a brand yet</div><div class="wx">Every confirmed signing resolved to a project with no company on it. Nothing is inferred.</div></div>`
+      : BRAND_ORDER.map(id => {
+      const m = BRANDS[id];
+      return `<div class="m2-brand-tile">
+        <div class="m2-bt-head"><div class="m2-bt-name">${esc(m.n)}</div>
+          <div class="m2-bt-roas none">no ÷ available</div></div>
+        <div class="m2-bt-rows">
+          <div class="m2-bt-row"><span>Signed jobs · all time</span><b class="g">${(byBrand[id] || 0).toLocaleString()}</b></div>
+          <div class="m2-bt-row"><span>Marketing spend</span><b style="color:var(--gold)">no brand column</b></div>
+        </div>
+      </div>`; }).join('')}
+    <div class="withheld"><div class="wt">The $-back-per-$1 on these tiles is withheld, not computed</div><div class="wx">
+      <b>marketing_spend</b> (166) is keyed <b>(source_name, month)</b> — there is no company column, so a brand's spend cannot be read from it. <b>google_ads_daily</b> is read here as <b>date, spend</b> only. Splitting either by brand needs a migration, not a change on this page. Signed jobs are counted distinct by project from <b>rpt_signings</b>, resolved to a brand with the same <b>rollup()</b> the money row uses, so Pro-Tec's 1537 folds into 1563 exactly as it does above.</div></div>
+  </div>`;
+}
+
+/* ── 4 · SIGNED BY SOURCE · the bar ───────────────────────────────────────── */
+function mkt2CardChart(){
+  const monthKey = mkISO(mkMonthStart(MKTOFF));
+  const rows = mkt2Rows(monthKey).filter(r => r.dollars > 0).sort((a, b) => b.dollars - a.dollars);
+  if (!rows.length) return '';
+  const jobs = rows.reduce((n, r) => n + r.jobs, 0);
+  return `<div class="m2-card">
+    <div class="m2-card-title">${esc(mkMonthLabel(MKTOFF))} signed by source<span class="m2-tag cc">live · cc</span></div>
+    <div class="m2-card-sub">${jobs.toLocaleString()} job${jobs === 1 ? '' : 's'}, every one source-tagged — the RPC groups on the rollup, so nothing lands in an "unknown" bucket.</div>
+    <div class="m2-chart-box"><canvas id="m2SrcBars"></canvas></div>
+  </div>`;
+}
+
+/* ── 5 · VENDOR LEDGER · no feed ──────────────────────────────────────────── */
+function mkt2CardLedger(){
+  return mk2Withheld('Spend ledger · monthly', 'no feed',
+    'There is no vendor table to read',
+    `The approved ledger names twelve vendors and splits each across three brands — Google Ads, Saving Safari, Angi / HomeAdvisor, Liam / Gate Digital, referral bonuses, Next Level, CallFire, Mailchimp, Marlie AI, Zapier, GoDaddy, Canva. <b>marketing_spend</b> (166) is keyed <b>(source_name, month)</b>: one amount per rolled-up lead source per month, no vendor and no brand. Seven of those twelve are not lead sources at all, so they have nowhere to sit even as a row. This is a schema gap, not an entry gap — typing more into the current table cannot produce this section.`);
+}
+
+/* ── 6 · COST PER LEAD & PER UNIT ─────────────────────────────────────────── */
+/* Units are live in every window. LEADS ARE NOT, and the split matters: the
+   RPC dates a lead by jobs.created_at, which for every month before Aug 2026
+   is the 20 Jul backfill. So cost-per-UNIT renders and cost-per-LEAD refuses,
+   in the same table, per row. */
+function mkt2CardCPU(){
+  const monthKey = mkISO(mkMonthStart(MKTOFF));
+  const leadsBlind = monthKey.slice(0, 7) < MK_LEADS_FROM;
+  const rows = mkt2Rows(monthKey).filter(r => r.dollars > 0 || r.spend);
+  if (!rows.length) return '';
+  const roiRows = ((MKT.roi.sections || {}).by_source || []);
+  const leadsOf = src => { const r = roiRows.find(x => x.source_name === src); return r ? Number(r.leads || 0) : 0; };
+  const totSpend = rows.reduce((n, r) => n + (r.spend || 0), 0);
+  const totUnits = rows.reduce((n, r) => n + r.jobs, 0);
+  const cell = r => {
+    const cpu = (r.spend && r.spend > 0 && r.jobs) ? r.spend / r.jobs : null;
+    const cpl = (!leadsBlind && r.spend && r.spend > 0 && leadsOf(r.src)) ? r.spend / leadsOf(r.src) : null;
+    /* Same three absent states as the thermometers, per cost cell. */
+    const absent = r.free ? 'free' : r.isG ? 'awaiting windsor' : r.spend === 0 ? 'no spend' : 'not entered';
+    return `<tr>
+      <td>${esc(r.src)}</td>
+      <td>${leadsBlind ? '<span class="absent" title="backfill-dated — see below">—</span>' : leadsOf(r.src).toLocaleString()}</td>
+      <td class="u">${r.jobs.toLocaleString()}</td>
+      <td class="${cpl == null ? (r.free ? 'free' : 'absent') : ''}">${leadsBlind ? 'backfill' : cpl == null ? absent : money(cpl)}</td>
+      <td class="${cpu == null ? (r.free ? 'free' : 'absent') : cpu > 1000 ? 'bad' : cpu < 100 ? 'good' : ''}">${
+        cpu == null ? absent : money(cpu)}</td>
+    </tr>`;
+  };
+  return `<div class="m2-card">
+    <div class="m2-card-title">Cost per lead &amp; per unit · ${esc(mkMonthLabel(MKTOFF))}<span class="m2-tag cc">live · cc</span></div>
+    <div class="m2-card-sub">Units = signed in the month. Leads = created in the month. Different cohorts on purpose — CPL measures the faucet, CPU measures what came out.</div>
+    <div class="m2-scroll"><table class="m2-cpu">
+      <tr><th>Source</th><th>Leads</th><th>Units</th><th>CPL</th><th>Cost / unit</th></tr>
+      ${rows.sort((a, b) => b.dollars - a.dollars).map(cell).join('')}
+      <tr class="tot"><td>BLENDED</td><td>${leadsBlind ? '—' : roiRows.reduce((n, r) => n + Number(r.leads || 0), 0).toLocaleString()}</td>
+        <td>${totUnits.toLocaleString()}</td>
+        <td>${leadsBlind ? 'backfill' : '—'}</td>
+        <td>${totSpend > 0 && totUnits ? money(totSpend / totUnits) : 'no priced spend'}</td></tr>
+    </table></div>
+    ${leadsBlind ? `<div class="withheld"><div class="wt">The CPL column is withheld for ${esc(mkMonthLabel(MKTOFF))}</div><div class="wx">
+      <b>rpt_report_marketing_roi</b> dates a lead by <b>jobs.created_at</b> — when OUR row was written, not when the lead arrived. The warehouse was loaded in one shot on <b>20 Jul 2026</b>, so a July window returns the whole backfill (Google reads <b>4,282</b> against a true <b>253</b>) and every month before it returns zero, which is not the same as none. From <b>August 2026</b> the column is real and renders. <b>Cost per unit is unaffected</b> and is shown above: units are signings, dated by <b>rpt_signings.signed_on</b>, which is correct in every window.</div></div>` : ''}
+  </div>`;
+}
+
+/* ── 7 · UNIT ECONOMICS BY COMPANY ────────────────────────────────────────── */
+function mkt2CardUnitEcon(){
+  return mk2Withheld('Unit economics · blended &amp; by company', 'no brand spend',
+    'Two of the three numbers on every tile have no feed',
+    `The approved section gives each brand a <b>cost per lead</b>, a <b>cost per unit</b> and an <b>average ticket</b>, then a per-source table underneath. Cost per lead needs a brand-split lead count and leads are backfill-dated before Aug 2026; cost per unit needs brand-split spend and <b>marketing_spend</b> has no company column. Average ticket needs a signed amount per project — <b>rpt_signings</b> is read here as <b>cc_project_id</b> only, which is what the closing-rate grid needs and is deliberately all this page downloads. Building this section is a migration and a wider projection, not a change on this page.`);
+}
+
+/* ── 8 · COST PER UNIT TRENDING ───────────────────────────────────────────── */
+function mkt2CardTrendCPU(){
+  return mk2Withheld('Cost per unit · trending', 'leads backfill-dated',
+    'A three-month cost curve cannot be drawn from a one-shot backfill',
+    `The approved section runs May → July with each month's close rate beneath it. Close rate needs leads, and every lead before <b>Aug 2026</b> carries the <b>20 Jul</b> backfill timestamp: May and June return zero leads and July returns all of them. A curve drawn on that would show cost collapsing to nothing in the two months the warehouse has no lead dates for. The signed-dollar history IS readable and is drawn below in the Apr–Aug matrix — dollars are dated by <b>rpt_signings.signed_on</b>, which is correct in every window.`);
+}
+
+/* ── 9 · SPEED TO CLOSE ───────────────────────────────────────────────────── */
+function mkt2CardSpeed(){
+  return mk2Withheld('Speed to close', 'no feed',
+    'There is no lead-to-signed interval on this console',
+    `The approved section is a median days-from-lead-created to contract-signed, by source. Lead creation is <b>jobs.created_at</b>, which is backfill-dated before Aug 2026, so the interval is unmeasurable for every historic signing. The one real lead clock is <b>cc_raw-&gt;&gt;'project_created_at'</b>, inside a jsonb this page deliberately does not download. <b>DAYS OUT on THE PULSE is not a substitute</b>: it measures lead to <i>appointment</i>, a different and shorter interval, and swapping it in here would be the same class of error as substituting appointments set for appointments ran.`);
+}
+
+/* ── 10 · REP BOARD · answered correctly elsewhere ────────────────────────── */
+function mkt2CardRepBoard(){
+  return mk2Withheld('Rep board · ' + esc(mkMonthLabel(MKTOFF)), 'month too thin',
+    'This question is answered above, all-time, and that is the honest window',
+    `The approved board ranks reps on one month's leads and units. <b>Who closes what</b> in the marketing drawer answers the same question and is deliberately <b>all-time</b>: a month-sliced rep × source cell is n=2, and the drawer's own thin floor refuses to colour any cell under <b>${MK_THIN}</b> leads for exactly that reason. Printing a monthly copy here would put a noisier answer next to a better one and let the owner pick. It is not withheld for want of a feed — it is withheld because the drawer's window is the right one.`);
+}
+
+function mkt2CardGoogleConv(){
+  return mk2Withheld('Who closes Google leads', 'month too thin',
+    'Same question, same answer, same place',
+    `The approved section is the Google column of a rep × source grid for one month. That column exists, all-time and with a thin floor, in <b>Who closes what</b> in the marketing drawer. The gap the section exists to show — the highest-volume desk being the lowest-converting one — reads there without the monthly noise. Note the drawer also cannot show <b>appointments ran</b> beside it: Contractors Cloud logs no appointment outcome, and that column says so in words rather than showing a number.`);
+}
+
+/* ── 11 · THE STALL ───────────────────────────────────────────────────────── */
+function mkt2CardStall(){
+  return mk2Withheld('The stall', 'no feed',
+    'Open-lead age is not a feed this console has',
+    `The approved section counts leads created, never signed, never closed out, still sitting open — by brand, by source, past 30 and 60 days, priced at each brand's own cost per lead. Three things are missing and each one alone is fatal: an <b>open/closed-out state</b> per lead, a <b>true lead date</b> (jobs.created_at is the backfill), and a <b>brand-split cost per lead</b> to price the sunk media with. <b>rpt_report_marketing_roi</b> returns counts and dollars for a window; it does not return an age or a state. Nothing here is estimated in its place.`);
+}
+
+/* ── 12 · SOURCE × COMPANY ────────────────────────────────────────────────── */
+/* LIVE, in signed JOBS rather than signed dollars — and the header says jobs.
+   The dollar version needs an amount per signing and this page downloads
+   rpt_signings as cc_project_id only. Counting jobs is exact; inventing a
+   dollar split across brands from a source-level total would not be. */
+function mkt2CardSrcByCo(){
+  const signed = new Set(((MKT && MKT.signed) || []).map(s => String(s.cc_project_id)));
+  const rollupMap = D.mktRollup || {};
+  const grid = Object.create(null), tot = Object.create(null);
+  for (const j of (D.mktJobs || [])) {
+    if (!signed.has(j.p)) continue;
+    const s = rollupMap[j.l]; if (!s) continue;
+    const b = j.b; if (!BRANDS[b]) continue;
+    (grid[s] || (grid[s] = Object.create(null)))[b] = ((grid[s] || {})[b] || 0) + 1;
+    tot[s] = (tot[s] || 0) + 1;
+  }
+  const srcs = Object.keys(tot).sort((a, b) => tot[b] - tot[a]);
+  if (!srcs.length) return mk2Withheld('Source × company', 'no feed',
+    'No signed job resolved to both a source and a brand', 'Nothing is inferred in its place.');
+  return `<div class="m2-card">
+    <div class="m2-card-title">Source × company<span class="m2-tag cc">live · cc</span><span class="m2-tag manual">jobs, not $</span></div>
+    <div class="m2-card-sub">Where every signed job came from. Green = that source's home brand — the brand it signs most for.</div>
+    <div class="m2-scroll"><table class="m2-co">
+      <tr><th>Source</th>${BRAND_ORDER.map(b => `<th>${esc(BRANDS[b].s)}</th>`).join('')}<th>All</th></tr>
+      ${srcs.map(s => {
+        const row = grid[s], peak = BRAND_ORDER.reduce((m, b) => (row[b] || 0) > (row[m] || 0) ? b : m, BRAND_ORDER[0]);
+        return `<tr><td>${esc(s)}</td>${BRAND_ORDER.map(b => {
+          const v = row[b] || 0;
+          return `<td class="${v === 0 ? 'z' : b === peak ? 'pk' : ''}">${v === 0 ? '—' : v.toLocaleString()}</td>`;
+        }).join('')}<td>${tot[s].toLocaleString()}</td></tr>`;
+      }).join('')}
+    </table></div>
+    <div class="m2-note">Counted in <b>signed jobs</b>, not signed dollars — and the approved board showed dollars. The dollar split needs an amount on each signing; this page reads <b>rpt_signings</b> as <b>cc_project_id</b> only, which is what the closing-rate grid needs and is deliberately all it downloads. Splitting a source-level dollar total across brands by job count would be an estimate wearing a measurement's badge, so the count is shown instead and named as a count. All-time, matching the signings set. Brands resolved with the same <b>rollup()</b> as the money row.</div>
+  </div>`;
+}
+
+/* ── 13 · WENT QUIET ──────────────────────────────────────────────────────── */
+function mkt2CardQuiet(){
+  if (!MKT2) return `<div class="m2-card"><div class="m2-card-title">Went quiet · sources that stopped<span class="m2-tag cc">live · cc</span></div>
+    <div class="m2-card-sub" style="margin:0">Walking the last ${MK2_MONTHS} months…</div></div>`;
+  if (MKT2.err) return mk2Withheld('Went quiet · sources that stopped', 'no feed',
+    'The month walk did not answer',
+    `Every one of the ${MK2_MONTHS} windowed calls to <b>rpt_report_marketing_roi</b> failed (${esc(String(MKT2.err))}). That RPC is migration 160 as corrected by 165.`);
+  const live = MKT2.series.filter(m => !m.err);
+  if (live.length < 3) return mk2Withheld('Went quiet · sources that stopped', 'too few months',
+    'Not enough months came back to call anything quiet',
+    `${live.length} of ${MK2_MONTHS} windows answered. A source needs a run of months behind it before silence means anything.`);
+  const names = [...new Set(live.flatMap(m => Object.keys(m.bySrc)))];
+  /* Quiet = earned money in the earlier months, nothing in the last two. Two,
+     not one: a source that simply has not signed yet this month is not a
+     source that stopped, and the current month is partial by definition. */
+  const tail = live.slice(-2), head = live.slice(0, -2);
+  const quiet = names.map(n => {
+    const earned = head.reduce((s, m) => s + ((m.bySrc[n] || {}).dollars || 0), 0);
+    const recent = tail.reduce((s, m) => s + ((m.bySrc[n] || {}).dollars || 0), 0);
+    return { n, earned, recent, series: live.map(m => (m.bySrc[n] || {}).dollars || 0) };
+  }).filter(x => x.earned > 0 && x.recent === 0).sort((a, b) => b.earned - a.earned);
+  if (!quiet.length) return `<div class="m2-card">
+    <div class="m2-card-title">Went quiet · sources that stopped<span class="m2-tag cc">live · cc</span></div>
+    <div class="m2-card-sub">Sources that earned in the earlier months and signed nothing in the last two.</div>
+    <div class="withheld"><div class="wt">Nothing has gone quiet</div><div class="wx">Every source that signed money in the first ${head.length} month${head.length === 1 ? '' : 's'} of the walk has signed again since. This is a real all-clear, not an empty feed — ${live.length} windows answered.</div></div>
+  </div>`;
+  const peak = Math.max(1, ...quiet.flatMap(x => x.series));
+  return `<div class="m2-card">
+    <div class="m2-card-title">Went quiet · sources that stopped<span class="m2-tag cc">live · cc</span></div>
+    <div class="m2-card-sub">Earned money ${esc(live[0].label)}–${esc(head[head.length - 1].label)}, nothing signed in ${esc(tail.map(t => t.label).join(' or '))}. Bars are ${esc(live[0].label)}→${esc(live[live.length - 1].label)}; red stubs are zero months.</div>
+    ${quiet.map(x => `<div class="m2-quiet-row">
+      <div class="m2-q-pulse dead"></div>
+      <div class="m2-q-body"><div class="m2-q-name">${esc(x.n)}</div>
+        <div class="m2-q-meta">last signed ${esc((live.filter((m, i) => x.series[i] > 0).pop() || {}).label || '—')} · ${x.series.filter(v => v > 0).length} of ${live.length} months live</div></div>
+      <div class="m2-q-spark">${x.series.map(v => v > 0
+        ? `<i style="height:${Math.max(3, Math.round(22 * v / peak))}px"></i>` : `<i class="z"></i>`).join('')}</div>
+      <div class="m2-q-lost">${short(x.earned)}</div>
+    </div>`).join('')}
+    <div class="m2-note"><b>${money(quiet.reduce((n, x) => n + x.earned, 0))}</b> of proven signed revenue now producing nothing. Dollars are dated by <b>rpt_signings.signed_on</b>, correct in every window — this section does not read the leads column and is unaffected by the backfill.</div>
+  </div>`;
+}
+
+/* ── 14 · THE TREND MATRIX ────────────────────────────────────────────────── */
+function mkt2CardMatrix(){
+  if (!MKT2) return `<div class="m2-card"><div class="m2-card-title">Signed revenue by source · by month<span class="m2-tag cc">live · cc</span></div>
+    <div class="m2-card-sub" style="margin:0">Walking the last ${MK2_MONTHS} months…</div></div>`;
+  if (MKT2.err) return mk2Withheld('Signed revenue by source · by month', 'no feed',
+    'The month walk did not answer',
+    `Every one of the ${MK2_MONTHS} windowed calls to <b>rpt_report_marketing_roi</b> failed (${esc(String(MKT2.err))}).`);
+  const live = MKT2.series;
+  const names = [...new Set(live.filter(m => !m.err).flatMap(m => Object.keys(m.bySrc)))];
+  if (!names.length) return mk2Withheld('Signed revenue by source · by month', 'no rows',
+    'No source signed money in the window', 'Nothing is inferred in its place.');
+  const totOf = n => live.reduce((s, m) => s + ((m.bySrc || {})[n] || {}).dollars || 0, 0);
+  names.sort((a, b) => totOf(b) - totOf(a));
+  const thisMonth = live[live.length - 1];
+  return `<div class="m2-card">
+    <div class="m2-card-title">Signed revenue by source · by month<span class="m2-tag cc">live · cc</span></div>
+    <div class="m2-card-sub">Every source, every month of the walk. <b>${esc(thisMonth.label)}</b> is partial — it is the month in progress.</div>
+    <div class="m2-scroll"><table class="m2-mx">
+      <tr><th>Source</th>${live.map(m => `<th>${esc(m.label)}${m.off === 0 ? '*' : ''}</th>`).join('')}</tr>
+      ${names.map(n => {
+        const vals = live.map(m => m.err ? null : ((m.bySrc[n] || {}).dollars || 0));
+        const peak = Math.max(...vals.map(v => v || 0));
+        const dead = vals.slice(-2).every(v => v === 0);
+        return `<tr class="${dead ? 'dim' : ''}"><td>${esc(n)}</td>${vals.map(v =>
+          v === null ? `<td class="z" title="this window did not answer">·</td>`
+          : v === 0 ? `<td class="z">—</td>`
+          : `<td class="${v === peak ? 'pk' : ''}">${short(v)}</td>`).join('')}</tr>`;
+      }).join('')}
+    </table></div>
+    <div class="m2-note">Signed dollars per source per month, one windowed call to <b>rpt_report_marketing_roi</b> each, grouped on <b>lead_sources.rollup_name</b>. ${live.some(m => m.err) ? `<b>${live.filter(m => m.err).length}</b> window${live.filter(m => m.err).length === 1 ? '' : 's'} did not answer and read as a dot, not a zero. ` : ''}A source with no revenue in the month reads an em-dash. Dimmed rows have signed nothing in the last two months — see Went quiet above.</div>
+  </div>`;
+}
+
+/* ── 15 · ASK ANYTHING · not yet ──────────────────────────────────────────── */
+function mkt2CardAsk(){
+  return mk2Withheld('Ask anything', 'not wired',
+    'The answer engine is held until the board underneath it is real',
+    `The approved board carries a typed-and-spoken question box over a <b>FACTS</b> array — a frozen snapshot of cost per lead, cost per unit, speed to close, the rep board, the stall and the vendor ledger. <b>Six of those eight fact types have no feed on this console</b>, which is what the refusals above say one at a time. An answer box that fielded "what does a Google lead cost me?" from a snapshot would be the most confident-sounding surface on the page and the least connected to the database — the exact failure the rest of this board is built to avoid. The console's own ask box, at the top of the page, answers against live data today.`);
+}
+
+/* ── 16 · FLAGS ───────────────────────────────────────────────────────────── */
+/* KD's own annotations, carried across verbatim and badged as typed. These are
+   editorial — a human's reading of the numbers on a given date — and the badge
+   says so, so a typed note can never wear a measured number's skin. */
+function mkt2CardFlags(){
+  const F = [
+    ['✓0', 0, '<b>Third card confirmed — Amex Gold, Pro-Tec Roofing.</b> KD Aug 16. Roofing spend locked.'],
+    ['~5', 0, '<b>Referral bonuses are an estimate, not a policy.</b> KD Aug 16: ~$500 Fencing + ~$500 Pro-Tec, $0 Oasis — paid occasionally, not to every referrer.'],
+    ['⚑1', 0, '<b>Second Google Ads ID on Roofing card</b> (~$450–590/mo) — likely LSA. Map separately?'],
+    ['✓2', 0, '<b>Liam IS Gate Digital.</b> KD Aug 16. $2,000/mo double-count removed — one line at $1,000 × 3 brands.'],
+    ['⚑3', 0, '<b>Unattributable spend: $1,454/mo</b> (Next Level, CallFire, Mailchimp, Marlie, Zapier, GoDaddy, Canva) — no CC source tag, so no ROI reading.'],
+    ['⚑4', 1, '<b>Angi is the leak.</b> Cheap leads, terrible close — the drawer\'s own thin floor and the cost-per-unit table above both read it the same way.'],
+    ['⚑7', 0, '<b>Attribution is clean.</b> Every project the RPC returns carries a rolled-up source — no "unknown" bucket needed.'],
+    ['⚑8', 0, '<b>Yard Sign went dark.</b> Signs not going out, or the tag not being applied at intake — worth one question to the crew. Went quiet, above, is the live version of this flag.'],
+    ['⚑6', 0, '<b>Oasis Safari $2,000 is imputed barter</b> — will not reconcile against QB. Known ghost.'],
+  ];
+  return `<div class="m2-card">
+    <div class="m2-card-title">Flags · read before trusting<span class="m2-tag manual">typed · kd</span></div>
+    <div class="m2-card-sub">A human's reading of the numbers, dated. Nothing here is measured by this page — the badge says typed so a note can never wear a measurement's skin.</div>
+    ${F.map(([n, hot, t]) => `<div class="m2-flag${hot ? ' hot' : ''}"><div class="fnum">${n}</div><div class="ftxt">${t}</div></div>`).join('')}
+    <div class="m2-note">Carried across from the approved board, 16 Aug 2026. Figures quoted inside a flag are that day's reading and are not recomputed — where a flag has a live equivalent on this board, it says so.</div>
+  </div>`;
+}
+
+/* ── THE FOOTER · rewritten, because the provenance changed ───────────────── */
+/* The standalone board's footer described a CC probe walk and hand-keyed card
+   statements. Carrying that text over a page reading rpt_report_marketing_roi
+   and Windsor would be the single most misleading line on the console — the
+   footer IS the provenance, and it has to describe the instrument actually in
+   use. Every other piece of copy on this board is the approved one. */
+function mkt2Foot(){
+  const g = mkGoogleSpend(mkISO(mkMonthStart(MKTOFF)));
+  return `<div class="m2-foot">
+    <b>Revenue:</b> <b>rpt_report_marketing_roi</b> (migration 160, corrected by 165), grouped on <b>lead_sources.rollup_name</b> (163) — never the raw Contractors Cloud name, which splits Angi three ways and Google five. Signed dollars are dated by <b>rpt_signings.signed_on</b> and are correct in every window. Signed jobs are counted <b>distinct by project</b>: migration 150 splits an amended invoice into a row per late bell, which is right for money and would push a rate past 100%.
+    <b>Spend:</b> typed sources from <b>marketing_spend</b> (166) — a source with no row reads <b>not entered</b>, never zero. Google is <b>not typeable</b>: it arrives through Windsor into <b>google_ads_daily</b> and 166 refuses a typed Google row with a CHECK, so the two surfaces cannot fork it${g.state === 'live' ? '' : g.state === 'stale' ? `. Windsor is <b>stale</b> for this month — last delivery ${esc(g.last)}` : '. Windsor has <b>never delivered</b>'}. Google's figure here is <b>raw ad spend only</b>; agency management is not folded in, so it reads higher than a card-statement ROI that includes it.
+    <b>Not read here:</b> the approved board's own basis — a one-off CC probe walk of 2,500 projects and Chase / Amex statements keyed by hand. That instrument and this one disagree about July Google spend by roughly 3×, and this page shows the database rather than the snapshot. Which is right is an open question, written up in the PR.
+    <b>Appointments ran</b> is empty everywhere on this console: Contractors Cloud logs no appointment outcome.
+    <span class="motto">Trust the instrument, not the retelling</span>
+  </div>`;
+}
+
+/* ── THE BOARD, IN THE APPROVED ORDER ─────────────────────────────────────── */
+function mkt2Body(){
+  if (!MKT || (!MKT.roi && !MKT.roiErr)) return `<div class="m2-card"><div class="m2-card-sub" style="margin:0">Reading…</div></div>`;
+  if (MKT.roiErr) return mk2Withheld('Marketing board · ROI edition', 'no feed',
+    'The whole board is withheld',
+    `<b>rpt_report_marketing_roi</b> did not answer (${esc(String(MKT.roiErr))}). That RPC is <b>migration 160 as corrected by 165</b>; if it is missing here, apply those and the board goes live with no further deploy. Every section on this board reads from it, so none is drawn — half a picture of what marketing cost would be worse than none.`);
+  return mkt2Head() + `<div class="m2-stack">` + [
+    mkt2CardAsk(),
+    mkt2CardThermo(),
+    mkt2CardEarned(),
+    mkt2CardBrandTiles(),
+    mkt2CardChart(),
+    mkt2CardLedger(),
+    mkt2CardCPU(),
+    mkt2CardUnitEcon(),
+    mkt2CardTrendCPU(),
+    mkt2CardSpeed(),
+    mkt2CardRepBoard(),
+    mkt2CardGoogleConv(),
+    mkt2CardStall(),
+    mkt2CardSrcByCo(),
+    mkt2CardQuiet(),
+    mkt2CardMatrix(),
+    mkt2CardFlags(),
+  ].join('') + `</div>` + mkt2Foot();
+}
+
+/* ── THE ROOM ─────────────────────────────────────────────────────────────── */
+/* Its own band and its own localStorage slot, so opening the deep board does
+   not disturb what the drawer above has open. Same one-value state machine as
+   the Effort Room and the drawer. */
+const MKT2_STORE = 'lcc.mkt2';
+let MKT2_VIEW = (() => {
+  try { const j = JSON.parse(localStorage.getItem(MKT2_STORE) || 'null');
+    if (j && j.mode === 'open') return { mode:'open' };
+  } catch (e) {}
+  return { mode:'none' };
+})();
+function mkt2Save(){ try { localStorage.setItem(MKT2_STORE, JSON.stringify(MKT2_VIEW)); } catch (e) {} }
+function mkt2Redraw(){
+  const el = document.getElementById('mkt2-room');
+  if (!el) { render(); return; }
+  const y = window.scrollY;
+  el.outerHTML = mkt2Room();
+  window.scrollTo({ top: y });
+  mkt2DrawChart();
+}
+function mkt2Toggle(){
+  MKT2_VIEW = MKT2_VIEW.mode === 'open' ? { mode:'none' } : { mode:'open' };
+  mkt2Save(); mkt2Redraw();
+  /* The six-window walk is only paid for when the board is actually opened. */
+  if (MKT2_VIEW.mode === 'open') loadMkt2();
+}
+
+/* The shelf tiles. Same three states the other two shelves keep: reading,
+   nothing behind it said in words, or the shape. */
+function pt2Net(){
+  if (!MKT || (!MKT.roi && !MKT.roiErr)) return ptEmptyBox('Reading…');
+  if (MKT.roiErr) return ptEmptyBox('The ROI feed did not answer');
+  const all = mkt2Rows(mkISO(mkMonthStart(MKTOFF)));
+  const rev = all.reduce((n, r) => n + r.dollars, 0);
+  const spend = all.reduce((n, r) => n + (r.spend || 0), 0);
+  if (!spend) return ptEmptyBox(`No priced source in ${mkMonthLabel(MKTOFF)}`);
+  return ptNum('$' + (rev / spend).toFixed(2), (rev / spend) >= MK_LINE ? 'green' : 'red') +
+    ptCap(`back per $1 · ${esc(mkMonthLabel(MKTOFF))}<br/>${money(rev)} on ${money(spend)}`);
+}
+function pt2Earned(){
+  if (!MKT || !MKT.roi) return ptEmptyBox('Reading…');
+  const all = mkt2Rows(mkISO(mkMonthStart(MKTOFF)));
+  const tot = all.reduce((n, r) => n + r.dollars, 0);
+  if (!tot) return ptEmptyBox(`Nothing signed in ${mkMonthLabel(MKTOFF)}`);
+  const earned = all.filter(r => r.free).reduce((n, r) => n + r.dollars, 0);
+  return ptNum(Math.round(100 * earned / tot) + '%', 'accent') +
+    ptCap(`of ${esc(mkMonthLabel(MKTOFF))} signed came in free<br/>${money(earned)} on no ad dollar`);
+}
+function pt2Gaps(){
+  /* The tile that says what the board cannot do. Eight refusals is the
+     headline finding of this build, not a footnote to it. */
+  return ptNum('8', 'gold') + ptCap(`sections have no feed<br/>each one says what it waits on`);
+}
+
+function mkt2Room(){
+  const open = MKT2_VIEW.mode === 'open';
+  /* A device that left the room open needs the walk kicked off on load, not
+     only on the toggle — loadMkt2 self-guards, so calling it from every
+     render of an open room costs nothing after the first. */
+  if (open) loadMkt2();
+  const TILES = [
+    { name:'Return per $1', tile: pt2Net },
+    { name:'Earned share',  tile: pt2Earned },
+    { name:'Held back',     tile: pt2Gaps },
+  ];
+  return `<div class="room" id="mkt2-room">
+    <div class="shelf-head">
+      <div class="shelf-titles">
+        <div class="card-title">The marketing board · ROI edition</div>
+        <div class="card-sub">The deep board behind the drawer: what every source returned against the ten-times line, what it cost per lead and per unit, and which sources have gone quiet. Eight of its sections have no feed yet and say so where they sit.</div>
+      </div>
+      <button type="button" class="shelf-all" onclick="mkt2Toggle()">${open ? 'Close the board' : 'Open the board'}</button>
+    </div>
+    <div class="shelf-grid">${TILES.map(t => `<button type="button" class="ptile${open ? ' on' : ''}" onclick="mkt2Toggle()" aria-expanded="${open ? 'true' : 'false'}">
+      <div class="pt-h">${esc(t.name)}</div>
+      <div class="pt-b">${t.tile()}</div>
+    </button>`).join('')}</div>
+    ${open ? `<div class="room-body">
+      <div class="room-open-head"><div class="ttl">Marketing board · ROI edition</div>
+        <button type="button" class="shelf-all" onclick="mkt2Toggle()">Close</button></div>
+      ${mkt2Body()}
+    </div>` : ''}
+  </div>`;
+}
+
+/* The board's one canvas. Registered in the same `charts` array everything
+   else uses so a redraw destroys it rather than stacking a second Chart on
+   the same node. */
+function mkt2DrawChart(){
+  const el = document.getElementById('m2SrcBars');
+  if (!el || typeof Chart === 'undefined') {
+    if (el) el.parentNode.innerHTML = '<div class="chartfail">Chart library did not load.<br/>The numbers on this board are unaffected — only the drawing is missing.</div>';
+    return;
+  }
+  const rows = mkt2Rows(mkISO(mkMonthStart(MKTOFF))).filter(r => r.dollars > 0).sort((a, b) => b.dollars - a.dollars);
+  if (!rows.length) return;
+  /* mkt2Redraw swaps the room's outerHTML, so this can be called against a
+     node that already carries a Chart. Destroy that one first rather than
+     stacking a second on the same canvas — Chart.js throws on the reuse. */
+  try { const prev = Chart.getChart(el); if (prev) prev.destroy(); } catch (e) {}
+  charts.push(new Chart(el, {
+    type: 'bar',
+    data: { labels: rows.map(r => r.src),
+      datasets: [{ data: rows.map(r => r.dollars),
+        backgroundColor: rows.map(r => r.free ? '#6ba8c9' : r.roi == null ? '#8aa094' : r.roi >= MK_LINE ? '#6cc28b' : '#d96a5e'),
+        borderRadius: 4 }] },
+    options: { indexAxis: 'y',
+      plugins: { legend: { display: false },
+        tooltip: { callbacks: { label: c => ' ' + money(c.parsed.x) } } },
+      scales: { x: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { font: { size: 9 }, callback: v => short(v) } },
+                y: { grid: { display: false }, ticks: { font: { size: 9 } } } },
+      maintainAspectRatio: false },
+  }));
 }
 
 /* ── cardLeads() — "Leads by source" — DELETED 16 Aug 2026 ───────────────────
@@ -5887,6 +6802,13 @@ function render(){
                                    low). "Who sold it" and "who got the at-bats"
                                    are the same question one step apart, so they
                                    now read as one pair with nothing between.
+       5b the marketing board    — THE ROI EDITION, the deep board behind the
+                                   drawer, in its own band directly under it.
+                                   The drawer is unchanged and keeps its own
+                                   state; this room has its own slot. Nineteen
+                                   sections in the approved order, eight of
+                                   them currently refusals naming the feed they
+                                   wait on — see the block above mk2Withheld().
        5  marketing              — THE MARKETING DRAWER. Replaces the old "Leads
                                    by source" card, which the owner rejected: a
                                    source with a dollar amount next to it and no
@@ -5929,6 +6851,19 @@ function render(){
          main page keeps its shape. The old cardLeads() is gone with it. */
       marketingRoom(),
 
+      /* 5b · THE MARKETING BOARD · ROI EDITION — the deep board BEHIND the
+         drawer, in its own band directly under it. The drawer is unchanged and
+         keeps its own state; this room has its own localStorage slot so
+         opening one never closes the other.
+
+         It sits here and not inside the drawer on purpose. The drawer answers
+         two questions well and is the thing Kevin opens daily; this board is
+         the long read behind them — nineteen sections, eight of which are
+         currently refusals naming the feed they wait on. Folding it into the
+         drawer's shelf would have put a mostly-withheld board on the same
+         rung as two live ones. */
+      mkt2Room(),
+
       /* 6 · WHERE EFFORT AND RESULTS DISAGREE. Stays visible even though the
          rest of the effort suite folded: this is the card that reads both
          halves of the page at once, and it is no use behind a tap. */
@@ -5944,6 +6879,9 @@ function render(){
       <br/>build ${esc(BUILD)}
       <br/><button class="signout" style="margin-top:12px" onclick="signOut()">Sign out</button></div>`;
   drawCharts();
+  /* The ROI board's canvas only exists when its room is open, so it is drawn
+     after the band pass rather than inside drawCharts()' blanket selector. */
+  mkt2DrawChart();
 }
 
 /* These toggles sit mid-page, so a full re-render must not throw the reader back
@@ -6387,7 +7325,7 @@ addEventListener('resize', () => {
    the last one, it is to tell a human which build is on the server and when it
    got there. A number nobody clocked cannot answer that, and the first time it
    is asked in anger will be the morning a stale build is being chased. */
-const BUILD = '2026-08-16T19:07Z-appt-median-reference';
+const BUILD = '2026-08-17T00:22Z-marketing-board-roi';
 const SB_URL = 'https://lzegjjbkfuecrhdvlvay.supabase.co';
 /* The one page that can finish a password reset. Hard-coded rather than derived,
    because every derivation of it so far has been a source of bugs: a bare origin
@@ -9323,10 +10261,18 @@ function buildData(raw){
        rpt_report_marketing_roi's `led` CTE does — the 012 batch-entry anomalies
        are 12 jobs, all Google, and leaving them in would make board 1's own
        leads column disagree with the RPC feeding the row beside it. */
+    /* `b` — the rolled-up brand, added for the ROI board's Source × Company
+       matrix. It is the same rollup() every other band on this page uses, so
+       Pro-Tec's 1537 folds into 1563 here exactly as it does in the money row;
+       a brand split that disagreed with the one above it would be worse than
+       no brand split at all. Revenue only: there is no brand dimension on
+       marketing_spend (166 is keyed source_name + month), so the board can
+       show what each brand EARNED per source and must refuse what each brand
+       SPENT. See mkt2CardBrandTiles. */
     mktJobs: allJobs
       .filter(j => !j.reporting_excluded && j.cc_lead_source_id && j.cc_project_id)
       .map(j => ({ p: String(j.cc_project_id), r: j.rep_id ? String(j.rep_id) : null,
-                   l: String(j.cc_lead_source_id) })),
+                   l: String(j.cc_lead_source_id), b: rollup(j.cc_company_id) })),
     /* Booked, not run: "appointments set" is what the setters produced off a
        source, so it dates by cc_created_at. The console keeps these two facts
        apart everywhere else (see cardApptByCompany) and this board does too. */
