@@ -4474,7 +4474,12 @@ function mkSpendSplit(src, monthKey){
    its card statements are keyed by brand like every other vendor. ⚑3 rows are
    here too: these are the LEDGER's own totals, not a per-source pricing read,
    and the approved board's brand columns ($34,555 / $19,819 / $14,861) carry
-   the unattributable tooling in exactly the same way. */
+   the unattributable tooling in exactly the same way.
+   SUPERSEDED BY MIGRATION 175 (17 Aug 2026): six tooling vendors left the book
+   as fixed opex, so July's live columns now read $34,048 / $19,819 / $14,805
+   against a $68,672 total. The $34,555 figures above are the APPROVED BOARD's,
+   a dated artifact — they are cited here, not asserted as the current read.
+   See docs/marketing-spend-ledger.md. */
 function mkBrandSpend(monthKey){
   if (!MKT || !Array.isArray(MKT.spend)) return null;
   const byBrand = Object.create(null);
@@ -5357,7 +5362,12 @@ function mkt2CardEarned(){
    are keyed by company, which was the one gap holding this division. The
    denominator is each company's whole book: card Google, mgmt, ⚑3 vendors,
    bonuses — the approved board's own brand columns ($34,555 / $19,819 /
-   $14,861 for July). If the computed figure differs from the approved
+   $14,861 for July). SUPERSEDED BY MIGRATION 175 (17 Aug 2026): the six
+   tooling vendors are out as fixed opex, so the live July denominators are
+   $34,048 / $19,819 / $14,805. The approved figures stay quoted because this
+   note is about which instrument wins when they disagree, and that ruling is
+   unchanged. June is now keyed too — $37,381 / $13,989 / $17,422 on $68,792.
+   See docs/marketing-spend-ledger.md. If the computed figure differs from the approved
    snapshot ($17.85 / $23.19 / $11.55), the computed figure prints — the two
    instruments disagreeing is a fact, not a bug to fudge over. */
 function mkt2BrandRows(){
