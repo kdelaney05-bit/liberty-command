@@ -4109,10 +4109,16 @@ const mkRoiClass = roi => Math.abs(roi - MK_LINE) <= MK_NEAR ? 'near' : (roi >= 
    "not entered", never zero. A zero-spend month is a thing the office can
    actually type, and it is a different claim from never having typed.
    Since 167 a month is either ONE 'all' row or per-brand rows (the trigger
-   forbids both at once), so summing the rows is the total either way. */
+   forbids both at once), so summing the rows is the total either way.
+   THIS IS THE PRICING READ: rows whose note carries ⚑3 are unattributable
+   vendor spend (no CC source tag — Next Level, CallFire, Mailchimp, Marlie,
+   Zapier, GoDaddy, Canva) and are excluded here so they can never feed a
+   per-source ROI, CPL or CPU. They stay in mkSpendSplit (the ledger read)
+   and in mkBookTotal (every month total): held in totals, priced nowhere. */
 function mkSpendOf(src, monthKey){
   if (!MKT || !Array.isArray(MKT.spend)) return null;
-  const rows = MKT.spend.filter(s => s.source_name === src && String(s.month).slice(0, 10) === monthKey);
+  const rows = MKT.spend.filter(s => s.source_name === src && String(s.month).slice(0, 10) === monthKey
+    && !String(s.note || '').includes('⚑3'));
   return rows.length ? rows.reduce((n, r) => n + Number(r.amount), 0) : null;
 }
 
@@ -4133,8 +4139,11 @@ function mkSpendSplit(src, monthKey){
 
 /* The whole typed book for one month, folded per brand: what each company's
    typed spend adds to, plus the dollars that were typed as unsplit totals and
-   therefore belong to no brand. GOOGLE IS NEVER HERE — its spend is Windsor's
-   (date, spend only, no brand) and the table refuses a typed Google row. */
+   therefore belong to no brand. GOOGLE IS HERE since the ruling (170/171) —
+   its card statements are keyed by brand like every other vendor. ⚑3 rows are
+   here too: these are the LEDGER's own totals, not a per-source pricing read,
+   and the approved board's brand columns ($34,555 / $19,819 / $14,861) carry
+   the unattributable tooling in exactly the same way. */
 function mkBrandSpend(monthKey){
   if (!MKT || !Array.isArray(MKT.spend)) return null;
   const byBrand = Object.create(null);
@@ -4148,18 +4157,35 @@ function mkBrandSpend(monthKey){
   return any ? { byBrand, unsplit } : null;
 }
 
-/* GOOGLE IS NOT TYPEABLE. Its spend arrives through Windsor into
-   google_ads_daily, and migration 166 refuses a typed Google row with a CHECK
-   so a second surface can never fork the number.
+/* ═══ THE RULING (KD, 16 Aug 2026 · migration 170) ═══════════════════════════
+   GOOGLE'S PRICE IS THE CARD. Google Ads spend truth is the credit-card
+   statements — Chase Ink 1552/1571 + Amex Gold, keyed monthly by brand into
+   marketing_spend as 'Google Ads' rows (171). Windsor's google_ads_daily
+   UNDERCOUNTS (July 2026: Windsor $25,175 vs card $47,994) and is demoted to
+   a freshness / pacing signal only — it must never feed an ROI, cost-per-lead,
+   cost-per-unit or $-per-$1 computation again, anywhere on this console.
+   Per flag ✓2 the ROI line prices Google ALL-IN: card ad spend plus Liam /
+   Gate Digital management ($1,000 × 3 brands) — the approved board's own
+   arithmetic ($47,994 + $3,000 = $50,994 → $11.54 back per $1). In the
+   LEDGER the two stay separate rows; only the pricing folds them. */
+function mkGoogleCard(monthKey){
+  const ads = mkSpendSplit('Google Ads', monthKey);
+  if (!ads) return null;   // no card row keyed — "not entered", never zero
+  const mgmt = mkSpendSplit('Liam / Gate Digital', monthKey);
+  const byBrand = Object.create(null);
+  for (const part of [ads, mgmt]) if (part)
+    for (const [b, v] of Object.entries(part.byBrand)) byBrand[b] = (byBrand[b] || 0) + v;
+  return { ads: ads.total, mgmt: mgmt ? mgmt.total : 0,
+           total: ads.total + (mgmt ? mgmt.total : 0), byBrand };
+}
 
-   Three states, and the third is the one that matters. A feed that has stopped
-   delivering is NOT the same fact as a month nobody entered: collapsing them
-   would hide a dead integration behind a data-entry prompt, which is exactly
-   how the "3-week export lag" survived for weeks while the real cause was our
-   own sync dropping a column. Verified against live 16 Aug: the table holds 584
-   rows spanning 22 May → 20 Jul 2026 and last synced 21 Jul, so today it is
-   STALE and every recent month says so out loud. */
-function mkGoogleSpend(monthKey){
+/* Windsor, demoted: the pacing chip's only feed. Three states still, because
+   a feed that has stopped delivering is NOT the same fact as a month nobody
+   entered: collapsing them would hide a dead integration behind a data-entry
+   prompt, which is exactly how the "3-week export lag" survived for weeks
+   while the real cause was our own sync dropping a column. Verified against
+   live 16 Aug: 584 rows spanning 22 May → 20 Jul 2026, last synced 21 Jul. */
+function mkWindsorPacing(monthKey){
   const ads = MKT && MKT.ads;
   if (!Array.isArray(ads) || !ads.length) return { state:'nofeed' };
   const pre = monthKey.slice(0, 7);
@@ -4167,6 +4193,16 @@ function mkGoogleSpend(monthKey){
   const last = ads.reduce((m, a) => String(a.date) > m ? String(a.date) : m, '');
   if (!inM.length) return { state:'stale', last };
   return { state:'live', amount: inM.reduce((n, a) => n + Number(a.spend || 0), 0), last };
+}
+
+/* The whole book for one month — every typed row: brand rows, unsplit totals,
+   ⚑3 vendors, referral bonuses, the card's Google. This is the headline's
+   denominator: the approved board's $69,235 is the full ledger, not just the
+   sources the revenue RPC can name. null means an empty month, never zero. */
+function mkBookTotal(monthKey){
+  if (!MKT || !Array.isArray(MKT.spend)) return null;
+  const rows = MKT.spend.filter(s => String(s.month).slice(0, 10) === monthKey);
+  return rows.length ? rows.reduce((n, r) => n + Number(r.amount), 0) : null;
 }
 
 /* project → rolled-up source, off the slim projection built in buildData. */
@@ -4216,8 +4252,10 @@ function cardSourceRow(){
 
   const enrich = r => {
     const src = r.source_name, free = MK_FREE.has(src), isG = src === 'Google';
-    const g = isG ? mkGoogleSpend(monthKey) : null;
-    const spend = free ? null : isG ? (g.state === 'live' ? g.amount : null) : mkSpendOf(src, monthKey);
+    /* Google prices off the CARD rows (the ruling, 170) — all-in with Liam /
+       Gate Digital management per flag ✓2. Windsor never prices anything. */
+    const g = isG ? mkGoogleCard(monthKey) : null;
+    const spend = free ? null : isG ? (g ? g.total : null) : mkSpendOf(src, monthKey);
     const dollars = Number(r.signed_dollars || 0);
     const roi = (spend && spend > 0) ? dollars / spend : null;
     return { ...r, src, free, isG, g, spend, dollars, roi, appts: appts[src] || 0 };
@@ -4233,9 +4271,9 @@ function cardSourceRow(){
   const spendCell = r => {
     if (r.free) return `<div class="col absent">—</div>`;
     if (r.isG) {
-      if (r.g.state === 'live') return `<div class="col money">${money(r.spend)}<span class="mk-auto">auto · windsor</span></div>`;
-      if (r.g.state === 'stale') return `<div class="col absent">no windsor data<span class="mk-auto stale">feed last delivered ${esc(r.g.last)}</span></div>`;
-      return `<div class="col absent">no feed<span class="mk-auto stale">windsor never delivered</span></div>`;
+      if (r.g) return `<div class="col money" title="${esc(BRAND_ORDER.map(b => r.g.byBrand[b] != null ? `${BRANDS[b].s} ${money(r.g.byBrand[b])}` : null).filter(Boolean).join(' · '))} — card statements keyed by brand (170/171)${r.g.mgmt ? `, incl. ${money(r.g.mgmt)} Liam / Gate Digital mgmt per flag ✓2` : ''}">${money(r.spend)}<span class="mk-auto">card · by brand</span></div>`;
+      if (!spendBook) return `<div class="col absent">not entered<span class="mk-auto stale">spend book not applied</span></div>`;
+      return `<div class="col absent">not entered<span class="mk-auto stale">card month not keyed</span></div>`;
     }
     if (!spendBook) return `<div class="col absent">not entered<span class="mk-auto stale">spend book not applied</span></div>`;
     /* A month typed per brand (167) shows its sum read-only: the database
@@ -4274,7 +4312,7 @@ function cardSourceRow(){
 
   return `<div class="card full">
     <div class="card-title">Return by source<span class="feed-tag cc">live · cc</span></div>
-    <div class="card-sub">What each source cost and what it gave back, for one month at a time. <b>Ten is the line</b> — at or above it the source earns its money, below it does not. Spend is typed at month close; Google's arrives on its own.</div>
+    <div class="card-sub">What each source cost and what it gave back, for one month at a time. <b>Ten is the line</b> — at or above it the source earns its money, below it does not. Spend is typed at month close; Google's is the card statements, keyed by brand (the ruling, 170).</div>
     ${bar}
     <div class="mk-scroll">
       ${head}
@@ -4432,9 +4470,11 @@ function cardRepGrid(){
    drawer's input types an UNSPLIT total (brand 'all'); a month that has been
    split per brand shows its sum read-only instead of an input, because typing
    a total over brand rows is refused at the database (167's one-grain
-   trigger) and offering the input would be offering an error. Google is not
-   reachable from here: it has no input to type into, and migration 166
-   refuses it at the database besides. */
+   trigger) and offering the input would be offering an error. Google is
+   typeable since the ruling lifted 166's CHECK (170), but not from HERE:
+   its card rows are keyed by brand (171 and successors), so the drawer
+   shows them read-only like any other brand-split month — an unsplit 'all'
+   total typed over them would be refused by the one-grain trigger anyway. */
 async function saveSpend(src, monthKey, el){
   const raw = String(el.value).trim();
   el.className = 'saving';
@@ -4499,9 +4539,9 @@ function ptSourceRow(){
   if (!rows.length) return ptEmptyBox(`No sourced lead in ${mkMonthLabel(MKTOFF)}`);
   const monthKey = mkISO(mkMonthStart(MKTOFF));
   const priced = rows.map(r => {
-    const isG = r.source_name === 'Google', g = isG ? mkGoogleSpend(monthKey) : null;
+    const isG = r.source_name === 'Google', g = isG ? mkGoogleCard(monthKey) : null;
     const sp = MK_FREE.has(r.source_name) ? null
-      : isG ? (g.state === 'live' ? g.amount : null) : mkSpendOf(r.source_name, monthKey);
+      : isG ? (g ? g.total : null) : mkSpendOf(r.source_name, monthKey);
     return sp && sp > 0 ? Number(r.signed_dollars || 0) / sp : null;
   }).filter(v => v != null);
   /* No spend anywhere is the headline when it is true — the board's whole
@@ -4591,22 +4631,23 @@ function marketingRoom(){
    signings — rolling window, flagged dead for this job; probe walk is the
    instrument of record."
 
-   This console reads rpt_report_marketing_roi (160/165) for revenue and
-   marketing_spend (166) + google_ads_daily (Windsor) for cost. Measured
-   against the same month, July 2026, Google:
+   THE FORK IS RULED (KD, 16 Aug 2026 — migrations 170/171). The gap above
+   was real and it resolved against Google's own truth: Windsor's
+   google_ads_daily UNDERCOUNTS — July read $25,175 once the feed resumed,
+   against $47,994 on the card statements. The ruling: card statements are
+   Google spend truth, keyed monthly by brand into marketing_spend ('Google
+   Ads' rows, one card per company — Chase Ink 1552/1571 + Amex Gold), and
+   Windsor is a FRESHNESS / PACING SIGNAL ONLY. It feeds one chip ("windsor
+   pacing $X") and no ROI, CPL, CPU or $-per-$1, anywhere, ever. 166's CHECK
+   refusing a typed Google row was the old truth's guard and is lifted (170);
+   the one-grain trigger still refuses forked grains. Google prices ALL-IN:
+   card ads + Liam / Gate Digital mgmt (flag ✓2) — $47,994 + $3,000 =
+   $50,994 → $11.54 back per $1 on the approved July.
 
-       standalone board   $588,592 signed · $50,994 spend · $11.54 back per $1
-       these feeds        $548K    signed · $15,856 spend · 35x
-
-   Revenue is close. SPEND IS 3.2x APART, so ROI is 3x apart. Two known reasons
-   and one unknown: the board folds agency fees (Liam / Gate Digital, $3,000)
-   into Google cost and this console does not; the board reads a card statement
-   and this console reads Windsor. Neither explains a $35,000 gap. Until that
-   is settled against live, THIS BOARD SHOWS THE WINDSOR NUMBER, because the
-   brief for this build named google_ads_daily as the feed and migration 166
-   refuses a typed Google row at the database precisely so a second surface
-   cannot fork it. The board says which instrument it is reading, out loud, in
-   its own footer — it does not silently pick one.
+   Against the same July, the two revenue instruments still differ (probe
+   walk $1,248,081 vs rpt_report_marketing_roi's read) — this board computes
+   from its own RPC and prints what it computes. Any delta against the
+   approved snapshot is stated in the PR, never fudged on the page.
 
    WHAT COULD NOT BE WIRED, AND WHY IT IS REFUSED RATHER THAN ESTIMATED.
    Several approved sections still have no full feed on this console. They are
@@ -4614,26 +4655,32 @@ function marketingRoom(){
    what is missing — because a board that quietly drops the sections it
    cannot fill teaches the owner it was never asked for them.
 
-   LIVE SINCE 167/168/169 (this build): the typed book splits by company
-   (167, July re-keyed by 168), and rpt_report_marketing_roi_brand (169)
-   returns the same signing rows grouped source × brand. That lit up:
-     · Return by brand       — month revenue + typed spend per company, live;
-                               only the ÷ still refuses (Google's spend has
-                               no brand split — Windsor is date, spend only).
+   LIVE SINCE 167/168/169, AND NOW 170/171 (this build): the typed book
+   splits by company (167, July re-keyed by 168), rpt_report_marketing_roi_brand
+   (169) returns the same signing rows grouped source × brand, and the July
+   vendor ledger + Google card split are seeded (171). That lit up:
+     · Return by brand       — the ÷ IS LIVE: brand revenue over the brand's
+                               whole spend book, card Google included.
+     · Spend ledger          — the WHOLE approved ledger: lead sources,
+                               Google Ads card rows, Liam / Gate Digital,
+                               referral bonuses, and the ⚑3 vendor tooling,
+                               with flags riding in from each row's note.
+     · Cost per lead & unit  — paid-vs-earned split boxes and MoM arrows,
+                               Referral priced at its bonus row like the
+                               approved table.
+     · Earned revenue        — one ranked attacker list, Referral wearing
+                               its computed $-per-$1 against the bonuses.
+     · The headline          — signed ÷ the whole spend book, computed.
      · Source × company      — signed DOLLARS per source per brand, windowed
                                to the browsed month (was all-time job counts).
-     · Spend ledger          — the typed half renders with real brand columns
-                               plus Google from Windsor; the vendor half
-                               (Liam/Gate, Next Level, CallFire, Mailchimp,
-                               Marlie, Zapier, GoDaddy, Canva) is still a
-                               schema gap — they are vendors, not lead
-                               sources, and have no table to sit in.
 
    STILL REFUSED, AND WHY:
      · Cost-per-unit trend   — needs a leads series over May–Jul, and leads
                                before Aug 2026 are backfill-dated (MK_LEADS_FROM).
      · Unit economics        — cost per lead blocked by the same backfill;
-                               cost per unit blocked by Google's unsplit spend.
+                               average ticket blocked by signed_jobs counting
+                               amended-invoice rows (150). The brand ÷ it was
+                               waiting on lives on the brand tiles now.
      · Speed to close        — no lead-to-signed median exists on this console.
                                The Pulse's DAYS OUT is lead-to-APPOINTMENT,
                                a different interval; substituting it would be
@@ -4664,14 +4711,14 @@ function mk2Withheld(title, tag, head, why){
 
 /* Every paid source's spend for the month, resolved the same way the drawer
    resolves it so the two surfaces cannot disagree: free sources are null,
-   Google comes from Windsor and never from a typed row, everything else is
-   the typed book. */
+   Google comes from the CARD rows all-in with management (the ruling, 170 —
+   never Windsor), everything else is the typed book with ⚑3 rows held out. */
 function mkt2Rows(monthKey){
   const rows = ((MKT.roi.sections || {}).by_source || []);
   return rows.map(r => {
     const src = r.source_name, free = MK_FREE.has(src), isG = src === 'Google';
-    const g = isG ? mkGoogleSpend(monthKey) : null;
-    const spend = free ? null : isG ? (g.state === 'live' ? g.amount : null) : mkSpendOf(src, monthKey);
+    const g = isG ? mkGoogleCard(monthKey) : null;
+    const spend = free ? null : isG ? (g ? g.total : null) : mkSpendOf(src, monthKey);
     const dollars = Number(r.signed_dollars || 0);
     const jobs = Number(r.signed_jobs || 0);
     return { src, free, isG, g, spend, dollars, jobs,
@@ -4684,24 +4731,26 @@ function mkt2Head(){
   const monthKey = mkISO(mkMonthStart(MKTOFF));
   const all = mkt2Rows(monthKey);
   const rev = all.reduce((n, r) => n + r.dollars, 0);
-  const spend = all.reduce((n, r) => n + (r.spend || 0), 0);
+  /* The headline divides the month's signed dollars by the WHOLE spend book —
+     card Google, ⚑3 vendors, referral bonuses, unsplit totals, all of it.
+     That is the approved board's own arithmetic ($1,248,081 on $69,235 →
+     $18.03 back per $1, marketing 5.6% of signed). COMPUTED, NEVER KEYED:
+     revenue here is rpt_report_marketing_roi, so the figure moves with the
+     database, and any gap against the approved snapshot is two instruments
+     disagreeing out loud, not a typo. */
+  const spend = mkBookTotal(monthKey);
   const net = spend > 0 ? rev / spend : null;
   const pct = rev > 0 && spend > 0 ? 100 * spend / rev : null;
-  /* Named for what it actually is. The standalone board's header said "July
-     Signed / July Spend" against a hand-keyed card total; this one is priced
-     against whatever the spend book and Windsor actually hold, which is a
-     smaller and differently-defined number. Calling both "spend" without
-     saying which would be the fork this build exists to avoid. */
   return `<div class="m2-hdr">
     <div class="m2-eyebrow">Liberty Command · Marketing Board · ROI Edition</div>
     <h1>The spend, the juice,<br/><em>and the squeeze.</em></h1>
     <div class="m2-nw-block">
       <div>
-        <div class="m2-nw-label">${esc(mkMonthLabel(MKTOFF))} signed ÷ ${esc(mkMonthLabel(MKTOFF))} priced spend</div>
-        <div class="m2-nw">${net != null ? '$' + net.toFixed(2) : '<span style="font-size:19px;color:var(--text-dim);font-family:\'JetBrains Mono\',monospace">no priced spend</span>'}</div>
+        <div class="m2-nw-label">${esc(mkMonthLabel(MKTOFF))} signed ÷ ${esc(mkMonthLabel(MKTOFF))} spend book</div>
+        <div class="m2-nw">${net != null ? '$' + net.toFixed(2) : '<span style="font-size:19px;color:var(--text-dim);font-family:\'JetBrains Mono\',monospace">no spend entered</span>'}</div>
         <div class="m2-nw-sub">${net != null
           ? `back per $1 · ${money(rev)} on ${money(spend)}`
-          : `${money(rev)} signed · no source carries a cost for this month`}</div>
+          : `${money(rev)} signed · the book holds no row for this month`}</div>
       </div>
       <div class="m2-nw-delta">
         ${pct != null ? `<b>${pct.toFixed(1)}%</b><br/>marketing as % of<br/>${esc(mkMonthLabel(MKTOFF))} signed revenue`
@@ -4715,17 +4764,18 @@ function mkt2Head(){
 function mkt2CardThermo(){
   const monthKey = mkISO(mkMonthStart(MKTOFF));
   /* The thermometer section is PRICED sources only, like the approved board:
-     Google always (it is paid by definition — when Windsor is down its row
-     says awaiting, it does not migrate to the earned card), and any source
-     with a typed row, zero included. A source with revenue and no cost sits in
-     the earned card's unpriced list instead — one home per state, never two
-     tellings of the same source. A priced source with zero dollars STAYS
-     (spend and nothing back is a 0x, the loudest read on the card). */
+     Google always (it is paid by definition — a month whose card is not
+     keyed says "not entered", it does not migrate to the earned card), and
+     any source with a typed row, zero included. A source with revenue and no
+     cost sits in the earned card's unpriced list instead — one home per
+     state, never two tellings of the same source. A priced source with zero
+     dollars STAYS (spend and nothing back is a 0x, the loudest read on the
+     card). */
   const paid = mkt2Rows(monthKey).filter(r => (r.isG || r.spend != null) && (r.dollars > 0 || (r.spend || 0) > 0))
     .sort((a, b) => (b.roi || 0) - (a.roi || 0));
   if (!paid.length) return mk2Withheld('ROI by paid source', 'no priced source',
     'Nothing to price this month',
-    `No source in ${esc(mkMonthLabel(MKTOFF))} carries a cost — the spend book has no row for this month and Windsor delivered nothing in it. A source with revenue and no cost beside it is revenue wearing a marketing label — the reason this board exists — so none is drawn priced.`);
+    `No source in ${esc(mkMonthLabel(MKTOFF))} carries a cost — the spend book has no row for this month, the card months included. A source with revenue and no cost beside it is revenue wearing a marketing label — the reason this board exists — so none is drawn priced.`);
   /* Scale runs to 20x, floor mark at 10x — the approved geometry. A source
      above 20x pins at full width rather than rescaling the axis, because
      moving the axis moves the 10x mark and the mark is the whole point. */
@@ -4738,77 +4788,99 @@ function mkt2CardThermo(){
   };
   const spendCap = r => {
     if (r.isG) {
-      if (r.g.state === 'live') return `spend <b>${money(r.spend)}</b> · windsor`;
-      if (r.g.state === 'stale') return `<span style="color:var(--gold)">no windsor data</span> · last ${esc(r.g.last)}`;
-      return `<span style="color:var(--gold)">no feed</span> · windsor never delivered`;
+      if (r.g) return `spend <b>${money(r.spend)}</b> · card${r.g.mgmt ? ' + mgmt' : ''}`;
+      if (!Array.isArray(MKT.spend)) return `<span style="color:var(--gold)">spend book not applied</span>`;
+      return `<span style="color:var(--gold)">not entered</span> · card month not keyed`;
     }
     if (!Array.isArray(MKT.spend)) return `<span style="color:var(--gold)">spend book not applied</span>`;
     return r.spend == null ? `<span style="color:var(--gold)">not entered</span>` : `spend <b>${money(r.spend)}</b>`;
   };
+  /* Windsor's whole remaining job on this board: a pacing chip. Never a
+     number in the math below — the ruling (170) demoted it after the card
+     showed it undercounting July by half. */
+  const pace = mkWindsorPacing(monthKey);
+  const paceTag = pace.state === 'live'
+    ? `<span class="m2-tag" title="google_ads_daily (Windsor) — freshness / pacing signal only since the ruling (170). Never in ROI math.">windsor pacing ${short(pace.amount)}${MKTOFF === 0 ? ' MTD' : ''}</span>`
+    : pace.state === 'stale'
+    ? `<span class="m2-tag none" title="google_ads_daily (Windsor) delivered nothing in this month — pacing signal only, never in ROI math.">windsor silent · last ${esc(pace.last)}</span>`
+    : `<span class="m2-tag none">windsor never delivered</span>`;
   return `<div class="m2-card">
-    <div class="m2-card-title">ROI by paid source<span class="m2-tag cc">live · cc</span>${
-      Array.isArray(MKT.ads) && MKT.ads.length ? '<span class="m2-tag">windsor</span>' : '<span class="m2-tag none">no windsor</span>'}</div>
+    <div class="m2-card-title">ROI by paid source<span class="m2-tag cc">live · cc</span>${paceTag}</div>
     <div class="m2-card-sub">${esc(mkMonthLabel(MKTOFF))} signed dollars ÷ ${esc(mkMonthLabel(MKTOFF))} spend. Gold mark = your $10-per-$1 floor. Scale runs to 20×.</div>
     ${paid.map(r => {
-      /* The label states WHICH absent state this is — the three are different
-         facts and the brief names each: not entered (nobody typed), no spend
-         (a typed zero: ROI is a division by it and is refused, never printed
-         infinite), awaiting windsor (the feed is down, not the data absent). */
+      /* The label states WHICH absent state this is — they are different
+         facts: not entered (nobody keyed the month — Google included, its
+         card is typed like everything else since 170), no spend (a typed
+         zero: ROI is a division by it and is refused, never printed
+         infinite). */
       const roas = r.roi != null ? '$' + r.roi.toFixed(2)
-        : r.isG ? 'awaiting windsor'
         : r.spend === 0 ? 'no spend'
         : 'not entered';
       return `<div class="m2-thermo">
       <div class="m2-th-head">
-        <div class="m2-th-name">${esc(r.src)}</div>
+        <div class="m2-th-name">${esc(r.src)}${r.isG && r.g && r.g.mgmt ? '<small>ads + Liam / Gate Digital mgmt</small>' : ''}</div>
         <div class="m2-th-roas ${r.roi == null ? 'none' : r.roi >= MK_LINE + MK_NEAR ? 'hot' : r.roi < MK_LINE - MK_NEAR ? 'cold' : ''}">${roas}</div>
       </div>
       ${bar(r)}
       <div class="m2-th-cap"><span>${spendCap(r)}</span><span>${r.jobs} job${r.jobs === 1 ? '' : 's'}</span><span>signed <b>${money(r.dollars)}</b></span></div>
     </div>`; }).join('')}
-    <div class="m2-note">Signed dollars from <b>rpt_report_marketing_roi</b> (160/165), grouped on <b>lead_sources.rollup_name</b>. Google's cost is <b>google_ads_daily</b> (Windsor) and is raw ad spend only — agency management is not folded in here, so this reads higher than a card-statement ROI that includes it. Every other cost is the typed book, <b>marketing_spend</b> (166).</div>
+    <div class="m2-note">Signed dollars from <b>rpt_report_marketing_roi</b> (160/165), grouped on <b>lead_sources.rollup_name</b>. Google's cost is the <b>card</b> — <b>marketing_spend</b> 'Google Ads' rows (Chase Ink 1552/1571 + Amex Gold, keyed by brand, 171) plus Liam / Gate Digital management folded in per flag ✓2, the approved board's own arithmetic. <b>Windsor prices nothing here</b>: the ruling (170) demoted <b>google_ads_daily</b> to the pacing chip above after the card showed it undercounting July by half. Every other cost is the typed book (166/167); ⚑3 vendor rows are excluded from per-source pricing and held in the month totals.</div>
   </div>`;
 }
 
-/* ── 2 · EARNED REVENUE ───────────────────────────────────────────────────── */
+/* ── 2 · EARNED REVENUE · the attacker list ───────────────────────────────── */
 function mkt2CardEarned(){
   const monthKey = mkISO(mkMonthStart(MKTOFF));
   const all = mkt2Rows(monthKey);
   const total = all.reduce((n, r) => n + r.dollars, 0);
-  /* Earned = the ruling set (Referral, Previous Customer) plus any source that
-     signed money and has no cost recorded against it. The second group is NOT
-     called free — it is called unpriced, because "nobody typed a cost" and
-     "there is no cost" are different claims and this console never merges
-     them. */
-  const free = all.filter(r => r.free && r.dollars > 0).sort((a, b) => b.dollars - a.dollars);
-  /* Never Google: a stale Windsor month leaves its spend null, but "the feed
-     is down" is not "nobody typed a cost" — Google stays on the priced card
-     saying awaiting windsor. A typed zero is priced too, at zero. */
-  const unpriced = all.filter(r => !r.free && !r.isG && r.spend == null && r.dollars > 0).sort((a, b) => b.dollars - a.dollars);
-  if (!free.length && !unpriced.length) return '';
-  const earned = free.reduce((n, r) => n + r.dollars, 0);
-  const row = (r, tag) => `<div class="m2-free-row">
-    <span class="nm">${esc(r.src)}<small>${r.jobs} job${r.jobs === 1 ? '' : 's'}${tag ? ' · ' + tag : ''}</small></span>
-    <span class="amt">${money(r.dollars)}</span></div>`;
+  /* ONE RANKED LIST — the attacker order, biggest earned dollars first, the
+     approved board's own shape (referral / previous customer / self-gen /
+     website / facebook…). Two kinds of row share it and each is tagged for
+     what it is: the ruling set (Referral, Previous Customer — free by
+     ruling), and sources that signed money with no cost in the book
+     (unpriced — "nobody typed a cost" and "there is no cost" stay different
+     claims, and the note below keeps them apart). Referral is the exception
+     that proves the card: it carries its ~$1,000/mo bonus cost (typed as
+     'Referral bonuses', flag ~5 — occasional, not programmatic) and wears
+     its own computed $-per-$1, the loudest number on the board. Every
+     dollar on the revenue side is CC-live from the RPC — nothing here is
+     hand-typed. */
+  const free = all.filter(r => r.free && r.dollars > 0);
+  /* Never Google: since the ruling its cost is the card, and a month whose
+     card is not keyed reads "not entered" on the priced card — it does not
+     migrate here. A typed zero is priced too, at zero. */
+  const unpriced = all.filter(r => !r.free && !r.isG && r.spend == null && r.dollars > 0);
+  const list = [...free, ...unpriced].sort((a, b) => b.dollars - a.dollars);
+  if (!list.length) return '';
+  const earned = list.reduce((n, r) => n + r.dollars, 0);
+  const bonus = mkSpendOf('Referral bonuses', monthKey);
+  const row = r => {
+    const tag = r.src === 'Referral' && bonus > 0
+      ? `${money(bonus)} bonuses ~ · <b style="color:var(--green-soft)">${money(r.dollars / bonus)} per $1</b>`
+      : r.free ? '' : 'no cost entered';
+    return `<div class="m2-free-row">
+      <span class="nm">${esc(r.src)}<small>${r.jobs} job${r.jobs === 1 ? '' : 's'}${tag ? ' · ' + tag : ''}</small></span>
+      <span class="amt">${money(r.dollars)}</span></div>`;
+  };
   return `<div class="m2-card">
     <div class="m2-card-title">Earned revenue · no ad dollar attached<span class="m2-tag cc">live · cc</span></div>
-    <div class="m2-card-sub">${total > 0 ? `<b>${(100 * earned / total).toFixed(1)}%</b> of ${esc(mkMonthLabel(MKTOFF))} signed came in free.` : ''} Referral and Previous Customer are free by ruling — they have no spend and therefore no ROI.</div>
-    ${free.map(r => row(r, '')).join('')}
-    ${unpriced.length ? `<div class="m2-note" style="margin:12px 0 6px"><b>Not free — unpriced.</b> These signed money and carry no cost in the book. That is a data-entry state, not a costless channel, so they are listed apart from the two above.</div>
-      ${unpriced.map(r => row(r, 'no cost entered')).join('')}` : ''}
+    <div class="m2-card-sub">${total > 0 ? `<b>${(100 * earned / total).toFixed(1)}%</b> of ${esc(mkMonthLabel(MKTOFF))} signed came in near-free.` : ''} Referral now carries its bonus cost — an estimate (~5), occasional not programmatic — and is priced out loud; no other row has a dollar against it.</div>
+    ${list.map(row).join('')}
+    ${unpriced.length ? `<div class="m2-note"><b>"no cost entered" rows are not called free.</b> They signed money and carry no cost in the book — a data-entry state, not a costless channel. The tag keeps the two claims apart inside one ranked list.</div>` : ''}
   </div>`;
 }
 
 /* ── 3 · RETURN BY BRAND ──────────────────────────────────────────────────── */
-/* Both halves are real now, and each names its own remainder. Revenue splits
-   by brand via rpt_report_marketing_roi_brand (169) — the same signing rows as
-   the board's every other dollar, grouped one dimension finer. Spend splits by
-   brand via the typed book's brand rows (167) — EXCEPT GOOGLE, whose spend is
-   Windsor's (date, spend — no brand) and is refused as a typed row, so a
-   brand's spend here is its typed book only and says so. The ÷ the approved
-   tile carries stays withheld: dividing full brand revenue by partial brand
-   cost would print a number that flatters every brand in proportion to how
-   much Google it buys — the exact backwards of what the tile is for. */
+/* THE ÷ IS LIVE. Revenue splits by brand via rpt_report_marketing_roi_brand
+   (169) — the same signing rows as the board's every other dollar, grouped
+   one dimension finer. Spend splits by brand via the typed book (167), and
+   since the ruling (170/171) that book INCLUDES Google — the card statements
+   are keyed by company, which was the one gap holding this division. The
+   denominator is each company's whole book: card Google, mgmt, ⚑3 vendors,
+   bonuses — the approved board's own brand columns ($34,555 / $19,819 /
+   $14,861 for July). If the computed figure differs from the approved
+   snapshot ($17.85 / $23.19 / $11.55), the computed figure prints — the two
+   instruments disagreeing is a fact, not a bug to fudge over. */
 function mkt2BrandRows(){
   return (((MKT.roiBrand || {}).sections || {}).by_source_brand || []);
 }
@@ -4823,25 +4895,25 @@ function mkt2CardBrandTiles(){
     jobs[r.brand] = (jobs[r.brand] || 0) + Number(r.signed_jobs || 0);
   }
   const book = mkBrandSpend(monthKey);
-  const g = mkGoogleSpend(monthKey);
-  const gNote = g.state === 'live' ? `Google's ${money(g.amount)} (Windsor)` : `Google's spend (Windsor, ${g.state === 'stale' ? 'stale this month' : 'no feed'})`;
   return `<div class="m2-card">
     <div class="m2-card-title">Return by brand · ${esc(mkMonthLabel(MKTOFF))}<span class="m2-tag cc">live · cc</span><span class="m2-tag manual">spend · typed book</span></div>
-    <div class="m2-card-sub">A roof and a fence do not cost the same to sell. Signed dollars per company, and beside them what the typed book says that company spent — Google excluded from every spend line, because Windsor delivers no brand split.</div>
+    <div class="m2-card-sub">A roof and a fence do not cost the same to sell. Signed dollars per company ÷ that company's whole spend book — card Google included since the ruling (170/171), which is what unblocked this division.</div>
     ${BRAND_ORDER.map(id => {
       const m = BRANDS[id];
       const sp = book && book.byBrand[id] != null ? book.byBrand[id] : null;
+      const roas = sp > 0 ? (rev[id] || 0) / sp : null;
       return `<div class="m2-brand-tile">
         <div class="m2-bt-head"><div class="m2-bt-name">${esc(m.n)}</div>
-          <div class="m2-bt-roas none" title="brand revenue is complete but brand cost excludes Google — the division would flatter every brand in proportion to its Google buy">÷ withheld · google unsplit</div></div>
+          ${roas != null
+            ? `<div class="m2-bt-roas">$${roas.toFixed(2)}<small> /$1</small></div>`
+            : `<div class="m2-bt-roas none" title="this company has no spend row for the month — a division by nothing is refused, never printed">${sp === 0 ? 'no spend' : '÷ not entered'}</div>`}</div>
         <div class="m2-bt-rows">
           <div class="m2-bt-row"><span>Signed · ${(jobs[id] || 0).toLocaleString()} job${(jobs[id] || 0) === 1 ? '' : 's'}</span><b class="g">${money(rev[id] || 0)}</b></div>
-          <div class="m2-bt-row"><span>Typed spend · excl. Google</span><b>${sp != null ? money(sp) : '<span style="color:var(--gold);font-weight:400">not entered</span>'}</b></div>
+          <div class="m2-bt-row"><span>Marketing spend</span><b>${sp != null ? money(sp) : '<span style="color:var(--gold);font-weight:400">not entered</span>'}</b></div>
         </div>
       </div>`; }).join('')}
-    ${book && book.unsplit > 0 ? `<div class="m2-note"><b>${money(book.unsplit)}</b> of this month's typed spend was entered as unsplit totals and belongs to no brand tile — split those rows by brand and it lands.</div>` : ''}
-    <div class="withheld"><div class="wt">The $-back-per-$1 on these tiles is withheld, not computed</div><div class="wx">
-      Brand revenue is complete (<b>rpt_report_marketing_roi_brand</b>, 169 — same signing rows as every dollar above, brand from <b>rpt_signings.brand_rollup_cc_id</b>, legacy 1537 folded into 1563). Brand cost is not: the typed book splits by company since <b>167</b>, but ${gNote} carries no brand split — <b>google_ads_daily</b> is <b>date, spend</b> only. Dividing full revenue by partial cost would overstate every tile in proportion to its Google buy. Map Windsor's <b>ad_account_id</b> to a company and the ÷ lights with no further schema change.</div></div>
+    ${book && book.unsplit > 0 ? `<div class="m2-note"><b>${money(book.unsplit)}</b> of this month's typed spend was entered as unsplit totals and belongs to no brand tile — those dollars are in the headline and the ledger total but in no tile's ÷, which therefore reads slightly high. Split those rows by brand and they land.</div>` : ''}
+    <div class="m2-note">Revenue: <b>rpt_report_marketing_roi_brand</b> (169) — the same signing rows as every dollar above, brand from <b>rpt_signings.brand_rollup_cc_id</b>, legacy 1537 folded into 1563. Spend: the whole typed book for the month by company (167), Google card rows and ⚑3 vendors included — matching the ledger below and the approved board's brand totals. The ÷ went live with the ruling: card Google keyed by brand (170/171) closed the one gap that held it.</div>
   </div>`;
 }
 
@@ -4858,57 +4930,53 @@ function mkt2CardChart(){
   </div>`;
 }
 
-/* ── 5 · VENDOR LEDGER · the typed half ───────────────────────────────────── */
-/* PARTIAL SINCE 167, and the card says which half it is. The typed book now
-   splits by brand, so every source in it renders as a ledger row with real
-   company columns; Google renders from Windsor as a total that CANNOT split
-   (date, spend only). What still cannot render is the approved ledger's other
-   seven lines — Liam / Gate Digital, Next Level, CallFire, Mailchimp, Marlie,
-   Zapier, GoDaddy, Canva are VENDORS, not lead sources, and marketing_spend
-   is keyed by lead-source name so they have nowhere to sit even as a row.
-   That remainder is named below rather than silently absent. */
+/* ── 5 · VENDOR LEDGER · the whole book ───────────────────────────────────── */
+/* FULL SINCE 171. One book holds it all now: lead sources (Saving Safari,
+   Angi), the card's Google Ads, the agency line, referral bonuses, and the
+   ⚑3 vendor tooling — vendors as rows, companies as columns, exactly the
+   approved ledger's shape. Rows sort by total, biggest first, matching the
+   approved board. Each row's flags ride in from its own note: ⚑3 means
+   unattributable (held in totals, priced nowhere), ~ means estimate.
+   Heymarket is deliberately NOT here — reclassified to company ops with
+   EagleView and Pictometry. Windsor prices nothing on this ledger. */
 function mkt2CardLedger(){
   const monthKey = mkISO(mkMonthStart(MKTOFF));
-  const book = Array.isArray(MKT.spend);
-  const srcs = book ? [...new Set(MKT.spend.filter(s => String(s.month).slice(0, 10) === monthKey).map(s => s.source_name))].sort() : [];
-  const g = mkGoogleSpend(monthKey);
-  if (!book) return mk2Withheld('Spend ledger · monthly', 'no feed',
+  if (!Array.isArray(MKT.spend)) return mk2Withheld('Spend ledger · monthly', 'no feed',
     'The spend book is not on live yet',
-    `<b>marketing_spend</b> (166/167) has not been applied — there is no table to read. Apply it and the typed half of this ledger goes live with no further deploy.`);
-  if (!srcs.length && g.state !== 'live') return mk2Withheld('Spend ledger · monthly', 'nothing typed',
+    `<b>marketing_spend</b> (166/167) has not been applied — there is no table to read. Apply it and this ledger goes live with no further deploy.`);
+  const monthRows = MKT.spend.filter(s => String(s.month).slice(0, 10) === monthKey);
+  if (!monthRows.length) return mk2Withheld('Spend ledger · monthly', 'nothing typed',
     `No spend row for ${esc(mkMonthLabel(MKTOFF))}`,
-    `The book is live but holds nothing for this month, and Windsor ${g.state === 'stale' ? `delivered nothing in it (last delivery ${esc(g.last)})` : 'has never delivered'}. A ledger of zeros would be an estimate; the empty month is the fact.`);
+    `The book is live but holds nothing for this month. A ledger of zeros would be an estimate; the empty month is the fact — and if it is last month, the nag at the top of the board is already asking for it.`);
+  const info = [...new Set(monthRows.map(s => s.source_name))].map(src => {
+    const sp = mkSpendSplit(src, monthKey);
+    const notes = monthRows.filter(r => r.source_name === src).map(r => String(r.note || ''));
+    const mark = notes.some(n => n.includes('⚑3')) ? ' ⚑3' : notes.some(n => n.includes('estimate ~')) ? ' ~' : '';
+    return { src, sp, mark };
+  }).sort((a, b) => b.sp.total - a.sp.total);
   const cells = Object.create(null);
   let tot = 0;
-  const row = src => {
-    const sp = mkSpendSplit(src, monthKey);
+  const rows = info.map(({ src, sp, mark }) => {
     tot += sp.total;
-    return `<tr><td>${esc(src)}</td>${BRAND_ORDER.map(b => {
+    return `<tr><td>${esc(src + mark)}</td>${BRAND_ORDER.map(b => {
       const v = sp.split ? (sp.byBrand[b] || 0) : null;
       if (v) cells[b] = (cells[b] || 0) + v;
       return sp.split
         ? `<td class="${v ? '' : 'z'}">${v ? v.toLocaleString() : '—'}</td>`
         : `<td class="z" title="entered as one unsplit total">·</td>`;
     }).join('')}<td>${sp.total.toLocaleString()}</td></tr>`;
-  };
-  const rows = srcs.map(row).join('');
-  const gRow = g.state === 'live'
-    ? `<tr><td>Google Ads</td><td class="z" colspan="${BRAND_ORDER.length}" style="text-align:center" title="google_ads_daily is date, spend — Windsor delivers no brand split">windsor · no brand split</td><td>${Math.round(g.amount).toLocaleString()}</td></tr>`
-    : `<tr><td>Google Ads</td><td class="z" colspan="${BRAND_ORDER.length}" style="text-align:center">${g.state === 'stale' ? `no windsor data · last ${esc(g.last)}` : 'windsor never delivered'}</td><td class="z">—</td></tr>`;
-  const gTot = g.state === 'live' ? g.amount : 0;
+  }).join('');
   return `<div class="m2-card">
-    <div class="m2-card-title">Spend ledger · ${esc(mkMonthLabel(MKTOFF))}<span class="m2-tag manual">typed · kd</span>${g.state === 'live' ? '<span class="m2-tag">windsor</span>' : '<span class="m2-tag none">no windsor</span>'}</div>
-    <div class="m2-card-sub">The typed book by company (167), plus Google from Windsor. This is the ledger's lead-source half — the vendor half has no table yet, see below.</div>
+    <div class="m2-card-title">Spend ledger · ${esc(mkMonthLabel(MKTOFF))}<span class="m2-tag manual">typed · kd</span><span class="m2-tag chase" title="Google Ads rows are the card statements — Chase Ink 1552/1571 + Amex Gold, keyed by brand (170/171)">card</span></div>
+    <div class="m2-card-sub">The whole book by company — vendors as rows, one grain per month (167/170/171). Google Ads is the card statements, keyed by brand; Windsor prices nothing here. Heymarket ($866) reclassified to company ops — with EagleView, Pictometry.</div>
     <div class="m2-scroll"><table class="m2-co">
-      <tr><th>Source</th>${BRAND_ORDER.map(b => `<th>${esc(BRANDS[b].s)}</th>`).join('')}<th>Total</th></tr>
+      <tr><th>Vendor</th>${BRAND_ORDER.map(b => `<th>${esc(BRANDS[b].s)}</th>`).join('')}<th>Total</th></tr>
       ${rows}
-      ${gRow}
       <tr><td style="font-weight:600">TOTAL / MO</td>${BRAND_ORDER.map(b =>
         `<td style="font-weight:600" class="${cells[b] ? '' : 'z'}">${cells[b] ? cells[b].toLocaleString() : '—'}</td>`).join('')}
-      <td style="font-weight:600">${Math.round(tot + gTot).toLocaleString()}</td></tr>
+      <td style="font-weight:600">${Math.round(tot).toLocaleString()}</td></tr>
     </table></div>
-    <div class="withheld"><div class="wt">The vendor half is still a schema gap</div><div class="wx">
-      The approved ledger also names <b>Liam / Gate Digital, Next Level, CallFire, Mailchimp, Marlie AI, Zapier, GoDaddy, Canva</b> — vendors, not lead sources, so the book (keyed by rolled-up lead-source name) has nowhere to put them: the ~$1,454/mo of unattributable tooling (⚑3) plus $3,000/mo agency fees are absent from the totals above. A vendor table is a migration, not an entry — until it exists this ledger reads lower than the card statements and says so here.</div></div>
+    <div class="m2-note">Flags ride in from each row's own note in <b>marketing_spend</b>: <b>⚑3</b> = unattributable — no CC source tag, held in these totals, excluded from every per-source ROI, CPL and CPU above; <b>~</b> = estimate (referral bonuses — occasional, not programmatic); the Oasis Saving Safari $2,000 is imputed barter (⚑6) and will not reconcile against QB. This table IS the month's spend truth — the headline and the brand tiles divide against these same totals, so the three surfaces cannot disagree.</div>
   </div>`;
 }
 
@@ -4916,7 +4984,15 @@ function mkt2CardLedger(){
 /* Units are live in every window. LEADS ARE NOT, and the split matters: the
    RPC dates a lead by jobs.created_at, which for every month before Aug 2026
    is the 20 Jul backfill. So cost-per-UNIT renders and cost-per-LEAD refuses,
-   in the same table, per row. */
+   in the same table, per row.
+   PRICING ON THIS TABLE follows the approved board: Google is the card
+   all-in, and Referral is priced at its bonus row ('Referral bonuses', ~) —
+   the one earned source that carries a real dollar, which is how the
+   approved table reads $16/lead · $23/unit against everyone else's "free".
+   The MoM column compares each source's cost-per-unit against last month,
+   priced the same way on both ends — spend from the book, units from the
+   month walk (MKT2). An arrow needs both ends: a month with no typed spend
+   or no answered window reads an em-dash, never a guess. */
 function mkt2CardCPU(){
   const monthKey = mkISO(mkMonthStart(MKTOFF));
   const leadsBlind = monthKey.slice(0, 7) < MK_LEADS_FROM;
@@ -4924,35 +5000,79 @@ function mkt2CardCPU(){
   if (!rows.length) return '';
   const roiRows = ((MKT.roi.sections || {}).by_source || []);
   const leadsOf = src => { const r = roiRows.find(x => x.source_name === src); return r ? Number(r.leads || 0) : 0; };
-  const totSpend = rows.reduce((n, r) => n + (r.spend || 0), 0);
-  const totUnits = rows.reduce((n, r) => n + r.jobs, 0);
+  const bonus = mkSpendOf('Referral bonuses', monthKey);
+  const priceOf = r => r.src === 'Referral' ? (bonus > 0 ? bonus : null) : r.spend;
+  /* Last month's cost per unit, priced identically. */
+  const prevKey = mkISO(mkMonthStart(MKTOFF + 1));
+  const prevWin = (MKT2 && !MKT2.err) ? MKT2.series.find(m => !m.err && m.key === prevKey.slice(0, 7)) : null;
+  const prevCpuOf = src => {
+    if (!prevWin) return null;
+    const sp = src === 'Google' ? (mkGoogleCard(prevKey) || {}).total
+      : src === 'Referral' ? mkSpendOf('Referral bonuses', prevKey)
+      : MK_FREE.has(src) ? null : mkSpendOf(src, prevKey);
+    const units = ((prevWin.bySrc || {})[src] || {}).jobs || 0;
+    return (sp > 0 && units) ? sp / units : null;
+  };
+  const momCell = (src, cpu) => {
+    if (cpu == null) return '<td class="absent">—</td>';
+    const prev = prevCpuOf(src);
+    if (prev == null) return `<td class="absent" title="no priced ${esc(mkMonthLabel(MKTOFF + 1))} to compare against — an arrow needs both ends">—</td>`;
+    const d = 100 * (cpu - prev) / prev;
+    if (Math.abs(d) < 1) return '<td>≈ flat</td>';
+    return d < 0 ? `<td class="good">▼ ${Math.abs(d).toFixed(0)}% cheaper</td>`
+                 : `<td class="bad">▲ ${d.toFixed(0)}% pricier</td>`;
+  };
   const cell = r => {
-    const cpu = (r.spend && r.spend > 0 && r.jobs) ? r.spend / r.jobs : null;
-    const cpl = (!leadsBlind && r.spend && r.spend > 0 && leadsOf(r.src)) ? r.spend / leadsOf(r.src) : null;
-    /* Same three absent states as the thermometers, per cost cell. */
-    const absent = r.free ? 'free' : r.isG ? 'awaiting windsor' : r.spend === 0 ? 'no spend' : 'not entered';
+    const sp = priceOf(r);
+    const cpu = (sp && sp > 0 && r.jobs) ? sp / r.jobs : null;
+    const cpl = (!leadsBlind && sp && sp > 0 && leadsOf(r.src)) ? sp / leadsOf(r.src) : null;
+    const absent = r.free ? 'free' : sp === 0 ? 'no spend' : 'not entered';
     return `<tr>
       <td>${esc(r.src)}</td>
       <td>${leadsBlind ? '<span class="absent" title="backfill-dated — see below">—</span>' : leadsOf(r.src).toLocaleString()}</td>
       <td class="u">${r.jobs.toLocaleString()}</td>
-      <td class="${cpl == null ? (r.free ? 'free' : 'absent') : ''}">${leadsBlind ? 'backfill' : cpl == null ? absent : money(cpl)}</td>
+      <td class="${cpl == null ? (cpu == null && r.free ? 'free' : 'absent') : cpl < 100 ? 'good' : ''}">${leadsBlind ? 'backfill' : cpl == null ? absent : money(cpl)}</td>
       <td class="${cpu == null ? (r.free ? 'free' : 'absent') : cpu > 1000 ? 'bad' : cpu < 100 ? 'good' : ''}">${
         cpu == null ? absent : money(cpu)}</td>
+      ${momCell(r.src, cpu)}
     </tr>`;
   };
+  /* The split the approved board draws: paid media against earned asking.
+     Paid = sources carrying real ad spend (Google, Safari, Angi — never the
+     referral bonus, which is a thank-you, not a buy). Earned = everything
+     that signed money without an ad dollar, Referral included. */
+  const paid = rows.filter(r => r.spend > 0);
+  const earnedRows = rows.filter(r => !(r.spend > 0) && r.dollars > 0);
+  const paidSpend = paid.reduce((n, r) => n + r.spend, 0);
+  const paidUnits = paid.reduce((n, r) => n + r.jobs, 0);
+  const paidLeads = leadsBlind ? null : paid.reduce((n, r) => n + leadsOf(r.src), 0);
+  const earnUnits = earnedRows.reduce((n, r) => n + r.jobs, 0);
+  const earnLeads = leadsBlind ? null : earnedRows.reduce((n, r) => n + leadsOf(r.src), 0);
+  const totUnits = rows.reduce((n, r) => n + r.jobs, 0);
+  const blendSpend = rows.reduce((n, r) => n + (priceOf(r) || 0), 0);
   return `<div class="m2-card">
-    <div class="m2-card-title">Cost per lead &amp; per unit · ${esc(mkMonthLabel(MKTOFF))}<span class="m2-tag cc">live · cc</span></div>
-    <div class="m2-card-sub">Units = signed in the month. Leads = created in the month. Different cohorts on purpose — CPL measures the faucet, CPU measures what came out.</div>
+    <div class="m2-card-title">Cost per lead &amp; per unit · ${esc(mkMonthLabel(MKTOFF))}<span class="m2-tag cc">live · cc</span><span class="m2-tag manual">spend · book</span></div>
+    <div class="m2-card-sub">Units = signed in the month. Leads = created in the month. Different cohorts on purpose — CPL measures the faucet, CPU measures what came out. MoM compares cost per unit against ${esc(mkMonthLabel(MKTOFF + 1))}, priced the same way on both ends.</div>
     <div class="m2-scroll"><table class="m2-cpu">
-      <tr><th>Source</th><th>Leads</th><th>Units</th><th>CPL</th><th>Cost / unit</th></tr>
+      <tr><th>Source</th><th>Leads</th><th>Units</th><th>CPL</th><th>Cost / unit</th><th>MoM</th></tr>
       ${rows.sort((a, b) => b.dollars - a.dollars).map(cell).join('')}
       <tr class="tot"><td>BLENDED</td><td>${leadsBlind ? '—' : roiRows.reduce((n, r) => n + Number(r.leads || 0), 0).toLocaleString()}</td>
         <td>${totUnits.toLocaleString()}</td>
         <td>${leadsBlind ? 'backfill' : '—'}</td>
-        <td>${totSpend > 0 && totUnits ? money(totSpend / totUnits) : 'no priced spend'}</td></tr>
+        <td>${blendSpend > 0 && totUnits ? money(blendSpend / totUnits) : 'no priced spend'}</td>
+        <td class="absent">—</td></tr>
     </table></div>
+    <div class="m2-cpu-split">
+      <div class="m2-cs"><div class="k">Paid only</div>
+        <div class="v">${paidSpend > 0 && paidUnits ? money(paidSpend / paidUnits) : '—'}</div>
+        <div class="u2">per unit${paidSpend > 0 && paidLeads ? ` · ${money(paidSpend / paidLeads)}/lead` : ''}<br/>${paidLeads != null ? paidLeads.toLocaleString() + ' leads · ' : ''}${paidUnits.toLocaleString()} units on ${money(paidSpend)}</div></div>
+      <div class="m2-cs earn"><div class="k">Earned</div>
+        <div class="v">${earnUnits.toLocaleString()} units</div>
+        <div class="u2">${totUnits ? Math.round(100 * earnUnits / totUnits) : 0}% of ${esc(mkMonthLabel(MKTOFF))} units${earnLeads != null && (earnLeads + (paidLeads || 0)) > 0 ? `<br/>${Math.round(100 * earnLeads / (earnLeads + paidLeads))}% of all leads` : ''} · ~$0${bonus > 0 ? ` beyond ${money(bonus)} referral bonuses` : ''}</div></div>
+    </div>
     ${leadsBlind ? `<div class="withheld"><div class="wt">The CPL column is withheld for ${esc(mkMonthLabel(MKTOFF))}</div><div class="wx">
       <b>rpt_report_marketing_roi</b> dates a lead by <b>jobs.created_at</b> — when OUR row was written, not when the lead arrived. The warehouse was loaded in one shot on <b>20 Jul 2026</b>, so a July window returns the whole backfill (Google reads <b>4,282</b> against a true <b>253</b>) and every month before it returns zero, which is not the same as none. From <b>August 2026</b> the column is real and renders. <b>Cost per unit is unaffected</b> and is shown above: units are signings, dated by <b>rpt_signings.signed_on</b>, which is correct in every window.</div></div>` : ''}
+    <div class="m2-note">Spend per source resolves exactly as the thermometers do — Google all-in from the card (170/171), Referral at its typed bonus row (~). ⚑3 vendor rows appear nowhere on this table, blended row included: unattributable spend prices no source, and it is carried where totals belong — the ledger and the headline. The MoM arrow reads from the month walk and lights only when both months carry a priced spend and signed units${!prevWin ? ` — ${MKT2 ? esc(mkMonthLabel(MKTOFF + 1)) + '’s window has not answered' : 'the walk loads with this board'}, so it reads an em-dash for now` : ''}.</div>
   </div>`;
 }
 
@@ -4960,7 +5080,7 @@ function mkt2CardCPU(){
 function mkt2CardUnitEcon(){
   return mk2Withheld('Unit economics · blended &amp; by company', 'partly feedable',
     'Two of the three numbers on every tile still cannot be honest',
-    `The approved section gives each brand a <b>cost per lead</b>, a <b>cost per unit</b> and an <b>average ticket</b>, then a per-source table underneath. Since <b>167/169</b> the raw halves exist for some of it — the typed book splits spend by company and <b>rpt_report_marketing_roi_brand</b> returns signed jobs and dollars per brand, so an average ticket is one division away. But <b>cost per lead</b> needs a brand-split lead count and leads are backfill-dated before Aug 2026, and <b>cost per unit</b> needs full brand cost while Google — the largest line — carries no brand split (<b>google_ads_daily</b> is date, spend). One live number under two refusals is a tile that reads broken; the section holds until Windsor's <b>ad_account_id</b> is mapped to a company, which is the same one gap the Return-by-brand ÷ is waiting on.`);
+    `The approved section gives each brand a <b>cost per lead</b>, a <b>cost per unit</b> and an <b>average ticket</b>, then a per-source table underneath. The ruling closed the cost gap — brand spend is complete since the card split (<b>170/171</b>), and the brand-level ÷ it unblocked is live on the <b>Return by brand</b> tiles above. What still cannot be honest here: <b>cost per lead</b> needs a brand-split lead count and leads are backfill-dated before Aug 2026 (see the CPL refusal above), and <b>average ticket</b> needs a distinct-by-project job count — <b>signed_jobs</b> counts amended-invoice rows (migration 150), which is right for money and wrong for a ticket. That count is a new RPC, not a bodge here. One live number under two refusals is a tile that reads broken, so the section holds — less is missing than before, and what is missing is named.`);
 }
 
 /* ── 8 · COST PER UNIT TRENDING ───────────────────────────────────────────── */
@@ -5132,11 +5252,12 @@ function mkt2CardAsk(){
    says so, so a typed note can never wear a measured number's skin. */
 function mkt2CardFlags(){
   const F = [
+    ['✓9', 0, '<b>Google spend truth is the card — the ruling, KD Aug 16.</b> Windsor undercounted July by half ($25,175 vs $47,994 keyed). <b>google_ads_daily</b> demoted to the pacing chip; every ROI, CPL, CPU and $-per-$1 on this board reads the card rows (170/171).'],
     ['✓0', 0, '<b>Third card confirmed — Amex Gold, Pro-Tec Roofing.</b> KD Aug 16. Roofing spend locked.'],
     ['~5', 0, '<b>Referral bonuses are an estimate, not a policy.</b> KD Aug 16: ~$500 Fencing + ~$500 Pro-Tec, $0 Oasis — paid occasionally, not to every referrer.'],
     ['⚑1', 0, '<b>Second Google Ads ID on Roofing card</b> (~$450–590/mo) — likely LSA. Map separately?'],
     ['✓2', 0, '<b>Liam IS Gate Digital.</b> KD Aug 16. $2,000/mo double-count removed — one line at $1,000 × 3 brands.'],
-    ['⚑3', 0, '<b>Unattributable spend: $1,454/mo</b> (Next Level, CallFire, Mailchimp, Marlie, Zapier, GoDaddy, Canva) — no CC source tag, so no ROI reading.'],
+    ['⚑3', 0, '<b>Unattributable spend: $1,454/mo</b> (Next Level, CallFire, Mailchimp, Marlie, Zapier, GoDaddy, Canva) — no CC source tag, so no ROI reading. Live in the ledger since 171: held in totals, priced nowhere.'],
     ['⚑4', 1, '<b>Angi is the leak.</b> Cheap leads, terrible close — the drawer\'s own thin floor and the cost-per-unit table above both read it the same way.'],
     ['⚑7', 0, '<b>Attribution is clean.</b> Every project the RPC returns carries a rolled-up source — no "unknown" bucket needed.'],
     ['⚑8', 0, '<b>Yard Sign went dark.</b> Signs not going out, or the tag not being applied at intake — worth one question to the crew. Went quiet, above, is the live version of this flag.'],
@@ -5157,12 +5278,14 @@ function mkt2CardFlags(){
    footer IS the provenance, and it has to describe the instrument actually in
    use. Every other piece of copy on this board is the approved one. */
 function mkt2Foot(){
-  const g = mkGoogleSpend(mkISO(mkMonthStart(MKTOFF)));
+  const monthKey = mkISO(mkMonthStart(MKTOFF));
+  const g = mkGoogleCard(monthKey);       // card truth — null when the month is not keyed
+  const w = mkWindsorPacing(monthKey);    // pacing signal, named in the footer only when it is also down
   return `<div class="m2-foot">
     <b>Revenue:</b> <b>rpt_report_marketing_roi</b> (migration 160, corrected by 165), grouped on <b>lead_sources.rollup_name</b> (163) — never the raw Contractors Cloud name, which splits Angi three ways and Google five. Signed dollars are dated by <b>rpt_signings.signed_on</b> and are correct in every window. Signed jobs are counted <b>distinct by project</b>: migration 150 splits an amended invoice into a row per late bell, which is right for money and would push a rate past 100%.
-    <b>Spend:</b> typed sources from <b>marketing_spend</b> (166, split by company since <b>167</b> — a month is either one unsplit total or per-brand rows, trigger-enforced, so sums never double) — a source with no row reads <b>not entered</b>, never zero. Google is <b>not typeable</b>: it arrives through Windsor into <b>google_ads_daily</b> and 166 refuses a typed Google row with a CHECK, so the two surfaces cannot fork it${g.state === 'live' ? '' : g.state === 'stale' ? `. Windsor is <b>stale</b> for this month — last delivery ${esc(g.last)}` : '. Windsor has <b>never delivered</b>'}. Google's figure here is <b>raw ad spend only</b>; agency management is not folded in, so it reads higher than a card-statement ROI that includes it, and it carries <b>no brand split</b> — the one gap holding the brand tiles' ÷.
-    <b>Brand money:</b> <b>rpt_report_marketing_roi_brand</b> (169) — the identical confirmed signing rows grouped source × company on <b>rpt_signings.brand_rollup_cc_id</b>, so the brand sections cross-foot with every other dollar on this board by construction. Legacy Liberty Roofing (1537) folds into Pro-Tec upstream.
-    <b>Not read here:</b> the approved board's own basis — a one-off CC probe walk of 2,500 projects and Chase / Amex statements keyed by hand. That instrument and this one disagree about July Google spend by roughly 3×, and this page shows the database rather than the snapshot. Which is right is an open question, written up in the PR.
+    <b>Spend:</b> the typed book, <b>marketing_spend</b> (166; by company since <b>167</b> — a month is either one unsplit total or per-brand rows, trigger-enforced, so sums never double; Google card rows since the ruling <b>170/171</b>) — a source with no row reads <b>not entered</b>, never zero. <b>Google is the card:</b> Chase Ink 1552/1571 + Amex Gold statements keyed monthly by brand, priced all-in with Liam / Gate Digital management (flag ✓2). <b>Windsor is a pacing signal only</b> — <b>google_ads_daily</b> undercounted July by half (card $47,994 vs Windsor $25,175, the ruling that demoted it)${g ? '' : (w.state === 'stale' ? ` — and it is <b>stale</b> for this month besides, last delivery ${esc(w.last)}` : w.state === 'nofeed' ? ' — and it has <b>never delivered</b> besides' : '')}; it feeds the pacing chip and no money math. <b>⚑3 rows</b> (Next Level, CallFire, Mailchimp, Marlie, Zapier, GoDaddy, Canva — no CC source tag) are held in month totals and excluded from every per-source figure. Referral bonuses are an estimate (~5). Heymarket is company ops, not marketing.
+    <b>Brand money:</b> <b>rpt_report_marketing_roi_brand</b> (169) — the identical confirmed signing rows grouped source × company on <b>rpt_signings.brand_rollup_cc_id</b>, so the brand sections cross-foot with every other dollar on this board by construction. Legacy Liberty Roofing (1537) folds into Pro-Tec upstream. The tiles' ÷ is live: brand cost is complete now that the card splits Google by company.
+    <b>Not read here:</b> the approved board's own revenue basis — a one-off CC probe walk of 2,500 projects. Revenue on this page is the RPC and may differ from that snapshot; the July spend book was keyed FROM the approved board's card figures (171) and read back to the cent, so the spend side of the two instruments agrees by construction.
     <b>Appointments ran</b> is empty everywhere on this console: Contractors Cloud logs no appointment outcome.
     <span class="motto">Trust the instrument, not the retelling</span>
   </div>`;
@@ -7484,7 +7607,7 @@ addEventListener('resize', () => {
    the last one, it is to tell a human which build is on the server and when it
    got there. A number nobody clocked cannot answer that, and the first time it
    is asked in anger will be the morning a stale build is being chased. */
-const BUILD = '2026-08-17T01:45Z-brand-spend-split';
+const BUILD = '2026-08-17T02:52Z-july-card-truth-ledger';
 const SB_URL = 'https://lzegjjbkfuecrhdvlvay.supabase.co';
 /* The one page that can finish a password reset. Hard-coded rather than derived,
    because every derivation of it so far has been a source of bugs: a bare origin
@@ -7989,7 +8112,7 @@ function buildPulse(jobs, qbInv){
       note:'The app\'s touch log has no estimate event. <code>app_private.touches</code> records five plays — <code>thankyou</code>, <code>forgot</code>, <code>untilyes</code>, <code>direct</code>, <code>digital</code> — and every one is follow-up cadence; delivering an estimate is not among them, folded in or otherwise. The one distinct stamp that exists is <code>geo_events.kind=\'estimate_capture\'</code>, and it holds 123 rows over 8 days from 5 reps, fires only when GPS capture succeeds, and carries a null <code>job_id</code> on every row. That is the wire to run, not a feed to draw.' };
 
     const cost = { name:'Cost ratio vs the 10% line', live:false,
-      note:'<code>marketing_spend</code> is empty (0 rows), so every non-Google channel is missing from the numerator. <code>google_ads_daily</code> covers 87 days and is uneven by brand — Pro-Tec from 22 May, Fencing from 21 Jun, Oasis only from 3 Aug. A Google-only numerator can only ever read LOW, which would paint a green ratio over spending that is actually above the line. Held deliberately: no number beats a flattering one.' };
+      note:'<code>marketing_spend</code> holds typed months now (July 2026 keyed from the card statements — the ruling, migrations 170/171), but spend is typed at month CLOSE: the month in progress has no row until the office keys it, and <code>google_ads_daily</code> (Windsor) is a pacing signal demoted from all money math after undercounting July by half. A mid-month numerator built from either would read LOW and paint a green ratio over spending that is actually above the line. Held deliberately: no number beats a flattering one.' };
 
     const subs = [leads, dOut, est, cost];
     const rank = { none:0, green:1, amber:2, red:3 };
