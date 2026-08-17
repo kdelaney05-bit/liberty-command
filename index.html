@@ -195,93 +195,12 @@
   .rb-aside { font-size: 10px; line-height: 1.5; color: var(--text-dim);
     opacity: 0.72; margin: 0 0 8px; max-width: var(--trace-max); }
   .rb-aside b { font-weight: 600; color: inherit; }
-  /* ── THE PULSE ─────────────────────────────────────────────────────────────
-     A vitals monitor reads top-down in one glance, so the five vitals are rails,
-     not cards. Nothing here scrolls sideways and nothing depends on colour alone
-     — every rail carries a shape, a plain-English read and a unit beside its dot.
-
-     THE RAIL IS A COLUMN, NOT A ROW. It was a six-column grid ending in a 120px
-     spark that the phone breakpoint then deleted outright — which meant the one
-     device Kevin actually reads this on got the version with no picture at all.
-     Now the trace spans the full rail width at every size and the phone loses
-     nothing. Mobile is the design target here, not the fallback. */
-  .pulse-card { margin-bottom: 14px; }
-  .pulse-vitals { display: flex; flex-direction: column; gap: 1px; }
-  .pulse-vital { border-radius: 8px; overflow: hidden; background: rgba(255,255,255,0.015); }
-  .pv-head { display: flex; flex-direction: column; gap: 5px;
-    width: 100%; padding: 10px; background: none; border: 0; cursor: pointer; text-align: left;
-    color: var(--text); font: inherit; }
-  .pv-top { display: grid; grid-template-columns: 8px auto 1fr 12px; align-items: center; gap: 8px; }
-  .pv-dot { width: 8px; height: 8px; border-radius: 50%; }
-  .pv-name { font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 0.14em; }
-  .pv-read { font-family: 'Inter Tight', sans-serif; font-size: 12.5px; font-weight: 600;
-    text-align: right; line-height: 1.25; }
-  .pv-unit { font-size: 10.5px; color: var(--text-dim); line-height: 1.3; }
-  .pulse-vital.off .pv-unit { font-style: italic; }
-  .pv-wire { font-family: 'Inter Tight', sans-serif; font-size: 12.5px; font-style: italic;
-    color: var(--text-dim); text-align: right; white-space: nowrap; }
-  /* ── ONE TRACE ──
-     The SVG stretches to the rail's width; the endpoint rides on top as a fixed
-     overlay so it stays a circle. overflow stays visible so the halo is not
-     sliced at the top and bottom of the band.
-
-     Capped and left-aligned — see --trace-max above for why a trace that grows
-     with the viewport is a different chart at every width. `margin-right: auto`
-     is explicit rather than inherited: .pv-head is a flex column, and a stretch
-     alignment would have re-centred the capped box the moment anyone added an
-     align-items rule to the rail. */
-  .ptrace { position: relative; width: 100%; max-width: var(--trace-max);
-    margin-right: auto; overflow: visible; }
-  .ptrace .pt-svg { display: block; width: 100%; height: 100%; overflow: visible; }
-  .pt-line { stroke-linecap: round; stroke-linejoin: round; fill: none; }
-  .pt-edge { stroke-width: 1; vector-effect: non-scaling-stroke; }
-  .pt-flat { stroke: var(--text-dim); stroke-opacity: 0.35; stroke-width: 1;
-    vector-effect: non-scaling-stroke; }
-  .pt-end { position: absolute; line-height: 0; pointer-events: none;
-    transform: translate(-50%, -50%); }
-  .pt-end svg { display: block; overflow: visible; }
-  /* THE ONLY MOTION ON THE CARD. transform and opacity only, on a 14px halo — no
-     layout property is touched, so nothing here can trigger a repaint of the
-     rail, let alone the card. transform-box: fill-box makes the SVG circle scale
-     about its own centre rather than the viewport origin, which is what turns a
-     lurch into a breath. The solid core underneath never moves, so the endpoint
-     stays exactly readable as a position while the halo breathes around it. */
-  .pt-halo { opacity: 0.55; transform-box: fill-box; transform-origin: center;
-    animation: pt-breathe 2.2s ease-in-out infinite; will-change: transform, opacity; }
-  @keyframes pt-breathe {
-    0%, 100% { transform: scale(1);   opacity: 0.55; }
-    50%      { transform: scale(1.6); opacity: 1; }
-  }
-  @media (prefers-reduced-motion: reduce) {
-    .pt-halo { animation: none; opacity: 0.5; }
-  }
-  /* ── THE COMPOSITE ──
-     Taller and set apart above the rails, because it is a different question. */
-  .pulse-comp { margin: 12px 0 10px; padding: 12px 10px 10px;
-    border: 1px solid var(--line); border-radius: 10px;
-    background: rgba(255,255,255,0.02); }
-  /* STACKED, NOT SPLIT. Side by side, "THE BUSINESS · ONE LINE" and a read as
-     long as "steady on average — rails disagree" cannot both fit a 390px rail,
-     and it was the label that wrapped — the one string on the card that must
-     never look broken. Label over read costs one line and always fits. */
-  .pc-head { display: flex; flex-direction: column; align-items: flex-start;
-    gap: 3px; margin-bottom: 9px; }
-  .pc-name { font-family: 'JetBrains Mono', monospace; font-size: 9.5px;
-    letter-spacing: 0.16em; color: var(--text-dim); white-space: nowrap; }
-  .pc-read { font-family: 'Inter Tight', sans-serif; font-size: 15px; font-weight: 600;
-    line-height: 1.2; }
-  .pc-note { font-size: 10.5px; line-height: 1.5; color: var(--text-dim); margin-top: 9px; }
-  .pv-chev { color: var(--text-dim); font-size: 14px; transition: transform 0.15s; }
-  .pulse-vital.open .pv-chev { transform: rotate(90deg); }
-  .pulse-vital.off .pv-name { color: var(--text-dim); }
-  .pulse-vital.band-amber { background: rgba(212,177,90,0.05); }
-  .pulse-vital.band-red   { background: rgba(217,106,94,0.07); }
-  @media (hover: hover) { .pv-head:hover { background: rgba(255,255,255,0.03); } }
-  .pv-drill { display: grid; grid-template-rows: 0fr; transition: grid-template-rows 0.18s ease; }
-  .pulse-vital.open .pv-drill { grid-template-rows: 1fr; }
-  .pv-drill-in { overflow: hidden; }
-  .pulse-vital.open .pv-drill-in { padding: 2px 12px 12px 28px; }
-  .pd-label { font-size: 11px; color: var(--text-dim); font-style: italic; margin-bottom: 8px; }
+  /* ── THE DRILL ROWS ────────────────────────────────────────────────────────
+     The sub-vital, brand and aging rows that sit inside an expanded vital on
+     the hero. They outlived the pulse CARD they were written for: the card was
+     replaced by the compressed hero above, and these rows carried across whole
+     rather than being summarised, because the working behind a colour is the
+     whole reason the colour can be trusted. */
   .pd-why { font-size: 12px; line-height: 1.6; color: var(--text-dim);
     background: rgba(212,177,90,0.05); border: 1px solid rgba(212,177,90,0.22);
     border-radius: 8px; padding: 8px 10px; margin-bottom: 8px; }
@@ -300,20 +219,122 @@
   .pd-dot { width: 7px; height: 7px; border-radius: 50%; flex: none; }
   .pd-brand-n { font-size: 12px; min-width: 88px; }
   .pd-brand-z { font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: 600; min-width: 52px; }
-  .pulse-foot { font-size: 11px; line-height: 1.65; color: var(--text-dim); margin-top: 12px;
-    padding-top: 10px; border-top: 1px solid var(--line); }
+  @media (max-width: 700px) { .pd-brand { flex-wrap: wrap; } }
+  /* ── THE VITALS HERO ───────────────────────────────────────────────────────
+     The first screen on login, and the whole of it has to fit one 390px phone
+     with nothing scrolled. That constraint is the design, not a limit on it.
+
+     ONE LARGE ELEMENT, AND ONLY ONE. The card this replaced gave five rails
+     nearly the same visual weight as the composite above them, so the eye had
+     six things to rank and ranked none of them. Here the master heartbeat is
+     the only big shape on the screen; the four micro vitals underneath are a
+     quarter of its weight each and carry no words at all at rest — a tag, a
+     trace, and a colour. Reading them is a glance down a 2×2, not a read.
+
+     NO NUMBERS AT REST ON THE MICROS. A figure invites arithmetic, and the
+     question these four answer is "is anything wrong", which is a colour and a
+     shape. The figures are one tap away, in full, where the reader has already
+     asked for them. */
+  .vit-card { margin-bottom: 14px; }
+  /* CAPPED ON THE SAME 560px AS EVERY OTHER TRACE (see --trace-max). The tiles
+     ARE the drawing here, not a frame around one: a 2×2 stretched to a 1,300px
+     monitor puts a 64px spark alone at the far right of a nearly empty bar, and
+     the shape a reader learned on their phone stops being recognisable. The
+     prose above and below keeps the full card width, as it does everywhere
+     else — only the instrument is capped, and it is left-aligned like the
+     rest. */
+  .vit-master { margin-top: 10px; padding: 12px 12px 10px; border: 1px solid var(--line);
+    border-radius: 12px; background: rgba(255,255,255,0.02);
+    max-width: var(--trace-max); margin-right: auto; }
+  .vit-m-btn { display: block; width: 100%; padding: 0; border: 0; background: none;
+    text-align: left; color: inherit; font: inherit; cursor: pointer; }
+  .vit-m-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+  .vit-m-name { font-family: 'JetBrains Mono', monospace; font-size: 9.5px; letter-spacing: 0.16em;
+    color: var(--text-dim); white-space: nowrap; }
+  .vit-m-read { font-family: 'Inter Tight', sans-serif; font-size: 12px; font-weight: 600;
+    text-align: right; line-height: 1.25; }
+  .vit-m-num { font-family: 'Fraunces', serif; font-size: 46px; font-weight: 500;
+    line-height: 1; letter-spacing: -0.02em; margin: 4px 0 2px; }
+  .vit-m-num small { font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 400;
+    letter-spacing: 0.1em; color: var(--text-dim); margin-left: 8px; }
+  /* The master's own trace is the one full-width shape on the screen. Same EKG
+     language as every other trace on this page — actual on top, the trailing
+     median riding under it as the gold dashed reference. */
+  .vit-master .ekg { height: 54px; }
+  /* ── THE 2×2 ──
+     MARKETING | SALES over PRODUCTION | MONEY, in that order, because that is
+     the order the money moves through the business. One compact row each. */
+  .vit-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px;
+    max-width: var(--trace-max); margin-right: auto; }
+  .vit-micro { display: flex; align-items: center; gap: 8px; width: 100%;
+    padding: 8px 10px; min-height: 46px; border-radius: 10px; cursor: pointer;
+    font: inherit; color: var(--text); text-align: left;
+    border: 1px solid rgba(138,160,148,0.18); background: rgba(138,160,148,0.05);
+    transition: border-color .15s, background .15s; }
+  .vit-tag { font-family: 'JetBrains Mono', monospace; font-size: 9.5px; letter-spacing: 0.14em;
+    font-weight: 600; flex: none; }
+  .vit-trace { flex: 1; display: flex; justify-content: flex-end; line-height: 0; }
+  .vit-trace .rbars { width: 64px; }
+  /* A mini rhythm bar keeps its bars and loses its numbers — the same rule the
+     brand-row sparks use. Nothing on a micro vital may print a figure. */
+  .vit-trace .rb-num, .vit-trace .rb-lab { display: none; }
+  /* THE HEAT MAP. Trace colour, border and a soft inner glow all move together
+     off one state, so the four read as one instrument. The rgb triplets are
+     inlined by the renderer (see VIT_RGB) because a CSS custom property cannot
+     be given an alpha without colour-mix. */
+  /* OPEN IS AN OUTLINE, not a border or a shadow: both of those carry the heat
+     colour inline, and an inline style wins — the open marker would have been
+     invisible on exactly the tiles worth opening. */
+  .vit-micro.on { outline: 1px solid rgba(255,255,255,0.26); outline-offset: -1px;
+    border-radius: 10px; }
+  /* The master needs no open marker of its own: an outline around a button that
+     wraps a 46px numeral and a full-width trace cuts straight through both, and
+     the drawer opening underneath it is already the loudest possible signal. */
+  @media (hover: hover) { .vit-micro:hover { background: rgba(255,255,255,0.05); } }
+  /* A dead feed draws no line at all — a flat hairline and the words for why.
+     Never a calm green standing in for a feed nobody has wired. */
+  .vit-dark { font-family: 'JetBrains Mono', monospace; font-size: 8px; letter-spacing: 0.12em;
+    text-transform: uppercase; color: var(--text-dim); border: 1px solid rgba(138,160,148,0.3);
+    border-radius: 100px; padding: 1px 6px; white-space: nowrap; }
+  .vit-flat { width: 64px; height: 22px; display: block; overflow: visible; }
+  .vit-flat line { stroke: var(--text-dim); stroke-opacity: 0.35; stroke-width: 1;
+    vector-effect: non-scaling-stroke; }
+  /* ── THE EXPANSION ──
+     One open at a time, inline, below whichever shape was tapped: the master's
+     panel under the master, a micro's panel under the whole 2×2 so the grid
+     never reflows around it. Same grid-rows transition the pulse rails used. */
+  .vit-panel { display: grid; grid-template-rows: 0fr; transition: grid-template-rows .18s ease; }
+  .vit-panel.open { grid-template-rows: 1fr; }
+  .vit-panel-in { overflow: hidden; }
+  .vit-panel.open .vit-panel-in { padding-top: 10px; }
+  .vit-body { border: 1px solid var(--line); border-radius: 12px; padding: 12px;
+    background: rgba(255,255,255,0.02); max-width: var(--trace-max); }
+  .vit-b-head { display: flex; align-items: baseline; justify-content: space-between;
+    gap: 10px; margin-bottom: 2px; }
+  .vit-b-name { font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 0.14em; }
+  .vit-b-read { font-family: 'Inter Tight', sans-serif; font-size: 13px; font-weight: 600; text-align: right; }
+  .vit-b-label { font-size: 11px; color: var(--text-dim); font-style: italic; margin-bottom: 6px; }
+  /* The read in English, under the label: the one sentence that says what the
+     colour above it means, in the vital's own units. */
+  .vit-b-say { font-size: 12px; line-height: 1.4; font-weight: 500; }
+  /* THE KEY STRIP — the two or three figures behind the colour, and the only
+     place on this hero a micro vital's numbers appear. */
+  .vit-keys { display: flex; gap: 7px; margin: 9px 0 4px; }
+  .vit-key { flex: 1; background: var(--bg-card-hi); border: 1px solid var(--line);
+    border-radius: 9px; padding: 8px 7px; min-width: 0; }
+  .vit-key .k { font-family: 'JetBrains Mono', monospace; font-size: 7.5px; letter-spacing: 0.1em;
+    text-transform: uppercase; color: var(--text-dim); }
+  .vit-key .v { font-family: 'Fraunces', serif; font-size: 17px; font-weight: 500; margin-top: 3px;
+    line-height: 1.1; overflow-wrap: anywhere; }
+  .vit-foot { font-size: 10.5px; line-height: 1.6; color: var(--text-dim); margin-top: 10px;
+    padding-top: 9px; border-top: 1px solid var(--line); }
   @media (max-width: 700px) {
-    /* THE TRACE NEVER LEAVES. The previous rule deleted it here, which meant the
-       phone — the only place this card is actually read — was the one size with
-       no picture. It is the shape that carries the meaning; the words tighten
-       instead. */
-    .pv-head { padding: 9px 8px; gap: 4px; }
-    .pv-top { gap: 7px; }
-    .pv-read, .pv-wire { font-size: 12px; }
-    .pv-unit { font-size: 10px; }
-    .pulse-comp { padding: 11px 8px 9px; }
-    .pulse-vital.open .pv-drill-in { padding: 2px 10px 12px 18px; }
-    .pd-brand { flex-wrap: wrap; }
+    .vit-master { padding: 11px 10px 9px; }
+    .vit-m-num { font-size: 42px; }
+    .vit-master .ekg { height: 48px; }
+    .vit-micro { padding: 7px 8px; min-height: 44px; gap: 6px; }
+    .vit-keys { gap: 6px; }
+    .vit-key .v { font-size: 15px; }
   }
   .rep-row { margin-bottom: 12px; } .rep-row:last-child { margin-bottom: 0; }
   .rep-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 5px; }
@@ -1641,6 +1662,82 @@ const short = n => { const a = Math.abs(n);
 const pct = (a,b) => b ? Math.round(a/b*100) : 0;
 const esc = s => String(s??'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
+/* ══ THE VITALS · EVERY THRESHOLD, IN ONE PLACE ═══════════════════════════════
+   KD: this block is the whole tuning surface for the login hero. Change a
+   number here and the tile colour, the glow and the blended master all move
+   with it — no threshold is written down anywhere else, so there is nothing to
+   hunt for and nothing that can drift out of step.
+
+   HOW A COLOUR IS DECIDED. Every vital reduces to one number called BADNESS,
+   always on the same scale of meaning: 0 is healthy, and it climbs as the
+   vital gets worse. Each vital's badness is measured in the units that suit
+   it — a shortfall fraction, percentage points, days — and each carries its
+   own `watch` and `problem` line on that scale:
+
+     badness <  watch    → GREEN   healthy
+     badness <  problem  → YELLOW  watch it
+     badness >= problem  → RED     problem
+
+   Badness is one-sided ON PURPOSE, which is the break from the pulse card's
+   old |z| bands. A week of signings 40% ABOVE the median is not a problem and
+   must not light up beside a week 40% below it; a heat map is a goodness
+   scale, not an unusualness scale. Anything better than normal scores 0.
+
+   THE MASTER IS THE SAME ARITHMETIC, BLENDED. Each vital's badness is divided
+   by its own `problem` line and clipped to 0–1, which makes the four unit-free
+   and comparable; the master is 100 minus their mean, so 100 means every
+   blended vital is sitting at or better than healthy and 0 means every one of
+   them is at or past its problem line. Distances ADD rather than cancel — the
+   one thing a mean of signed deviations could never do, and the reason the old
+   composite could read "in rhythm" in green with red rails underneath it. */
+const VIT = {
+  /* How many trailing periods make the reference median. Eight weeks is two
+     months of business — long enough that one big job cannot move it, short
+     enough to still be this season. */
+  weeks: 8,
+  /* THE MASTER, on a 0–100 health scale. These two numbers are not arbitrary:
+     75 is the point where the blended vitals average a quarter of the way to
+     their problem lines, and 50 is halfway. */
+  master: { watch: 75, problem: 50 },
+
+  /* MARKETING · blended dollars back per $1, last CLOSED month, against the
+     median of the closed months before it AND against KD's floor.
+     Badness = the larger of the two shortfalls, as a fraction:
+       0.15 = 15% under the reference · 0.35 = 35% under it.
+     THE FLOOR IS IN HERE FOR THE SAME REASON DAYS-OUT HAS ONE: a business that
+     has spent a year at $6 back per $1 has a median of $6, and scoring against
+     that median alone would report a chronic problem as perfectly healthy. */
+  marketing: { floor: 10, watch: 0.15, problem: 0.35 },
+
+  /* SALES · signed dollars in the last 7 days against the trailing-8-week
+     median of the same. Badness = the shortfall fraction below that median. */
+  sales: { watch: 0.15, problem: 0.35 },
+
+  /* PRODUCTION · the share of the open backlog that has gone stale, against
+     the trailing-8-week median of that same share.
+     Badness is in PERCENTAGE POINTS off the median, not a percentage of it,
+     because the level itself is meaningless here: 188 open jobs are over a
+     year old and hold the share permanently high, so a relative band would be
+     numb to a real move. Points off its own median stay readable at any level.
+       stallDays / deepDays are the two age lines the drill reports. */
+  production: { stallDays: 14, deepDays: 30, watch: 3, problem: 8 },
+
+  /* MONEY · the dollar-weighted mean age of every open balance, in days.
+     A FIXED BAND, NOT A MEDIAN, and that is deliberate: receivables age in one
+     direction only, so a book that has always sat at 70 days would score its
+     own worst habit as normal. Badness = days past `good`. */
+  money: { good: 30, watch: 45, problem: 60 },
+
+  /* A median wants samples behind it. Under this many typed months, MARKETING
+     reads against the floor alone and says so rather than claiming a normal. */
+  minMonths: 3,
+};
+/* The four state colours, and the same four as rgb triplets for the glows. Kept
+   adjacent so the two can never drift apart — the same pairing the pulse
+   traces use. `dark` is a feed that is not wired: grey, never green. */
+const VIT_C   = { green:'var(--green)', yellow:'var(--gold)', red:'var(--red)', dark:'var(--text-dim)' };
+const VIT_RGB = { green:'108,194,139', yellow:'212,177,90', red:'217,106,94', dark:'138,160,148' };
+
 /* Brand colours per Kevin's model: Fencing green, Oasis blue, Pro-Tec gold. */
 /* Contractors Cloud carries Pro-Tec (1563) and Liberty Roofing (1537) as two
    companies. They are one business — Liberty Roofing is the DBA — so they roll
@@ -1942,12 +2039,19 @@ function hdr(){
 function ekgSpark(days, { id, w = 280, h = 48, mini = false, color = 'var(--green)', glow = 'var(--accent)' } = {}) {
   if (!days || days.length < 2) return '';
   const pad = mini ? 1.5 : 3;
-  const vMax = Math.max(1, ...days.map(x=>x.v), ...days.map(x=>x.t)) * 1.18;
+  /* THE REFERENCE IS OPTIONAL, AND A MISSING ONE DRAWS NOTHING. Every caller
+     that has a typical passes one on every point; the vitals hero has traces
+     whose reference median cannot be claimed yet (too few samples behind it),
+     and a "typical" line quietly pinned to zero — or to the actual — would be
+     a reference invented by the drawing code. No point, no line. */
+  const refs = days.filter(x => x.t != null);
+  const vMax = Math.max(1, ...days.map(x=>x.v), ...refs.map(x=>x.t)) * 1.18;
   const n = days.length, stepX = (w - pad*2) / (n - 1);
   const X = i => pad + i * stepX;
   const Y = v => h - pad - (Math.max(0,v) / vMax) * (h - pad*2);
   const actual  = days.map((x,i)=>`${X(i).toFixed(1)},${Y(x.v).toFixed(1)}`).join(' ');
-  const typical = days.map((x,i)=>`${X(i).toFixed(1)},${Y(x.t).toFixed(1)}`).join(' ');
+  const typical = days.map((x,i)=> x.t == null ? null : `${X(i).toFixed(1)},${Y(x.t).toFixed(1)}`)
+    .filter(Boolean).join(' ');
   const lastX = X(n-1), lastY = Y(days[n-1].v);
   return `<svg class="ekg${mini?' ekg-mini':''}" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" role="img" aria-hidden="true">
     <defs><filter id="${id}-glow" x="-80%" y="-80%" width="260%" height="260%">
@@ -1994,9 +2098,13 @@ function rhythmBars(items, { w = 280, h = 62, mini = false, refDash = true, colo
     return `<rect x="${(padX + i*bw + bw*0.16).toFixed(1)}" y="${y.toFixed(1)}"
       width="${(bw*0.68).toFixed(1)}" height="${Math.max(0, bh).toFixed(1)}" rx="2" fill="${fill}"/>`;
   }).join('');
+  /* `num` restates what is PRINTED on a bar, never what is drawn: the height is
+     always it.v. A bar of open dollars is read as "$132K", not as the six digits
+     behind it — but the label and the bar must not be allowed to disagree, so a
+     caller may reformat the figure and cannot substitute a different one. */
   const nums = items.map((it, i) => it.v == null ? '' :
     `<text x="${cx(i).toFixed(1)}" y="${(Y(it.v)-3.5).toFixed(1)}" class="rb-num"
-      ${it.hot ? 'style="fill:var(--accent)"' : it.dim ? 'style="fill:rgba(138,160,148,0.6)"' : ''}>${it.v}</text>`).join('');
+      ${it.hot ? 'style="fill:var(--accent)"' : it.dim ? 'style="fill:rgba(138,160,148,0.6)"' : ''}>${esc(it.num != null ? it.num : it.v)}</text>`).join('');
   const labs = items.map((it, i) =>
     `<text x="${cx(i).toFixed(1)}" y="${h-2.5}" class="rb-lab"
       ${it.hot ? 'style="fill:var(--accent)"' : ''}>${esc(it.label)}</text>`).join('');
@@ -5941,40 +6049,20 @@ const RHY_SEV  = { hot:'good', warm:'good', flat:'watch', cooling:'watch', cold:
    flat. Never a percentage dressed as a verdict when it is inside the band. */
 const rhyTick = d => d === null ? 'flat'
   : d >= 8 ? `▲${d}%` : d <= -8 ? `▼${Math.abs(d)}%` : 'flat';
-/* ── THE PULSE, drawn ────────────────────────────────────────────────────────
-   Five vitals stacked as rails, with the whole business as one trace on top.
-   Glance down the shapes; drill into whichever one is not green. Every row is a
-   symptom and a place to look, never an instruction.
+/* ── THE PULSE · WHAT THE VITALS HERO READS FROM IT ──────────────────────────
+   The pulse CARD is gone — the vitals hero above replaced it, and the argument
+   for the swap is in render(). What survives is everything that card MEASURED
+   rather than everything it drew: the five rails are still built by
+   buildPulse(), and their sub-vitals, brand cuts, aging buckets and every
+   withheld-feed note are rendered inside the hero's expanded cards by the two
+   row helpers below. Nothing was summarised on the way across.
 
-   IT DRAWS BEFORE IT READS. The card shipped first as a status list — a dot, a
-   name, and a bare z-score — and a list is read word by word, in order, which is
-   the opposite of what a vitals monitor is for. A heartbeat is recognised as a
-   SHAPE, before any word on the card is read, so every live vital carries its
-   own 14-day line and the eye can run down the column and stop at the one that
-   is not like the others.
-
-   THE BAND IS WHAT MAKES A SHAPE MEAN ANYTHING. A line alone is just a wiggle:
-   nothing on screen says whether it is a big wiggle. Behind every trace sits
-   that vital's normal range — median ± 1 MAD, the same arithmetic the score
-   already uses — as a faint filled band. In z-space that band is exactly −1 to
-   +1 by construction, which is why it can be drawn without a second pass over
-   the data. A line inside the band barely registers. A line punching out of it
-   is visible across the room, which is the entire design.
-
-   NO NAKED Z AT RAIL LEVEL. "−2.4" is a number about a number; "38% below your
-   normal" is a fact about the business, and Kevin reads this at 390px on a
-   phone. The z is the same arithmetic underneath and it survives in the tap
-   detail, where a reader who wants the machinery can find it.
-
-   A vital with no feed behind it draws NOTHING that could be mistaken for a
-   measurement. Payables gets a flat hairline where the trace would be — a line
-   that visibly says "no signal", not a healthy calm. */
+   NO NAKED Z WHERE IT CAN BE READ AT A GLANCE. "−2.4" is a number about a
+   number; "38% below your normal" is a fact about the business, and Kevin reads
+   this at 390px on a phone. The z is the same arithmetic underneath and it
+   survives in the tap detail, where a reader who wants the machinery can find
+   it — which is now the only place it appears at all. */
 const PULSE_BAND_C = { green:'var(--green)', amber:'var(--gold)', red:'var(--red)', none:'var(--text-dim)' };
-/* The same four tokens as channels, because a band fill has to be that colour at
-   7% and CSS custom properties cannot be given an alpha without colour-mix. Kept
-   adjacent to the map above so the two can never drift apart. */
-const PULSE_BAND_RGB = { green:'108,194,139', amber:'212,177,90', red:'217,106,94', none:'138,160,148' };
-const PULSE_DAYS = 14;   // days drawn in every trace, composite included
 
 function pulseWord(z, band){
   if (z === null) return '';
@@ -6014,98 +6102,6 @@ function pulseReadText(r){
   if (ratio >= 5) return `${(ratio).toFixed(1)}× your normal`;
   const pct = Math.round(Math.abs(ratio - 1) * 100);
   return `${pct}% ${dir} your normal`;
-}
-
-/* ONE TRACE. Fourteen days of z over its own normal band.
-
-   The SVG is stretched horizontally (preserveAspectRatio="none") so the line
-   fills whatever width the rail has, and the viewBox height is the rendered
-   pixel height, which keeps the vertical mapping 1:1 — that is what lets the lit
-   endpoint be positioned in CSS pixels from the same Y the polyline used.
-
-   Y-RANGE IS PER TRACE, so a peak reads as a peak. A shared axis would flatten
-   every quiet vital into a nub at 390px, which is where this is actually read.
-
-   THE AXIS IS LINEAR THROUGH THE BAND AND COMPRESSED OUTSIDE IT, which is the
-   one piece of geometry here that had to be argued for. Two obvious axes both
-   fail on real numbers. A plain data-driven axis: a dead week on signings scores
-   z −19 (the scoring note puts a dead week at −19 to −27), and against a −19
-   domain the ±1 band renders about three pixels tall — the one thing the reader
-   needs to see becomes a hairline exactly when the vital is in the most trouble.
-   Clamping the line at ±3 instead: the band survives, but every extreme trace
-   flattens onto the frame and a fortnight of shape is destroyed, which is the
-   whole reason the card was rebuilt.
-
-   So: linear out to ±1.5, log beyond. Distances inside and just outside normal
-   are true to scale, the band never falls below about a third of the height, and
-   the excursion keeps its shape — a line that dives and recovers still visibly
-   dives and recovers at z −19, it simply does not need twenty times the room to
-   say so. The transform is monotonic, so nothing ever crosses out of order.
-
-   FLOOR ±1.5, so a fortnight spent entirely inside normal still has daylight
-   above and below the band. Without it the band fills the frame edge to edge and
-   "inside it" stops looking like inside anything. */
-const PULSE_Z_LIN = 1.5;
-const pulseWarp = z => { const a = Math.abs(z);
-  return (z < 0 ? -1 : 1) * (a <= PULSE_Z_LIN ? a : PULSE_Z_LIN + Math.log1p(a - PULSE_Z_LIN)); };
-function pulseTrace(spark, band, { h = 36, sw = 1.6, dot = 7 } = {}){
-  const pts = (spark || []).slice(-PULSE_DAYS);
-  const zs = pts.map(p => p.z).filter(z => z !== null);
-  if (zs.length < 2) return '';
-  const c = PULSE_BAND_C[band] || PULSE_BAND_C.none;
-  const rgb = PULSE_BAND_RGB[band] || PULSE_BAND_RGB.none;
-  const ws = zs.map(pulseWarp);
-  const lo0 = Math.min(-PULSE_Z_LIN, ...ws), hi0 = Math.max(PULSE_Z_LIN, ...ws);
-  const padZ = (hi0 - lo0) * 0.10;
-  const lo = lo0 - padZ, hi = hi0 + padZ;
-  const padY = 3;                        // px of headroom for the endpoint halo
-  const Y = z => padY + (hi - pulseWarp(z)) / (hi - lo) * (h - padY*2);
-  /* Percent x, inset at both ends: the lit endpoint is an absolutely positioned
-     overlay at the last point's x, and a dot centred on 100% would hang half its
-     width past the card. 3% clears the halo at every width this card renders. */
-  const n = pts.length, PADX = 3;
-  const X = i => PADX + (i / (n - 1)) * (100 - PADX*2);
-  const segs = []; let cur = [];
-  pts.forEach((p, i) => { if (p.z === null){ if (cur.length > 1) segs.push(cur); cur = []; }
-    else cur.push(`${X(i).toFixed(2)},${Y(p.z).toFixed(2)}`); });
-  if (cur.length > 1) segs.push(cur);
-  const last = pts.reduce((a, p, i) => p.z !== null ? i : a, -1);
-  const bTop = Y(1), bBot = Y(-1);
-  const svg = `<svg class="pt-svg" viewBox="0 0 100 ${h}" preserveAspectRatio="none" aria-hidden="true">
-    <rect x="0" y="${bTop.toFixed(2)}" width="100" height="${(bBot - bTop).toFixed(2)}"
-      fill="rgba(${rgb},0.07)"/>
-    <line x1="0" y1="${bTop.toFixed(2)}" x2="100" y2="${bTop.toFixed(2)}"
-      class="pt-edge" style="stroke:rgba(${rgb},0.14)"/>
-    <line x1="0" y1="${bBot.toFixed(2)}" x2="100" y2="${bBot.toFixed(2)}"
-      class="pt-edge" style="stroke:rgba(${rgb},0.14)"/>
-    ${segs.map(s => `<polyline points="${s.join(' ')}" fill="none" class="pt-line"
-      style="stroke:${c};stroke-width:${sw}" vector-effect="non-scaling-stroke"/>`).join('')}
-  </svg>`;
-  /* The lit endpoint lives OUTSIDE the stretched SVG on purpose. Inside it, the
-     same horizontal stretch that makes the line fill the rail would flatten the
-     dot into an ellipse, by a factor that depends on the viewport and so cannot
-     be corrected in the markup. A fixed-size overlay stays round at every width,
-     and it is the only thing on this card that moves. */
-  const end = last < 0 ? '' : `<span class="pt-end" style="left:${X(last).toFixed(2)}%;top:${Y(pts[last].z).toFixed(2)}px">
-    <svg viewBox="0 0 ${dot*2} ${dot*2}" width="${dot*2}" height="${dot*2}" aria-hidden="true">
-      <circle class="pt-halo" cx="${dot}" cy="${dot}" r="${(dot*0.62).toFixed(1)}" style="fill:${c}"/>
-      <circle cx="${dot}" cy="${dot}" r="${(dot*0.34).toFixed(1)}" style="fill:${c}"/>
-    </svg></span>`;
-  return `<div class="ptrace" style="height:${h}px">${svg}${end}</div>`;
-}
-
-/* Payables draws this instead. A hairline at 35% and no dot: it has to be
-   visibly a placeholder, because a centred flat line at full strength is what a
-   perfectly steady vital would look like, and Payables is not steady — it is
-   unmeasured. */
-const pulseFlat = (h = 36) => `<div class="ptrace" style="height:${h}px">
-  <svg class="pt-svg" viewBox="0 0 100 ${h}" preserveAspectRatio="none" aria-hidden="true">
-    <line x1="0" y1="${h/2}" x2="100" y2="${h/2}" class="pt-flat"/>
-  </svg></div>`;
-
-function pulseDrill(key){
-  const el = document.getElementById('pulse-' + key);
-  if (el) el.classList.toggle('open');
 }
 
 /* Two kinds of sub-vital share this row, and they must not be made to look
@@ -6148,108 +6144,418 @@ function pulseBrandRow(b){
   </div>`;
 }
 
-function cardPulse(){
-  const P = D.pulse;
-  if (!P) return '';
-  /* No composite reading, because there is no composite. The header counts what
-     is measured and what is not, which is the honest one-line summary of a card
-     that is three-fifths unwired. */
-  const worst = P.vitals.filter(v => v.live && v.band !== 'green').length;
-  const head = !P.live
-    ? 'No vital has enough history behind it to claim a normal yet.'
-    : `${P.live} of ${P.total} vitals have a feed. ` + (worst
-        ? `<b style="color:var(--gold)">${worst}</b> of them ${worst === 1 ? 'is' : 'are'} off their rhythm — open the rail to see where.`
-        : `All ${P.live} are in rhythm.`);
+/* ══ THE VITALS HERO · THE READING ═══════════════════════════════════════════
+   Measurements come from buildVitals(); thresholds come from VIT at the top of
+   the file. This layer does one thing: turn a measurement into a state, a
+   shape and a sentence. Nothing here holds a number KD would want to retune.
 
-  const rows = P.vitals.map(v => {
-    /* The rail reads NAME · plain-English read on one line, the trace across the
-       full width under it, and the unit beneath that. The read sits on the label
-       line rather than under the trace because at 390px the label line is the
-       only row guaranteed to be scanned. */
-    const body = v.live
-      ? `<span class="pv-read" style="color:${PULSE_BAND_C[v.band]}">${esc(pulseReadText(v.read))}</span>`
-      : `<span class="pv-wire">wiring up</span>`;
-    const trace = v.live ? pulseTrace(v.spark, v.band) : pulseFlat();
-    const unit = v.live
-      ? (v.read && v.read.readUnit ? esc(v.read.readUnit) : '')
-      : 'no feed behind it — it draws nothing';
-    const drill = [
-      v.why ? `<div class="pd-why">${v.why}</div>` : '',
-      v.half ? `<div class="pd-why">${v.half}</div>` : '',
-      (v.subs || []).map(pulseSubRow).join(''),
-      v.brands && v.brands.length ? `<div class="pd-h">Which brand</div>${v.brands.map(pulseBrandRow).join('')}` : '',
-      v.aging && v.aging.length ? `<div class="pd-h">Which aging bucket · open balance, aged from the invoice date</div>
-        ${v.aging.map(a => `<div class="pd-brand"><span class="pd-brand-n">${esc(a.label)}</span>
-          <span class="pd-brand-z">${short(a.v)}</span>
-          <span class="pd-brand-v">${a.n} invoice${a.n === 1 ? '' : 's'}</span></div>`).join('')}` : '',
-    ].join('');
-    return `<div class="pulse-vital band-${v.band}${v.live ? '' : ' off'}" id="pulse-${v.key}">
-      <button class="pv-head" onclick="pulseDrill('${v.key}')" aria-expanded="false">
-        <span class="pv-top">
-          <span class="pv-dot" style="background:${PULSE_BAND_C[v.band]}"></span>
-          <span class="pv-name">${esc(v.name)}</span>
-          ${body}
-          <span class="pv-chev">›</span>
-        </span>
-        ${trace}
-        <span class="pv-unit">${unit}</span>
-      </button>
-      <div class="pv-drill"><div class="pv-drill-in">
-        <div class="pd-label">${esc(v.label)}</div>
-        ${drill}
-      </div></div>
-    </div>`;
-  }).join('');
+   THE HEAT MAP IS ONE-SIDED. GREEN is healthy, YELLOW is watch, RED is a
+   problem — a goodness scale, not the pulse card's two-sided "unusualness"
+   band. A week 40% ABOVE the median does not light up beside a week 40% below
+   it, because those two facts do not mean the same thing to the man reading
+   this at 6am on a phone.
 
-  /* THE COMPOSITE, on top and taller than anything under it, because it answers
-     the coarsest question — is anything wrong at all — and the rails answer
-     where. The sentence underneath is not decoration: a line called "the
-     business" that quietly leaves a fifth of the business out would be the exact
-     kind of confident summary this card was built to refuse, so what it blends
-     and what it excludes is stated in words, under the line, every time. */
-  const C = P.comp;
-  /* A calm mean over disagreeing rails is not an all-clear, so it is neither
-     worded nor coloured as one: the read says the rails disagree and takes the
-     amber, which is the same colour the reader has already learned means "look
-     closer". Only a genuinely quiet business gets the green. */
-  const cQuiet = C && C.band === 'green' && !C.dissent;
-  const cRead = !C ? '' : C.band !== 'green' ? `${C.z >= 0 ? 'above' : 'below'} its normal`
-    : C.dissent ? 'steady on average — rails disagree' : 'in rhythm';
-  const cTone = !C ? 'none' : cQuiet ? 'green' : C.band === 'green' ? 'amber' : C.band;
-  const comp = !C ? '' : `<div class="pulse-comp">
-    <div class="pc-head">
-      <span class="pc-name">THE BUSINESS · ONE LINE</span>
-      <span class="pc-read" style="color:${PULSE_BAND_C[cTone]}">${esc(cRead)}</span>
-    </div>
-    ${pulseTrace(C.spark, C.band, { h:64, sw:2, dot:8 })}
-    <div class="pc-note">${C.n === 4
-      ? 'Blend of the four live vitals. Payables excluded — it has no feed yet.'
-      : `Blend of the ${C.n} live vital${C.n === 1 ? '' : 's'} — ${esc(C.names.join(', '))}. The rest are excluded: they have no feed yet.`}${
-      C.dissent && C.band === 'green'
-        ? ` A mean cancels: ${C.dissent} of the ${C.n} ${C.dissent === 1 ? 'is' : 'are'} off ${C.dissent === 1 ? 'its' : 'their'} own rhythm in opposite directions, so read the rails below, not this line.`
-        : ''}</div>
+   A DEAD FEED IS GREY AND SAYS SO. Every vital that cannot be measured draws a
+   flat grey hairline and wears a chip naming what is missing. Nothing here is
+   allowed to render a calm green over a feed nobody has wired — that is the
+   one failure this whole console exists to refuse. */
+let VITOPEN = null;   // which vital is expanded; one at a time, remembered across renders
+
+const vitMed = a => { const c = (a || []).filter(v => v != null && isFinite(v));
+  return c.length ? pMedian(c) : null; };
+
+/* Badness → the state, and the 0–1 distance the master blends. Badness is
+   clipped at zero (better than healthy is not a degree of health) and at the
+   problem line (twice as bad as a problem is still one problem — otherwise a
+   single blown vital could drag a blended master through the floor on its
+   own). */
+function vitState(bad, cfg){
+  if (bad == null || !isFinite(bad)) return { band:'dark', dist:null };
+  const b = Math.max(0, bad);
+  return { band: b < cfg.watch ? 'green' : b < cfg.problem ? 'yellow' : 'red',
+           dist: Math.min(1, b / cfg.problem) };
+}
+const VIT_WORD = { green:'healthy', yellow:'watch this', red:'problem', dark:'no feed' };
+
+/* The flat hairline. Grey means unmeasured; a coloured one means the state is
+   known but there is no history to draw a shape from — two different facts
+   that must not wear one mark. */
+const vitFlat = (c) => `<svg class="vit-flat" viewBox="0 0 64 22" preserveAspectRatio="none" aria-hidden="true">
+  <line x1="1" y1="11" x2="63" y2="11"${c ? ` style="stroke:${c};stroke-opacity:.55"` : ''}/></svg>`;
+
+/* One trace, drawn in the EKG language every other trace on this page uses:
+   the actual on top, the trailing median under it as the gold dashed
+   reference, a lit dot on the latest point. `ref` may be null — see ekgSpark. */
+function vitTrace(v, { id, w, h, mini }){
+  const pts = (v.series || []).filter(x => x != null && isFinite(x));
+  if (pts.length < 2) return vitFlat(v.band === 'dark' ? null : VIT_C[v.band]);
+  return ekgSpark(pts.map(x => ({ v: x, t: v.ref })),
+    { id, w, h, mini, color: VIT_C[v.band], glow: VIT_C[v.band] });
+}
+
+/* ── MARKETING ───────────────────────────────────────────────────────────────
+   Blended dollars back per $1: the month's signed dollars over the month's
+   WHOLE typed spend book — the same divisor the ROI board's headline uses, so
+   the hero and the board cannot quote two different books.
+
+   MEASURED ON CLOSED MONTHS, AND IT SAYS SO ON THE CARD. Spend is typed at
+   month close, one grain per month; the month in progress has no row until the
+   office keys it. A weekly ratio would need a weekly denominator that does not
+   exist, and inventing one by spreading a monthly total across days would put
+   a smooth fake under a real numerator — the flattering number this board has
+   refused since the cost-ratio sub-vital was first held. Windsor's daily
+   google_ads_daily is NOT used here: it is a pacing signal, demoted from all
+   money math by the 170/171 ruling after undercounting July by half. */
+function vitMarketing(){
+  const V = D.vitals;
+  const base = { key:'marketing', tag:'MKT', name:'MARKETING',
+                 label:'what a marketing dollar brings back', grain:'closed months' };
+  if (!MKT || !Array.isArray(MKT.spend))
+    return { ...base, live:false, band:'dark', dist:null, series:[], ref:null,
+      chip: MKT_LOADING || !MKT ? 'spend loading' : 'feed dark',
+      read: MKT_LOADING || !MKT ? 'the spend book has not answered yet' : 'no spend book to read',
+      why: 'The typed spend book (<code>marketing_spend</code>) has not answered. It is fetched after first paint so a missing migration can never block this page — while it is in flight this tile says <b>spend loading</b>, and if it settles on <b>feed dark</b> the table is unreadable rather than empty.' };
+
+  const priced = V.months.map(m => ({ ...m, spend: mkBookTotal(m.key) }))
+    .map(m => ({ ...m, roi: (m.spend && m.spend > 0) ? m.signed / m.spend : null }))
+    .filter(m => m.roi != null);
+  if (!priced.length)
+    return { ...base, live:false, band:'dark', dist:null, series:[], ref:null, chip:'feed dark',
+      read:'no closed month has been keyed yet',
+      why:'Not one of the last nine closed months carries a typed spend row, so there is no denominator to divide by. This is a data-entry state, not a costless one — a source with no cost recorded is not a free source.' };
+
+  const cur = priced[priced.length - 1];
+  const prior = priced.slice(0, -1).map(m => m.roi);
+  const ref = prior.length >= VIT.minMonths ? vitMed(prior) : null;
+  /* Two shortfalls, and the worse one wins: against the trailing median, and
+     against KD's $10 line. The floor is here for the same reason days-out has
+     one — a business that has spent a year under the line has a median under
+     the line, and scoring against that alone would call a chronic problem
+     normal. */
+  const badMed   = ref ? Math.max(0, 1 - cur.roi / ref) : null;
+  const badFloor = Math.max(0, 1 - cur.roi / VIT.marketing.floor);
+  const bad = badMed == null ? badFloor : Math.max(badMed, badFloor);
+  const st = vitState(bad, VIT.marketing);
+  const under = cur.roi < VIT.marketing.floor;
+  const read = under
+    ? `$${cur.roi.toFixed(2)} back per $1 — under your $${VIT.marketing.floor} line`
+    : ref && cur.roi < ref
+      ? `$${cur.roi.toFixed(2)} back per $1 — ${Math.round((1 - cur.roi/ref) * 100)}% under your median month`
+      : `$${cur.roi.toFixed(2)} back per $1 — clear of your $${VIT.marketing.floor} line`;
+  return { ...base, live:true, band:st.band, dist:st.dist,
+    series: priced.map(m => m.roi), ref, read, cur, priced,
+    /* MARKETING IS NOT IN THE MASTER, and the master says so: its newest
+       reading is a closed month old, so blending it into a weekly line would
+       mix two clocks. It colours its own tile and stops there. */
+    inMaster: false,
+    refNote: ref
+      ? `median of the ${prior.length} closed month${prior.length === 1 ? '' : 's'} before it`
+      : `no median claimed — ${prior.length} closed month${prior.length === 1 ? '' : 's'} behind it, and this hero wants ${VIT.minMonths}`,
+    keys: [
+      { k: `${cur.label} · back per $1`, v: `$${cur.roi.toFixed(2)}` },
+      { k: 'spend book', v: short(cur.spend) },
+      { k: 'signed', v: short(cur.signed) },
+    ] };
+}
+
+/* ── SALES ───────────────────────────────────────────────────────────────────
+   Signed dollars in the last seven complete days against the median of the
+   eight complete weeks before them. The same jobs, the same amount column and
+   the same signing date every money tile on this page counts. */
+function vitSales(){
+  const V = D.vitals, s = V.sales.series, N = VIT.weeks;
+  const cur = s[N], ref = vitMed(s.slice(0, N));
+  if (!ref || !(ref > 0))
+    return { key:'sales', tag:'SLS', name:'SALES', label:'signed dollars a week',
+      live:false, band:'dark', dist:null, series:[], ref:null, chip:'feed dark',
+      read:'no trailing weeks to compare against',
+      why:'Fewer than eight complete weeks of signings sit behind this window, so there is no median worth drawing a line at.' };
+  const bad = Math.max(0, 1 - cur / ref);
+  const st = vitState(bad, VIT.sales);
+  const gap = Math.round((cur / ref - 1) * 100);
+  return { key:'sales', tag:'SLS', name:'SALES', label:'signed dollars a week',
+    grain:'weeks', live:true, band:st.band, dist:st.dist, series:s, ref, inMaster:true,
+    read: `${short(cur)} signed, ${gap === 0 ? 'level with' : gap > 0 ? `${gap}% above` : `${Math.abs(gap)}% below`} your 8-week median`,
+    refNote:'median of your last 8 complete weeks',
+    keys: [
+      { k:'last 7 days', v: short(cur) },
+      { k:'8-week median', v: short(ref) },
+      { k:'gap', v: `${gap > 0 ? '+' : gap < 0 ? '−' : ''}${Math.abs(gap)}%` },
+    ] };
+}
+
+/* ── PRODUCTION ──────────────────────────────────────────────────────────────
+   The share of the open backlog that has gone stale — signed, not completed,
+   and older than the stall line — against the median of that same share over
+   the eight weeks before. Reconstructed exactly: both dates are stamped, so
+   the open set on any past day is a fact, not an inference.
+
+   POINTS, NOT PERCENT OF THE MEDIAN. See VIT.production for why. */
+function vitProduction(){
+  const V = D.vitals, s = V.production.series, N = VIT.weeks, o = V.production.now;
+  const cur = s[N], ref = vitMed(s.slice(0, N));
+  if (cur == null || ref == null)
+    return { key:'production', tag:'PRD', name:'PRODUCTION', label:'how much of the backlog has stalled',
+      live:false, band:'dark', dist:null, series:[], ref:null, chip:'feed dark',
+      read:'no open backlog to age',
+      why:'No job is both signed and unfinished across these weeks, so there is no backlog whose age could be measured.' };
+  const bad = cur - ref;                       // percentage points off its own median
+  const st = vitState(bad, VIT.production);
+  const d = Math.round(cur - ref);
+  return { key:'production', tag:'PRD', name:'PRODUCTION', label:'how much of the backlog has stalled',
+    grain:'weeks', live:true, band:st.band, dist:st.dist, series:s, ref, inMaster:true,
+    read: `${Math.round(cur)}% of the open book is past ${VIT.production.stallDays} days — ${
+      d === 0 ? 'level with' : d > 0 ? `${d} points above` : `${Math.abs(d)} points below`} its 8-week median`,
+    refNote:'median of your last 8 complete weeks',
+    keys: [
+      { k:`past ${VIT.production.stallDays} days`, v:`${Math.round(cur)}%` },
+      { k:`past ${VIT.production.deepDays} days`, v:`${o.n ? Math.round(100 * o.deep / o.n) : 0}%` },
+      { k:'open jobs', v:String(o.n) },
+    ] };
+}
+
+/* ── MONEY ───────────────────────────────────────────────────────────────────
+   The dollar-weighted mean age of every open balance, against a fixed band.
+
+   A FIXED BAND, NOT A TRAILING MEDIAN, on two counts. Receivables age in one
+   direction, so a book that has always sat at 70 days would score its own
+   worst habit as perfectly normal — the same argument that gave days-out a
+   hand-set target. And the history is not there to build a median from anyway:
+   QuickBooks hands us a balance with no date attached, so an invoice paid last
+   Tuesday is simply absent from today's snapshot. Rebuilding prior weeks out
+   of the invoices still open now would drop every fast payer, flatter the past
+   and make creep read LOW — a false all-clear, which is worse than no line. */
+function vitMoney(){
+  const M = D.vitals.money;
+  if (M.meanAge == null || !M.n)
+    return { key:'money', tag:'MNY', name:'MONEY', label:'how old the money owed to you is',
+      live:false, band:'dark', dist:null, series:[], ref:null, chip:'feed dark',
+      read: qbOK() ? 'no open balance on the book' : 'QuickBooks is not readable',
+      why: qbOK()
+        ? 'Every invoice QuickBooks holds is settled, so there is no open balance to age.'
+        : esc(String((D.qb && D.qb.reason) || 'qb_invoices did not answer.')) };
+  const bad = M.meanAge - VIT.money.good;
+  const st = vitState(bad, { watch: VIT.money.watch - VIT.money.good,
+                             problem: VIT.money.problem - VIT.money.good });
+  const old = M.aging.filter(a => a.label === '60–90' || a.label === 'over 90')
+    .reduce((n, a) => n + a.v, 0);
+  return { key:'money', tag:'MNY', name:'MONEY', label:'how old the money owed to you is',
+    grain:'a snapshot, aged from the invoice date', live:true, band:st.band, dist:st.dist,
+    /* NO LINE, A PROFILE. There is no weekly history to draw (see above), so
+       the shape is the open book itself split by age — four real amounts on a
+       shared floor, heavy on the right exactly when the money is old. It
+       pictures the very thing that decides the colour, which a borrowed
+       invoiced-dollars line would not. */
+    profile: M.aging, series: [], ref: null, inMaster: false,
+    read: `${Math.round(M.meanAge)} days is the average age of ${short(M.openTotal)} owed to you`,
+    refNote:`your line: green to ${VIT.money.good} days, watch to ${VIT.money.watch}, problem past ${VIT.money.problem}`,
+    keys: [
+      { k:'mean age', v:`${Math.round(M.meanAge)}d` },
+      { k:'open balance', v: short(M.openTotal) },
+      { k:'past 60 days', v: M.openTotal > 0 ? `${Math.round(100 * old / M.openTotal)}%` : '0%' },
+    ] };
+}
+
+/* ── THE MASTER ──────────────────────────────────────────────────────────────
+   THE BUSINESS as one heartbeat, on a 0–100 health scale: 100 is every
+   blended vital sitting at or better than healthy, 0 is every one of them at
+   or past its problem line.
+
+   IT BLENDS DISTANCES, NOT DEVIATIONS, and that is the fix this rebuild
+   carries. The composite it replaces averaged signed z-scores, so signings far
+   down and backlog far up cancelled to something that looked perfectly calm —
+   it once read "in rhythm" in green with red rails directly beneath it, and
+   the card had to grow a sentence apologising for its own arithmetic. A mean
+   of distances cannot cancel: two vitals in trouble in opposite directions are
+   two vitals in trouble.
+
+   ONE ROSTER, STATED. Only vitals with a value in EVERY weekly slot are in the
+   line, so the line never quietly changes what it is a mean of partway along.
+   Marketing (closed months) and money (a snapshot) are not in it today, they
+   are named under it, and they join automatically the day their feeds carry a
+   week-by-week history. */
+function vitMaster(list){
+  const N = VIT.weeks;
+  /* Each roster vital's badness is re-measured per week by the rule its own
+     tile uses, so the line and the number are one arithmetic. A vital with no
+     entry here cannot be blended however live it is — a new vital joins this
+     line by being given a rule, never by being given a flag. */
+  const cfgOf = { sales: VIT.sales, production: VIT.production };
+  const badAt = (v, i) => v.key === 'production' ? v.series[i] - v.ref
+    : Math.max(0, 1 - v.series[i] / v.ref);
+  const roster = list.filter(v => v.inMaster && v.live && cfgOf[v.key] && v.ref && v.series
+    && v.series.length === N + 1 && v.series.every(x => x != null && isFinite(x)));
+  const out = { key:'master', name:'THE BUSINESS', roster, series: [], ref: null };
+  if (roster.length < 2)
+    return { ...out, live:false, band:'dark', chip:'feed dark',
+      read:'not enough weekly vitals to blend',
+      note:`A blended line wants at least two vitals with a full week-by-week history. ${
+        roster.length ? 'Only one has one' : 'None has one'} right now, so nothing is drawn — a line over one vital would just be that vital wearing a bigger name.` };
+
+  /* Measured against the SAME reference the tile uses, so the dashed median
+     under this line means exactly what the tiles mean. */
+  const series = [];
+  for (let i = 0; i <= N; i++){
+    const d = roster.map(v => vitState(badAt(v, i), cfgOf[v.key]).dist).filter(x => x != null);
+    series.push(d.length === roster.length ? 100 * (1 - d.reduce((a,b) => a+b, 0) / d.length) : null);
+  }
+  const health = series[N], ref = vitMed(series.slice(0, N));
+  const band = health >= VIT.master.watch ? 'green'
+             : health >= VIT.master.problem ? 'yellow' : 'red';
+  const off = roster.filter(v => v.band !== 'green');
+  return { ...out, live:true, band, series, ref, health,
+    read: band === 'green' ? 'in rhythm'
+      : off.length ? `${off.map(v => v.name.toLowerCase()).join(' and ')} off rhythm`
+      : 'off its rhythm',
+    note: (() => {
+      const out = list.filter(v => !v.inMaster);
+      const why = v => v.key === 'marketing'
+        ? 'a closed-month reading — spend is typed at month close'
+        : 'a snapshot with no payment feed behind it';
+      const cap = a => a.map(v => v.name.charAt(0) + v.name.slice(1).toLowerCase());
+      return `Blended from <b>${cap(roster).join(' and ')}</b> — the ${
+        roster.length === 2 ? 'two vitals' : roster.length === 1 ? 'one vital' : `${roster.length} vitals`
+        } with a week-by-week history.${out.length ? ` ${
+        out.map(v => `${cap([v])[0]} is ${why(v)}`).join(', and ')}, so ${
+        out.length === 1 ? 'it carries its own tile and is' : 'they carry their own tiles and are'
+        } not in this line.` : ''}`;
+    })() };
+}
+
+/* ── DRAWN ───────────────────────────────────────────────────────────────── */
+function vitMicroHtml(v){
+  const c = VIT_C[v.band], rgb = VIT_RGB[v.band];
+  const heat = v.band === 'dark' ? ''
+    : ` style="border-color:rgba(${rgb},0.32);background:rgba(${rgb},0.07);box-shadow:inset 0 0 18px rgba(${rgb},0.10)"`;
+  /* Money draws its age profile instead of a line — real amounts on a shared
+     floor, no invented history. Everything else draws its rhythm. */
+  const shape = v.profile
+    ? rhythmBars(v.profile.map(a => ({ label:'', v: Math.round(a.v) })),
+        { w:64, h:22, mini:true, refDash:false, color: c })
+    : vitTrace(v, { id:`vit-${v.key}`, w:64, h:22, mini:true });
+  return `<button class="vit-micro${VITOPEN === v.key ? ' on' : ''}" id="vitm-${v.key}" data-vit
+      onclick="vitOpen('${v.key}')" aria-expanded="${VITOPEN === v.key ? 'true' : 'false'}"
+      aria-label="${esc(v.name)} — ${esc(VIT_WORD[v.band])}. Open for the full reading."${heat}>
+    <span class="vit-tag" style="color:${c}">${v.tag}</span>
+    <span class="vit-trace">${shape}</span>
+    ${v.live ? '' : `<span class="vit-dark">${esc(v.chip || 'feed dark')}</span>`}
+  </button>`;
+}
+
+/* The expanded card. Same shape as the console's heartbeat cards: the full
+   trace with its median reference, the key strip, then the flags — which are
+   the pulse rails' own sub-vitals and notes, carried over whole rather than
+   summarised, so nothing this hero replaced was lost on the way. */
+function vitPanelHtml(v){
+  const c = VIT_C[v.band];
+  const P = (D.pulse && D.pulse.vitals) || [];
+  const src = P.filter(p => (v.key === 'money' ? ['collections','payables'] : [v.key]).includes(p.key));
+  /* THE MASTER DRAWS NO TRACE DOWN HERE. Its heartbeat is already the largest
+     thing on the screen two inches above, and a second copy of the same line
+     inside its own drawer is the repetition that teaches a reader a card is
+     padding. What the drawer owes them is the roster and the keys. */
+  const big = v.noTrace ? ''
+    : v.profile
+      ? rhythmBars(v.profile.map(a => ({ label: a.label.replace(' days',''),
+          v: Math.round(a.v), num: short(a.v) })), { w:280, h:62, refDash:false, color: c })
+      : vitTrace(v, { id:`vit-${v.key}-big`, w:280, h:48 });
+  const flags = src.map(p => [
+    /* The rail is named even when there is only one of them, because MONEY
+       carries two — collections and payables — and an unlabelled run of
+       sub-vitals from two different rails reads as one list of six. */
+    `<div class="pd-h">${esc(p.name)} · ${esc(p.label)}${p.live && p.read
+      ? ` — ${esc(pulseReadText(p.read))}` : ''}</div>`,
+    p.why  ? `<div class="pd-why">${p.why}</div>` : '',
+    p.half ? `<div class="pd-why">${p.half}</div>` : '',
+    (p.subs || []).map(pulseSubRow).join(''),
+    p.brands && p.brands.length
+      ? `<div class="pd-h">Which brand</div>${p.brands.map(pulseBrandRow).join('')}` : '',
+    p.aging && p.aging.length
+      ? `<div class="pd-h">Which aging bucket · open balance, aged from the invoice date</div>
+         ${p.aging.map(a => `<div class="pd-brand"><span class="pd-brand-n">${esc(a.label)}</span>
+           <span class="pd-brand-z">${short(a.v)}</span>
+           <span class="pd-brand-v">${a.n} invoice${a.n === 1 ? '' : 's'}</span></div>`).join('')}` : '',
+  ].join('')).join('');
+  return `<div class="vit-panel${VITOPEN === v.key ? ' open' : ''}" id="vitp-${v.key}">
+    <div class="vit-panel-in"><div class="vit-body">
+      <div class="vit-b-head">
+        <span class="vit-b-name" style="color:${c}">${esc(v.name)}</span>
+        <span class="vit-b-read" style="color:${c}">${esc(VIT_WORD[v.band])}</span>
+      </div>
+      <div class="vit-b-label">${esc(v.label)}</div>
+      ${v.read ? `<div class="vit-b-say" style="color:${v.live ? c : 'var(--text-dim)'}">${esc(v.read)}</div>` : ''}
+      ${big ? `<div class="ekg-wrap">${big}<div class="ekg-cap">${esc(v.grain || '')}${
+        v.refNote ? `<span class="ekg-cap-ref">${v.profile ? '' : '╌╌ '}${esc(v.refNote)}</span>` : ''}</div></div>` : ''}
+      ${v.live && v.keys && v.keys.length ? `<div class="vit-keys">${v.keys.map(k =>
+        `<div class="vit-key"><div class="k">${esc(k.k)}</div><div class="v">${esc(k.v)}</div></div>`).join('')}</div>` : ''}
+      ${v.why ? `<div class="pd-why">${v.why}</div>` : ''}
+      ${flags}
+    </div></div>
   </div>`;
+}
 
-  const endTxt = P.end.toLocaleDateString('en-US', { month:'short', day:'numeric' });
-  return `<div class="card pulse-card">
-    <div class="card-title">The pulse · vitals</div>
-    <div class="card-sub">${head}</div>
-    ${comp}
-    <div class="pulse-vitals">${rows}</div>
-    <div class="pulse-foot">
-      Most vitals are a trailing 7-day window scored against their own history for
-      this point in the month — median and MAD, so one large job cannot redefine
-      normal. The shaded band behind each trace <b>is</b> that normal range, median
-      ± 1 MAD: a line inside it is ordinary, a line clear of it is not. Reads are
-      that same arithmetic said in English — green inside the band, amber past 1,
-      red past 2 — and each trace is scaled to its own range, so heights compare
-      within a rail and never across them. <b>Days out is the exception</b>: it is
-      judged against a fixed 2–3 day band, not against history, because a business
-      that has always booked eight days out would score its own chronic problem as
-      normal. Windows end <b>${esc(endTxt)}</b>: a window holding a partial today
-      reads low for no reason but the clock. ${P.live} of ${P.total} vitals have a
-      feed behind them; the rest say so and draw nothing. Open a rail for the
-      z-score and the sub-vitals behind its reading.
+/* One open at a time, and no re-render: the panels are already in the DOM, so
+   a tap is a class toggle. VITOPEN survives a full redraw of the page. */
+function vitOpen(k){
+  const was = VITOPEN === k;
+  VITOPEN = was ? null : k;
+  document.querySelectorAll('.vit-panel').forEach(el => el.classList.remove('open'));
+  document.querySelectorAll('[data-vit]').forEach(el => {
+    el.classList.remove('on'); el.setAttribute('aria-expanded', 'false'); });
+  if (was) return;
+  const p = document.getElementById('vitp-' + k); if (p) p.classList.add('open');
+  const t = document.getElementById('vitm-' + k);
+  if (t){ t.classList.add('on'); t.setAttribute('aria-expanded', 'true'); }
+}
+
+function cardVitals(){
+  if (!D.vitals) return '';
+  /* MARKETING | SALES over PRODUCTION | MONEY — the order the money moves. */
+  const list = [vitMarketing(), vitSales(), vitProduction(), vitMoney()];
+  const M = vitMaster(list);
+  const mc = VIT_C[M.band], mrgb = VIT_RGB[M.band];
+  const dark = list.filter(v => !v.live);
+  const endTxt = D.vitals.end.toLocaleDateString('en-US', { month:'short', day:'numeric' });
+
+  return `<div class="card vit-card">
+    <div class="card-title">Vitals · the business<span class="feed-tag cc">CC live</span><span class="feed-tag qb">QB</span></div>
+    <div class="card-sub">One heartbeat and four organs. Green healthy, gold watch, red problem — tap any of them for the numbers behind the colour.</div>
+
+    <div class="vit-master"${M.live ? ` style="border-color:rgba(${mrgb},0.24);box-shadow:inset 0 0 26px rgba(${mrgb},0.07)"` : ''}>
+      <button class="vit-m-btn" id="vitm-master" data-vit onclick="vitOpen('master')"
+        aria-expanded="${VITOPEN === 'master' ? 'true' : 'false'}"
+        aria-label="The business — ${esc(M.read)}. Open for what is in this line.">
+        <span class="vit-m-head">
+          <span class="vit-m-name">THE BUSINESS</span>
+          <span class="vit-m-read" style="color:${mc}">${esc(M.read)}</span>
+        </span>
+        ${M.live ? `<div class="vit-m-num" style="color:${mc}">${Math.round(M.health)}<small>OF 100 HEALTH</small></div>
+          <div class="ekg-wrap" style="margin:2px 0 0">${
+            ekgSpark(M.series.map(x => ({ v: x, t: M.ref })),
+              { id:'vit-master', w:280, h:54, color: mc, glow: mc })}
+            <div class="ekg-cap">blended, week by week<span class="ekg-cap-ref">╌╌ median of your last ${VIT.weeks} weeks</span></div>
+          </div>`
+        : `<div class="vit-m-num" style="color:var(--text-dim)">—<small>NO BLENDED LINE</small></div>
+           <div class="ekg-wrap" style="margin:2px 0 0">${vitFlat()}<div class="ekg-cap">nothing drawn — see below</div></div>`}
+      </button>
+      ${vitPanelHtml({ key:'master', name:'THE BUSINESS', label:'what is in this line, and what is not',
+        band: M.band, live: M.live, read:'', noTrace:true, why: M.note,
+        keys: M.live ? [
+          { k:'health now', v: String(Math.round(M.health)) },
+          { k:`${VIT.weeks}-week median`, v: M.ref == null ? '—' : String(Math.round(M.ref)) },
+          { k:'in the line', v: String(M.roster.length) },
+        ] : [] })}
+    </div>
+
+    <div class="vit-grid">${list.map(vitMicroHtml).join('')}</div>
+    ${list.map(vitPanelHtml).join('')}
+
+    <div class="vit-foot">
+      ${list.filter(v => v.live).length} of ${list.length} vitals have a feed${
+        dark.length ? ` — ${esc(dark.map(v => v.name.toLowerCase()).join(' and '))} draw${
+        dark.length === 1 ? 's' : ''} a flat grey line and names what is missing, never a calm green over nothing` : ''}.
+      Windows end <b>${esc(endTxt)}</b>: one holding a partial today reads low for no reason
+      but the clock. Thresholds are one block in the source, <code>VIT</code>.
     </div>
   </div>`;
 }
@@ -7064,14 +7370,24 @@ function render(){
      statement:
 
        1  the ask box            — the question he arrived with, always first
-       1b THE PULSE              — the whole business as one heartbeat trace,
-                                   over five vitals each drawn against its own
-                                   normal band for this point in the month. It
-                                   sits above ATTENTION because it answers a
-                                   coarser question first, and answers it as a
-                                   SHAPE: is anything wrong at all. ATTENTION
-                                   then says what, in words. The pulse shows
+       1b THE VITALS HERO        — one master heartbeat and a 2×2 of micro
+                                   vitals, and the whole of it fits one 390px
+                                   phone screen with nothing scrolled. It sits
+                                   above ATTENTION because it answers a coarser
+                                   question first, and answers it as a SHAPE
+                                   and a COLOUR: is anything wrong at all.
+                                   ATTENTION then says what, in words. It shows
                                    symptoms and never prescribes.
+
+                                   It replaced THE PULSE card, which asked the
+                                   same question at four times the height — a
+                                   composite plus five full rails, each nearly
+                                   as large as the composite, so the eye had
+                                   six things to rank and ranked none of them.
+                                   Nothing that card measured was dropped: its
+                                   rails' sub-vitals, brand cuts, aging buckets
+                                   and every withheld-feed note are carried
+                                   whole inside the four expanded cards here.
        2  ATTENTION              — what is off its rhythm, at headline size. It
                                    was a footnote under the money; it is the
                                    reason he opened the page, so it leads.
@@ -7116,7 +7432,7 @@ function render(){
      coverage / going cold (the TruOdds cooling book owns that question now).
      ────────────────────────────────────────────────────────────────────────── */
   document.getElementById('app').innerHTML =
-    hdrTitle() + askBar() + cardPulse() + cardAttention() + hdr() + '<div class="stack bands">' + [
+    hdrTitle() + askBar() + cardVitals() + cardAttention() + hdr() + '<div class="stack bands">' + [
       /* 4 · WHO SOLD IT */
       cardReps(),
 
@@ -7607,7 +7923,7 @@ addEventListener('resize', () => {
    the last one, it is to tell a human which build is on the server and when it
    got there. A number nobody clocked cannot answer that, and the first time it
    is asked in anger will be the morning a stale build is being chased. */
-const BUILD = '2026-08-17T02:52Z-july-card-truth-ledger';
+const BUILD = '2026-08-17T06:40Z-vitals-compression';
 const SB_URL = 'https://lzegjjbkfuecrhdvlvay.supabase.co';
 /* The one page that can finish a password reset. Hard-coded rather than derived,
    because every derivation of it so far has been a source of bugs: a bare origin
@@ -8232,6 +8548,129 @@ function buildPulse(jobs, qbInv){
 
   return { end, vitals, comp, live: vitals.filter(v => v.live).length, total: vitals.length,
            poolN: S ? S.pool : 0 };
+}
+
+/* ── THE VITALS · THE MEASUREMENTS ───────────────────────────────────────────
+   Everything the login hero draws, measured once here off the same two feeds
+   the pulse reads — Contractors Cloud jobs and QuickBooks invoices. The
+   thresholds that turn these into colours live in VIT at the top of the file
+   and are applied at render time; nothing in this function knows what green
+   means, which is what keeps the tuning surface a single block.
+
+   NINE WEEKLY SLOTS, NOT NINETY DAYS. The hero's whole comparison language is
+   "against your trailing 8 weeks", so the grid is eight complete prior weeks
+   plus the week just finished. Non-overlapping, because the median has to be a
+   median of independent weeks — a rolling 7-day sum sampled daily would put 56
+   heavily-correlated numbers behind a "median of 8 weeks" and quietly narrow
+   it. Every week ends on a complete day: the last slot ends yesterday, for the
+   same reason every pulse window does — a window holding a partial today reads
+   low for no reason but the clock.
+
+   WHAT IS NOT HERE, AND WHY. Two of the four vitals have no week-by-week
+   history and cannot be given one honestly:
+
+     MARKETING needs spend, and spend is typed at month CLOSE (marketing_spend,
+     one grain per month). A weekly denominator would have to be invented by
+     spreading a monthly total across days, and the month in progress has no
+     total to spread. So marketing is measured on CLOSED MONTHS and says so.
+
+     MONEY needs the open balance as it stood in past weeks, and QuickBooks
+     gives a balance with no date attached — an invoice paid last Tuesday is
+     simply gone from the snapshot. Reconstructing prior weeks from the
+     invoices still open today would omit everything that got paid, which
+     biases the past toward the slow payers and makes creep read LOW. That is a
+     false all-clear, so it is not drawn. Money is a snapshot, aged, and the
+     card says which clock it used. */
+function buildVitals(jobs, qbInv){
+  const sod = d => new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  const end = new Date(pDayAdd(+sod(new Date()), -1));      // yesterday
+  const N = VIT.weeks;                                      // 8 prior + 1 current
+
+  /* Slot i ends N-i weeks before `end`; slot N is the week just finished. */
+  const weeks = [];
+  for (let i = 0; i <= N; i++){
+    const e = pDayAdd(+end, -(N - i) * 7);
+    weeks.push({ s: pDayAdd(e, -6), e,
+      label: new Date(pDayAdd(e, -6)).toLocaleDateString('en-US', { month:'short', day:'numeric' }) });
+  }
+  const inWeek = (t, w) => t >= w.s && t <= w.e;
+
+  /* ── SALES · signed dollars per week ──────────────────────────────────────
+     The same jobs and the same amount column the money tiles count, bucketed
+     into the nine slots. */
+  const signed = jobs.filter(j => j.contract_signed_at)
+    .map(j => ({ t: +sod(new Date(j.contract_signed_at)), v: Number(j.fin_sold_amount || 0),
+                 done: j.completed_at ? +sod(new Date(j.completed_at)) : null }))
+    .filter(j => !isNaN(j.t));
+  const salesSeries = weeks.map(w => signed.reduce((n, j) => inWeek(j.t, w) ? n + j.v : n, 0));
+
+  /* ── PRODUCTION · the stalled share of the open backlog ───────────────────
+     Exactly reconstructable at any past date, and it is the one of the four
+     that is: a job's signed date and completed date are both stamped, so the
+     open set on any Tuesday in June is a fact rather than an inference.
+
+     THE YEAR-OLD RECORDS STAY IN. 188 open jobs are over a year old and are
+     almost certainly never-closed records rather than live work. Dropping them
+     would make the share prettier and less true; leaving them in only lifts
+     the LEVEL, and this vital is scored on points off its own trailing median,
+     which the level cannot reach. They are named in the drill. */
+  const openAt = t => {
+    let n = 0, stalled = 0, deep = 0;
+    for (const j of signed){
+      if (j.t > t || (j.done !== null && j.done <= t)) continue;
+      n++;
+      const age = pDayDiff(t, j.t);
+      if (age >= VIT.production.stallDays) stalled++;
+      if (age >= VIT.production.deepDays) deep++;
+    }
+    return { n, stalled, deep };
+  };
+  const prodAt = weeks.map(w => openAt(w.e));
+  const prodSeries = prodAt.map(o => o.n ? 100 * o.stalled / o.n : null);
+
+  /* ── MONEY · the open book, aged from the invoice date ────────────────────
+     due_date is not among the columns this console fetches, so the age is from
+     the invoice date and the card says so rather than implying a due clock it
+     never read. */
+  const open = (qbInv || []).filter(r => !r.reporting_excluded && Number(r.balance || 0) > 0)
+    .map(r => ({ v: Number(r.balance || 0), age: pDayDiff(+end, +sod(new Date(r.txn_date))) }))
+    .filter(r => isFinite(r.age));
+  const openTotal = open.reduce((n, r) => n + r.v, 0);
+  const meanAge = openTotal > 0
+    ? open.reduce((n, r) => n + r.v * Math.max(0, r.age), 0) / openTotal : null;
+  const AGE_B = [[0,30,'0–30 days'],[30,60,'30–60'],[60,90,'60–90'],[90,1e9,'over 90']];
+  const aging = AGE_B.map(([lo, hi, label]) => {
+    const mine = open.filter(r => r.age >= lo && r.age < hi);
+    return { label, n: mine.length, v: mine.reduce((a, r) => a + r.v, 0) };
+  });
+
+  /* ── MARKETING · signed dollars per CLOSED month ──────────────────────────
+     The revenue half only. The spend half is the typed book (MKT.spend), which
+     arrives after first paint, so the ratio itself is formed at render time.
+
+     WHICH REVENUE INSTRUMENT: this console's own walk of `jobs`, the same
+     figure every money tile on the page counts. The ROI board computes its
+     revenue from rpt_report_marketing_roi and the two still differ on July;
+     the hero reads the console's instrument so the first screen and the tiles
+     under it cannot disagree, and the drill names the other one. */
+  const nowM = new Date();
+  const months = [];
+  for (let i = N + 1; i >= 1; i--){
+    const d = new Date(nowM.getFullYear(), nowM.getMonth() - i, 1);
+    months.push({ key: `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-01`,
+                  label: `${MNAMES[d.getMonth()].slice(0,3)} ${String(d.getFullYear()).slice(2)}`,
+                  y: d.getFullYear(), m: d.getMonth(), signed: 0 });
+  }
+  for (const j of signed){
+    const d = new Date(j.t);
+    const hit = months.find(x => x.y === d.getFullYear() && x.m === d.getMonth());
+    if (hit) hit.signed += j.v;
+  }
+
+  return { end, weeks, months,
+           sales: { series: salesSeries },
+           production: { series: prodSeries, at: prodAt, now: prodAt[N] },
+           money: { aging, meanAge, openTotal, n: open.length } };
 }
 
 function buildData(raw){
@@ -10510,6 +10949,11 @@ function buildData(raw){
        month the owner happens to be looking at is not a normal. It is the one
        band on this page the month time machine leaves alone. */
     pulse: buildPulse(jobs, qbInv),
+    /* THE LOGIN HERO reads the same two feeds on the same rule — whole history,
+       never the browsed month. Its thresholds live in VIT at the top of the
+       file; the colours are decided at render time because MARKETING's spend
+       half arrives after first paint. */
+    vitals: buildVitals(jobs, qbInv),
     // the filtered roster by id, for the rep one-pager — name, role and the
     // sells flag travel together so the pager never re-derives who someone is
     roster: Object.fromEntries(reps.map(r =>
