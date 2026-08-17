@@ -662,8 +662,16 @@
   .mk-head div { font-family: 'JetBrains Mono', monospace; font-size: 8px; letter-spacing: 0.1em;
     text-transform: uppercase; color: var(--text-dim); text-align: right; }
   .mk-head div:first-child { text-align: left; }
-  .mk-row { padding: 11px 0; border-bottom: 1px solid var(--line); }
+  /* DENSITY. Single-line rows at the mobile-preview pitch, so the whole
+     ACTIVE ledger — the only rows this list now shows at a glance — fits one
+     screen instead of running past the fold behind two separators and a tail
+     of sources that neither cost nor earned anything this month. */
+  .mk-row { padding: 6px 0; border-bottom: 1px solid var(--line); }
   .mk-row:last-child { border-bottom: none; }
+  /* `display: grid` outranks the [hidden] attribute's own display:none, so a
+     folded row would lay itself out anyway. Both the folded rows and the
+     earned row's collapsed input need this said explicitly. */
+  .mk-row[hidden], .mk-spend[hidden], .mk-earn[hidden] { display: none; }
   /* The free sources sit below the paid ones behind a labelled rule: their
      volume is the point, their ROI does not exist. */
   .mk-row.free { opacity: 0.92; }
@@ -698,6 +706,33 @@
   .mk-auto { font-family: 'JetBrains Mono', monospace; font-size: 7.5px; letter-spacing: .1em;
     text-transform: uppercase; color: var(--blue); display: block; margin-top: 3px; }
   .mk-auto.stale { color: var(--gold); }
+  /* THE EARNED BADGE. A source that has never carried a cost in the book is
+     not a source somebody forgot to type — those are different claims and the
+     board has always insisted on keeping them apart. "$0 · EARNED" in gold
+     says the first; "not entered" is now reserved for the second, which is to
+     say for PAID sources whose month has not been keyed. Tapping the badge
+     opens the input, so a channel that starts costing money can still be
+     priced from here the moment it does. */
+  .mk-earn { display: inline-flex; align-items: center; gap: 5px; background: none; border: 0;
+    padding: 0; margin: 0; cursor: pointer; font-family: 'JetBrains Mono', monospace;
+    font-size: 8.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--gold);
+    white-space: nowrap; }
+  .mk-earn:hover { color: #e8ca6e; }
+  .mk-roi.earned { font-family: 'JetBrains Mono', monospace; font-size: 9px; font-weight: 400;
+    color: var(--gold); letter-spacing: .04em; }
+  /* THE FOLD. Everything that neither cost nor earned a dollar this month goes
+     behind one row. It is a summary line, never a deletion — the count is
+     stated, the sources are named the moment it is opened, and their lead
+     volume travels with them. */
+  .mk-fold { width: 100%; min-width: 700px; display: flex; align-items: center; gap: 8px;
+    padding: 9px 0 8px; background: none; border: 0;
+    border-top: 1px solid rgba(255,255,255,0.08); cursor: pointer;
+    font-family: 'JetBrains Mono', monospace; font-size: 8.5px; letter-spacing: .11em;
+    text-transform: uppercase; color: var(--text-dim); text-align: left; margin-top: 4px; }
+  .mk-fold:hover { color: var(--text); }
+  .mk-fold .chev { display: inline-block; transition: transform .15s; font-size: 10px; }
+  .mk-fold.open .chev { transform: rotate(90deg); color: var(--accent); }
+  .mk-fold .why { margin-left: auto; text-transform: none; letter-spacing: .02em; opacity: .8; }
   .mk-monthbar { display: flex; align-items: center; gap: 10px; margin: 2px 0 14px; }
   .mk-monthbar .mn-cur { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: .08em;
     text-transform: uppercase; color: var(--accent-soft); min-width: 108px; text-align: center; }
@@ -706,14 +741,38 @@
      so it scrolls horizontally at desk width and TRANSPOSES on a phone (see the
      700px block) — every number survives either way; nothing is truncated. */
   .mkg-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; margin: 0 -16px; padding: 0 16px 4px; }
-  .mkg { border-collapse: separate; border-spacing: 0; min-width: 100%; }
+  /* WIDTH: max-content, NOT min-width:100%. THAT WAS THE CLIPPING BUG.
+     A table laid out `auto` inside a narrower box does not overflow — it
+     SQUEEZES, because its min-content width (the longest single word in a
+     header) sits far below its preferred width. So with thirteen source
+     columns at 1050px the browser compressed every column to fit, wrapping
+     "Referral- Self Generated" and "Previous Customer" into unreadable
+     stacks, and the scroller .mkg-wrap already offered never appeared:
+     nothing was ever wider than the box to scroll.
+     `width: max-content` makes the table take its PREFERRED width, which
+     overflows the wrapper and hands the horizontal scroll to .mkg-wrap where
+     it always belonged. min-width:100% stays so a two-column month still
+     fills the card rather than hugging the left edge. */
+  .mkg { border-collapse: separate; border-spacing: 0; width: max-content; min-width: 100%; }
   .mkg th, .mkg td { padding: 0; }
   .mkg thead th { font-family: 'JetBrains Mono', monospace; font-size: 7.5px; letter-spacing: .09em;
     text-transform: uppercase; color: var(--text-dim); font-weight: 400; text-align: center;
-    padding: 0 4px 8px; vertical-align: bottom; width: 78px; line-height: 1.35; }
-  .mkg thead th.rep-h { text-align: left; width: 118px; position: sticky; left: 0; background: var(--bg-card); z-index: 2; padding-left: 0; }
+    padding: 0 4px 8px; vertical-align: bottom; width: 78px; min-width: 78px; line-height: 1.35; }
+  .mkg tbody td { min-width: 78px; }
+  /* The pinned name column. It needs a hard edge as well as a fill: scrolled
+     under, a sticky cell carrying only a background reads as a rendering
+     fault rather than as a column deliberately standing still. */
+  .mkg thead th.rep-h { text-align: left; width: 118px; min-width: 118px; position: sticky; left: 0;
+    background: var(--bg-card); z-index: 3; padding-left: 0; box-shadow: 1px 0 0 var(--line); }
   .mkg tbody th { text-align: left; font-size: 12.5px; font-weight: 500; color: var(--text);
-    padding: 0 10px 0 0; position: sticky; left: 0; background: var(--bg-card); z-index: 1; white-space: nowrap; }
+    padding: 0 10px 0 0; position: sticky; left: 0; background: var(--bg-card); z-index: 2;
+    white-space: nowrap; min-width: 118px; box-shadow: 1px 0 0 var(--line); }
+  /* A seller who has left the roster still holds the book they closed, and
+     every surface that names them says so — otherwise a departed rep's row
+     reads as a live desk to route the next appointment to. */
+  .mkg tbody th .gone, .mkp-nm .gone, .rep-head .nm .gone, .m2-rp-nm .gone {
+    font-family: 'JetBrains Mono', monospace; font-size: 7.5px; letter-spacing: .1em;
+    text-transform: uppercase; color: var(--gold); margin-left: 6px; font-weight: 400; }
   .mkg tbody tr td { border-top: 1px solid var(--line); }
   .mkg tbody tr th { border-top: 1px solid var(--line); }
   .mkc { margin: 4px 3px; border-radius: 8px; padding: 7px 4px 6px; text-align: center;
@@ -755,7 +814,7 @@
     margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--line); }
   .mkp-thin b { color: var(--text); font-weight: 600; }
   @media (max-width: 700px) {
-    .mk-row, .mk-head { min-width: 560px; }
+    .mk-row, .mk-head, .mk-fold { min-width: 560px; }
     .mkg-wrap { display: none; }
     .mkg-phone { display: block; }
     .mk-monthbar .mn-cur { min-width: 88px; font-size: 10px; }
@@ -1465,6 +1524,36 @@
   .m2-mx td.z { color: rgba(217,106,94,0.75); }
   .m2-mx td.pk { color: var(--green-soft); font-weight: 600; }
   .m2-mx tr.dim td:first-child { color: var(--text-dim); }
+  /* ── THE REP BOARD · the approved board's own row shape ──
+     Name and sub-line left, close-rate bar in the middle, month revenue
+     right. The close cell can carry TWO readings where a rep's denominator
+     holds work that was never theirs — see mkInherited(). */
+  .m2-rp { display: grid; grid-template-columns: 1fr 84px 56px 56px; gap: 10px; align-items: center;
+    padding: 9px 0; border-bottom: 1px solid var(--line); }
+  .m2-rp:last-of-type { border-bottom: none; }
+  /* On a phone the bar is the first thing to go: it restates the percentage
+     beside it, and the percentage is the number being read. */
+  @media (max-width: 420px) {
+    .m2-rp { grid-template-columns: 1fr 56px 54px; gap: 8px; }
+    .m2-rp-bar { display: none; }
+  }
+  .m2-rp-nm { font-size: 13px; font-weight: 500; min-width: 0; }
+  .m2-rp-nm small { display: block; font-family: 'JetBrains Mono', monospace; font-size: 8.5px;
+    color: var(--text-dim); margin-top: 2px; font-weight: 400; letter-spacing: .02em; }
+  .m2-rp-bar { height: 9px; border-radius: 100px; background: rgba(255,255,255,0.06); overflow: hidden; }
+  .m2-rp-bar i { display: block; height: 100%; border-radius: 100px; }
+  .m2-rp-pct { font-family: 'Fraunces', serif; font-size: 16px; font-weight: 600; text-align: right;
+    line-height: 1.1; }
+  .m2-rp-pct small { display: block; font-family: 'JetBrains Mono', monospace; font-size: 8px;
+    font-weight: 400; color: var(--text-dim); margin-top: 2px; letter-spacing: .02em; }
+  /* The adjusted reading rides UNDER the raw one and never replaces it. The
+     raw figure is what the database says; the adjusted figure is what it says
+     once work the rep never ran comes out of the denominator. Printing only
+     the second would be grading on a curve nobody could audit. */
+  .m2-rp-pct .adj { display: block; font-family: 'JetBrains Mono', monospace; font-size: 10px;
+    font-weight: 600; color: var(--gold); margin-top: 3px; }
+  .m2-rp-amt { font-family: 'JetBrains Mono', monospace; font-size: 10.5px; text-align: right;
+    color: var(--green-soft); }
   .m2-note { font-family: 'JetBrains Mono', monospace; font-size: 8px; color: var(--text-dim); margin-top: 8px;
     letter-spacing: 0.04em; line-height: 1.6; }
   .m2-note b { color: var(--text); }
@@ -2910,10 +2999,22 @@ function cardReps(){
      useful, should be used anytime we can." So the sales box gets the same
      window toggle the fleet has, instead of being frozen on MTD. */
   const k = REPSWIN, W = D.windows[k] || {};
-  /* Kevin: only the current sellers (roster sells flag) and Gio on the list;
-     everyone else compresses behind one tap. */
+  /* Kevin: only the sellers and Gio on the list; everyone else compresses
+     behind one tap.
+     WHO COUNTS AS A SELLER IS ASKED OF THE PERIOD, NOT OF TODAY. The `sells`
+     flag alone is flipped off the day someone leaves, which buried Jared
+     Heideman — 26 jobs, $137,116, the fourth-biggest book in July — under
+     "Show all" on the July board, one tap away from a month he was fourth
+     in. A window is a record of what happened; a roster filter that only
+     knows the present cannot edit it. So the visible list is anyone who sold
+     in this window whom the roster knows as a seller in any tense — the live
+     flag, or a sales role that outlived it. Gio keeps his standing
+     exception. Office-sent rows are not sellers in any tense and stay behind
+     the tap where they have always been. */
   const all = W.reps || [];
-  const core0 = all.filter(r => (D.roster[String(r.id)]||{}).sells || /\bgio\b/i.test(r.name||''));
+  const sellerish = r => { const p = D.roster[String(r.id)] || {};
+    return !r.office && (p.sells || p.role === 'sales' || /\bgio\b/i.test(r.name || '')); };
+  const core0 = all.filter(sellerish);
   const rest0 = all.filter(r => !core0.includes(r));
   const reps = [...core0, ...rest0], CORE = core0.length, mx = Math.max(1, ...all.map(r=>r.rev));
   const label = { day:'today', week:'this week', month:mSpan(), ytd:'this year' }[k];
@@ -2946,7 +3047,7 @@ function cardReps(){
       </div>`; })()}
     ${reps.map((r,i)=>`<div class="rep-row${r.office?'':' acc'}"${i>=CORE?' data-extra="1" style="display:none"':''} ${r.office?'style="opacity:.8"':`onclick="openRep('${esc(String(r.id))}')"`}>
       <div class="rep-head">
-        <div class="nm">${esc(r.name)}${r.billdu?'<span class="tick">billdu</span>':''}${r.role&&r.role!=='sales'&&!r.office?`<span class="brand">${esc(r.role)}</span>`:''}</div>
+        <div class="nm">${esc(r.name)}${(D.roster[String(r.id)]||{}).active===false?'<span class="gone">departed</span>':''}${r.billdu?'<span class="tick">billdu</span>':''}${r.role&&r.role!=='sales'&&!r.office?`<span class="brand">${esc(r.role)}</span>`:''}</div>
         <div class="amt">${short(r.rev)} <span>· ${r.jobs} deal${r.jobs===1?'':'s'}</span>${r.office?'':'<span class="acc-chev">›</span>'}</div>
       </div>
       <div class="meter"><div class="meter-fill" style="width:${Math.round(r.rev/mx*100)}%;background:${r.office?'#8aa094':(r.rev===mx?'#6cc28b':'#6ba8c9')}"></div></div>
@@ -4122,6 +4223,29 @@ function mkSpendOf(src, monthKey){
   return rows.length ? rows.reduce((n, r) => n + Number(r.amount), 0) : null;
 }
 
+/* ── IS THIS SOURCE PAID AT ALL? ──────────────────────────────────────────────
+   The board has always insisted that "nobody typed a cost" and "there is no
+   cost" are different claims. Until now only MK_FREE — a two-name ruling —
+   could say the second, so every other costless channel read "not entered"
+   forever: Website, Facebook, Ref-Self-Gen and Slug A Bug have signed money
+   month after month and have never had a dollar against them, and the board
+   nagged about all four as though the office were behind on data entry.
+   THE EVIDENCE IS THE BOOK ITSELF, not another ruling to keep in sync: a
+   source is PAID if the office has ever keyed a real cost for it in any month
+   — that is what proves a cost exists to be typed. One that never has is
+   EARNED, and reads $0 rather than an accusation. ⚑3 rows do not count: they
+   are unattributable vendor tooling that prices no source anywhere, so a
+   Marlie AI tooling line does not make "Marlie AI" a paid channel.
+   The consequence, stated plainly because it is the whole point: from here on
+   "not entered" appears ONLY against a source the book has proven costs money
+   and whose month nobody has keyed. That is a list worth chasing. */
+function mkEverPaid(src){
+  if (!MKT || !Array.isArray(MKT.spend)) return false;
+  const key = src === 'Google' ? 'Google Ads' : src;
+  return MKT.spend.some(s => s.source_name === key && Number(s.amount) > 0
+    && !String(s.note || '').includes('⚑3'));
+}
+
 /* The same read, brand-aware: how one source's month sits in the book. null
    means no row; otherwise { total, split, byBrand } where split says the month
    was typed per brand ('all' and brand rows cannot coexist — 167's trigger). */
@@ -4195,6 +4319,42 @@ function mkWindsorPacing(monthKey){
   return { state:'live', amount: inM.reduce((n, a) => n + Number(a.spend || 0), 0), last };
 }
 
+/* ── THE PACING CHIP · WHERE THE FORK IS SHOWN, NOT SETTLED QUIETLY ──────────
+   GOOGLE SPEND LAW, stated once so it can be checked: the ONLY spend feeding
+   any ROI, CPL, CPU or $-per-$1 anywhere on this console is a typed
+   marketing_spend row — the card. google_ads_daily (Windsor) feeds this chip
+   and nothing else. Audited at this build: mkSpendOf, mkSpendSplit,
+   mkBrandSpend, mkGoogleCard and mkBookTotal — every spend read on either
+   board — take their rows from MKT.spend, and MKT.ads is referenced by
+   mkWindsorPacing alone, which is called by this chip and by the footer's
+   freshness line. There is no third path.
+   WHEN THE TWO DISAGREE, BOTH FIGURES GO ON THE CHIP. Typed wins — that is
+   the ruling and it is not re-litigated month by month — but a disagreement
+   is a fact about a feed, and hiding the loser turns a broken integration
+   into an invisible one. July is the case that made the law: Windsor $25,175
+   against $47,994 on the card, a little over half, and it read as
+   authoritative for weeks. A 5% band keeps rounding and the odd late-posting
+   day from crying wolf; anything wider is named as the lag it is. */
+const MK_PACE_TOL = 0.05;
+function mkPaceChip(pace, card){
+  if (pace.state === 'nofeed') return `<span class="m2-tag none"
+    title="google_ads_daily has never delivered a row. Nothing on this board was priced from it either way.">windsor never delivered</span>`;
+  if (pace.state === 'stale') return `<span class="m2-tag none"
+    title="google_ads_daily (Windsor) delivered nothing in this month — pacing signal only, never in ROI math.">windsor silent · last ${esc(pace.last)}</span>`;
+  const mtd = MKTOFF === 0 ? ' MTD' : '';
+  /* No card row to disagree with: the chip is a bare pacing reading, and the
+     board still says "not entered" for the price — a Windsor figure is not
+     promoted to a cost just because it is the only number in the room. */
+  if (!card || !(card.ads > 0)) return `<span class="m2-tag"
+    title="google_ads_daily (Windsor) — freshness / pacing signal only since the ruling (170). Never in ROI math, and it does not stand in for a card month nobody has keyed.">windsor pacing ${short(pace.amount)}${mtd}</span>`;
+  const gap = (card.ads - pace.amount) / card.ads;
+  if (Math.abs(gap) <= MK_PACE_TOL) return `<span class="m2-tag"
+    title="Windsor ${money(pace.amount)} against ${money(card.ads)} on the card — inside the ${Math.round(MK_PACE_TOL * 100)}% band, so the feed is pacing true this month. The card still prices the board; this is agreement, not authority.">windsor ${short(pace.amount)}${mtd} · tracks card</span>`;
+  const lags = gap > 0;
+  return `<span class="m2-tag ${lags ? 'manual' : 'none'}"
+    title="Windsor ${money(pace.amount)} against ${money(card.ads)} keyed from the card statements for ${esc(mkMonthLabel(MKTOFF))} — ${Math.abs(Math.round(gap * 100))}% ${lags ? 'under' : 'over'}. TYPED WINS: every ROI, CPL, CPU and $-per-$1 on this board is priced from the card (the ruling, 170/171). Both figures are shown because a feed that disagrees with the statement is a fact about the feed.">windsor ${short(pace.amount)}${mtd} · card ${short(card.ads)} · ${lags ? 'windsor lags cards' : 'windsor over cards'}</span>`;
+}
+
 /* The whole book for one month — every typed row: brand rows, unsplit totals,
    ⚑3 vendors, referral bonuses, the card's Google. This is the headline's
    denominator: the approved board's $69,235 is the full ledger, not just the
@@ -4258,18 +4418,44 @@ function cardSourceRow(){
     const spend = free ? null : isG ? (g ? g.total : null) : mkSpendOf(src, monthKey);
     const dollars = Number(r.signed_dollars || 0);
     const roi = (spend && spend > 0) ? dollars / spend : null;
-    return { ...r, src, free, isG, g, spend, dollars, roi, appts: appts[src] || 0 };
+    /* EARNED: no cost this month and none ever, so there is nothing to type
+       and nothing to nag about. Google is never earned — its card is typed
+       like any other vendor since the ruling, so an unkeyed month is an
+       unkeyed month. */
+    const earned = !isG && (free || !mkEverPaid(src));
+    return { ...r, src, free, isG, g, spend, dollars, roi, earned, appts: appts[src] || 0 };
   };
-  /* SOURCES WITH SPEND SORT ABOVE SOURCES WITHOUT — the paid channels are the
-     ones a spend decision gets made about, so they are never below the free
-     ones on the page. Within each group, biggest return first. */
+  /* ── ACTIVE AT A GLANCE, THE REST BEHIND ONE ROW ────────────────────────
+     The RPC returns every source that carried a lead in the month — 25 of
+     them in July — and this list rendered all 25 under two separators.
+     Sixteen of those rows said nothing: no cost, no revenue, only a
+     backfill-dated lead count the board already refuses to print. The
+     month's actual spend decisions were spread across three screens with
+     Porch and Premier Magazine sitting between them.
+     ACTIVE = a cost in the book this month OR a signed dollar this month.
+     That is exactly the set a spend decision can be made about, and it is
+     what the list shows first. Everything else folds into one counted row
+     that opens on tap — folded, never dropped: the count is on the face of
+     it, the sources are named the moment it opens, and their lead volume
+     comes with them. Nothing on this board disappears to make it shorter. */
   const all = rows.map(enrich);
-  const paid = all.filter(r => r.spend != null).sort((a, b) => (b.roi || 0) - (a.roi || 0));
-  const unpriced = all.filter(r => r.spend == null && !r.free).sort((a, b) => b.dollars - a.dollars);
-  const free = all.filter(r => r.spend == null && r.free).sort((a, b) => b.dollars - a.dollars);
+  const isActive = r => r.spend != null || r.dollars > 0;
+  const live = all.filter(isActive);
+  const idle = all.filter(r => !isActive(r)).sort((a, b) => Number(b.leads || 0) - Number(a.leads || 0));
+  /* Within the visible list: priced sources first, biggest return first —
+     they are the ones a dollar decision hangs on. Earned money below them,
+     biggest first. */
+  const paid = live.filter(r => r.spend != null).sort((a, b) => (b.roi || 0) - (a.roi || 0));
+  const rest = live.filter(r => r.spend == null).sort((a, b) => b.dollars - a.dollars);
+  const idleLeads = idle.reduce((n, r) => n + Number(r.leads || 0), 0);
 
   const spendCell = r => {
-    if (r.free) return `<div class="col absent">—</div>`;
+    if (r.earned) return `<div class="col"><button type="button" class="mk-earn" onclick="mkTypeCost(this)"
+      title="No cost has ever been keyed for ${esc(r.src)} in any month, so this is a channel that earns rather than a month somebody forgot — &quot;not entered&quot; is reserved for sources the book has proven cost money. Tap to type a cost anyway if that has changed."
+      aria-label="Earned — no cost ever entered for ${esc(r.src)}. Tap to enter one.">$0 · earned</button>
+      <div class="mk-spend" hidden><input type="number" min="0" step="1" inputmode="decimal" value=""
+        placeholder="cost" aria-label="Spend for ${esc(r.src)}, ${esc(mkMonthLabel(MKTOFF))}"
+        onchange="saveSpend(${JSON.stringify(r.src).replace(/"/g, '&quot;')}, '${monthKey}', this)"></div></div>`;
     if (r.isG) {
       if (r.g) return `<div class="col money" title="${esc(BRAND_ORDER.map(b => r.g.byBrand[b] != null ? `${BRANDS[b].s} ${money(r.g.byBrand[b])}` : null).filter(Boolean).join(' · '))} — card statements keyed by brand (170/171)${r.g.mgmt ? `, incl. ${money(r.g.mgmt)} Liam / Gate Digital mgmt per flag ✓2` : ''}">${money(r.spend)}<span class="mk-auto">card · by brand</span></div>`;
       if (!spendBook) return `<div class="col absent">not entered<span class="mk-auto stale">spend book not applied</span></div>`;
@@ -4294,16 +4480,25 @@ function cardSourceRow(){
     ? `<div class="col absent" title="rpt_report_marketing_roi windows leads on jobs.created_at, which is our row-insert time. The warehouse was backfilled in one shot on 20 Jul 2026, so this month's count is the backfill, not the month.">backfill-dated</div>`
     : `<div class="col">${Number(r.leads || 0).toLocaleString()}</div>`;
 
-  const line = r => `<div class="mk-row${r.free ? ' free' : ''}">
+  /* The ROI cell states WHICH kind of no-answer this is, and they are three
+     different facts: `earned` (nothing was ever spent, so there is no ratio
+     to want), `no spend` (a typed zero — dividing by it is refused, never
+     printed as infinity), `not entered` (a source the book proves costs
+     money whose month nobody has keyed — the only one that is a chase). */
+  const roiCell = r => r.roi != null
+    ? `<div class="mk-roi ${mkRoiClass(r.roi)}">${Math.round(r.roi)}x</div>`
+    : r.earned ? `<div class="mk-roi earned" title="no cost has ever been keyed for this source — there is no ratio to compute, and that is the finding, not a gap">earned</div>`
+    : r.spend === 0 ? `<div class="mk-roi none">no spend</div>`
+    : `<div class="mk-roi none">not entered</div>`;
+
+  const line = r => `<div class="mk-row${r.earned ? ' free' : ''}"${r.idle ? ' data-idle="1" hidden' : ''}>
     <div class="nm">${esc(r.src)}${r.category && r.category !== '—' ? `<span class="cat">${esc(r.category)}</span>` : ''}</div>
     ${spendCell(r)}
     ${leadsCell(r)}
     <div class="col${r.appts ? '' : ' dim'}">${r.appts ? r.appts.toLocaleString() : '0'}</div>
     <div class="col${r.signed_jobs ? '' : ' dim'}">${r.signed_jobs ? Number(r.signed_jobs).toLocaleString() : '0'}</div>
     <div class="col money">${r.dollars ? short(r.dollars) : '<span class="dim">—</span>'}</div>
-    ${r.roi != null
-      ? `<div class="mk-roi ${mkRoiClass(r.roi)}">${Math.round(r.roi)}x</div>`
-      : `<div class="mk-roi none">${r.free ? '—' : 'no spend'}</div>`}
+    ${roiCell(r)}
   </div>`;
 
   const head = `<div class="mk-head">
@@ -4312,21 +4507,38 @@ function cardSourceRow(){
 
   return `<div class="card full">
     <div class="card-title">Return by source<span class="feed-tag cc">live · cc</span></div>
-    <div class="card-sub">What each source cost and what it gave back, for one month at a time. <b>Ten is the line</b> — at or above it the source earns its money, below it does not. Spend is typed at month close; Google's is the card statements, keyed by brand (the ruling, 170).</div>
+    <div class="card-sub">What each source cost and what it gave back, for one month at a time. <b>Ten is the line</b> — at or above it the source earns its money, below it does not. Spend is typed at month close; Google's is the card statements, keyed by brand (the ruling, 170). Only sources that <b>cost or earned something in ${esc(mkMonthLabel(MKTOFF))}</b> are listed; the rest fold below.</div>
     ${bar}
     <div class="mk-scroll">
       ${head}
       ${paid.map(line).join('')}
-      ${unpriced.length ? `<div class="mk-sep">No spend entered for ${esc(mkMonthLabel(MKTOFF))}</div>${unpriced.map(line).join('')}` : ''}
-      ${free.length ? `<div class="mk-sep">Free — no spend, no ROI</div>${free.map(line).join('')}` : ''}
+      ${rest.map(line).join('')}
+      ${idle.length ? `<button type="button" class="mk-fold" onclick="mkFold(this)" aria-expanded="false"><span class="chev">›</span>${idle.length} inactive source${idle.length === 1 ? '' : 's'}<span class="why">no spend and no signed dollar in ${esc(mkMonthLabel(MKTOFF))}${idleLeads && !leadsBlind ? ` · ${idleLeads.toLocaleString()} leads` : ''}</span></button>
+      ${idle.map(r => line({ ...r, idle: true })).join('')}` : ''}
     </div>
     ${!rows.length ? `<div class="card-sub" style="margin:12px 0 0">No lead carried a source in ${esc(mkMonthLabel(MKTOFF))}.</div>` : ''}
     ${!spendBook ? `<div class="withheld"><div class="wt">The spend book is not on live yet</div><div class="wx">
       Every typed source reads <b>not entered</b> because <b>marketing_spend</b> (migration <b>166</b>) has not been applied — the table the office types into does not exist yet, so no ROI on this board can be computed. This is the honest state, not a zero: a source with no cost recorded is not a free source. Apply 166 and the inputs go live with no further deploy.</div></div>` : ''}
     ${leadsBlind ? `<div class="withheld"><div class="wt">The leads column is withheld for ${esc(mkMonthLabel(MKTOFF))}</div><div class="wx">
       <b>rpt_report_marketing_roi</b> dates a lead by <b>jobs.created_at</b> — when OUR row was written, not when the lead came in. The warehouse was loaded in one shot on <b>20 Jul 2026</b> (11,119 of 11,558 rows), so a July window returns the entire backfill: Google reads <b>4,282</b> against a true <b>253</b>. Months before July return zero, which is not the same as none. From <b>August 2026</b> the column is real — measured 112 true against 113 reported — so it renders there and is refused here. Closed jobs, closed dollars and therefore <b>ROI are unaffected</b>: they are dated by <b>rpt_signings.signed_on</b>, which is correct in every window.</div></div>` : ''}
-    <div class="note">Closed jobs, closed dollars and the source list come from <b>rpt_report_marketing_roi</b> (160, corrected by <b>165</b>), grouped on <b>lead_sources.rollup_name</b> — migration 163's canonical rollup, never the raw CC name, which splits Angi three ways and Google five. Appointments set are counted client-side by when the appointment was <b>booked</b>, off the same project→source join. ROI is closed dollars ÷ spend for the month shown, rounded to a whole multiple; within ±${MK_NEAR} of ${MK_LINE}x it reads neutral because one deal moves a small source across the line. Leads exclude the 12 reporting_excluded batch-entry anomalies, matching the RPC${leadsBlind ? ', and are withheld this month — see above' : ''}.</div>
+    <div class="note">Closed jobs, closed dollars and the source list come from <b>rpt_report_marketing_roi</b> (160, corrected by <b>165</b>), grouped on <b>lead_sources.rollup_name</b> — migration 163's canonical rollup, never the raw CC name, which splits Angi three ways and Google five. Appointments set are counted client-side by when the appointment was <b>booked</b>, off the same project→source join. ROI is closed dollars ÷ spend for the month shown, rounded to a whole multiple; within ±${MK_NEAR} of ${MK_LINE}x it reads neutral because one deal moves a small source across the line. Leads exclude the 12 reporting_excluded batch-entry anomalies, matching the RPC${leadsBlind ? ', and are withheld this month — see above' : ''}. <b>$0 · earned</b> means no cost has ever been keyed for that source in any month, so there is nothing to type; <b>not entered</b> is now reserved for sources the book proves cost money and whose month has not been keyed, which makes that phrase a list worth chasing instead of wallpaper.${idle.length ? ` The <b>${idle.length}</b> folded source${idle.length === 1 ? '' : 's'} neither cost nor earned a dollar this month — folded, not dropped, and ${idle.length === 1 ? 'it opens' : 'they open'} on tap.` : ''}</div>
   </div>`;
+}
+
+/* The fold, and the earned row's hidden input. Both are pure DOM: re-rendering
+   the drawer to open a disclosure would throw away the month the reader has
+   stepped to and their scroll position with it. */
+function mkFold(btn){
+  const open = btn.getAttribute('aria-expanded') !== 'true';
+  btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+  btn.classList.toggle('open', open);
+  let el = btn.nextElementSibling;
+  while (el && el.hasAttribute && el.hasAttribute('data-idle')) { el.hidden = !open; el = el.nextElementSibling; }
+}
+function mkTypeCost(btn){
+  const box = btn.nextElementSibling;
+  btn.hidden = true; box.hidden = false;
+  const input = box.querySelector('input'); if (input) input.focus();
 }
 
 /* ── BOARD 2 · THE REP × SOURCE GRID ──────────────────────────────────────── */
@@ -4346,6 +4558,9 @@ function mkGridData(){
     const c = byRep[s] || (byRep[s] = { leads: 0, signed: 0 });
     c.leads++; if (signed.has(j.p)) c.signed++;
   }
+  /* PRESENCE IN THE DATA IS THE ROSTER. A seller earns a row here by carrying
+     leads on this grid, not by still being employed — see mktSellers for the
+     bug that rule replaced. Departed sellers keep their book and wear a tag. */
   const sellers = (D.mktSellers || []).filter(r => cells[r.id]);
   /* Column set: a source earns a column when at least one seller has enough
      volume on it to be read. Sources below that are NOT silently dropped — the
@@ -4411,7 +4626,7 @@ function cardRepGrid(){
 
   const table = `<div class="mkg-wrap"><table class="mkg">
     <thead><tr><th class="rep-h">Rep</th>${G.cols.map(s => `<th>${esc(s)}</th>`).join('')}</tr></thead>
-    <tbody>${G.sellers.map(r => `<tr><th>${esc(r.name)}</th>
+    <tbody>${G.sellers.map(r => `<tr><th>${esc(r.name)}${r.gone ? '<span class="gone">departed</span>' : ''}</th>
       ${G.cols.map(s => `<td>${cellOf(r, s)}</td>`).join('')}</tr>`).join('')}</tbody>
   </table></div>`;
 
@@ -4433,7 +4648,7 @@ function cardRepGrid(){
        repeating it down a column of unreadable cells. */
     const readable = mine.filter(([, c]) => c.leads >= MK_THIN);
     const thin = mine.filter(([, c]) => c.leads < MK_THIN);
-    return `<div class="mkp-rep"><div class="mkp-nm">${esc(r.name)}</div>
+    return `<div class="mkp-rep"><div class="mkp-nm">${esc(r.name)}${r.gone ? '<span class="gone">departed</span>' : ''}</div>
       ${readable.map(([s, c]) => {
         const p = 100 * c.signed / c.leads;
         const k = G.median == null ? '' : p >= G.median + MK_BAND ? 'strong' : p <= G.median - MK_BAND ? 'weak' : '';
@@ -4460,7 +4675,7 @@ function cardRepGrid(){
     </div>
     <div class="withheld"><div class="wt">Appointments ran is empty, and that is the finding</div><div class="wx">
       The second denominator has <b>no feed anywhere</b>. Contractors Cloud does not log appointment outcomes — there is no ran field in the payload — so every cell says so in words rather than showing a number. <b>cc_appointments.cc_result_id</b> exists and looks like an outcome log; it is populated on <b>83 of 9,627</b> appointments and trails off after July, so it is not a denominator and this board deliberately does not read it. Appointments <i>set</i> is not substituted either: a rep who books ten and runs six is not the rep who books ten and runs ten, and that gap is the reason the column was asked for.</div></div>
-    <div class="note">Signed is <b>rpt_signings</b> where confirmed, matched to the job by <b>cc_project_id</b> — the same basis board 1 reads, so the two boards cannot disagree about who closed what. It is counted <b>distinct by project</b>: migration 150 splits an amended invoice into a signing row per late bell, which is right for money and would push a closing rate past 100%. Not <b>jobs.contract_signed_at</b>, which would understate Oasis — 227 of Google's confirmed signings arrive through Billdu and 32 of those sit on jobs with no contract date at all. All-time, not monthly: a month-sliced cell is n=2 and reads as noise. Sellers only (098). ${G.dropped.length ? `<b>${G.dropped.length}</b> source${G.dropped.length === 1 ? '' : 's'} ${G.dropped.length === 1 ? 'is' : 'are'} not a column here — no seller carries ${MK_THIN} leads on ${G.dropped.length === 1 ? 'it' : 'any of them'} (${G.droppedLeads.toLocaleString()} leads between them): ${esc(G.dropped.join(', '))}.` : ''}</div>
+    <div class="note">Signed is <b>rpt_signings</b> where confirmed, matched to the job by <b>cc_project_id</b> — the same basis board 1 reads, so the two boards cannot disagree about who closed what. It is counted <b>distinct by project</b>: migration 150 splits an amended invoice into a signing row per late bell, which is right for money and would push a closing rate past 100%. Not <b>jobs.contract_signed_at</b>, which would understate Oasis — 227 of Google's confirmed signings arrive through Billdu and 32 of those sit on jobs with no contract date at all. All-time, not monthly: a month-sliced cell is n=2 and reads as noise. Sellers only (098) — but <b>every</b> seller the roster has carried, not only the ones still employed: a departed rep's book is some of the strongest evidence on this grid about which desk closes which lead, and filtering the roster to <code>active</code> used to delete it.${G.sellers.some(r => r.gone) ? ` <b>${G.sellers.filter(r => r.gone).map(r => esc(r.name)).join(', ')}</b> ${G.sellers.filter(r => r.gone).length === 1 ? 'has' : 'have'} left; ${G.sellers.filter(r => r.gone).length === 1 ? 'that row is' : 'those rows are'} tagged <b>departed</b> and ${G.sellers.filter(r => r.gone).length === 1 ? 'is' : 'are'} here for what the book proves, not as a desk to route to.` : ''} ${G.dropped.length ? `<b>${G.dropped.length}</b> source${G.dropped.length === 1 ? '' : 's'} ${G.dropped.length === 1 ? 'is' : 'are'} not a column here — no seller carries ${MK_THIN} leads on ${G.dropped.length === 1 ? 'it' : 'any of them'} (${G.droppedLeads.toLocaleString()} leads between them): ${esc(G.dropped.join(', '))}.` : ''}</div>
   </div>`;
 }
 
@@ -4674,6 +4889,15 @@ function marketingRoom(){
      · Source × company      — signed DOLLARS per source per brand, windowed
                                to the browsed month (was all-time job counts).
 
+   LIVE IN THIS BUILD:
+     · Rep board (month)     — leads → units → dollars per seller, leads dated
+                               on cc_raw->>project_created_at (the honest lead
+                               clock) rather than the backfilled RPC column.
+                               Carries the inherited-lead flag: a rep holding
+                               a departed colleague's unsigned appointments
+                               reads a raw AND an adjusted close rate, never
+                               the adjusted one alone. See mkInherited().
+
    STILL REFUSED, AND WHY:
      · Cost-per-unit trend   — needs a leads series over May–Jul, and leads
                                before Aug 2026 are backfill-dated (MK_LEADS_FROM).
@@ -4686,11 +4910,13 @@ function marketingRoom(){
                                a different interval; substituting it would be
                                the same class of error as swapping appointments
                                set for appointments ran.
-     · Rep board (July)      — cardRepGrid is deliberately ALL-TIME because a
-                               month-sliced rep x source cell is n=2. The
-                               drawer already answers this correctly; pointing
-                               at it beats printing a noisier copy here.
-     · Who closes Google     — same rule, same pointer.
+     · Who closes Google     — cardRepGrid is deliberately ALL-TIME because a
+                               month-sliced rep x SOURCE cell is n=2. That
+                               reasoning was always about cells and never
+                               about rep totals, which is why the rep board
+                               above is now live and this one is not. The
+                               drawer answers this correctly; pointing at it
+                               beats printing a noisier copy here.
      · The Stall             — no open-lead-age feed anywhere.
      · Ask anything          — its FACTS array is a frozen snapshot of the
                                sections above. It cannot be honest until
@@ -4799,11 +5025,7 @@ function mkt2CardThermo(){
      number in the math below — the ruling (170) demoted it after the card
      showed it undercounting July by half. */
   const pace = mkWindsorPacing(monthKey);
-  const paceTag = pace.state === 'live'
-    ? `<span class="m2-tag" title="google_ads_daily (Windsor) — freshness / pacing signal only since the ruling (170). Never in ROI math.">windsor pacing ${short(pace.amount)}${MKTOFF === 0 ? ' MTD' : ''}</span>`
-    : pace.state === 'stale'
-    ? `<span class="m2-tag none" title="google_ads_daily (Windsor) delivered nothing in this month — pacing signal only, never in ROI math.">windsor silent · last ${esc(pace.last)}</span>`
-    : `<span class="m2-tag none">windsor never delivered</span>`;
+  const paceTag = mkPaceChip(pace, mkGoogleCard(monthKey));
   return `<div class="m2-card">
     <div class="m2-card-title">ROI by paid source<span class="m2-tag cc">live · cc</span>${paceTag}</div>
     <div class="m2-card-sub">${esc(mkMonthLabel(MKTOFF))} signed dollars ÷ ${esc(mkMonthLabel(MKTOFF))} spend. Gold mark = your $10-per-$1 floor. Scale runs to 20×.</div>
@@ -4854,19 +5076,28 @@ function mkt2CardEarned(){
   if (!list.length) return '';
   const earned = list.reduce((n, r) => n + r.dollars, 0);
   const bonus = mkSpendOf('Referral bonuses', monthKey);
+  /* THE SAME THREE WORDS AS BOARD 1, decided by the same test. This card used
+     to call every costless row "no cost entered", which reads as a data-entry
+     backlog — and for a source that has never had a dollar against it in any
+     month, it is not one. mkEverPaid() splits them: a source the book has
+     never priced is EARNED, and one that has been priced before but not this
+     month is genuinely un-keyed and still says so. Two surfaces, one rule. */
   const row = r => {
     const tag = r.src === 'Referral' && bonus > 0
       ? `${money(bonus)} bonuses ~ · <b style="color:var(--green-soft)">${money(r.dollars / bonus)} per $1</b>`
-      : r.free ? '' : 'no cost entered';
+      : r.free ? ''
+      : mkEverPaid(r.src) ? 'not entered this month'
+      : '<span style="color:var(--gold)">$0 · earned</span>';
     return `<div class="m2-free-row">
       <span class="nm">${esc(r.src)}<small>${r.jobs} job${r.jobs === 1 ? '' : 's'}${tag ? ' · ' + tag : ''}</small></span>
       <span class="amt">${money(r.dollars)}</span></div>`;
   };
+  const unkeyed = unpriced.filter(r => mkEverPaid(r.src));
   return `<div class="m2-card">
     <div class="m2-card-title">Earned revenue · no ad dollar attached<span class="m2-tag cc">live · cc</span></div>
     <div class="m2-card-sub">${total > 0 ? `<b>${(100 * earned / total).toFixed(1)}%</b> of ${esc(mkMonthLabel(MKTOFF))} signed came in near-free.` : ''} Referral now carries its bonus cost — an estimate (~5), occasional not programmatic — and is priced out loud; no other row has a dollar against it.</div>
     ${list.map(row).join('')}
-    ${unpriced.length ? `<div class="m2-note"><b>"no cost entered" rows are not called free.</b> They signed money and carry no cost in the book — a data-entry state, not a costless channel. The tag keeps the two claims apart inside one ranked list.</div>` : ''}
+    ${unpriced.length ? `<div class="m2-note"><b>$0 · earned</b> means the book has never carried a cost for that source in <i>any</i> month — a channel that earns, not a month somebody forgot.${unkeyed.length ? ` <b>not entered this month</b> is the other claim, and ${unkeyed.length === 1 ? 'it applies to' : 'it applies to'} <b>${esc(unkeyed.map(r => r.src).join(', '))}</b>: the book has priced ${unkeyed.length === 1 ? 'it' : 'them'} before, so a missing month here is a data-entry state and worth chasing.` : ''} Same test as the ledger above (<b>mkEverPaid</b>), so the two surfaces cannot describe one source two ways.</div>` : ''}
   </div>`;
 }
 
@@ -5098,10 +5329,124 @@ function mkt2CardSpeed(){
 }
 
 /* ── 10 · REP BOARD · answered correctly elsewhere ────────────────────────── */
+/* ── INHERITED WORK · A BOOK THAT CHANGED HANDS ──────────────────────────────
+   Travis Janke's July close rate read 11% off 38 leads. Twenty-nine of those
+   leads were Jared Heideman's: files Jared had already run the appointment on
+   in July, still unsigned when he left, dumped into Travis's queue on the way
+   out. Travis never sat in those living rooms. The denominator was counting
+   them anyway, so the board was reporting a routing event as a closing
+   failure — and that is the number a rep gets managed on.
+   THE RULE, not the special case. A lead is INHERITED for the rep who holds
+   it if, in the month being read: the file is still unsigned, an appointment
+   on it was run by a DIFFERENT rep, and that rep has since left the roster.
+   All three clauses earn their place — a signed file has no denominator
+   complaint left to make, a colleague who is still here has not handed
+   anything over, and an appointment somebody else ran is the whole evidence
+   that the work was not this rep's. Nobody is named in this function; it
+   found Travis because Travis is who it happened to, and it will find the
+   next one without an edit.
+   THE RAW FIGURE IS NEVER REPLACED, only accompanied. An adjusted close rate
+   that quietly overwrote the real one would be a rep-friendly number nobody
+   could audit — and the adjustment is drawn from an unsigned pile, which is
+   exactly the pile a generous rule could be built out of. Both readings, both
+   denominators, and the count of what came out. */
+function mkInherited(monthKey){
+  const pre = monthKey.slice(0, 7), roster = D.roster || {};
+  const jobBy = Object.create(null);
+  for (const j of (D.mktJobs || [])) jobBy[j.p] = j;
+  const out = Object.create(null);
+  for (const a of (D.mktAppts || [])) {
+    if (!a.s || !a.r || mkET(a.s).slice(0, 7) !== pre) continue;
+    const j = jobBy[a.p];
+    if (!j || !j.r || j.r === a.r) continue;      // still with whoever ran it
+    if (j.d) continue;                            // it closed — no complaint left
+    const donor = roster[a.r];
+    if (!donor || donor.active !== false) continue;  // only a departure hands work over
+    const e = out[j.r] || (out[j.r] = { pids: new Set(), donors: new Set() });
+    e.pids.add(j.p); e.donors.add(donor.name || 'a departed rep');
+  }
+  return out;
+}
+
+/* ── 10 · REP BOARD · LIVE ───────────────────────────────────────────────────
+   WHY THIS IS NO LONGER WITHHELD. The old refusal here pointed at Who closes
+   what and said a month-sliced answer would be noisier than the all-time one.
+   That reasoning was about rep × SOURCE cells, where a month really does
+   leave n=2 in most of the grid — and it still holds, which is why the
+   Google-conversion section below stays refused. It was never true of rep
+   TOTALS: July gives Eric 110 leads, Mike 88, Travis 38. Those are
+   denominators, and the section the approved board actually asked for.
+   THE LEADS COLUMN DATES ON cc_raw->>project_created_at, not on the RPC's
+   leads (jobs.created_at, the 20 Jul backfill — see MK_LEADS_FROM). That is
+   the same clock the rest of this console calls the only honest lead date in
+   the database, and it is what makes a monthly rep board possible while the
+   RPC's own column is still refused two sections up. Cross-checked against
+   the approved board's probe walk: Travis 38 leads on both instruments.
+   UNITS AND DOLLARS date on contract_signed_at, correct in every window. */
+function mkt2RepBoardData(monthKey){
+  const pre = monthKey.slice(0, 7);
+  const byRep = Object.create(null);
+  const touch = id => byRep[id] || (byRep[id] = { leads: 0, leadPids: new Set(), units: 0, rev: 0 });
+  for (const j of (D.mktJobs || [])) {
+    if (!j.r) continue;
+    if (j.t && mkET(j.t).slice(0, 7) === pre) { const e = touch(j.r); e.leads++; e.leadPids.add(j.p); }
+    if (j.d && mkET(j.d).slice(0, 7) === pre) { const e = touch(j.r); e.units++; e.rev += Number(j.v || 0); }
+  }
+  const inh = mkInherited(monthKey);
+  /* PRESENT IN THE PERIOD'S DATA, not present on today's payroll. This is the
+     same law mktSellers now carries, and it is the reason Jared has a row. */
+  const rows = (D.mktSellers || []).filter(r => byRep[r.id]).map(r => {
+    const e = byRep[r.id], i = inh[r.id];
+    /* Only inherited files that are actually IN this month's denominator may
+       come out of it. Travis holds 41 inherited PIDs; 29 carry a July lead
+       date and 12 are older files that were never in the July cohort to
+       begin with. Subtracting all 41 would flatter him with a denominator
+       the board never charged him for. */
+    const inCohort = i ? [...i.pids].filter(p => e.leadPids.has(p)).length : 0;
+    const adjLeads = e.leads - inCohort;
+    return { ...r, leads: e.leads, units: e.units, rev: e.rev,
+             close: e.leads ? 100 * e.units / e.leads : null,
+             held: i ? i.pids.size : 0, inCohort, adjLeads,
+             donors: i ? [...i.donors] : [],
+             adjClose: (inCohort > 0 && adjLeads > 0) ? 100 * e.units / adjLeads : null };
+  }).sort((a, b) => b.rev - a.rev);
+  /* Production on desks that are not seller rows — office-booked Oasis work,
+     a manager who signed one. Stated rather than rendered, so no dollar goes
+     missing between this board and the money row above it. */
+  const seller = new Set(rows.map(r => r.id));
+  let otherUnits = 0, otherRev = 0;
+  for (const [id, e] of Object.entries(byRep)) if (!seller.has(id)) { otherUnits += e.units; otherRev += e.rev; }
+  const tl = rows.reduce((n, r) => n + r.leads, 0), tu = rows.reduce((n, r) => n + r.units, 0);
+  return { rows, otherUnits, otherRev, blended: tl ? 100 * tu / tl : null };
+}
+
 function mkt2CardRepBoard(){
-  return mk2Withheld('Rep board · ' + esc(mkMonthLabel(MKTOFF)), 'month too thin',
-    'This question is answered above, all-time, and that is the honest window',
-    `The approved board ranks reps on one month's leads and units. <b>Who closes what</b> in the marketing drawer answers the same question and is deliberately <b>all-time</b>: a month-sliced rep × source cell is n=2, and the drawer's own thin floor refuses to colour any cell under <b>${MK_THIN}</b> leads for exactly that reason. Printing a monthly copy here would put a noisier answer next to a better one and let the owner pick. It is not withheld for want of a feed — it is withheld because the drawer's window is the right one.`);
+  const monthKey = mkISO(mkMonthStart(MKTOFF));
+  const B = mkt2RepBoardData(monthKey);
+  if (!B.rows.length) return mk2Withheld('Rep board · ' + esc(mkMonthLabel(MKTOFF)), 'no rows',
+    `No seller carried a lead or a signing in ${esc(mkMonthLabel(MKTOFF))}`,
+    'Nothing is inferred in its place.');
+  const mx = Math.max(1, ...B.rows.map(r => r.close || 0));
+  const band = c => B.blended == null || c == null ? 'var(--text-dim)'
+    : c >= B.blended + MK_BAND ? 'var(--green-soft)'
+    : c <= B.blended - MK_BAND ? 'var(--red)' : 'var(--blue)';
+  const anyInh = B.rows.some(r => r.inCohort > 0);
+  return `<div class="m2-card">
+    <div class="m2-card-title">Rep board · ${esc(mkMonthLabel(MKTOFF))}<span class="m2-tag cc">live · cc</span></div>
+    <div class="m2-card-sub">Every seller who carried a lead or signed a job in ${esc(mkMonthLabel(MKTOFF))}, ranked by what they signed. Close is that month's units over that month's leads — <b>green</b> is ${MK_BAND}+ points above the ${B.blended == null ? 'board' : Math.round(B.blended) + '%'} blend, <b>red</b> ${MK_BAND}+ below.</div>
+    ${B.rows.map(r => `<div class="m2-rp">
+      <div class="m2-rp-nm">${esc(r.name)}${r.gone ? '<span class="gone">departed</span>' : ''}${r.inCohort ? '<span class="gone" style="color:var(--gold)">*</span>' : ''}
+        <small>${r.leads.toLocaleString()} lead${r.leads === 1 ? '' : 's'} → ${r.units.toLocaleString()} unit${r.units === 1 ? '' : 's'}${r.units ? ` · ${money(Math.round(r.rev / r.units))} ticket` : ''}</small></div>
+      <div class="m2-rp-bar">${r.close != null ? `<i style="width:${Math.round(100 * r.close / mx)}%;background:${band(r.close)}"></i>` : ''}</div>
+      <div class="m2-rp-pct" style="color:${band(r.close)}">${r.close != null ? Math.round(r.close) + '%' : '—'}${
+        r.adjClose != null ? `<span class="adj" title="${r.inCohort} of this month's ${r.leads} leads were inherited from ${esc(r.donors.join(', '))} — appointments run by someone who has since left, still unsigned when the book changed hands. Raw ${Math.round(r.close)}% counts them; adjusted ${Math.round(r.adjClose)}% is ${r.units} over the remaining ${r.adjLeads}.">${Math.round(r.adjClose)}% adj</span>`
+        : `<small>close</small>`}</div>
+      <div class="m2-rp-amt">${short(r.rev)}</div>
+    </div>`).join('')}
+    ${anyInh ? `<div class="m2-note">${B.rows.filter(r => r.inCohort).map(r =>
+      `<b>* ${esc(r.name)}</b> — <b>${r.held}</b> inherited lead${r.held === 1 ? '' : 's'} from ${esc(r.donors.join(', '))}${r.held !== r.inCohort ? `, <b>${r.inCohort}</b> of them in ${esc(mkMonthLabel(MKTOFF))}'s cohort` : ''} excluded in adjusted: files whose appointment was run by a rep who has since left and which were still unsigned when the book changed hands. Raw <b>${Math.round(r.close)}%</b> (${r.units}/${r.leads}) counts them; adjusted <b>${Math.round(r.adjClose)}%</b> (${r.units}/${r.adjLeads}) does not. <b>Both are printed and neither replaces the other</b> — the raw figure is what the database says, and the adjusted figure is drawn from an unsigned pile, which is exactly the pile a flattering rule could be built out of. ${r.adjLeads < MK_THIN ? `At <b>${r.adjLeads}</b> leads the adjusted denominator is under this board's own thin floor of ${MK_THIN}, so read it as a direction, not a rate.` : ''}`).join('<br/><br/>')}</div>` : ''}
+    <div class="m2-note"><b>Leads</b> date on <b>cc_raw-&gt;&gt;'project_created_at'</b> — Contractors Cloud's own lead stamp, not <b>jobs.created_at</b>, which is our row-insert time and puts the whole warehouse on 20 Jul 2026 (the backfill that withholds the leads column two sections up). <b>Units and dollars</b> date on <b>contract_signed_at</b>, correct in every window. Leads and units are deliberately different cohorts — a lead that arrived in ${esc(mkMonthLabel(MKTOFF))} and a job signed in ${esc(mkMonthLabel(MKTOFF))} are not the same set, so a close rate here can exceed 100% and means "signed this month against fed this month", the approved board's own arithmetic. Sellers only (098), every seller the roster has ever carried${B.rows.some(r => r.gone) ? ` — <b>${esc(B.rows.filter(r => r.gone).map(r => r.name).join(', '))}</b> ${B.rows.filter(r => r.gone).length === 1 ? 'has' : 'have'} left and ${B.rows.filter(r => r.gone).length === 1 ? 'is' : 'are'} shown for the month ${B.rows.filter(r => r.gone).length === 1 ? 'they' : 'they'} worked` : ''}.${B.otherUnits ? ` <b>${money(B.otherRev)}</b> across <b>${B.otherUnits}</b> unit${B.otherUnits === 1 ? '' : 's'} was signed on desks that are not seller rows — office-booked and managerial work — and is stated here rather than dropped or folded into somebody's rate.` : ''} The rep × <b>source</b> question stays where it was: <b>Who closes what</b> in the drawer, all-time, because a month-sliced cell is n=2 — that refusal was about cells, never about these totals.</div>
+  </div>`;
 }
 
 function mkt2CardGoogleConv(){
@@ -10551,19 +10896,48 @@ function buildData(raw){
        marketing_spend (166 is keyed source_name + month), so the board can
        show what each brand EARNED per source and must refuse what each brand
        SPENT. See mkt2CardBrandTiles. */
+    /* `d` / `v` — signed date and contract value, for the month rep board.
+       `t` — cc_raw->>project_created_at, THE LEAD CLOCK (see the jobs query
+       above for why it and nothing else): the rep board's leads column dates
+       on it, which is what lets a monthly rep board exist at all while the
+       RPC's own leads column is still backfill-dated (MK_LEADS_FROM). These
+       three fields ride on rows already downloaded — no extra network, only
+       the slim projection getting three columns wider. */
     mktJobs: allJobs
       .filter(j => !j.reporting_excluded && j.cc_lead_source_id && j.cc_project_id)
       .map(j => ({ p: String(j.cc_project_id), r: j.rep_id ? String(j.rep_id) : null,
-                   l: String(j.cc_lead_source_id), b: rollup(j.cc_company_id) })),
+                   l: String(j.cc_lead_source_id), b: rollup(j.cc_company_id),
+                   d: j.contract_signed_at || null, v: Number(j.fin_sold_amount || 0),
+                   t: j.lead_at || null })),
     /* Booked, not run: "appointments set" is what the setters produced off a
        source, so it dates by cc_created_at. The console keeps these two facts
-       apart everywhere else (see cardApptByCompany) and this board does too. */
+       apart everywhere else (see cardApptByCompany) and this board does too.
+       `s` / `r` — appointment START and the rep who held it, which is a
+       different question from who owns the file today and the only way to see
+       a book that has changed hands. mkInherited() reads exactly these. */
     mktAppts: appts.filter(a => a.cc_project_id && a.cc_created_at && !a.is_internal)
-      .map(a => ({ p: String(a.cc_project_id), c: a.cc_created_at })),
-    /* Sellers only — migration 098's roster law. A non-selling manager has no
-       closing rate to read and would land a row of blanks across the grid. */
-    mktSellers: allReps.filter(r => r.active && r.sells)
-      .map(r => ({ id: String(r.id), name: r.name || '—' })),
+      .map(a => ({ p: String(a.cc_project_id), c: a.cc_created_at,
+                   s: a.starts_at || null, r: a.rep_id ? String(a.rep_id) : null })),
+    /* ── THE ROSTER LAW, CORRECTED ────────────────────────────────────────
+       WAS: `r.active && r.sells`. That filter asked "who sells here NOW" of
+       boards whose entire subject is what already happened, and the answer
+       silently deleted people. Jared Heideman closed 26 jobs for $137,116 in
+       July, left, and went with it — his Google column, the strongest on the
+       grid, gone from the one board built to decide who gets the next Google
+       lead. A roster filtered to current employees cannot describe a past
+       period.
+       NOW: every Contractors Cloud seller the roster has ever carried, live
+       or departed, tagged with which they are. `sells || role === 'sales'`
+       keeps migration 098's actual law — a non-selling manager still has no
+       closing rate to read and still lands no row — because `sells` is
+       flipped off at departure alongside `active`, so the flag alone can no
+       longer recognise a seller who has left. Presence in the PERIOD'S data
+       is what puts a row on a board; the roster only supplies the name and
+       the departed tag.
+       `reps`, not `allReps`: migration 011's four invented demo sellers are
+       already dropped upstream and have no business re-entering here. */
+    mktSellers: reps.filter(r => r.sells || r.role === 'sales')
+      .map(r => ({ id: String(r.id), name: r.name || '—', gone: !r.active })),
     /* cc_lead_id → rollup_name, migration 163's canonical grouping. Falls back
        to `name` only if a row somehow has no rollup; never the other way. */
     mktRollup: Object.fromEntries(leadNames.map(e =>
