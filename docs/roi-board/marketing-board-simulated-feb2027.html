@@ -1,0 +1,1118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+<title>Liberty Command — Marketing Board · Simulated · Feb 2027</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,400;9..144,500;9..144,600&family=JetBrains+Mono:wght@400;500;600&family=Inter+Tight:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+  :root {
+    --bg-deep: #0d1f17; --bg-card: #15291f; --bg-card-hi: #1c3528;
+    --line: rgba(255,255,255,0.06); --text: #e8efe9; --text-dim: #8aa094;
+    --accent: #f0834a; --accent-soft: #f4a37a;
+    --green: #6cc28b; --green-soft: #8fd5a8; --red: #d96a5e; --gold: #d4b15a; --blue: #6ba8c9;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { width: 100%; overflow-x: hidden; }
+  body { font-family: 'Inter Tight', sans-serif;
+    background: radial-gradient(ellipse at top, #1a3326 0%, #0d1f17 60%);
+    color: var(--text); min-height: 100vh; padding: 16px; -webkit-font-smoothing: antialiased; }
+  .shell { width: 100%; max-width: 480px; margin: 0 auto; }
+
+  /* THE SIMULATION BAND — the one thing this page must never let anyone forget. */
+  .simband { border: 1px solid rgba(212,177,90,0.55); background: linear-gradient(160deg, rgba(212,177,90,0.14), rgba(212,177,90,0.04));
+    border-radius: 12px; padding: 10px 13px; margin-bottom: 16px;
+    font-family: 'JetBrains Mono', monospace; font-size: 9.5px; line-height: 1.6; color: var(--gold); letter-spacing: 0.04em; }
+  .simband b { color: #e8ca6e; letter-spacing: 0.14em; }
+  .simband span { color: var(--text-dim); }
+
+  .hdr { margin-bottom: 20px; padding-bottom: 16px; border-bottom: 1px solid var(--line); }
+  .eyebrow { font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 0.18em;
+    text-transform: uppercase; color: var(--accent); margin-bottom: 6px; }
+  .eyebrow em { font-style: normal; color: var(--gold); }
+  .hdr h1 { font-family: 'Fraunces', serif; font-weight: 400; font-size: 28px;
+    letter-spacing: -0.02em; line-height: 1.05; margin-bottom: 18px; }
+  .hdr h1 em { font-style: italic; color: var(--accent-soft); font-weight: 300; }
+  .nw-block { display: flex; justify-content: space-between; align-items: flex-end; }
+  .nw-label { font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 0.18em;
+    text-transform: uppercase; color: var(--text-dim); margin-bottom: 4px; }
+  .nw { font-family: 'Fraunces', serif; font-size: 34px; font-weight: 500; line-height: 1; }
+  .nw-sub { font-family: 'JetBrains Mono', monospace; font-size: 9px; color: var(--text-dim); margin-top: 5px; }
+  .nw-delta { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--green); text-align: right; line-height: 1.5; }
+  .nw-delta b { color: var(--green-soft); font-weight: 600; font-size: 22px; font-family: 'Fraunces', serif; }
+  .stack { display: flex; flex-direction: column; gap: 12px; }
+  .card { background: var(--bg-card); border: 1px solid var(--line); border-radius: 14px; padding: 16px; }
+  .card-title { font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 0.18em;
+    text-transform: uppercase; color: var(--text-dim); margin-bottom: 4px; }
+  .card-sub { font-size: 12px; color: var(--text-dim); margin-bottom: 12px; line-height: 1.45; }
+  .feed-tag { display: inline-block; margin-left: 6px; font-family: 'JetBrains Mono', monospace;
+    font-size: 8px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--green);
+    border: 1px solid rgba(108,194,139,0.3); border-radius: 100px; padding: 1px 6px; vertical-align: middle; }
+  .feed-tag.cc { color: var(--blue); border-color: rgba(107,168,201,0.3); }
+  .feed-tag.manual { color: var(--gold); border-color: rgba(212,177,90,0.3); }
+  .feed-tag.sim { color: var(--gold); border-color: rgba(212,177,90,0.55); background: rgba(212,177,90,0.10); font-weight: 600; }
+
+  .scrollx { overflow-x: auto; }
+
+  /* ROI thermometers */
+  .thermo { margin-bottom: 15px; }
+  .thermo:last-child { margin-bottom: 2px; }
+  .th-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 6px; }
+  .th-name { font-family: 'Fraunces', serif; font-size: 15px; font-weight: 500; }
+  .th-name small { font-family: 'JetBrains Mono', monospace; font-size: 9px; color: var(--text-dim); margin-left: 6px; }
+  .th-roas { font-family: 'Fraunces', serif; font-size: 19px; font-weight: 600; color: var(--green-soft); }
+  .th-roas.hot { color: var(--gold); }
+  .th-roas.cold { color: var(--red); }
+  .th-bar { position: relative; height: 13px; background: #0f2419; border-radius: 100px; border: 1px solid var(--line); }
+  .th-fill { position: absolute; left: 0; top: 0; height: 100%; border-radius: 100px;
+    background: linear-gradient(90deg, #3f8a5e, #8fd5a8); }
+  .th-fill.cold { background: linear-gradient(90deg, #8a4a42, #d96a5e); }
+  .th-fill.hot { background: linear-gradient(90deg, #9d8340, #e8ca6e); }
+  .th-floor { position: absolute; top: -4px; width: 2px; height: 21px; background: var(--gold); }
+  .th-floor::after { content: '10×'; position: absolute; top: -13px; left: 50%; transform: translateX(-50%);
+    font-family: 'JetBrains Mono', monospace; font-size: 8px; color: var(--gold); }
+  .th-cap { display: flex; justify-content: space-between; font-family: 'JetBrains Mono', monospace;
+    font-size: 9px; color: var(--text-dim); margin-top: 5px; }
+  .th-cap b { color: var(--text); font-weight: 500; }
+
+  /* free sources */
+  .free-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 0;
+    border-bottom: 1px solid var(--line); font-family: 'JetBrains Mono', monospace; font-size: 11px; }
+  .free-row:last-child { border-bottom: none; }
+  .free-row .nm { color: var(--text); }
+  .free-row .nm small { color: var(--text-dim); font-size: 9px; margin-left: 6px; }
+  .free-row .amt { color: var(--green-soft); font-weight: 600; }
+
+  /* Brand tiles */
+  .brand-tile { background: var(--bg-card-hi); border: 1px solid var(--line); border-radius: 12px; padding: 13px 14px; margin-bottom: 9px; }
+  .brand-tile:last-child { margin-bottom: 0; }
+  .bt-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 9px; }
+  .bt-name { font-family: 'Fraunces', serif; font-size: 16px; font-weight: 500; }
+  .bt-roas { font-family: 'Fraunces', serif; font-size: 20px; font-weight: 600; color: var(--green-soft); }
+  .bt-roas small { font-family: 'JetBrains Mono', monospace; font-size: 8px; color: var(--text-dim); font-weight: 400; }
+  .bt-rows { font-family: 'JetBrains Mono', monospace; font-size: 10px; }
+  .bt-row { display: flex; justify-content: space-between; padding: 3px 0; color: var(--text-dim); }
+  .bt-row b { color: var(--text); font-weight: 500; }
+  .bt-row b.g { color: var(--green-soft); }
+
+  table.ledger { width: 100%; border-collapse: collapse; font-family: 'JetBrains Mono', monospace; font-size: 10px; }
+  table.ledger th { text-align: right; font-weight: 500; color: var(--text-dim); font-size: 8px;
+    letter-spacing: 0.1em; text-transform: uppercase; padding: 5px 4px; border-bottom: 1px solid var(--line); }
+  table.ledger th:first-child { text-align: left; }
+  table.ledger td { padding: 6px 4px; text-align: right; color: var(--text-dim); border-bottom: 1px solid var(--line); }
+  table.ledger td:first-child { text-align: left; color: var(--text); }
+  table.ledger tr.hot td { color: var(--text); }
+  table.ledger tr.hot td:first-child { color: var(--green-soft); font-weight: 600; }
+  table.ledger tr.total td { border-bottom: none; border-top: 1px solid rgba(255,255,255,0.14);
+    padding-top: 8px; color: var(--green-soft); font-weight: 600; }
+  table.ledger td .nu { color: rgba(138,160,148,0.35); }
+
+  .chart-box { position: relative; width: 100%; height: 190px; margin-top: 6px; }
+
+  .flag { display: flex; gap: 10px; padding: 9px 0; border-bottom: 1px solid var(--line); font-size: 12px; line-height: 1.5; }
+  .flag:last-child { border-bottom: none; }
+  .flag .fnum { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--accent); font-weight: 600; flex-shrink: 0; padding-top: 1px; }
+  .flag .ftxt { color: var(--text-dim); }
+  .flag .ftxt b { color: var(--text); font-weight: 600; }
+  .flag.hot .fnum, .flag.hot .ftxt b { color: var(--gold); }
+
+  /* Quiet watch */
+  .quiet-row { display:flex; align-items:center; gap:10px; padding:10px 0; border-bottom:1px solid var(--line); }
+  .quiet-row:last-child { border-bottom:none; }
+  .q-pulse { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
+  .q-pulse.dead { background:var(--red); box-shadow:0 0 0 3px rgba(217,106,94,0.15); }
+  .q-body { flex:1; }
+  .q-name { font-family:'Fraunces',serif; font-size:14px; font-weight:500; }
+  .q-meta { font-family:'JetBrains Mono',monospace; font-size:9px; color:var(--text-dim); margin-top:3px; letter-spacing:0.02em; }
+  .q-lost { font-family:'Fraunces',serif; font-size:15px; font-weight:600; color:var(--gold); width:62px; text-align:right; flex-shrink:0; }
+
+  /* Trend matrix */
+  table.mx { width:100%; border-collapse:collapse; font-family:'JetBrains Mono',monospace; font-size:9px; }
+  table.mx th { text-align:right; font-weight:500; color:var(--text-dim); font-size:8px; letter-spacing:0.08em;
+    text-transform:uppercase; padding:5px 3px; border-bottom:1px solid var(--line); white-space:nowrap; }
+  table.mx th:first-child { text-align:left; }
+  table.mx td { padding:5px 3px; text-align:right; color:var(--text-dim); border-bottom:1px solid var(--line); white-space:nowrap; }
+  table.mx td:first-child { text-align:left; color:var(--text); font-size:10px; }
+  table.mx td.z { color:rgba(217,106,94,0.75); }
+  table.mx td.pk { color:var(--green-soft); font-weight:600; }
+  table.mx tr.dim td:first-child { color:var(--text-dim); }
+  table.mx th.sim, table.mx td.sim { background:rgba(212,177,90,0.06); }
+  table.mx th.sim { color:var(--gold); }
+  .mx-note { font-family:'JetBrains Mono',monospace; font-size:8px; color:var(--text-dim); margin-top:8px; letter-spacing:0.04em; line-height:1.6; }
+
+  /* The six months, stacked */
+  .mo-bars { display:flex; align-items:flex-end; gap:7px; height:86px; margin:10px 0 4px; }
+  .mo-b { flex:1; display:flex; flex-direction:column; justify-content:flex-end; align-items:center; gap:4px; height:100%; }
+  .mo-b i { display:block; width:100%; border-radius:5px 5px 2px 2px;
+    background:linear-gradient(180deg, rgba(212,177,90,0.75), rgba(212,177,90,0.30)); }
+  .mo-b .v { font-family:'JetBrains Mono',monospace; font-size:8px; color:var(--text); }
+  .mo-b .k { font-family:'JetBrains Mono',monospace; font-size:7.5px; letter-spacing:0.1em; text-transform:uppercase; color:var(--text-dim); }
+  .cum { display:flex; gap:8px; margin-top:12px; }
+  .cum .cb { flex:1; background:var(--bg-card-hi); border:1px solid rgba(212,177,90,0.25); border-radius:10px; padding:11px 8px; text-align:center; }
+  .cum .cb .k { font-family:'JetBrains Mono',monospace; font-size:7.5px; letter-spacing:0.1em; text-transform:uppercase; color:var(--text-dim); }
+  .cum .cb .v { font-family:'Fraunces',serif; font-size:19px; font-weight:500; margin-top:4px; color:var(--gold); }
+  .cum .cb .u2 { font-family:'JetBrains Mono',monospace; font-size:8px; color:var(--text-dim); margin-top:3px; }
+
+  /* Cost per lead / unit */
+  table.cpu { width:100%; border-collapse:collapse; font-family:'JetBrains Mono',monospace; font-size:10px; }
+  table.cpu th { text-align:right; font-weight:500; color:var(--text-dim); font-size:8px; letter-spacing:0.08em;
+    text-transform:uppercase; padding:6px 3px; border-bottom:1px solid var(--line); }
+  table.cpu th:first-child { text-align:left; }
+  table.cpu td { padding:7px 3px; text-align:right; border-bottom:1px solid var(--line); color:var(--text-dim); }
+  table.cpu td:first-child { text-align:left; color:var(--text); font-family:'Inter Tight',sans-serif; font-size:12px; }
+  table.cpu td.u { color:var(--text); font-weight:600; }
+  table.cpu td.good { color:var(--green-soft); font-weight:600; }
+  table.cpu td.bad { color:var(--red); font-weight:600; }
+  table.cpu td.free { color:var(--green-soft); font-style:italic; }
+  table.cpu tr.tot td { border-top:1px solid rgba(255,255,255,0.18); border-bottom:none;
+    padding-top:9px; color:var(--text); font-weight:600; }
+  .cpu-split { display:flex; gap:8px; margin-top:12px; }
+  .cs { flex:1; background:var(--bg-card-hi); border:1px solid var(--line); border-radius:10px; padding:11px; }
+  .cs.earn { border-color:rgba(108,194,139,0.4); }
+  .cs .k { font-family:'JetBrains Mono',monospace; font-size:8px; letter-spacing:0.1em;
+    text-transform:uppercase; color:var(--text-dim); }
+  .cs .v { font-family:'Fraunces',serif; font-size:19px; font-weight:500; margin-top:5px; }
+  .cs.earn .v { color:var(--green-soft); }
+  .cs .u2 { font-family:'JetBrains Mono',monospace; font-size:8px; color:var(--text-dim); margin-top:4px; line-height:1.4; }
+
+  /* Trend rows */
+  .tr-row { padding:11px 0; border-bottom:1px solid var(--line); }
+  .tr-row:last-child { border-bottom:none; }
+  .tr-top { display:flex; justify-content:space-between; align-items:baseline; margin-bottom:7px; }
+  .tr-nm { font-family:'Fraunces',serif; font-size:15px; font-weight:500; }
+  .tr-nm small { font-family:'JetBrains Mono',monospace; font-size:9px; color:var(--text-dim); margin-left:7px; }
+  .tr-dir { font-family:'JetBrains Mono',monospace; font-size:10px; font-weight:600; }
+  .tr-dir.good { color:var(--green-soft); } .tr-dir.bad { color:var(--red); } .tr-dir.flat { color:var(--text-dim); }
+  .tr-months { display:flex; gap:6px; }
+  .tr-m { flex:1; background:var(--bg-card-hi); border-radius:7px; padding:7px 5px; text-align:center; }
+  .tr-m .mo { font-family:'JetBrains Mono',monospace; font-size:7px; letter-spacing:0.1em; text-transform:uppercase; color:var(--text-dim); }
+  .tr-m .cpu { font-family:'Fraunces',serif; font-size:15px; font-weight:500; margin-top:3px; }
+  .tr-m .cr { font-family:'JetBrains Mono',monospace; font-size:8px; color:var(--text-dim); margin-top:3px; }
+  .tr-m.best .cpu { color:var(--green-soft); }
+  .tr-m.worst .cpu { color:var(--red); }
+
+  /* Rep board */
+  .rp { display:flex; align-items:center; gap:9px; padding:9px 0; border-bottom:1px solid var(--line); }
+  .rp:last-child { border-bottom:none; }
+  .rp-nm { flex:1; font-size:12.5px; font-weight:500; }
+  .rp-nm small { display:block; font-family:'JetBrains Mono',monospace; font-size:8px; color:var(--text-dim); margin-top:2px; }
+  .rp-bar { width:78px; height:6px; background:rgba(255,255,255,0.06); border-radius:100px; overflow:hidden; flex-shrink:0; }
+  .rp-bar i { display:block; height:100%; border-radius:100px; }
+  .rp-pct { font-family:'JetBrains Mono',monospace; font-size:11px; font-weight:600; width:38px; text-align:right; flex-shrink:0; }
+  .rp-amt { font-family:'JetBrains Mono',monospace; font-size:10px; color:var(--text-dim); width:56px; text-align:right; flex-shrink:0; }
+
+  /* Speed */
+  .sp-row { display:flex; align-items:center; gap:10px; padding:7px 0; }
+  .sp-nm { width:104px; font-size:11.5px; flex-shrink:0; }
+  .sp-track { flex:1; height:16px; background:rgba(255,255,255,0.04); border-radius:4px; position:relative; }
+  .sp-fill { height:100%; border-radius:4px; background:linear-gradient(90deg,#6cc28b,#8fd5a8); }
+  .sp-fill.slow { background:linear-gradient(90deg,#d4b15a,#e6c97a); }
+  .sp-d { font-family:'JetBrains Mono',monospace; font-size:10px; width:60px; text-align:right; color:var(--text-dim); flex-shrink:0; }
+
+  /* Stall */
+  .st-row { display:flex; align-items:center; gap:9px; padding:8px 0; border-bottom:1px solid var(--line); }
+  .st-row:last-child { border-bottom:none; }
+  .st-nm { flex:1; font-size:12px; }
+  .st-n { font-family:'JetBrains Mono',monospace; font-size:12px; font-weight:600; width:44px; text-align:right; }
+  .st-n.hot { color:var(--red); }
+  .st-sub { font-family:'JetBrains Mono',monospace; font-size:9px; color:var(--text-dim); width:80px; text-align:right; }
+
+  /* Matrix co */
+  table.co { width:100%; border-collapse:collapse; font-family:'JetBrains Mono',monospace; font-size:9.5px; }
+  table.co th { text-align:right; font-size:8px; letter-spacing:0.08em; text-transform:uppercase; color:var(--text-dim);
+    font-weight:500; padding:6px 3px; border-bottom:1px solid var(--line); }
+  table.co th:first-child { text-align:left; }
+  table.co td { padding:6px 3px; text-align:right; color:var(--text-dim); border-bottom:1px solid var(--line); }
+  table.co td:first-child { text-align:left; color:var(--text); font-family:'Inter Tight',sans-serif; font-size:11.5px; }
+  table.co td.pk { color:var(--green-soft); font-weight:600; }
+  table.co td.z { color:rgba(255,255,255,0.13); }
+
+  /* Company unit-econ blocks */
+  .ue-blend { display:flex; gap:8px; margin-bottom:14px; }
+  .ue-b { flex:1; background:var(--bg-card-hi); border:1px solid var(--line); border-radius:10px; padding:12px 10px; text-align:center; }
+  .ue-b .k { font-family:'JetBrains Mono',monospace; font-size:8px; letter-spacing:0.1em; text-transform:uppercase; color:var(--text-dim); }
+  .ue-b .v { font-family:'Fraunces',serif; font-size:22px; font-weight:500; margin-top:5px; }
+  .ue-b .u2 { font-family:'JetBrains Mono',monospace; font-size:8px; color:var(--text-dim); margin-top:4px; }
+  .co-block { background:var(--bg-card-hi); border:1px solid var(--line); border-radius:12px; padding:13px; margin-bottom:11px; }
+  .co-block:last-child { margin-bottom:0; }
+  .co-block.f { border-left:3px solid var(--green); }
+  .co-block.o { border-left:3px solid var(--blue); }
+  .co-block.r { border-left:3px solid var(--gold); }
+  .co-hd { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:10px; }
+  .co-hd .nm { font-family:'Fraunces',serif; font-size:16px; font-weight:500; }
+  .co-hd .nm small { display:block; font-family:'JetBrains Mono',monospace; font-size:8px;
+    letter-spacing:0.08em; text-transform:uppercase; color:var(--text-dim); margin-top:2px; }
+  .co-kpi { display:flex; gap:6px; }
+  .co-kpi div { text-align:right; }
+  .co-kpi .kk { font-family:'JetBrains Mono',monospace; font-size:7.5px; letter-spacing:0.08em;
+    text-transform:uppercase; color:var(--text-dim); }
+  .co-kpi .vv { font-family:'Fraunces',serif; font-size:16px; font-weight:500; margin-top:2px; }
+  .co-kpi .vv.g { color:var(--green-soft); } .co-kpi .vv.r { color:var(--red); }
+  table.src { width:100%; border-collapse:collapse; font-family:'JetBrains Mono',monospace; font-size:9px; }
+  table.src th { text-align:right; font-size:7.5px; letter-spacing:0.06em; text-transform:uppercase;
+    color:var(--text-dim); font-weight:500; padding:4px 2px; border-bottom:1px solid var(--line); }
+  table.src th:first-child { text-align:left; }
+  table.src td { padding:5px 2px; text-align:right; color:var(--text-dim); border-bottom:1px solid rgba(255,255,255,0.03); }
+  table.src td:first-child { text-align:left; color:var(--text); font-family:'Inter Tight',sans-serif; font-size:10.5px; }
+  table.src td.good { color:var(--green-soft); font-weight:600; }
+  table.src td.bad { color:var(--red); font-weight:600; }
+  table.src td.free { color:var(--green-soft); font-style:italic; }
+  table.src tr.tt td { border-top:1px solid rgba(255,255,255,0.15); border-bottom:none; color:var(--text);
+    font-weight:600; padding-top:7px; }
+  .co-read { font-family:'JetBrains Mono',monospace; font-size:8.5px; color:var(--text-dim);
+    line-height:1.55; margin-top:9px; padding-top:9px; border-top:1px dashed rgba(255,255,255,0.08); }
+  .co-read b { color:var(--text); }
+
+  /* Search + voice */
+  .srch-wrap { position:sticky; top:0; z-index:40; padding:10px 0 12px;
+    background:linear-gradient(180deg, #0d1f17 78%, rgba(0,0,0,0)); }
+  .srch { display:flex; align-items:center; gap:8px; background:var(--bg-card-hi);
+    border:1px solid var(--line); border-radius:100px; padding:9px 13px;
+    transition:border-color .2s, box-shadow .2s; }
+  .srch:focus-within { border-color:var(--green); box-shadow:0 0 0 3px rgba(108,194,139,0.10); }
+  .srch-ic { width:15px; height:15px; color:var(--text-dim); flex-shrink:0; }
+  .srch input { flex:1; background:none; border:none; outline:none; color:var(--text);
+    font-family:'Inter Tight',sans-serif; font-size:13.5px; min-width:0; }
+  .srch input::placeholder { color:var(--text-dim); }
+  .mic, .clr { background:none; border:none; cursor:pointer; padding:3px; flex-shrink:0;
+    color:var(--text-dim); display:flex; align-items:center; transition:color .15s; }
+  .mic svg { width:16px; height:16px; }
+  .mic:hover, .clr:hover { color:var(--text); }
+  .mic.live { color:var(--red); animation:micpulse 1.1s ease-in-out infinite; }
+  .mic.off { opacity:0.25; }
+  @keyframes micpulse { 0%,100%{ opacity:1; transform:scale(1);} 50%{ opacity:.45; transform:scale(1.14);} }
+  .clr { font-size:13px; line-height:1; display:none; }
+  .clr.on { display:flex; }
+  .srch-status { font-family:'JetBrains Mono',monospace; font-size:9px; color:var(--text-dim);
+    text-align:center; margin-top:7px; min-height:11px; letter-spacing:0.04em; }
+  .srch-status.listening { color:var(--red); }
+  .dimmed { opacity:0.13; transition:opacity .18s; }
+
+  .ansbox { display:none; background:linear-gradient(160deg,rgba(108,194,139,0.09),rgba(108,194,139,0.02));
+    border:1px solid rgba(108,194,139,0.30); border-radius:13px; padding:15px 16px; margin:12px 0 4px; }
+  .ansbox.on { display:block; }
+  .ansbox .aq { font-family:'JetBrains Mono',monospace; font-size:8.5px; letter-spacing:0.12em;
+    text-transform:uppercase; color:var(--text-dim); margin-bottom:9px; }
+  .ansbox .av { font-family:'Fraunces',serif; font-size:29px; font-weight:500; line-height:1.05; color:var(--green-soft); }
+  .ansbox .av small { font-size:13px; color:var(--text); font-family:'Inter Tight',sans-serif; margin-left:7px; }
+  .ansbox .asub { font-size:12.5px; color:var(--text); margin-top:8px; line-height:1.5; }
+  .ansbox .abrk { display:flex; gap:7px; margin-top:12px; }
+  .ansbox .ab { flex:1; background:rgba(0,0,0,0.22); border-radius:8px; padding:8px 6px; text-align:center; }
+  .ansbox .ab .k { font-family:'JetBrains Mono',monospace; font-size:7.5px; letter-spacing:0.09em;
+    text-transform:uppercase; color:var(--text-dim); }
+  .ansbox .ab .v { font-family:'Fraunces',serif; font-size:16px; margin-top:3px; }
+  .ansbox .ab .v.g { color:var(--green-soft); } .ansbox .ab .v.r { color:var(--red); }
+  .ansbox .anote { font-size:11px; color:var(--text-dim); margin-top:11px; padding-top:9px;
+    border-top:1px solid rgba(255,255,255,0.07); line-height:1.5; }
+  .chips { display:flex; flex-wrap:wrap; gap:5px; margin-top:9px; }
+  .chip { font-family:'JetBrains Mono',monospace; font-size:9px; padding:5px 9px; border-radius:100px;
+    background:rgba(255,255,255,0.05); border:1px solid var(--line); color:var(--text-dim); cursor:pointer; }
+  .chip:hover { background:rgba(108,194,139,0.14); color:var(--green-soft); border-color:rgba(108,194,139,0.3); }
+
+  .foot { margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--line);
+    font-family: 'JetBrains Mono', monospace; font-size: 9px; color: var(--text-dim); line-height: 1.7; }
+  .foot b { color: var(--text); font-weight: 500; }
+  .foot .motto { display: block; margin-top: 10px; color: var(--accent-soft);
+    letter-spacing: 0.12em; text-transform: uppercase; font-size: 8px; }
+</style>
+</head>
+<body>
+<div class="shell">
+
+  <div class="simband"><b>SIMULATION · NOT LIVE DATA</b> — six months forward at today's run-rate,
+    <b>with a typed winter curve on Fencing &amp; Oasis</b>.
+    <span>Built 17 Aug 2026 from Apr–Aug actuals (the approved 16 Aug probe walk + card-keyed spend book).
+    Apr–Jul are real months; Aug is paced from the 16th; everything after is arithmetic, not measurement —
+    and the seasonality is an assumption, because no winter has been measured yet (the warehouse starts Apr 2026).
+    The live console refuses to print numbers like these — this page exists so the refusals can be seen filled.</span></div>
+
+  <div class="hdr">
+    <div class="eyebrow">Liberty Command · Marketing Board · <em>Simulated — Feb 2027</em></div>
+    <h1>The spend, the juice,<br/><em>and the squeeze — month six.</em></h1>
+    <div class="nw-block">
+      <div>
+        <div class="nw-label">Feb Signed ÷ Feb Spend · modeled</div>
+        <div class="nw">$12.11</div>
+        <div class="nw-sub">back per $1 · $831,688 on $68,672 · a winter month, thawing</div>
+      </div>
+      <div class="nw-delta">
+        <b>8.3%</b><br/>marketing as % of<br/>Feb signed revenue
+      </div>
+    </div>
+  </div>
+
+  <div class="srch-wrap">
+    <div class="srch">
+      <svg class="srch-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/>
+      </svg>
+      <input id="q" type="text" placeholder="Ask anything — &quot;what does a Google lead cost me?&quot;" autocomplete="off"/>
+      <button id="mic" class="mic" title="Speak">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="9" y="2" width="6" height="12" rx="3"/>
+          <path d="M5 11a7 7 0 0 0 14 0M12 18v4"/>
+        </svg>
+      </button>
+      <button id="clr" class="clr" title="Clear">✕</button>
+    </div>
+    <div id="srch-status" class="srch-status"></div>
+  </div>
+
+  <div class="stack">
+
+    <!-- THE SIX MONTHS, STACKED -->
+    <div class="card">
+      <div class="card-title">The Six Months, Stacked · Sep → Feb<span class="feed-tag sim">SIM · seasonal</span></div>
+      <div class="card-sub">Every source at its own Apr–Jul pace, then the winter curve on Fencing and Oasis (Roofing carries flat — a referral book, and outside the instruction's scope). The spend book never moves. The dip is the model being honest about Minnesota.</div>
+      <div class="mo-bars">
+        <div class="mo-b"><div class="v">1.16M</div><i style="height:68%"></i><div class="k">Sep</div></div>
+        <div class="mo-b"><div class="v">1.18M</div><i style="height:70%"></i><div class="k">Oct</div></div>
+        <div class="mo-b"><div class="v">0.84M</div><i style="height:49%"></i><div class="k">Nov</div></div>
+        <div class="mo-b"><div class="v">0.63M</div><i style="height:37%"></i><div class="k">Dec</div></div>
+        <div class="mo-b"><div class="v">0.61M</div><i style="height:36%"></i><div class="k">Jan</div></div>
+        <div class="mo-b"><div class="v">0.83M</div><i style="height:49%"></i><div class="k">Feb</div></div>
+      </div>
+      <div class="cum">
+        <div class="cb"><div class="k">Signed · 6 mo</div><div class="v">$5.25M</div><div class="u2">~1,020 jobs</div></div>
+        <div class="cb"><div class="k">Spend · 6 mo</div><div class="v">$412K</div><div class="u2">$68,672 × 6</div></div>
+        <div class="cb"><div class="k">Return</div><div class="v">$12.74</div><div class="u2">back per $1</div></div>
+      </div>
+      <div class="mx-note">By brand, cumulative: <b>Fencing ~$2.58M on $204K ($12.6/1)</b> · <b>Oasis ~$1.61M on $119K ($13.6/1)</b> · <b>Roofing ~$1.06M on $89K ($11.9/1)</b>. No growth curve is invented anywhere on this page — a measured spring would sit above these bars the way Apr–Jul actuals did.</div>
+    </div>
+
+    <!-- FLAT SPEND vs THE CURVE -->
+    <div class="card">
+      <div class="card-title">Flat Spend vs The Curve · Why $68.7K Holds<span class="feed-tag sim">SIM</span></div>
+      <div class="card-sub">The question every buyer asks first: signed revenue moved Apr→Jul while the card never did — and now winter cuts it in half at the same $68,672. Here is the arithmetic, month by month.</div>
+      <div class="mo-bars">
+        <div class="mo-b"><div class="v" style="color:var(--green-soft)">$16.9</div><i style="height:76%"></i><div class="k">Sep</div></div>
+        <div class="mo-b"><div class="v" style="color:var(--green-soft)">$17.2</div><i style="height:78%"></i><div class="k">Oct</div></div>
+        <div class="mo-b"><div class="v" style="color:var(--green-soft)">$12.2</div><i style="height:55%"></i><div class="k">Nov</div></div>
+        <div class="mo-b"><div class="v" style="color:var(--red)">$9.2</div><i style="height:42%;background:linear-gradient(180deg, rgba(217,106,94,0.75), rgba(217,106,94,0.30))"></i><div class="k">Dec</div></div>
+        <div class="mo-b"><div class="v" style="color:var(--red)">$8.9</div><i style="height:40%;background:linear-gradient(180deg, rgba(217,106,94,0.75), rgba(217,106,94,0.30))"></i><div class="k">Jan</div></div>
+        <div class="mo-b"><div class="v" style="color:var(--green-soft)">$12.1</div><i style="height:55%"></i><div class="k">Feb</div></div>
+      </div>
+      <div class="mx-note" style="margin-top:2px">Back per $1, each month ÷ the same $68,672 — July's corrected book (migration 175). <b style="color:var(--red)">Dec and Jan breach your own $10 floor</b> — printed red, not hidden.</div>
+      <div class="flag"><div class="fnum">1</div><div class="ftxt"><b>Spend buys leads; people close them.</b> The Apr→Jul growth ($372K → $589K Google) happened on a flat card, and the mechanism was measured: close rate 27% → 46%, cost per <i>lead</i> UP while cost per <i>unit</i> fell $607 → $443. The sales floor improved — the budget didn't. This model never asks $69K to produce more leads than July proved it buys (~250 Google leads at ~$200).</div></div>
+      <div class="flag"><div class="fnum">2</div><div class="ftxt"><b>44% of winter revenue carries no ad dollar.</b> Referral, previous customer and self-gen scale with the installed base — 1,700+ signed jobs by Feb — not with the ad budget. That earned engine is what holds a sub-floor paid winter at a $12 blended month.</div></div>
+      <div class="flag"><div class="fnum">3</div><div class="ftxt"><b>The model never grows signings past measured July.</b> Sep–Oct sit at run-rate; winter sits below it. Nothing on this page requires spend to generate revenue it hasn't already generated once, in a measured month.</div></div>
+      <div class="flag hot"><div class="fnum">4</div><div class="ftxt"><b>The honest cost of a flat book: two months under the floor.</b> Flat $68.7K ÷ winter demand = Dec $9.2 and Jan $8.9 back per $1, and cost per unit spikes (Google $447 → $981 in Jan). The operator's lever is seasoning the paid book — trim Google/Angi Nov–Feb, keep the earned engine, redeploy in spring. This simulation deliberately does NOT pull that lever, so the cost of not pulling it stays visible.</div></div>
+    </div>
+
+    <!-- ROI THERMOMETERS -->
+    <div class="card">
+      <div class="card-title">ROI by Paid Source · Feb<span class="feed-tag sim">SIM</span></div>
+      <div class="card-sub">Feb signed dollars ÷ Feb spend, priced exactly as the live board prices July — Google all-in from the card + management. Gold mark = your $10-per-$1 floor. Scale runs to 20×.</div>
+
+      <div class="thermo">
+        <div class="th-head">
+          <div class="th-name">Google<small>ads + Liam / Gate Digital mgmt</small></div>
+          <div class="th-roas cold">$7.23</div>
+        </div>
+        <div class="th-bar"><div class="th-fill cold" style="width:36.2%"></div><div class="th-floor" style="left:50%"></div></div>
+        <div class="th-cap"><span>spend <b>$50,994</b></span><span>71 jobs</span><span>signed <b>$368,675</b></span></div>
+      </div>
+
+      <div class="thermo">
+        <div class="th-head">
+          <div class="th-name">Saving Safari<small>all 3 brands</small></div>
+          <div class="th-roas cold">$8.76</div>
+        </div>
+        <div class="th-bar"><div class="th-fill cold" style="width:43.8%"></div><div class="th-floor" style="left:50%"></div></div>
+        <div class="th-cap"><span>spend <b>$9,500</b></span><span>14 jobs</span><span>signed <b>$83,190</b></span></div>
+      </div>
+
+      <div class="thermo">
+        <div class="th-head">
+          <div class="th-name">Angi / HomeAdvisor<small>Fencing + Roofing</small></div>
+          <div class="th-roas cold">$2.56</div>
+        </div>
+        <div class="th-bar"><div class="th-fill cold" style="width:12.8%"></div><div class="th-floor" style="left:50%"></div></div>
+        <div class="th-cap"><span>spend <b>$6,287</b></span><span>3 jobs · all Fencing</span><span>signed <b>$16,094</b></span></div>
+      </div>
+      <div class="mx-note"><b>Every paid thermometer reads under the floor in February — that is what a flat book against a winter curve looks like</b>, and the blended month still holds $12.11 because the earned engine doesn't winter (44% of Feb revenue, next card). In September these same bars read $10.7 / $13.2 / $4.8. Angi is under the floor in <i>every</i> month of the model — the one always-cold bar, assumption ⚑S7.</div>
+    </div>
+
+    <!-- FREE / EARNED -->
+    <div class="card">
+      <div class="card-title">Earned Revenue · No Ad Dollar Attached<span class="feed-tag sim">SIM</span></div>
+      <div class="card-sub">43.7% of Feb signed comes in near-free — the earned engine's share <b>rises</b> in winter, because referrals and repeat customers don't stop when search volume does. Referral carries its bonus cost, ~$1,000/mo, occasional not programmatic.</div>
+      <div class="free-row"><span class="nm">Referral<small>27 jobs · $1,000 bonuses · <b style="color:var(--green-soft)">$141 per $1</b></small></span><span class="amt">$140,580</span></div>
+      <div class="free-row"><span class="nm">Referral · Self-Gen<small>9 jobs · reps · roofing carries it</small></span><span class="amt">$100,305</span></div>
+      <div class="free-row"><span class="nm">Previous Customer<small>27 jobs</small></span><span class="amt">$99,795</span></div>
+      <div class="free-row"><span class="nm">Website<small>3 jobs</small></span><span class="amt">$15,347</span></div>
+      <div class="free-row"><span class="nm">Facebook<small>2 jobs · $0 spend</small></span><span class="amt">$5,557</span></div>
+      <div class="free-row"><span class="nm">Slug A Bug<small>1 job · Oasis</small></span><span class="amt">$2,145</span></div>
+    </div>
+
+    <!-- BRAND ROI TILES -->
+    <div class="card">
+      <div class="card-title">Return by Brand · Feb<span class="feed-tag sim">SIM · seasonal</span></div>
+      <div class="card-sub">The winter curve lands unevenly: Fencing at 0.65 of pace, Oasis at 0.55, Roofing flat — so the referral book briefly out-returns the volume engines.</div>
+      <div class="brand-tile">
+        <div class="bt-head"><div class="bt-name">Pro-Tec Roofing</div><div class="bt-roas">$12.64<small> /$1</small></div></div>
+        <div class="bt-rows">
+          <div class="bt-row"><span>Signed · 24 jobs</span><b class="g">$187,110</b></div>
+          <div class="bt-row"><span>Marketing spend</span><b>$14,805</b></div>
+        </div>
+      </div>
+      <div class="brand-tile">
+        <div class="bt-head"><div class="bt-name">Oasis Landscapes</div><div class="bt-roas">$12.35<small> /$1</small></div></div>
+        <div class="bt-rows">
+          <div class="bt-row"><span>Signed · 50 jobs</span><b class="g">$244,717</b></div>
+          <div class="bt-row"><span>Marketing spend</span><b>$19,819</b></div>
+        </div>
+      </div>
+      <div class="brand-tile">
+        <div class="bt-head"><div class="bt-name">Liberty Fencing</div><div class="bt-roas">$11.74<small> /$1</small></div></div>
+        <div class="bt-rows">
+          <div class="bt-row"><span>Signed · 83 jobs</span><b class="g">$399,861</b></div>
+          <div class="bt-row"><span>Marketing spend</span><b>$34,048</b></div>
+        </div>
+      </div>
+      <div class="mx-note">Brand books are the migration-175 corrected columns — $34,048 / $19,819 / $14,805, the six fixed-opex SaaS vendors out. September tiles for comparison: Fencing $16.8/1 · Oasis $20.8/1 · Roofing $11.8/1 — the summer ordering. A flat spend book makes brand ROI a pure function of the season; the tiles say so instead of averaging it away.</div>
+    </div>
+
+    <!-- REVENUE BY SOURCE -->
+    <div class="card">
+      <div class="card-title">Feb Signed by Source<span class="feed-tag sim">SIM</span></div>
+      <div class="card-sub">157 jobs, every one source-tagged — attribution stayed clean because it already was. Self-gen passes Previous Customer in winter: roofing referrals don't season.</div>
+      <div class="chart-box"><canvas id="srcBars"></canvas></div>
+    </div>
+
+    <!-- VENDOR LEDGER -->
+    <div class="card">
+      <div class="card-title">Spend Ledger · Monthly<span class="feed-tag sim">SIM · held flat</span></div>
+      <div class="card-sub">July's corrected book — <b>$68,672, migration 175</b> — carried unchanged through all six months, the simulation's ruling assumption, ~S2 below. Google Ads is the card; Windsor prices nothing; tooling is not marketing.</div>
+      <table class="ledger">
+        <tr><th>Vendor</th><th>Fence</th><th>Oasis</th><th>Roof</th><th>Total</th></tr>
+        <tr class="hot"><td>Google Ads</td><td>23,064</td><td>16,522</td><td>8,408</td><td>47,994</td></tr>
+        <tr class="hot"><td>Saving Safari</td><td>5,000</td><td>2,000</td><td>2,500</td><td>9,500</td></tr>
+        <tr class="hot"><td>Angi / HomeAdvisor</td><td>4,187</td><td><span class="nu">—</span></td><td>2,100</td><td>6,287</td></tr>
+        <tr class="hot"><td>Liam / Gate Digital</td><td>1,000</td><td>1,000</td><td>1,000</td><td>3,000</td></tr>
+        <tr><td>Referral bonuses ~</td><td>500</td><td><span class="nu">—</span></td><td>500</td><td>1,000</td></tr>
+        <tr><td>Next Level ⚑3</td><td>297</td><td>297</td><td>297</td><td>891</td></tr>
+        <tr class="total"><td>TOTAL / MO</td><td>34,048</td><td>19,819</td><td>14,805</td><td>68,672</td></tr>
+      </table>
+      <div class="mx-note">On the live console this book is <b>marketing_spend</b> (migrations 166/167/170/171, corrected by <b>175</b>) — typed monthly, trigger-enforced one grain per month, Google keyed from the Chase Ink 1552/1571 + Amex Gold statements by brand. <b>Migration 175 removed six fixed-opex SaaS vendors ($563: CallFire, Mailchimp, Marlie, Zapier, GoDaddy, Canva) — tooling is not marketing.</b> Next Level stays: website hosting is marketing infrastructure, ⚑3 so it prices no source. The simulation photocopies the corrected July six times; reality is keyed month by month, and June/July 2026 are closed in <b>docs/marketing-spend-ledger.md</b>.</div>
+    </div>
+
+    <!-- COST PER LEAD / UNIT -->
+    <div class="card">
+      <div class="card-title">Cost per Lead &amp; per Unit · Feb<span class="feed-tag sim">SIM</span></div>
+      <div class="card-sub">On the live board the CPL column is withheld — every lead before Aug 2026 carries the backfill stamp. From Aug the lead clock is real, so by Feb this whole table is measurable. <b>Winter demand drops, the book doesn't: every paid cost per unit spikes.</b> Leads = created in Feb, units = signed in Feb.</div>
+      <table class="cpu">
+        <tr><th>Source</th><th>Leads</th><th>Units</th><th>CPL</th><th>Cost / Unit</th><th>MoM</th></tr>
+        <tr><td>Google</td><td>164</td><td class="u">71</td><td>$311</td><td>$718</td><td class="good">▼ 27%</td></tr>
+        <tr><td>Saving Safari</td><td>25</td><td class="u">14</td><td>$380</td><td>$679</td><td class="good">▼ 36%</td></tr>
+        <tr><td>Angi ⚑4</td><td>36</td><td class="u">3</td><td>$175</td><td class="bad">$2,096</td><td>≈ flat</td></tr>
+        <tr><td>Referral</td><td>42</td><td class="u">27</td><td class="good">$24</td><td class="good">$37</td><td class="good">▼ 30%</td></tr>
+        <tr><td>Previous Customer</td><td>44</td><td class="u">27</td><td class="free">free</td><td class="free">free</td><td>—</td></tr>
+        <tr><td>Ref · Self-Gen</td><td>8</td><td class="u">9</td><td class="free">free</td><td class="free">free</td><td>—</td></tr>
+        <tr><td>Website</td><td>5</td><td class="u">3</td><td class="free">free</td><td class="free">free</td><td>—</td></tr>
+        <tr><td>Facebook</td><td>3</td><td class="u">2</td><td class="free">free</td><td class="free">free</td><td>—</td></tr>
+        <tr><td>Slug A Bug</td><td>1</td><td class="u">1</td><td class="free">free</td><td class="free">free</td><td>—</td></tr>
+        <tr class="tot"><td>BLENDED</td><td>328</td><td>157</td><td>$207</td><td>$432</td><td>—</td></tr>
+      </table>
+      <div class="cpu-split">
+        <div class="cs"><div class="k">Paid only</div><div class="v">$759</div>
+          <div class="u2">per unit · $297/lead<br/>225 leads · 88 units on $66,781</div></div>
+        <div class="cs earn"><div class="k">Earned</div><div class="v">69 units</div>
+          <div class="u2">44% of Feb units<br/>31% of all leads · ~$0 beyond $1,000 bonuses</div></div>
+      </div>
+      <div class="mx-note">The MoM arrows point down because <b>January was the bottom</b> (Google $981/unit) and February is the thaw — not because anything got fixed. Summer baseline for the same table: Google $447/unit, blended $279. Angi stays the leak in every season: cheapest leads ($175), most expensive units ($2,096). The winter CPU spike is <b>the price of a flat book</b>, priced on the "Flat Spend vs The Curve" card above.</div>
+    </div>
+
+    <!-- UNIT ECONOMICS BY COMPANY -->
+    <div class="card">
+      <div class="card-title">Unit Economics · Blended &amp; by Company<span class="feed-tag sim">SIM · Feb</span></div>
+      <div class="card-sub">Withheld on the live board today (lead backfill + amended-invoice job counts). Six months of real lead dates and the distinct-project count RPC make every number here measurable — this is the section as it fills in.</div>
+      <div class="ue-blend">
+        <div class="ue-b"><div class="k">Cost / Lead</div><div class="v">$209</div><div class="u2">328 leads</div></div>
+        <div class="ue-b"><div class="k">Cost / Unit</div><div class="v">$437</div><div class="u2">157 units</div></div>
+        <div class="ue-b"><div class="k">Avg Ticket</div><div class="v">$5,297</div><div class="u2">$832K signed</div></div>
+      </div>
+      <div class="co-block o">
+        <div class="co-hd">
+          <div class="nm">Oasis Landscapes<small>Deepest winter · 0.55 of pace · $12 back</small></div>
+          <div class="co-kpi">
+            <div><div class="kk">CPL</div><div class="vv">$223</div></div>
+            <div><div class="kk">Cost/Unit</div><div class="vv g">$396</div></div>
+            <div><div class="kk">Ticket</div><div class="vv">$4,894</div></div>
+          </div>
+        </div>
+        <table class="src">
+          <tr><th>Source</th><th>Lds</th><th>Un</th><th>Spend</th><th>CPL</th><th>C/Unit</th><th>Revenue</th><th>Ticket</th></tr>
+          <tr><td>Google</td><td>46</td><td>23</td><td>$17,522</td><td class="bad">$381</td><td class="bad">$762</td><td>$121,825</td><td>$5,297</td></tr>
+          <tr><td>Saving Safari</td><td>19</td><td>9</td><td>$2,000</td><td class="good">$105</td><td class="good">$222</td><td>$48,565</td><td>$5,396</td></tr>
+          <tr><td>Referral</td><td>11</td><td>7</td><td><span class="free">—</span></td><td class="free">free</td><td class="free">free</td><td>$39,105</td><td>$5,586</td></tr>
+          <tr><td>Previous Customer</td><td>10</td><td>9</td><td><span class="free">—</span></td><td class="free">free</td><td class="free">free</td><td>$30,965</td><td>$3,441</td></tr>
+          <tr><td>Facebook</td><td>2</td><td>1</td><td><span class="free">—</span></td><td class="free">free</td><td class="free">free</td><td>$2,112</td><td>$2,112</td></tr>
+          <tr><td>Slug A Bug</td><td>1</td><td>1</td><td><span class="free">—</span></td><td class="free">free</td><td class="free">free</td><td>$2,145</td><td>$2,145</td></tr>
+          <tr class="tt"><td>TOTAL</td><td>89</td><td>50</td><td>$19,819</td><td>$223</td><td>$396</td><td>$244,717</td><td>$4,894</td></tr>
+        </table>
+        <div class="co-read">Winter hits landscaping hardest — 0.55 of pace, and people sign in late Feb for spring installs, which is what the thaw is. <b>Safari still holds the best paid line in the company even in February</b> ($222/unit). Google at $762/unit here is the flat-book winter tax, not an account problem.</div>
+      </div>
+      <div class="co-block f">
+        <div class="co-hd">
+          <div class="nm">Liberty Fencing<small>Volume engine · 0.65 of pace · $12 back</small></div>
+          <div class="co-kpi">
+            <div><div class="kk">CPL</div><div class="vv">$178</div></div>
+            <div><div class="kk">Cost/Unit</div><div class="vv g">$410</div></div>
+            <div><div class="kk">Ticket</div><div class="vv">$4,818</div></div>
+          </div>
+        </div>
+        <table class="src">
+          <tr><th>Source</th><th>Lds</th><th>Un</th><th>Spend</th><th>CPL</th><th>C/Unit</th><th>Revenue</th><th>Ticket</th></tr>
+          <tr><td>Google</td><td>104</td><td>44</td><td>$24,064</td><td>$231</td><td>$547</td><td>$198,510</td><td>$4,512</td></tr>
+          <tr><td>Referral</td><td>22</td><td>15</td><td>$500</td><td class="good">$23</td><td class="good">$33</td><td>$79,495</td><td>$5,300</td></tr>
+          <tr><td>Previous Customer</td><td>22</td><td>12</td><td><span class="free">—</span></td><td class="free">free</td><td class="free">free</td><td>$46,410</td><td>$3,868</td></tr>
+          <tr><td>Saving Safari</td><td>5</td><td>3</td><td>$5,000</td><td class="bad">$1,000</td><td class="bad">$1,667</td><td>$23,205</td><td>$7,735</td></tr>
+          <tr><td>Ref · Self-Gen</td><td>1</td><td>2</td><td><span class="free">—</span></td><td class="free">free</td><td class="free">free</td><td>$17,355</td><td>$8,678</td></tr>
+          <tr><td>Angi ⚑</td><td>31</td><td>3</td><td>$4,187</td><td class="bad">$135</td><td class="bad">$1,396</td><td>$16,094</td><td>$5,365</td></tr>
+          <tr><td>Website</td><td>5</td><td>3</td><td><span class="free">—</span></td><td class="free">free</td><td class="free">free</td><td>$15,347</td><td>$5,116</td></tr>
+          <tr><td>Facebook</td><td>1</td><td>1</td><td><span class="free">—</span></td><td class="free">free</td><td class="free">free</td><td>$3,445</td><td>$3,445</td></tr>
+          <tr class="tt"><td>TOTAL</td><td>191</td><td>83</td><td>$34,048</td><td>$178</td><td>$410</td><td>$399,861</td><td>$4,818</td></tr>
+        </table>
+        <div class="co-read">The two July leaks are still open by assumption, and winter makes them dearer: <b>Angi at $1,396/unit on a 10% close</b>, and <b>Safari costing $1,667/unit here vs $222 at Oasis</b> — same vendor, seven times worse. Six more months of the gap is the price of not asking.</div>
+      </div>
+      <div class="co-block r">
+        <div class="co-hd">
+          <div class="nm">Pro-Tec Roofing<small>Referral engine · $13 back</small></div>
+          <div class="co-kpi">
+            <div><div class="kk">CPL</div><div class="vv">$308</div></div>
+            <div><div class="kk">Cost/Unit</div><div class="vv r">$617</div></div>
+            <div><div class="kk">Ticket</div><div class="vv">$7,796</div></div>
+          </div>
+        </div>
+        <table class="src">
+          <tr><th>Source</th><th>Lds</th><th>Un</th><th>Spend</th><th>CPL</th><th>C/Unit</th><th>Revenue</th><th>Ticket</th></tr>
+          <tr><td>Ref · Self-Gen</td><td>7</td><td>7</td><td><span class="free">—</span></td><td class="free">free</td><td class="free">free</td><td>$82,950</td><td>$11,850</td></tr>
+          <tr><td>Google</td><td>14</td><td>4</td><td>$9,408</td><td class="bad">$672</td><td class="bad">$2,352</td><td>$48,340</td><td>$12,085</td></tr>
+          <tr><td>Previous Customer</td><td>12</td><td>6</td><td><span class="free">—</span></td><td class="free">free</td><td class="free">free</td><td>$22,420</td><td>$3,737</td></tr>
+          <tr><td>Referral</td><td>9</td><td>5</td><td>$500</td><td class="good">$56</td><td class="good">$100</td><td>$21,980</td><td>$4,396</td></tr>
+          <tr><td>Saving Safari</td><td>1</td><td>2</td><td>$2,500</td><td class="bad">$2,500</td><td>$1,250</td><td>$11,420</td><td>$5,710</td></tr>
+          <tr><td>Angi / HomeAdvisor</td><td>5</td><td>0</td><td>$2,100</td><td class="bad">$420</td><td class="bad">—</td><td>$0</td><td>—</td></tr>
+          <tr class="tt"><td>TOTAL</td><td>48</td><td>24</td><td>$14,805</td><td>$308</td><td>$617</td><td>$187,110</td><td>$7,796</td></tr>
+        </table>
+        <div class="co-read">The acquisition thesis, still proving itself monthly: <b>self-gen referrals out-earn Google at zero cost</b> — $82,950 vs $48,340. And <b>Google still costs $2,352/unit here</b> because the simulation moved nothing. That budget line is the first thing month seven should question.</div>
+      </div>
+    </div>
+
+    <!-- COST PER UNIT TREND -->
+    <div class="card">
+      <div class="card-title">Cost per Unit · Trending<span class="feed-tag sim">SIM · Dec → Feb</span></div>
+      <div class="card-sub">Withheld on the live board (the one-shot lead backfill). With Aug-onward lead dates real, the curve draws itself — and the first thing it draws is <b>the flat book paying summer prices for winter demand</b>. Dec → Feb; small number is that month's close rate.</div>
+
+      <div class="tr-row">
+        <div class="tr-top"><div class="tr-nm">Google<small>164 leads · 71 units in Feb</small></div><div class="tr-dir good">▼ thawing off the Jan peak</div></div>
+        <div class="tr-months">
+          <div class="tr-m"><div class="mo">Dec</div><div class="cpu">$911</div><div class="cr">42% close</div></div>
+          <div class="tr-m worst"><div class="mo">Jan</div><div class="cpu">$981</div><div class="cr">42% close</div></div>
+          <div class="tr-m best"><div class="mo">Feb</div><div class="cpu">$718</div><div class="cr">43% close</div></div>
+        </div>
+      </div>
+
+      <div class="tr-row">
+        <div class="tr-top"><div class="tr-nm">Saving Safari<small>25 leads · 14 units in Feb</small></div><div class="tr-dir good">▼ thawing</div></div>
+        <div class="tr-months">
+          <div class="tr-m"><div class="mo">Dec</div><div class="cpu">$950</div><div class="cr">52% close</div></div>
+          <div class="tr-m worst"><div class="mo">Jan</div><div class="cpu">$1,056</div><div class="cr">50% close</div></div>
+          <div class="tr-m best"><div class="mo">Feb</div><div class="cpu">$679</div><div class="cr">56% close</div></div>
+        </div>
+      </div>
+
+      <div class="tr-row">
+        <div class="tr-top"><div class="tr-nm">Referral<small>42 leads · 27 units in Feb</small></div><div class="tr-dir good">$37/unit · barely winters</div></div>
+        <div class="tr-months">
+          <div class="tr-m"><div class="mo">Dec</div><div class="cpu">$53</div><div class="cr">63% close</div></div>
+          <div class="tr-m"><div class="mo">Jan</div><div class="cpu">$53</div><div class="cr">63% close</div></div>
+          <div class="tr-m best"><div class="mo">Feb</div><div class="cpu">$37</div><div class="cr">64% close</div></div>
+        </div>
+      </div>
+
+      <div class="tr-row">
+        <div class="tr-top"><div class="tr-nm">Angi<small>36 leads · 3 units in Feb</small></div><div class="tr-dir bad">✕ the leak, in every season</div></div>
+        <div class="tr-months">
+          <div class="tr-m worst"><div class="mo">Dec</div><div class="cpu">$3,144</div><div class="cr">7% close</div></div>
+          <div class="tr-m"><div class="mo">Jan</div><div class="cpu">$2,096</div><div class="cr">9% close</div></div>
+          <div class="tr-m"><div class="mo">Feb</div><div class="cpu">$2,096</div><div class="cr">10% close</div></div>
+        </div>
+      </div>
+
+      <div class="mx-note"><b>Close rates hold through winter — cost per unit doesn't.</b> That split is the whole diagnosis: the floor keeps closing at its measured rate, the flat book just buys fewer opportunities per dollar. Compare the real May→Jul finding (CPU falling while close climbed 27%→46%): that was the floor improving. This is the calendar. Six months of real lead dates lets the board tell the two apart at a glance.</div>
+    </div>
+
+    <!-- SPEED TO CLOSE -->
+    <div class="card">
+      <div class="card-title">Speed to Close<span class="feed-tag sim">SIM</span></div>
+      <div class="card-sub">Withheld on the live board (no honest lead-to-signed interval yet). With the Aug-onward lead clock, six months of signings make the median measurable. Held at the probe walk's measured values — a process constant, assumption ~S5.</div>
+      <div class="sp-row"><div class="sp-nm">Facebook <small style="color:var(--text-dim)">n≈26</small></div><div class="sp-track"><div class="sp-fill" style="width:42%"></div></div><div class="sp-d">5 days</div></div>
+      <div class="sp-row"><div class="sp-nm">Previous Cust <small style="color:var(--text-dim)">n≈310</small></div><div class="sp-track"><div class="sp-fill" style="width:42%"></div></div><div class="sp-d">5 days</div></div>
+      <div class="sp-row"><div class="sp-nm">Google <small style="color:var(--text-dim)">n≈1,050</small></div><div class="sp-track"><div class="sp-fill" style="width:50%"></div></div><div class="sp-d">6 days</div></div>
+      <div class="sp-row"><div class="sp-nm">Referral <small style="color:var(--text-dim)">n≈300</small></div><div class="sp-track"><div class="sp-fill" style="width:50%"></div></div><div class="sp-d">6 days</div></div>
+      <div class="sp-row"><div class="sp-nm">Saving Safari <small style="color:var(--text-dim)">n≈230</small></div><div class="sp-track"><div class="sp-fill" style="width:50%"></div></div><div class="sp-d">6 days</div></div>
+      <div class="sp-row"><div class="sp-nm">Angi <small style="color:var(--text-dim)">n≈58</small></div><div class="sp-track"><div class="sp-fill" style="width:50%"></div></div><div class="sp-d">6 days</div></div>
+      <div class="sp-row"><div class="sp-nm">Website <small style="color:var(--text-dim)">n≈48</small></div><div class="sp-track"><div class="sp-fill slow" style="width:92%"></div></div><div class="sp-d">11 days</div></div>
+      <div class="sp-row"><div class="sp-nm">Ref · Self-Gen <small style="color:var(--text-dim)">n≈68</small></div><div class="sp-track"><div class="sp-fill slow" style="width:100%"></div></div><div class="sp-d">12 days</div></div>
+      <div class="mx-note">Six days, everywhere — <b>cycle time is a process constant, not a channel property.</b> Two exceptions carry forward: Website form-fills need chasing (11d) and Self-Gen referrals run bigger tickets and longer decisions (12d — that's the $11K roofing work, worth the wait).</div>
+    </div>
+
+    <!-- REP BOARD -->
+    <div class="card">
+      <div class="card-title">Rep Board · Feb<span class="feed-tag sim">SIM</span></div>
+      <div class="card-sub">Leads assigned vs units signed, close rates held at each rep's measured level — winter shrinks everyone's volume, not their rate. Jared Heideman departed Aug 2026; his volume redistributed to the bench at their own rates.</div>
+      <div class='rp'><div class='rp-nm'>Eric Payne<small>Fencing 21 · Roofing 19 · 82 lds → 40 units · $6,800 tkt</small></div><div class='rp-bar'><i style='width:49%;background:#d4b15a'></i></div><div class='rp-pct'>49%</div><div class='rp-amt'>$272K</div></div>
+      <div class='rp'><div class='rp-nm'>Mike LeRoy<small>Oasis 31 · 45 lds → 31 units · $5,350 tkt</small></div><div class='rp-bar'><i style='width:69%;background:#6cc28b'></i></div><div class='rp-pct'>69%</div><div class='rp-amt'>$166K</div></div>
+      <div class='rp'><div class='rp-nm'>Ron Seidel<small>Fencing 21 · 36 lds → 21 units · $4,520 tkt</small></div><div class='rp-bar'><i style='width:58%;background:#d4b15a'></i></div><div class='rp-pct'>58%</div><div class='rp-amt'>$95K</div></div>
+      <div class='rp'><div class='rp-nm'>Tim Whitson<small>Oasis 20 · 36 lds → 20 units · $4,600 tkt</small></div><div class='rp-bar'><i style='width:56%;background:#d4b15a'></i></div><div class='rp-pct'>56%</div><div class='rp-amt'>$92K</div></div>
+      <div class='rp'><div class='rp-nm'>Matthew Vedder<small>Fencing 18 · 24 lds → 18 units · $4,440 tkt</small></div><div class='rp-bar'><i style='width:75%;background:#6cc28b'></i></div><div class='rp-pct'>75%</div><div class='rp-amt'>$80K</div></div>
+      <div class='rp'><div class='rp-nm'>Haakon Endreson<small>Fencing 14 · 31 lds → 14 units · $5,000 tkt</small></div><div class='rp-bar'><i style='width:45%;background:#d4b15a'></i></div><div class='rp-pct'>45%</div><div class='rp-amt'>$70K</div></div>
+      <div class='rp'><div class='rp-nm'>Travis Janke *<small>inside sales · 18 lds → 8 units · $5,250 tkt</small></div><div class='rp-bar'><i style='width:44%;background:#d4b15a'></i></div><div class='rp-pct'>44%</div><div class='rp-amt'>$42K</div></div>
+      <div class='rp'><div class='rp-nm'>House / Gio<small>6 lds → 5 units · $3,000 tkt</small></div><div class="rp-bar"></div><div class='rp-pct'>—</div><div class='rp-amt'>$15K</div></div>
+      <div class="mx-note"><b>Travis at 46% is not an improvement claim</b> — his July 8% was a routing event (29 of 38 leads were Jared's unsigned files, dumped on departure; the live board prints raw and adjusted side by side). The one-time distortion washes out of the denominator; the simulation holds him at a normal inside-sales rate, assumption ~S6. Jared's ~26 units/mo redistribute to Ron, Vedder and Haakon at their own measured close rates.</div>
+    </div>
+
+    <!-- GOOGLE CONVERSION -->
+    <div class="card">
+      <div class="card-title">Who Closes Google Leads<span class="feed-tag sim">SIM · Feb cohort</span></div>
+      <div class="card-sub">Same source, same month, same price per lead — $231 Fencing, $381 Oasis, $672 Roofing at winter volumes. Only the hands change.</div>
+      <div class='rp'><div class='rp-nm'>Matthew Vedder<small>Fencing · 16 Google leads → 13 signed</small></div><div class='rp-bar'><i style='width:81%;background:#6cc28b'></i></div><div class='rp-pct'>81%</div><div class='rp-amt'>16 lds</div></div>
+      <div class='rp'><div class='rp-nm'>Tim Whitson<small>Oasis · 22 Google leads → 12 signed</small></div><div class='rp-bar'><i style='width:55%;background:#d4b15a'></i></div><div class='rp-pct'>55%</div><div class='rp-amt'>22 lds</div></div>
+      <div class='rp'><div class='rp-nm'>Mike LeRoy<small>Oasis · 20 Google leads → 11 signed</small></div><div class='rp-bar'><i style='width:55%;background:#d4b15a'></i></div><div class='rp-pct'>55%</div><div class='rp-amt'>20 lds</div></div>
+      <div class='rp'><div class='rp-nm'>Ron Seidel<small>Fencing · 13 Google leads → 7 signed</small></div><div class='rp-bar'><i style='width:54%;background:#d4b15a'></i></div><div class='rp-pct'>54%</div><div class='rp-amt'>13 lds</div></div>
+      <div class='rp'><div class='rp-nm'>Haakon Endreson<small>Fencing · 19 Google leads → 8 signed</small></div><div class='rp-bar'><i style='width:42%;background:#d4b15a'></i></div><div class='rp-pct'>42%</div><div class='rp-amt'>19 lds</div></div>
+      <div class='rp'><div class='rp-nm'>Eric Payne<small>Fencing / Roofing · 39 Google leads → 13 signed</small></div><div class='rp-bar'><i style='width:33%;background:#c96a5e'></i></div><div class='rp-pct'>33%</div><div class='rp-amt'>39 lds</div></div>
+      <div class='rp'><div class='rp-nm'>Travis Janke *<small>inside sales · 15 Google leads → 4 signed</small></div><div class='rp-bar'><i style='width:29%;background:#c96a5e'></i></div><div class='rp-pct'>29%</div><div class='rp-amt'>15 lds</div></div>
+      <div class='rp'><div class='rp-nm'>TBD — unassigned<small>all · 20 Google leads → 0 signed</small></div><div class='rp-bar'><i style='width:0%;background:#c96a5e'></i></div><div class='rp-pct'>0%</div><div class='rp-amt'>20 lds</div></div>
+      <div class="mx-note"><b style="color:var(--red)">The July gap is still open because the simulation changed nothing — and winter makes it dearer.</b> At $231–$381 a lead, the highest-volume desk closing at 33% while the best closes 81% costs more per wasted lead than it did in July. Rerouting ~15 winter leads/mo to the 75–81% desks is <b style="color:var(--green-soft)">~6 extra jobs a month on spend already paid</b>, and <b>20 leads/mo to TBD still sign zero</b>.</div>
+    </div>
+
+    <!-- STALLED PIPELINE -->
+    <div class="card">
+      <div class="card-title">The Stall<span class="feed-tag sim">SIM · as of Feb 28</span></div>
+      <div class="card-sub">Leads created, never signed, never closed out — compounding at the measured accumulation rate, because "continue exactly as we are" includes the leak.</div>
+      <div class="ue-blend">
+        <div class="ue-b"><div class="k">Open &gt; 30 days</div><div class="v" style="color:var(--red)">1,990</div><div class="u2">1,510 past 60 days</div></div>
+        <div class="ue-b"><div class="k">Media Sunk</div><div class="v" style="color:var(--red)">$310K</div><div class="u2">at your own CPL</div></div>
+        <div class="ue-b"><div class="k">Unassigned</div><div class="v" style="color:var(--red)">820</div><div class="u2">~75 added / mo</div></div>
+      </div>
+      <div class="st-row"><div class="st-nm"><b>Liberty Fencing</b></div><div class="st-n hot">1,320</div><div class="st-sub">1,005 &gt;60d · $198K</div></div>
+      <div class="st-row"><div class="st-nm"><b>Oasis Landscapes</b></div><div class="st-n hot">545</div><div class="st-sub">412 &gt;60d · $76K</div></div>
+      <div class="st-row"><div class="st-nm"><b>Pro-Tec Roofing</b></div><div class="st-n hot">125</div><div class="st-sub">93 &gt;60d · $36K</div></div>
+      <div style="height:12px"></div>
+      <div class="card-sub" style="margin-bottom:4px">By source · &gt;30 days open</div>
+      <div class="st-row"><div class="st-nm">Google</div><div class="st-n hot">1,170</div><div class="st-sub">895 &gt;60d</div></div>
+      <div class="st-row"><div class="st-nm">Angi</div><div class="st-n hot">235</div><div class="st-sub">190 &gt;60d</div></div>
+      <div class="st-row"><div class="st-nm">Saving Safari</div><div class="st-n">150</div><div class="st-sub">103 &gt;60d</div></div>
+      <div class="st-row"><div class="st-nm">Referral</div><div class="st-n">140</div><div class="st-sub">89 &gt;60d</div></div>
+      <div class="st-row"><div class="st-nm">Previous Customer</div><div class="st-n">130</div><div class="st-sub">93 &gt;60d</div></div>
+      <div class="st-row"><div class="st-nm">Website</div><div class="st-n">80</div><div class="st-sub">73 &gt;60d</div></div>
+      <div class="mx-note"><b>This is the simulation's loudest warning, on purpose.</b> Aug 16 actual: 1,241 open &gt;30d, ~$193K sunk. Grown at the measured pace — slowed only by winter's thinner lead flow — six months lands at ~1,990 and ~$310K. At even a 10% resurrection rate that pile is <b style="color:var(--green-soft)">~110 jobs from media already bought</b> — the cheapest revenue in this whole document, the obvious winter project for the sales floor, and the first thing a buyer's operating partner would point at.</div>
+    </div>
+
+    <!-- SOURCE x COMPANY -->
+    <div class="card">
+      <div class="card-title">Source × Company<span class="feed-tag sim">SIM · Feb signed $</span></div>
+      <div class="card-sub">Where every modeled dollar lands. Green = that source's home brand.</div>
+      <table class="co">
+        <tr><th>Source</th><th>Fencing</th><th>Oasis</th><th>Roofing</th></tr>
+        <tr><td>Google</td><td class="pk">198,510</td><td>121,825</td><td>48,340</td></tr>
+        <tr><td>Referral</td><td class="pk">79,495</td><td>39,105</td><td>21,980</td></tr>
+        <tr><td>Ref · Self-Gen</td><td>17,355</td><td class="z">—</td><td class="pk">82,950</td></tr>
+        <tr><td>Previous Customer</td><td class="pk">46,410</td><td>30,965</td><td>22,420</td></tr>
+        <tr><td>Saving Safari</td><td>23,205</td><td class="pk">48,565</td><td>11,420</td></tr>
+        <tr><td>Angi</td><td class="pk">16,094</td><td class="z">—</td><td class="z">—</td></tr>
+        <tr><td>Website</td><td class="pk">15,347</td><td class="z">—</td><td class="z">—</td></tr>
+        <tr><td>Facebook</td><td class="pk">3,445</td><td>2,112</td><td class="z">—</td></tr>
+        <tr><td>Slug A Bug</td><td class="z">—</td><td class="pk">2,145</td><td class="z">—</td></tr>
+      </table>
+      <div class="mx-note">Three different businesses, same shapes as July, winter-scaled: <b>Fencing is a Google shop</b> (50% of its revenue), <b>Oasis is diversified</b>, <b>Roofing is a referral book</b> — and in February, Roofing's untouched referral engine makes it the steadiest column on the table.</div>
+    </div>
+
+    <!-- WENT QUIET -->
+    <div class="card">
+      <div class="card-title">Went Quiet · Sources That Stopped<span class="feed-tag sim">SIM</span></div>
+      <div class="card-sub">The five that died stay dead in the model — nothing in this simulation resurrects a source, because run-rate can't.</div>
+      <div class="quiet-row">
+        <div class="q-pulse dead"></div>
+        <div class="q-body"><div class="q-name">Yard Sign</div><div class="q-meta">last signing Jun 2026 · 8 months quiet by Feb · Fencing</div></div>
+        <div class="q-lost">$37,726</div>
+      </div>
+      <div class="quiet-row">
+        <div class="q-pulse dead"></div>
+        <div class="q-body"><div class="q-name">Yelp</div><div class="q-meta">last signing May 2026 · Fencing</div></div>
+        <div class="q-lost">$19,018</div>
+      </div>
+      <div class="quiet-row">
+        <div class="q-pulse dead"></div>
+        <div class="q-body"><div class="q-name">Marlie AI</div><div class="q-meta">reclassified to company ops (175) — $99/mo no longer in this book, revenue still dead</div></div>
+        <div class="q-lost">$10,762</div>
+      </div>
+      <div class="quiet-row">
+        <div class="q-pulse dead"></div>
+        <div class="q-body"><div class="q-name">BNI</div><div class="q-meta">last signing Jun 2026</div></div>
+        <div class="q-lost">$3,371</div>
+      </div>
+      <div class="quiet-row">
+        <div class="q-pulse dead"></div>
+        <div class="q-body"><div class="q-name">Thumbtack</div><div class="q-meta">last signing Jun 2026</div></div>
+        <div class="q-lost">$3,265</div>
+      </div>
+      <div class="mx-note">$73,542 of proven signed revenue producing nothing for eight straight months. Yard Sign is still the loud one — it worked, then stopped; one question to the crew is still unpaid for.</div>
+    </div>
+
+    <!-- TREND MATRIX -->
+    <div class="card">
+      <div class="card-title">Signed Revenue by Source · Apr 2026 → Feb 2027<span class="feed-tag cc">Apr–Aug actual</span><span class="feed-tag sim">Sep–Feb SIM</span></div>
+      <div class="card-sub">The seam is visible on purpose: white columns are measured months, gold columns are the model. Aug is paced from the 1st–16th actuals.</div>
+      <div class="scrollx">
+      <table class="mx">
+        <tr><th>Source</th><th>Apr</th><th>May</th><th>Jun</th><th>Jul</th><th>Aug‡</th><th class="sim">Sep</th><th class="sim">Oct</th><th class="sim">Nov</th><th class="sim">Dec</th><th class="sim">Jan</th><th class="sim">Feb</th></tr>
+        <tr><td>Google</td><td>372K</td><td>444K</td><td>565K</td><td class="pk">589K</td><td>411K</td><td class="sim">545K</td><td class="sim">570K</td><td class="sim">371K</td><td class="sim">284K</td><td class="sim">262K</td><td class="sim">369K</td></tr>
+        <tr><td>Referral</td><td class="pk">383K</td><td>55K</td><td>87K</td><td>222K</td><td>136K</td><td class="sim">195K</td><td class="sim">170K</td><td class="sim">152K</td><td class="sim">98K</td><td class="sim">100K</td><td class="sim">141K</td></tr>
+        <tr><td>Previous Cust</td><td>149K</td><td>76K</td><td class="pk">182K</td><td>138K</td><td>114K</td><td class="sim">130K</td><td class="sim">145K</td><td class="sim">88K</td><td class="sim">76K</td><td class="sim">70K</td><td class="sim">100K</td></tr>
+        <tr><td>Ref · Self-Gen</td><td>151K</td><td>184K</td><td>62K</td><td>90K</td><td class="pk">203K</td><td class="sim">105K</td><td class="sim">95K</td><td class="sim">113K</td><td class="sim">89K</td><td class="sim">101K</td><td class="sim">100K</td></tr>
+        <tr><td>Saving Safari</td><td>118K</td><td>86K</td><td>99K</td><td class="pk">152K</td><td>29K</td><td class="sim">125K</td><td class="sim">140K</td><td class="sim">74K</td><td class="sim">59K</td><td class="sim">53K</td><td class="sim">83K</td></tr>
+        <tr><td>Angi</td><td class="pk">72K</td><td>12K</td><td>46K</td><td>27K</td><td>35K</td><td class="sim">30K</td><td class="sim">25K</td><td class="sim">26K</td><td class="sim">11K</td><td class="sim">15K</td><td class="sim">16K</td></tr>
+        <tr><td>Website</td><td>15K</td><td>31K</td><td>24K</td><td>14K</td><td class="pk">39K</td><td class="sim">18K</td><td class="sim">22K</td><td class="sim">11K</td><td class="sim">11K</td><td class="sim">8K</td><td class="sim">15K</td></tr>
+        <tr><td>Facebook</td><td class="z">—</td><td>2K</td><td>10K</td><td class="pk">12K</td><td>4K</td><td class="sim">8K</td><td class="sim">12K</td><td class="sim">4K</td><td class="sim">5K</td><td class="sim">6K</td><td class="sim">6K</td></tr>
+        <tr><td>Slug A Bug</td><td class="z">—</td><td class="z">—</td><td>1K</td><td class="pk">4K</td><td>4K</td><td class="sim">2K</td><td class="sim z">—</td><td class="sim">2K</td><td class="sim z">—</td><td class="sim">1K</td><td class="sim">2K</td></tr>
+        <tr class="dim"><td>Yard Sign</td><td>14K</td><td class="pk">22K</td><td>2K</td><td class="z">—</td><td class="z">—</td><td class="sim z">—</td><td class="sim z">—</td><td class="sim z">—</td><td class="sim z">—</td><td class="sim z">—</td><td class="sim z">—</td></tr>
+        <tr class="dim"><td>Yelp</td><td>7K</td><td class="pk">12K</td><td class="z">—</td><td class="z">—</td><td class="z">—</td><td class="sim z">—</td><td class="sim z">—</td><td class="sim z">—</td><td class="sim z">—</td><td class="sim z">—</td><td class="sim z">—</td></tr>
+      </table>
+      </div>
+      <div class="mx-note"><b>‡ Aug</b> = actuals through the 16th, paced to month-end (×31/16). <b>Gold columns are model output</b> — each source at its own Apr–Jul pace, then the winter curve (Fencing ×0.75/0.55/0.50/0.65, Oasis ×0.60/0.35/0.35/0.55 across Nov–Feb, Roofing flat) applied through each source's own brand mix — which is why Self-Gen barely dips (75% Roofing) while Safari halves (65% Oasis). Feb's column cross-foots with every card above: $831,688.</div>
+    </div>
+
+    <!-- ASSUMPTIONS -->
+    <div class="card">
+      <div class="card-title">Assumptions · Read Before Showing Anyone<span class="feed-tag sim">SIM</span></div>
+      <div class="flag"><div class="fnum">✓S1</div><div class="ftxt"><b>Everything after 16 Aug 2026 is a projection.</b> Baseline: the approved 16 Aug probe walk (243 jobs / $1,248,081 July, 100% source-tagged) and the card-keyed spend book. Apr–Jul are measured months.</div></div>
+      <div class="flag"><div class="fnum">~S2</div><div class="ftxt"><b>Spend book held flat at $68,672/mo</b> — July's corrected composition (migration 175: six fixed-opex SaaS vendors out of the book, Next Level stays ⚑3), all six months. No budget is added, moved, or cancelled. Brand books: Fencing $34,048 · Oasis $19,819 · Pro-Tec $14,805.</div></div>
+      <div class="flag"><div class="fnum">~S3</div><div class="ftxt"><b>Each source continues at its own Apr–Jul pace.</b> No growth curve is invented — Google's Apr→Jul climb is deliberately NOT extrapolated. Flat is the conservative read of "keep doing exactly this."</div></div>
+      <div class="flag hot"><div class="fnum">⚑S4</div><div class="ftxt"><b>Seasonality is applied Nov–Feb, and the curve is TYPED, not measured.</b> No winter exists in the warehouse (data starts Apr 2026), so these factors are an owner's assumption wearing an assumption's badge: <b>Fencing ×0.75 / 0.55 / 0.50 / 0.65</b>, <b>Oasis ×0.60 / 0.35 / 0.35 / 0.55</b> (Nov / Dec / Jan / Feb — the Feb uptick is spring booking, signings run ahead of installs), <b>Roofing flat</b> (a referral book, and outside the instruction's scope — its own winter risk is real and unmodeled). Leads and signings scale together; spend does not. The first measured winter replaces this flag with data.</div></div>
+      <div class="flag"><div class="fnum">~S5</div><div class="ftxt"><b>Close rates, tickets and cycle times held at July's measured values.</b> Speed-to-close stays a process constant (6 days) because it measured as one.</div></div>
+      <div class="flag"><div class="fnum">~S6</div><div class="ftxt"><b>Jared Heideman departed Aug 2026.</b> His ~26 units/mo redistribute to Ron, Vedder and Haakon at their own measured close rates. Travis's July 8% was a routing artifact (inherited unsigned files) and normalizes — not an improvement claim.</div></div>
+      <div class="flag hot"><div class="fnum">⚑S7</div><div class="ftxt"><b>The leaks are kept, on purpose.</b> Angi still returns $3.94/1, Eric still gets the most Google volume at the lowest conversion, 23 Google leads/mo still route to nobody, and the stall compounds to ~2,140 open leads. "Exactly as we are" includes the problems — that is what makes the fixes legible as upside.</div></div>
+      <div class="flag"><div class="fnum">✓S8</div><div class="ftxt"><b>Why the blank live boards fill in:</b> the lead clock is real from Aug 2026 (no more one-shot backfill dating), so CPL, unit economics, cost-per-unit trending and speed-to-close all become measurable by Feb — the withheld sections go live with data, not with estimates.</div></div>
+      <div class="flag hot"><div class="fnum">⚑S9</div><div class="ftxt"><b>Flat spend under a winter curve breaches the floor.</b> $68,672 ÷ December demand = $9.2 back per $1; January $8.9 — both under the $10 mark, printed red on the "Flat Spend vs The Curve" card. The model holds the book flat because that was the instruction; the fix (seasoning paid spend) is an operating decision this page prices but does not make.</div></div>
+    </div>
+
+  </div>
+
+  <div class="foot">
+    <b>THIS PAGE IS A SIMULATION</b>, built 17 Aug 2026 — a demonstration of the console six months forward, for planning and investor conversations. It is not the live board and never claims to be. <b>Baseline instruments:</b> the approved 16 Aug 2026 Contractors Cloud probe walk (2,500 projects, 243 July jobs / $1,248,081, 100% source-tagged) and the card-keyed spend book (Chase Ink 1552/1571 + Amex Gold, Google priced all-in with Liam / Gate Digital management — the ruling, migrations 170/171). <b>Method:</b> every source projected at its own Apr–Jul measured pace, then a TYPED winter curve on Fencing (×0.75/0.55/0.50/0.65) and Oasis (×0.60/0.35/0.35/0.55) across Nov–Feb, Roofing flat — no measured winter exists yet, and the curve is badged as the assumption it is (⚑S4). Spend held at July's CORRECTED composition all six months — <b>$68,672/mo, migration 175</b> (six fixed-opex SaaS vendors excluded as tooling-not-marketing; Next Level stays ⚑3; brand columns $34,048 / $19,819 / $14,805, per <b>docs/marketing-spend-ledger.md</b> where June and July 2026 are closed); close rates, tickets and cycle times held at measured values; no growth curve. Sep 2026 → Feb 2027 totals ≈ $5.25M signed on $412K spend, $12.74 back per $1, with December and January under the $10 floor at flat spend (⚑S9). <b>The live console</b> (Liberty Command) refuses to print any figure it cannot measure — the sections shown filled here are withheld there until their feeds mature, which is the difference between this page and that one, and the reason both exist.
+    <span class="motto">Trust the instrument, not the retelling — and this page is a forecast, which is a retelling. It says so.</span>
+  </div>
+
+<script>
+  Chart.defaults.font.family = "'JetBrains Mono', monospace";
+  Chart.defaults.color = '#8aa094';
+  new Chart(document.getElementById('srcBars'), {
+    type: 'bar',
+    data: {
+      labels: ['Google','Referral','Self-Gen','Prev Cust','Safari','Angi','Website','FB','Slug'],
+      datasets: [{ data: [368675,140580,100305,99795,83190,16094,15347,5557,2145],
+        backgroundColor: ['#6cc28b','#d4b15a','#d4b15a','#d4b15a','#d4b15a','#d96a5e','#6ba8c9','#6ba8c9','#6ba8c9'],
+        borderRadius: 4 }]
+    },
+    options: {
+      indexAxis: 'y',
+      plugins: { legend: { display: false },
+        tooltip: { callbacks: { label: c => ' $' + c.parsed.x.toLocaleString() + ' · simulated' } } },
+      scales: {
+        x: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { font: { size: 9 }, callback: v => '$' + (v/1000) + 'K' } },
+        y: { grid: { display: false }, ticks: { font: { size: 9 } } }
+      },
+      maintainAspectRatio: false
+    }
+  });
+</script>
+</div>
+
+<script>
+(function(){
+  var q=document.getElementById('q'), mic=document.getElementById('mic'),
+      clr=document.getElementById('clr'), st=document.getElementById('srch-status');
+
+  var SEL='.tr-row, .rp, .sp-row, .st-row, table.src tr, table.co tr, .quiet-row, .free-row, .thermo, table.ledger tr, table.cpu tr, table.mx tr';
+  function apply(term){
+    term=(term||'').trim().toLowerCase();
+    clr.classList.toggle('on', !!term);
+    var nodes=document.querySelectorAll(SEL), hits=0;
+    nodes.forEach(function(n){
+      if(n.querySelector('th')){ n.classList.remove('dimmed'); return; }
+      if(!term){ n.classList.remove('dimmed'); return; }
+      var m=n.textContent.toLowerCase().indexOf(term)>-1;
+      n.classList.toggle('dimmed', !m);
+      if(m) hits++;
+    });
+    st.textContent = term ? (hits ? hits+' matching rows' : 'no match for "'+term+'"') : '';
+    st.classList.remove('listening');
+  }
+  q.addEventListener('input', function(){
+    var handled = window.__answer ? window.__answer(q.value) : false;
+    apply(q.value);
+    if(handled){ st.textContent = 'answered from the simulation — rows below filtered'; }
+    else if(q.value.trim() && st.textContent.indexOf('no match')===0){
+      st.textContent = 'no direct answer — try naming a source, brand, or metric';
+    }
+  });
+  clr.addEventListener('click', function(){ q.value=''; if(window.__answer) window.__answer(''); apply(''); q.focus(); });
+
+  var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if(!SR){
+    mic.classList.add('off');
+    mic.title='Voice not supported here — use the mic key on your phone keyboard';
+    mic.addEventListener('click', function(){
+      st.textContent='voice needs Chrome or Safari — try your keyboard mic key';
+    });
+    return;
+  }
+  var rec=new SR(), live=false;
+  rec.lang='en-US'; rec.interimResults=true; rec.continuous=false; rec.maxAlternatives=1;
+
+  rec.onstart=function(){ live=true; mic.classList.add('live');
+    st.textContent='listening...'; st.classList.add('listening'); };
+  rec.onresult=function(e){
+    var t='';
+    for(var i=e.resultIndex;i<e.results.length;i++) t+=e.results[i][0].transcript;
+    t=t.replace(/[.,!?]+$/,'');
+    q.value=t;
+    if(e.results[e.results.length-1].isFinal){ apply(t); }
+    else { st.textContent='"'+t+'"'; }
+  };
+  rec.onerror=function(e){
+    mic.classList.remove('live'); live=false; st.classList.remove('listening');
+    st.textContent = e.error==='not-allowed' ? 'mic blocked - allow microphone in site settings'
+                   : e.error==='no-speech' ? 'did not catch that' : 'voice error: '+e.error;
+  };
+  rec.onend=function(){ mic.classList.remove('live'); live=false;
+    st.classList.remove('listening'); if(q.value) apply(q.value); };
+
+  mic.addEventListener('click', function(){
+    if(live){ rec.stop(); return; }
+    try{ rec.start(); }catch(err){ st.textContent='mic busy - tap again'; }
+  });
+})();
+</script>
+
+<script>
+var FACTS=[
+{"t":"src","co":"Fencing","src":"Google","leads":104,"units":44,"spend":24064,"rev":198510,"cpl":231,"cpu":547,"roas":8.2,"tkt":4512,"close":42},
+{"t":"src","co":"Fencing","src":"Referral","leads":22,"units":15,"spend":500,"rev":79495,"cpl":23,"cpu":33,"roas":159.0,"tkt":5300,"close":68},
+{"t":"src","co":"Fencing","src":"Previous Customer","leads":22,"units":12,"spend":0,"rev":46410,"cpl":0,"cpu":0,"roas":null,"tkt":3868,"close":55},
+{"t":"src","co":"Fencing","src":"Saving Safari","leads":5,"units":3,"spend":5000,"rev":23205,"cpl":1000,"cpu":1667,"roas":4.6,"tkt":7735,"close":60},
+{"t":"src","co":"Fencing","src":"Angi","leads":31,"units":3,"spend":4187,"rev":16094,"cpl":135,"cpu":1396,"roas":3.8,"tkt":5365,"close":10},
+{"t":"src","co":"Fencing","src":"Ref Self-Gen","leads":1,"units":2,"spend":0,"rev":17355,"cpl":0,"cpu":0,"roas":null,"tkt":8678,"close":200},
+{"t":"src","co":"Fencing","src":"Website","leads":5,"units":3,"spend":0,"rev":15347,"cpl":0,"cpu":0,"roas":null,"tkt":5116,"close":60},
+{"t":"src","co":"Fencing","src":"Facebook","leads":1,"units":1,"spend":0,"rev":3445,"cpl":0,"cpu":0,"roas":null,"tkt":3445,"close":100},
+{"t":"src","co":"Oasis","src":"Google","leads":46,"units":23,"spend":17522,"rev":121825,"cpl":381,"cpu":762,"roas":7.0,"tkt":5297,"close":50},
+{"t":"src","co":"Oasis","src":"Saving Safari","leads":19,"units":9,"spend":2000,"rev":48565,"cpl":105,"cpu":222,"roas":24.3,"tkt":5396,"close":47},
+{"t":"src","co":"Oasis","src":"Referral","leads":11,"units":7,"spend":0,"rev":39105,"cpl":0,"cpu":0,"roas":null,"tkt":5586,"close":64},
+{"t":"src","co":"Oasis","src":"Previous Customer","leads":10,"units":9,"spend":0,"rev":30965,"cpl":0,"cpu":0,"roas":null,"tkt":3441,"close":90},
+{"t":"src","co":"Oasis","src":"Facebook","leads":2,"units":1,"spend":0,"rev":2112,"cpl":0,"cpu":0,"roas":null,"tkt":2112,"close":50},
+{"t":"src","co":"Oasis","src":"Slug A Bug","leads":1,"units":1,"spend":0,"rev":2145,"cpl":0,"cpu":0,"roas":null,"tkt":2145,"close":100},
+{"t":"src","co":"Roofing","src":"Ref Self-Gen","leads":7,"units":7,"spend":0,"rev":82950,"cpl":0,"cpu":0,"roas":null,"tkt":11850,"close":100},
+{"t":"src","co":"Roofing","src":"Google","leads":14,"units":4,"spend":9408,"rev":48340,"cpl":672,"cpu":2352,"roas":5.1,"tkt":12085,"close":29},
+{"t":"src","co":"Roofing","src":"Referral","leads":9,"units":5,"spend":500,"rev":21980,"cpl":56,"cpu":100,"roas":44.0,"tkt":4396,"close":56},
+{"t":"src","co":"Roofing","src":"Previous Customer","leads":12,"units":6,"spend":0,"rev":22420,"cpl":0,"cpu":0,"roas":null,"tkt":3737,"close":50},
+{"t":"src","co":"Roofing","src":"Saving Safari","leads":1,"units":2,"spend":2500,"rev":11420,"cpl":2500,"cpu":1250,"roas":4.6,"tkt":5710,"close":200},
+{"t":"src","co":"Roofing","src":"Angi","leads":5,"units":0,"spend":2100,"rev":0,"cpl":420,"cpu":0,"roas":0.0,"tkt":0,"close":0},
+{"t":"co","co":"Fencing","leads":191,"units":83,"spend":34048,"rev":399861,"cpl":178,"cpu":410,"roas":11.7,"tkt":4818,"close":43},
+{"t":"co","co":"Oasis","leads":89,"units":50,"spend":19819,"rev":244717,"cpl":223,"cpu":396,"roas":12.3,"tkt":4894,"close":56},
+{"t":"co","co":"Roofing","leads":48,"units":24,"spend":14805,"rev":187110,"cpl":308,"cpu":617,"roas":12.6,"tkt":7796,"close":50},
+{"t":"all","co":"All","leads":328,"units":157,"spend":68672,"rev":831688,"cpl":209,"cpu":437,"roas":12.1,"tkt":5297,"close":48},
+{"t":"srcall","co":"All","src":"Google","leads":164,"units":71,"spend":50994,"rev":368675,"cpl":311,"cpu":718,"roas":7.2,"tkt":5193,"close":43},
+{"t":"srcall","co":"All","src":"Referral","leads":42,"units":27,"spend":1000,"rev":140580,"cpl":24,"cpu":37,"roas":140.6,"tkt":5207,"close":64},
+{"t":"srcall","co":"All","src":"Previous Customer","leads":44,"units":27,"spend":0,"rev":99795,"cpl":0,"cpu":0,"roas":null,"tkt":3696,"close":61},
+{"t":"srcall","co":"All","src":"Saving Safari","leads":25,"units":14,"spend":9500,"rev":83190,"cpl":380,"cpu":679,"roas":8.8,"tkt":5942,"close":56},
+{"t":"srcall","co":"All","src":"Angi","leads":36,"units":3,"spend":6287,"rev":16094,"cpl":175,"cpu":2096,"roas":2.6,"tkt":5365,"close":8},
+{"t":"srcall","co":"All","src":"Ref Self-Gen","leads":8,"units":9,"spend":0,"rev":100305,"cpl":0,"cpu":0,"roas":null,"tkt":11145,"close":113},
+{"t":"srcall","co":"All","src":"Website","leads":5,"units":3,"spend":0,"rev":15347,"cpl":0,"cpu":0,"roas":null,"tkt":5116,"close":60},
+{"t":"srcall","co":"All","src":"Facebook","leads":3,"units":2,"spend":0,"rev":5557,"cpl":0,"cpu":0,"roas":null,"tkt":2779,"close":67},
+{"t":"srcall","co":"All","src":"Slug A Bug","leads":1,"units":1,"spend":0,"rev":2145,"cpl":0,"cpu":0,"roas":null,"tkt":2145,"close":100},
+{"t":"speed","src":"Facebook","days":5},{"t":"speed","src":"Previous Customer","days":5},
+{"t":"speed","src":"Google","days":6},{"t":"speed","src":"Referral","days":6},
+{"t":"speed","src":"Saving Safari","days":6},{"t":"speed","src":"Angi","days":6},
+{"t":"speed","src":"Website","days":11},{"t":"speed","src":"Ref Self-Gen","days":12},
+{"t":"rep","rep":"Eric Payne","co":"Fencing/Roofing","leads":82,"units":40,"close":49,"rev":272000,"tkt":6800},
+{"t":"rep","rep":"Mike LeRoy","co":"Oasis","leads":45,"units":31,"close":69,"rev":165850,"tkt":5350},
+{"t":"rep","rep":"Ron Seidel","co":"Fencing","leads":36,"units":21,"close":58,"rev":94920,"tkt":4520},
+{"t":"rep","rep":"Tim Whitson","co":"Oasis","leads":36,"units":20,"close":56,"rev":92000,"tkt":4600},
+{"t":"rep","rep":"Matthew Vedder","co":"Fencing","leads":24,"units":18,"close":75,"rev":79920,"tkt":4440},
+{"t":"rep","rep":"Haakon Endreson","co":"Fencing","leads":31,"units":14,"close":45,"rev":70000,"tkt":5000},
+{"t":"rep","rep":"Travis Janke","co":"Fencing","leads":18,"units":8,"close":44,"rev":42000,"tkt":5250},
+{"t":"rep","rep":"House/Gio","co":"All","leads":6,"units":5,"close":0,"rev":15000,"tkt":3000},
+{"t":"gconv","rep":"Matthew Vedder","leads":16,"units":13,"close":81},
+{"t":"gconv","rep":"Tim Whitson","leads":22,"units":12,"close":55},
+{"t":"gconv","rep":"Mike LeRoy","leads":20,"units":11,"close":55},
+{"t":"gconv","rep":"Ron Seidel","leads":13,"units":7,"close":54},
+{"t":"gconv","rep":"Haakon Endreson","leads":19,"units":8,"close":42},
+{"t":"gconv","rep":"Eric Payne","leads":39,"units":13,"close":33},
+{"t":"gconv","rep":"Travis Janke","leads":15,"units":4,"close":29},
+{"t":"gconv","rep":"TBD","leads":20,"units":0,"close":0},
+{"t":"stall","co":"Fencing","d30":1320,"d60":1005,"burn":198000,"tbd":550},
+{"t":"stall","co":"Oasis","d30":545,"d60":412,"burn":76000,"tbd":215},
+{"t":"stall","co":"Roofing","d30":125,"d60":93,"burn":36000,"tbd":55},
+{"t":"stallsrc","src":"Google","d30":1170,"d60":895},{"t":"stallsrc","src":"Angi","d30":235,"d60":190},
+{"t":"stallsrc","src":"Saving Safari","d30":150,"d60":103},{"t":"stallsrc","src":"Referral","d30":140,"d60":89},
+{"t":"stallsrc","src":"Previous Customer","d30":130,"d60":93},{"t":"stallsrc","src":"Website","d30":80,"d60":73},
+{"t":"vendor","vendor":"Google Ads","amt":47994,"note":"F 23,064 / O 16,522 / R 8,408"},
+{"t":"vendor","vendor":"Saving Safari","amt":9500,"note":"F 5,000 / O 2,000 / R 2,500"},
+{"t":"vendor","vendor":"Angi + HomeAdvisor","amt":6287,"note":"F 4,187 / R 2,100"},
+{"t":"vendor","vendor":"Liam / Gate Digital","amt":3000,"note":"$1,000 x 3 brands"},
+{"t":"vendor","vendor":"Referral bonuses","amt":1000,"note":"estimate — F 500 / R 500"},
+{"t":"vendor","vendor":"Next Level","amt":891,"note":"⚑3 · website hosting, all 3 brands — the one ⚑3 row since 175"}];
+(function(){
+  var q=document.getElementById('q');
+  var box=document.createElement('div'); box.className='ansbox'; box.id='ansbox';
+  var srch=document.querySelector('.srch');
+  srch.parentNode.insertBefore(box, srch.nextSibling);
+  var chips=document.createElement('div'); chips.className='chips';
+  ['what does a Google lead cost','cost per unit Oasis','Angi ROI','who closes Google best',
+   'how many stalled leads','average ticket roofing','how fast do we close','Fencing revenue']
+   .forEach(function(t){ var c=document.createElement('div'); c.className='chip'; c.textContent=t;
+     c.onclick=function(){ q.value=t; q.dispatchEvent(new Event('input')); }; chips.appendChild(c); });
+  srch.parentNode.insertBefore(chips, box.nextSibling);
+
+  var SIMNOTE='SIMULATED · Feb 2027 model month, projected 17 Aug 2026 from Apr–Aug actuals.';
+  var CO={fencing:'Fencing',fence:'Fencing',lf:'Fencing',oasis:'Oasis',landscap:'Oasis',
+          roofing:'Roofing',roof:'Roofing','pro-tec':'Roofing',protec:'Roofing','pro tec':'Roofing'};
+  var SRC={google:'Google',adwords:'Google',ppc:'Google',angi:'Angi',homeadvisor:'Angi',
+    safari:'Saving Safari','saving safari':'Saving Safari','self-gen':'Ref Self-Gen','self gen':'Ref Self-Gen',
+    selfgen:'Ref Self-Gen','previous customer':'Previous Customer','previous':'Previous Customer',
+    'repeat':'Previous Customer',referral:'Referral',website:'Website','web site':'Website',
+    facebook:'Facebook',fb:'Facebook','slug':'Slug A Bug','yard sign':'Yard Sign'};
+  var money=function(n){return '$'+Math.round(n).toLocaleString();};
+
+  function find(t,f){ return FACTS.filter(function(x){ if(x.t!==t) return false;
+      for(var k in f){ if(f[k]!==null && x[k]!==f[k]) return false; } return true; }); }
+
+  function detect(s,map){ var best=null,bl=0;
+    for(var k in map){ if(s.indexOf(k)>-1 && k.length>bl){ best=map[k]; bl=k.length; } } return best; }
+
+  function metric(s){
+    if(/stall|sitting|untouched|open lead|never sign|dead lead|unwork/.test(s)) return 'stall';
+    if(/how (long|fast)|speed|days to|cycle time|take to close/.test(s)) return 'speed';
+    if(/who|which rep|best closer|worst/.test(s)) return 'who';
+    if(/close rate|conversion|convert|closing/.test(s)) return 'close';
+    if(/roas|roi|return|back per|per dollar/.test(s)) return 'roas';
+    if(/ticket|job size|avg sale|average sale|deal size/.test(s)) return 'tkt';
+    if(/per unit|per job|per sale|per signed|cost per acquisition|cpa|per deal/.test(s)) return 'cpu';
+    if(/per lead|lead cost|cpl|a lead cost|leads cost/.test(s)) return 'cpl';
+    if(/revenue|signed|sold|top line|sales/.test(s)) return 'rev';
+    if(/spend|budget|cost me|paying|pay for|how much.*(cost|spend)/.test(s)) return 'spend';
+    if(/how many lead|lead count|leads did/.test(s)) return 'leads';
+    if(/how many (job|unit|sale)|units/.test(s)) return 'units';
+    return null;
+  }
+
+  var LBL={cpl:'Cost per Lead',cpu:'Cost per Unit',roas:'Return per $1',tkt:'Average Ticket',
+    rev:'Revenue',spend:'Spend',leads:'Leads',units:'Units',close:'Close Rate'};
+  function fmt(m,v){ if(v===null||v===undefined) return '—';
+    if(m==='roas') return '$'+Number(v).toFixed(2); if(m==='close') return v+'%';
+    if(m==='leads'||m==='units') return v.toLocaleString(); return money(v); }
+
+  function render(h){ box.innerHTML=h; box.classList.add('on'); }
+
+  function answer(raw){
+    var s=raw.toLowerCase().trim();
+    if(!s){ box.classList.remove('on'); return false; }
+    var co=detect(s,CO), src=detect(s,SRC), m=metric(s);
+
+    if(m==='stall'){
+      var st=find('stall',{}), tot=0,t60=0,burn=0,tbd=0;
+      st.forEach(function(x){tot+=x.d30;t60+=x.d60;burn+=x.burn;tbd+=x.tbd;});
+      if(co){ var r=find('stall',{co:co})[0];
+        render('<div class="aq">Stalled pipeline · '+co+' · simulated</div><div class="av">'+r.d30.toLocaleString()+
+          '<small>leads open &gt; 30 days</small></div><div class="asub">'+r.d60+' of them are past 60 days. At '+
+          co+'\'s own cost per lead that is <b>'+money(r.burn)+'</b> of media already bought and untouched. '+
+          r.tbd+' have no rep assigned at all.</div><div class="anote">'+SIMNOTE+' Compounded from the Aug 16 measured stall at its measured growth rate.</div>');
+        return true; }
+      render('<div class="aq">Stalled pipeline · all brands · simulated</div><div class="av">'+tot.toLocaleString()+
+        '<small>leads open &gt; 30 days</small></div><div class="asub">'+t60+' past 60 days. Roughly <b>'+money(burn)+
+        '</b> of paid media sitting untouched. '+tbd+' have no rep assigned.</div><div class="abrk">'+
+        st.map(function(x){return '<div class="ab"><div class="k">'+x.co+'</div><div class="v r">'+x.d30+'</div></div>';}).join('')+
+        '</div><div class="anote">'+SIMNOTE+' Compounded from the Aug 16 measured stall (1,241 open).</div>');
+      return true;
+    }
+
+    if(m==='speed'){
+      if(src){ var r=find('speed',{src:src})[0];
+        if(r){ render('<div class="aq">Speed to close · '+src+' · simulated</div><div class="av">'+r.days+
+          '<small>days, median — lead to signed</small></div><div class="asub">Company median is 6 days across almost every source.</div>'+
+          '<div class="anote">'+SIMNOTE+' Held at the measured probe-walk value — a process constant.</div>'); return true; } }
+      render('<div class="aq">Speed to close · all sources · simulated</div><div class="av">6<small>days, median</small></div>'+
+        '<div class="asub">Source barely moves it — cycle time is a process constant, not a channel property. '+
+        'Two exceptions: Website 11 days, Self-Gen referrals 12 days (bigger tickets, longer decisions).</div>'+
+        '<div class="anote">'+SIMNOTE+' Held at measured values.</div>');
+      return true;
+    }
+
+    if(m==='who'||(m==='close'&&/google/.test(s)&&/who|rep/.test(s))){
+      var g=find('gconv',{}).slice().sort(function(a,b){return b.close-a.close;});
+      render('<div class="aq">Who closes Google leads · Feb cohort · simulated</div><div class="av">'+g[0].rep+
+        '<small>'+g[0].close+'% — '+g[0].leads+' leads, '+g[0].units+' signed</small></div>'+
+        '<div class="asub">Same source, same month, same price per lead. Only the hands change.</div><div class="abrk">'+
+        g.slice(0,3).map(function(x){return '<div class="ab"><div class="k">'+x.rep.split(' ')[0]+'</div><div class="v g">'+x.close+'%</div></div>';}).join('')+
+        '</div><div class="anote">Bottom: Eric Payne 33% on 39 leads (most volume, lowest conversion) · 20 leads to TBD signed zero. '+SIMNOTE+'</div>');
+      return true;
+    }
+
+    if(m==='spend'&&!src&&!co){
+      var v=find('vendor',{}), tot=0; v.forEach(function(x){tot+=x.amt;});
+      render('<div class="aq">Marketing spend · monthly · held flat</div><div class="av">'+money(tot)+'<small>per month, all brands</small></div>'+
+        '<div class="abrk">'+find('co',{}).map(function(x){return '<div class="ab"><div class="k">'+x.co+'</div><div class="v">'+money(x.spend)+'</div></div>';}).join('')+
+        '</div><div class="anote">July\'s corrected book (migration 175 — tooling is not marketing) carried through all six months, the simulation\'s ruling assumption. Top lines: Google Ads '+money(47994)+' · Saving Safari '+money(9500)+' · Angi '+money(6287)+'.</div>');
+      return true;
+    }
+
+    if(!m) return false;
+
+    if(src){
+      var recs = co ? find('src',{co:co,src:src}) : find('srcall',{src:src});
+      if(recs.length && recs[0][m]!==undefined){
+        var r=recs[0], scope = co ? src+' · '+co : src+' · all brands';
+        var h='<div class="aq">'+(LBL[m]||m)+' · '+scope+' · simulated</div><div class="av">'+fmt(m,r[m])+
+          (m==='cpl'?'<small>per lead</small>':m==='cpu'?'<small>per signed job</small>':m==='roas'?'<small>back per $1 spent</small>':'')+'</div>';
+        h+='<div class="asub">'+r.leads+' leads → '+r.units+' units'+(r.close?' ('+r.close+'% close)':'')+
+           ', '+money(r.spend)+' spend, '+money(r.rev)+' signed.</div>';
+        if(!co && (m==='cpl'||m==='cpu'||m==='roas'||m==='tkt')){
+          var per=['Fencing','Oasis','Roofing'].map(function(c){ var x=find('src',{co:c,src:src})[0];
+            if(!x) return '<div class="ab"><div class="k">'+c+'</div><div class="v" style="opacity:.3">—</div></div>';
+            return '<div class="ab"><div class="k">'+c+'</div><div class="v">'+fmt(m,x[m])+'</div></div>';}).join('');
+          h+='<div class="abrk">'+per+'</div><div class="anote">Blended hides the spread — a roof and a fence don\'t cost the same to sell. '+SIMNOTE+'</div>';
+        } else { h+='<div class="anote">'+SIMNOTE+'</div>'; }
+        render(h); return true;
+      }
+    }
+    if(co){
+      var r=find('co',{co:co})[0];
+      if(r&&r[m]!==undefined){
+        render('<div class="aq">'+(LBL[m]||m)+' · '+co+' · simulated</div><div class="av">'+fmt(m,r[m])+'</div>'+
+          '<div class="asub">'+r.leads+' leads → '+r.units+' units ('+r.close+'% close), '+money(r.spend)+
+          ' spend, '+money(r.rev)+' signed, '+money(r.tkt)+' average ticket.</div><div class="anote">'+SIMNOTE+'</div>');
+        return true;
+      }
+    }
+    var a=find('all',{})[0];
+    if(a[m]!==undefined){
+      var per=['Fencing','Oasis','Roofing'].map(function(c){ var x=find('co',{co:c})[0];
+        return '<div class="ab"><div class="k">'+c+'</div><div class="v">'+fmt(m,x[m])+'</div></div>';}).join('');
+      render('<div class="aq">'+(LBL[m]||m)+' · blended, all brands · simulated</div><div class="av">'+fmt(m,a[m])+'</div>'+
+        '<div class="abrk">'+per+'</div><div class="anote">Blended is the top line — the three below are how it gets there. '+SIMNOTE+'</div>');
+      return true;
+    }
+    return false;
+  }
+  window.__answer=answer;
+})();
+</script>
+
+</body>
+</html>
