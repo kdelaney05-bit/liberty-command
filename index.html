@@ -328,6 +328,52 @@
     line-height: 1.1; overflow-wrap: anywhere; }
   .vit-foot { font-size: 10.5px; line-height: 1.6; color: var(--text-dim); margin-top: 10px;
     padding-top: 9px; border-top: 1px solid var(--line); }
+  /* ── THE HERO ROW ─────────────────────────────────────────────────────────
+     The 560px cap above is right and stays: a trace that changes slope with
+     the viewport is not an instrument. But capping both the master and the 2×2
+     and then STACKING them left-aligned inside a band that runs the full width
+     of the page left the whole right half of the card empty — on a 1480px desk
+     the instrument occupied under 40% of its own card and read as something
+     that had failed to load. Kevin, on the desktop view: "it's literally in
+     less than half of the entire thing."
+
+     The fix is layout, not scale. Nothing is stretched — the master keeps its
+     560px trace and the 2×2 keeps its 560px cap, both exactly the shapes a
+     phone draws. They simply sit BESIDE each other once there is room for two,
+     which is the one arrangement that fills the band without touching a single
+     drawn width. 560 + 26 + 560 = 1146 against the 1144px of card interior at
+     the 1180px shell: the pair fills the row.
+
+     The micro panels ride in the right column under the 2×2 they belong to, so
+     opening one still never reflows the master beside it. Below the breakpoint
+     the row is a plain block and the order is byte-for-byte what it was:
+     master, grid, panels, foot. Mobile is untouched.
+
+     THE BREAKPOINT IS 1040px, NOT 900px, AND THAT NUMBER IS THE TRACE CAP DOING
+     ITS JOB. Splitting at 900 would have handed each column ~390px of a 808px
+     card interior — which shrinks the master's trace to 390 and puts a slope on
+     this page that no other trace on the page has, the exact failure the cap
+     exists to prevent, only now WITHIN one screen instead of across two. So the
+     master's track is a hard 560px and the row only forms once there is room
+     for it plus a 2×2 wide enough to still read as tiles. The 2×2's own track
+     takes what is left, up to the same 560: it holds no trace, only four fixed
+     64px sparks, so it is the one of the pair that can flex. */
+  @media (min-width: 1040px) {
+    .vit-hero { display: grid; align-items: start; gap: 26px; margin-top: 10px;
+      grid-template-columns: var(--trace-max) minmax(320px, var(--trace-max));
+      justify-content: start; }
+    /* The tracks now carry the cap, so the caps on the blocks inside them only
+       restate it; they stay declared for the stacked case below 1040px.
+       `margin-right: auto` has to be unset with them: on a block it resolves to
+       zero and merely stops the box centring, but on a GRID ITEM an auto margin
+       eats the free space in its track — which shrink-wrapped the master to the
+       305px its header text happened to measure and left a hole beside it.
+       `margin-top` goes for the same reason: grid items do not margin-collapse,
+       so each block's 10px stacked lead-in has to move up onto the row itself
+       or the 2×2 hangs 10px below the master it is meant to be level with. */
+    .vit-hero .vit-master, .vit-hero .vit-grid {
+      max-width: none; margin-right: 0; margin-top: 0; }
+  }
   @media (max-width: 700px) {
     .vit-master { padding: 11px 10px 9px; }
     .vit-m-num { font-size: 42px; }
@@ -467,16 +513,26 @@
      the rows — a 23px sentence next to a 9.5px tag reads as a mistake. */
   .attn.lead { padding: 18px; }
   .attn.lead .ia { margin-top: 6px; border-left-width: 3px; }
-  .attn.lead .ia-row { padding: 10px 14px; font-size: 18px; line-height: 1.4; }
-  .attn.lead .ia-row .tag { font-size: 11px; }
-  .attn.lead .ia .acc-chev { font-size: 17px; }
-  .attn.lead .ia-body { padding: 3px 14px 12px; font-size: 15px; line-height: 1.6; }
-  .attn.lead .nofires { font-size: 18px; }
-  @media (min-width: 900px) { .attn.lead .ia-row { font-size: 23px; }
-    .attn.lead .ia-row .tag { font-size: 12px; }
-    .attn.lead .ia .acc-chev { font-size: 20px; }
-    .attn.lead .ia-body { font-size: 16px; }
-    .attn.lead .nofires { font-size: 22px; } }
+  .attn.lead .ia-row { padding: 9px 14px; font-size: 15px; line-height: 1.4; }
+  .attn.lead .ia-row .tag { font-size: 9.5px; }
+  .attn.lead .ia .acc-chev { font-size: 15px; }
+  .attn.lead .ia-body { padding: 3px 14px 12px; font-size: 13px; line-height: 1.6; }
+  .attn.lead .nofires { font-size: 15px; }
+  /* ...but the correction overshot. At 23px the rows were the largest type on
+     the page by a clear margin — a nine-row board set larger than the numbers,
+     the headings and the card titles around it reads as shouting rather than
+     as a headline, and Kevin called it: "larger than anything else, it really
+     sticks out." A headline does not have to be the biggest thing to be read
+     first; it is first on the page, it has the colour bar, and it is the only
+     block with nine short lines in a row. So the scale steps back to 17px on a
+     desktop — comfortably above the 11.5px flag scale it came from, clearly
+     ahead of body prose, and below the 22px money tiles, which puts the board
+     back in the same register as everything it sits above instead of above it. */
+  @media (min-width: 900px) { .attn.lead .ia-row { font-size: 17px; }
+    .attn.lead .ia-row .tag { font-size: 10px; }
+    .attn.lead .ia .acc-chev { font-size: 16px; }
+    .attn.lead .ia-body { font-size: 14px; }
+    .attn.lead .nofires { font-size: 17px; } }
   /* ── THE EFFORT ROOM ────────────────────────────────────────────────────────
      The room holds the working instruments rather than the reading ones, and
      it still folds — but it no longer HIDES. A bare drawer header was a name
@@ -5914,7 +5970,11 @@ function pt2Net(){
     ptCap(`back per $1 · ${esc(mkMonthLabel(MKTOFF))}<br/>${money(rev)} on ${money(spend)}`);
 }
 function pt2Earned(){
-  if (!MKT || !MKT.roi) return ptEmptyBox('Reading…');
+  /* The same two states its two shelfmates keep, in the same order. Testing
+     only `!MKT.roi` collapsed them: a dead ROI feed left this tile reading
+     "Reading…" forever, which says the answer is coming when it is not. */
+  if (!MKT || (!MKT.roi && !MKT.roiErr)) return ptEmptyBox('Reading…');
+  if (MKT.roiErr) return ptEmptyBox('The ROI feed did not answer');
   const all = mkt2Rows(mkISO(mkMonthStart(MKTOFF)));
   const tot = all.reduce((n, r) => n + r.dollars, 0);
   if (!tot) return ptEmptyBox(`Nothing signed in ${mkMonthLabel(MKTOFF)}`);
@@ -6950,6 +7010,7 @@ function cardVitals(){
     <div class="card-title">Vitals · the business<span class="feed-tag cc">CC live</span><span class="feed-tag qb">QB</span></div>
     <div class="card-sub">One heartbeat and four organs. Green healthy, gold watch, red problem — tap any of them for the numbers behind the colour.</div>
 
+    <div class="vit-hero">
     <div class="vit-master"${M.live ? ` style="border-color:rgba(${mrgb},0.24);box-shadow:inset 0 0 26px rgba(${mrgb},0.07)"` : ''}>
       <button class="vit-m-btn" id="vitm-master" data-vit onclick="vitOpen('master')"
         aria-expanded="${VITOPEN === 'master' ? 'true' : 'false'}"
@@ -6976,8 +7037,11 @@ function cardVitals(){
         ] : [] })}
     </div>
 
-    <div class="vit-grid">${list.map(vitMicroHtml).join('')}</div>
-    ${list.map(vitPanelHtml).join('')}
+    <div class="vit-side">
+      <div class="vit-grid">${list.map(vitMicroHtml).join('')}</div>
+      ${list.map(vitPanelHtml).join('')}
+    </div>
+    </div><!-- /vit-hero -->
 
     <div class="vit-foot">
       ${list.filter(v => v.live).length} of ${list.length} vitals have a feed${
