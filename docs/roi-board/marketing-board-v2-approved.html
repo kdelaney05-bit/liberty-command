@@ -1,0 +1,1017 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+<title>Liberty Command — Marketing Board · ROI Edition</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,400;9..144,500;9..144,600&family=JetBrains+Mono:wght@400;500;600&family=Inter+Tight:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+  :root {
+    --bg-deep: #0d1f17; --bg-card: #15291f; --bg-card-hi: #1c3528;
+    --line: rgba(255,255,255,0.06); --text: #e8efe9; --text-dim: #8aa094;
+    --accent: #f0834a; --accent-soft: #f4a37a;
+    --green: #6cc28b; --green-soft: #8fd5a8; --red: #d96a5e; --gold: #d4b15a; --blue: #6ba8c9;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { width: 100%; overflow-x: hidden; }
+  body { font-family: 'Inter Tight', sans-serif;
+    background: radial-gradient(ellipse at top, #1a3326 0%, #0d1f17 60%);
+    color: var(--text); min-height: 100vh; padding: 16px; -webkit-font-smoothing: antialiased; }
+  .shell { width: 100%; max-width: 480px; margin: 0 auto; }
+  .hdr { margin-bottom: 20px; padding-bottom: 16px; border-bottom: 1px solid var(--line); }
+  .eyebrow { font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 0.18em;
+    text-transform: uppercase; color: var(--accent); margin-bottom: 6px; }
+  .hdr h1 { font-family: 'Fraunces', serif; font-weight: 400; font-size: 28px;
+    letter-spacing: -0.02em; line-height: 1.05; margin-bottom: 18px; }
+  .hdr h1 em { font-style: italic; color: var(--accent-soft); font-weight: 300; }
+  .nw-block { display: flex; justify-content: space-between; align-items: flex-end; }
+  .nw-label { font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 0.18em;
+    text-transform: uppercase; color: var(--text-dim); margin-bottom: 4px; }
+  .nw { font-family: 'Fraunces', serif; font-size: 34px; font-weight: 500; line-height: 1; }
+  .nw-sub { font-family: 'JetBrains Mono', monospace; font-size: 9px; color: var(--text-dim); margin-top: 5px; }
+  .nw-delta { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--green); text-align: right; line-height: 1.5; }
+  .nw-delta b { color: var(--green-soft); font-weight: 600; font-size: 22px; font-family: 'Fraunces', serif; }
+  .stack { display: flex; flex-direction: column; gap: 12px; }
+  .card { background: var(--bg-card); border: 1px solid var(--line); border-radius: 14px; padding: 16px; }
+  .card-title { font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 0.18em;
+    text-transform: uppercase; color: var(--text-dim); margin-bottom: 4px; }
+  .card-sub { font-size: 12px; color: var(--text-dim); margin-bottom: 12px; line-height: 1.45; }
+  .feed-tag { display: inline-block; margin-left: 6px; font-family: 'JetBrains Mono', monospace;
+    font-size: 8px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--green);
+    border: 1px solid rgba(108,194,139,0.3); border-radius: 100px; padding: 1px 6px; vertical-align: middle; }
+  .feed-tag.cc { color: var(--blue); border-color: rgba(107,168,201,0.3); }
+  .feed-tag.chase { color: var(--blue); border-color: rgba(107,168,201,0.3); }
+  .feed-tag.manual { color: var(--gold); border-color: rgba(212,177,90,0.3); }
+
+  /* ROI thermometers */
+  .thermo { margin-bottom: 15px; }
+  .thermo:last-child { margin-bottom: 2px; }
+  .th-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 6px; }
+  .th-name { font-family: 'Fraunces', serif; font-size: 15px; font-weight: 500; }
+  .th-name small { font-family: 'JetBrains Mono', monospace; font-size: 9px; color: var(--text-dim); margin-left: 6px; }
+  .th-roas { font-family: 'Fraunces', serif; font-size: 19px; font-weight: 600; color: var(--green-soft); }
+  .th-roas.hot { color: var(--gold); }
+  .th-roas.cold { color: var(--red); }
+  .th-bar { position: relative; height: 13px; background: #0f2419; border-radius: 100px; border: 1px solid var(--line); }
+  .th-fill { position: absolute; left: 0; top: 0; height: 100%; border-radius: 100px;
+    background: linear-gradient(90deg, #3f8a5e, #8fd5a8); }
+  .th-fill.cold { background: linear-gradient(90deg, #8a4a42, #d96a5e); }
+  .th-fill.hot { background: linear-gradient(90deg, #9d8340, #e8ca6e); }
+  .th-floor { position: absolute; top: -4px; width: 2px; height: 21px; background: var(--gold); }
+  .th-floor::after { content: '10×'; position: absolute; top: -13px; left: 50%; transform: translateX(-50%);
+    font-family: 'JetBrains Mono', monospace; font-size: 8px; color: var(--gold); }
+  .th-cap { display: flex; justify-content: space-between; font-family: 'JetBrains Mono', monospace;
+    font-size: 9px; color: var(--text-dim); margin-top: 5px; }
+  .th-cap b { color: var(--text); font-weight: 500; }
+
+  /* free sources */
+  .free-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 0;
+    border-bottom: 1px solid var(--line); font-family: 'JetBrains Mono', monospace; font-size: 11px; }
+  .free-row:last-child { border-bottom: none; }
+  .free-row .nm { color: var(--text); }
+  .free-row .nm small { color: var(--text-dim); font-size: 9px; margin-left: 6px; }
+  .free-row .amt { color: var(--green-soft); font-weight: 600; }
+  .free-badge { font-size: 8px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--gold);
+    border: 1px solid rgba(212,177,90,0.3); border-radius: 100px; padding: 1px 6px; margin-left: 7px; }
+
+  /* Brand tiles */
+  .brand-tile { background: var(--bg-card-hi); border: 1px solid var(--line); border-radius: 12px; padding: 13px 14px; margin-bottom: 9px; }
+  .brand-tile:last-child { margin-bottom: 0; }
+  .bt-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 9px; }
+  .bt-name { font-family: 'Fraunces', serif; font-size: 16px; font-weight: 500; }
+  .bt-roas { font-family: 'Fraunces', serif; font-size: 20px; font-weight: 600; color: var(--green-soft); }
+  .bt-roas small { font-family: 'JetBrains Mono', monospace; font-size: 8px; color: var(--text-dim); font-weight: 400; }
+  .bt-rows { font-family: 'JetBrains Mono', monospace; font-size: 10px; }
+  .bt-row { display: flex; justify-content: space-between; padding: 3px 0; color: var(--text-dim); }
+  .bt-row b { color: var(--text); font-weight: 500; }
+  .bt-row b.g { color: var(--green-soft); }
+
+  table.ledger { width: 100%; border-collapse: collapse; font-family: 'JetBrains Mono', monospace; font-size: 10px; }
+  table.ledger th { text-align: right; font-weight: 500; color: var(--text-dim); font-size: 8px;
+    letter-spacing: 0.1em; text-transform: uppercase; padding: 5px 4px; border-bottom: 1px solid var(--line); }
+  table.ledger th:first-child { text-align: left; }
+  table.ledger td { padding: 6px 4px; text-align: right; color: var(--text-dim); border-bottom: 1px solid var(--line); }
+  table.ledger td:first-child { text-align: left; color: var(--text); }
+  table.ledger tr.hot td { color: var(--text); }
+  table.ledger tr.hot td:first-child { color: var(--green-soft); font-weight: 600; }
+  table.ledger tr.total td { border-bottom: none; border-top: 1px solid rgba(255,255,255,0.14);
+    padding-top: 8px; color: var(--green-soft); font-weight: 600; }
+  table.ledger td .nu { color: rgba(138,160,148,0.35); }
+
+  .chart-box { position: relative; width: 100%; height: 190px; margin-top: 6px; }
+  .legend { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 10px;
+    font-family: 'JetBrains Mono', monospace; font-size: 9px; color: var(--text-dim); }
+  .legend .li { display: flex; align-items: center; gap: 5px; }
+  .legend .sw { width: 9px; height: 9px; border-radius: 3px; }
+
+  .flag { display: flex; gap: 10px; padding: 9px 0; border-bottom: 1px solid var(--line); font-size: 12px; line-height: 1.5; }
+  .flag:last-child { border-bottom: none; }
+  .flag .fnum { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--accent); font-weight: 600; flex-shrink: 0; padding-top: 1px; }
+  .flag .ftxt { color: var(--text-dim); }
+  .flag .ftxt b { color: var(--text); font-weight: 600; }
+  .flag.hot .fnum, .flag.hot .ftxt b { color: var(--gold); }
+
+
+  /* Quiet watch */
+  .quiet-row { display:flex; align-items:center; gap:10px; padding:10px 0; border-bottom:1px solid var(--line); }
+  .quiet-row:last-child { border-bottom:none; }
+  .q-pulse { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
+  .q-pulse.dead { background:var(--red); box-shadow:0 0 0 3px rgba(217,106,94,0.15); }
+  .q-pulse.fading { background:var(--gold); box-shadow:0 0 0 3px rgba(212,177,90,0.15); }
+  .q-body { flex:1; }
+  .q-name { font-family:'Fraunces',serif; font-size:14px; font-weight:500; }
+  .q-meta { font-family:'JetBrains Mono',monospace; font-size:9px; color:var(--text-dim); margin-top:3px; letter-spacing:0.02em; }
+  .q-spark { display:flex; align-items:flex-end; gap:2px; height:22px; width:74px; flex-shrink:0; }
+  .q-spark i { flex:1; background:var(--green-soft); border-radius:1px; opacity:0.85; min-height:1px; }
+  .q-spark i.z { background:rgba(217,106,94,0.45); height:2px !important; }
+  .q-lost { font-family:'Fraunces',serif; font-size:15px; font-weight:600; color:var(--gold); width:62px; text-align:right; flex-shrink:0; }
+
+  /* Trend matrix */
+  table.mx { width:100%; border-collapse:collapse; font-family:'JetBrains Mono',monospace; font-size:9px; }
+  table.mx th { text-align:right; font-weight:500; color:var(--text-dim); font-size:8px; letter-spacing:0.08em;
+    text-transform:uppercase; padding:5px 3px; border-bottom:1px solid var(--line); }
+  table.mx th:first-child { text-align:left; }
+  table.mx td { padding:5px 3px; text-align:right; color:var(--text-dim); border-bottom:1px solid var(--line); }
+  table.mx td:first-child { text-align:left; color:var(--text); font-size:10px; }
+  table.mx td.z { color:rgba(217,106,94,0.75); }
+  table.mx td.pk { color:var(--green-soft); font-weight:600; }
+  table.mx tr.dim td:first-child { color:var(--text-dim); }
+  .mx-note { font-family:'JetBrains Mono',monospace; font-size:8px; color:var(--text-dim); margin-top:8px; letter-spacing:0.04em; }
+
+
+  /* Cost per lead / unit */
+  table.cpu { width:100%; border-collapse:collapse; font-family:'JetBrains Mono',monospace; font-size:10px; }
+  table.cpu th { text-align:right; font-weight:500; color:var(--text-dim); font-size:8px; letter-spacing:0.08em;
+    text-transform:uppercase; padding:6px 3px; border-bottom:1px solid var(--line); }
+  table.cpu th:first-child { text-align:left; }
+  table.cpu td { padding:7px 3px; text-align:right; border-bottom:1px solid var(--line); color:var(--text-dim); }
+  table.cpu td:first-child { text-align:left; color:var(--text); font-family:'Inter Tight',sans-serif; font-size:12px; }
+  table.cpu td.u { color:var(--text); font-weight:600; }
+  table.cpu td.good { color:var(--green-soft); font-weight:600; }
+  table.cpu td.bad { color:var(--red); font-weight:600; }
+  table.cpu td.free { color:var(--green-soft); font-style:italic; }
+  table.cpu tr.tot td { border-top:1px solid rgba(255,255,255,0.18); border-bottom:none;
+    padding-top:9px; color:var(--text); font-weight:600; }
+  .cpu-split { display:flex; gap:8px; margin-top:12px; }
+  .cs { flex:1; background:var(--bg-card-hi); border:1px solid var(--line); border-radius:10px; padding:11px; }
+  .cs.earn { border-color:rgba(108,194,139,0.4); }
+  .cs .k { font-family:'JetBrains Mono',monospace; font-size:8px; letter-spacing:0.1em;
+    text-transform:uppercase; color:var(--text-dim); }
+  .cs .v { font-family:'Fraunces',serif; font-size:19px; font-weight:500; margin-top:5px; }
+  .cs.earn .v { color:var(--green-soft); }
+  .cs .u2 { font-family:'JetBrains Mono',monospace; font-size:8px; color:var(--text-dim); margin-top:4px; line-height:1.4; }
+
+
+  /* Trend rows */
+  .tr-row { padding:11px 0; border-bottom:1px solid var(--line); }
+  .tr-row:last-child { border-bottom:none; }
+  .tr-top { display:flex; justify-content:space-between; align-items:baseline; margin-bottom:7px; }
+  .tr-nm { font-family:'Fraunces',serif; font-size:15px; font-weight:500; }
+  .tr-nm small { font-family:'JetBrains Mono',monospace; font-size:9px; color:var(--text-dim); margin-left:7px; }
+  .tr-dir { font-family:'JetBrains Mono',monospace; font-size:10px; font-weight:600; }
+  .tr-dir.good { color:var(--green-soft); } .tr-dir.bad { color:var(--red); } .tr-dir.flat { color:var(--text-dim); }
+  .tr-months { display:flex; gap:6px; }
+  .tr-m { flex:1; background:var(--bg-card-hi); border-radius:7px; padding:7px 5px; text-align:center; }
+  .tr-m .mo { font-family:'JetBrains Mono',monospace; font-size:7px; letter-spacing:0.1em; text-transform:uppercase; color:var(--text-dim); }
+  .tr-m .cpu { font-family:'Fraunces',serif; font-size:15px; font-weight:500; margin-top:3px; }
+  .tr-m .cr { font-family:'JetBrains Mono',monospace; font-size:8px; color:var(--text-dim); margin-top:3px; }
+  .tr-m.best .cpu { color:var(--green-soft); }
+  .tr-m.worst .cpu { color:var(--red); }
+
+  /* Rep board */
+  .rp { display:flex; align-items:center; gap:9px; padding:9px 0; border-bottom:1px solid var(--line); }
+  .rp:last-child { border-bottom:none; }
+  .rp-nm { flex:1; font-size:12.5px; font-weight:500; }
+  .rp-nm small { display:block; font-family:'JetBrains Mono',monospace; font-size:8px; color:var(--text-dim); margin-top:2px; }
+  .rp-bar { width:78px; height:6px; background:rgba(255,255,255,0.06); border-radius:100px; overflow:hidden; flex-shrink:0; }
+  .rp-bar i { display:block; height:100%; border-radius:100px; }
+  .rp-pct { font-family:'JetBrains Mono',monospace; font-size:11px; font-weight:600; width:38px; text-align:right; flex-shrink:0; }
+  .rp-amt { font-family:'JetBrains Mono',monospace; font-size:10px; color:var(--text-dim); width:56px; text-align:right; flex-shrink:0; }
+
+  /* Speed */
+  .sp-row { display:flex; align-items:center; gap:10px; padding:7px 0; }
+  .sp-nm { width:104px; font-size:11.5px; flex-shrink:0; }
+  .sp-track { flex:1; height:16px; background:rgba(255,255,255,0.04); border-radius:4px; position:relative; }
+  .sp-fill { height:100%; border-radius:4px; background:linear-gradient(90deg,#6cc28b,#8fd5a8); }
+  .sp-fill.slow { background:linear-gradient(90deg,#d4b15a,#e6c97a); }
+  .sp-d { font-family:'JetBrains Mono',monospace; font-size:10px; width:60px; text-align:right; color:var(--text-dim); flex-shrink:0; }
+
+  /* Stall */
+  .st-row { display:flex; align-items:center; gap:9px; padding:8px 0; border-bottom:1px solid var(--line); }
+  .st-row:last-child { border-bottom:none; }
+  .st-nm { flex:1; font-size:12px; }
+  .st-n { font-family:'JetBrains Mono',monospace; font-size:12px; font-weight:600; width:44px; text-align:right; }
+  .st-n.hot { color:var(--red); }
+  .st-sub { font-family:'JetBrains Mono',monospace; font-size:9px; color:var(--text-dim); width:70px; text-align:right; }
+
+  /* Matrix co */
+  table.co { width:100%; border-collapse:collapse; font-family:'JetBrains Mono',monospace; font-size:9.5px; }
+  table.co th { text-align:right; font-size:8px; letter-spacing:0.08em; text-transform:uppercase; color:var(--text-dim);
+    font-weight:500; padding:6px 3px; border-bottom:1px solid var(--line); }
+  table.co th:first-child { text-align:left; }
+  table.co td { padding:6px 3px; text-align:right; color:var(--text-dim); border-bottom:1px solid var(--line); }
+  table.co td:first-child { text-align:left; color:var(--text); font-family:'Inter Tight',sans-serif; font-size:11.5px; }
+  table.co td.pk { color:var(--green-soft); font-weight:600; }
+  table.co td.z { color:rgba(255,255,255,0.13); }
+
+
+  /* Company unit-econ blocks */
+  .ue-blend { display:flex; gap:8px; margin-bottom:14px; }
+  .ue-b { flex:1; background:var(--bg-card-hi); border:1px solid var(--line); border-radius:10px; padding:12px 10px; text-align:center; }
+  .ue-b .k { font-family:'JetBrains Mono',monospace; font-size:8px; letter-spacing:0.1em; text-transform:uppercase; color:var(--text-dim); }
+  .ue-b .v { font-family:'Fraunces',serif; font-size:22px; font-weight:500; margin-top:5px; }
+  .ue-b .u2 { font-family:'JetBrains Mono',monospace; font-size:8px; color:var(--text-dim); margin-top:4px; }
+  .co-block { background:var(--bg-card-hi); border:1px solid var(--line); border-radius:12px; padding:13px; margin-bottom:11px; }
+  .co-block:last-child { margin-bottom:0; }
+  .co-block.f { border-left:3px solid var(--green); }
+  .co-block.o { border-left:3px solid var(--violet); }
+  .co-block.r { border-left:3px solid var(--gold); }
+  .co-hd { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:10px; }
+  .co-hd .nm { font-family:'Fraunces',serif; font-size:16px; font-weight:500; }
+  .co-hd .nm small { display:block; font-family:'JetBrains Mono',monospace; font-size:8px;
+    letter-spacing:0.08em; text-transform:uppercase; color:var(--text-dim); margin-top:2px; }
+  .co-kpi { display:flex; gap:6px; }
+  .co-kpi div { text-align:right; }
+  .co-kpi .kk { font-family:'JetBrains Mono',monospace; font-size:7.5px; letter-spacing:0.08em;
+    text-transform:uppercase; color:var(--text-dim); }
+  .co-kpi .vv { font-family:'Fraunces',serif; font-size:16px; font-weight:500; margin-top:2px; }
+  .co-kpi .vv.g { color:var(--green-soft); } .co-kpi .vv.r { color:var(--red); }
+  table.src { width:100%; border-collapse:collapse; font-family:'JetBrains Mono',monospace; font-size:9px; }
+  table.src th { text-align:right; font-size:7.5px; letter-spacing:0.06em; text-transform:uppercase;
+    color:var(--text-dim); font-weight:500; padding:4px 2px; border-bottom:1px solid var(--line); }
+  table.src th:first-child { text-align:left; }
+  table.src td { padding:5px 2px; text-align:right; color:var(--text-dim); border-bottom:1px solid rgba(255,255,255,0.03); }
+  table.src td:first-child { text-align:left; color:var(--text); font-family:'Inter Tight',sans-serif; font-size:10.5px; }
+  table.src td.good { color:var(--green-soft); font-weight:600; }
+  table.src td.bad { color:var(--red); font-weight:600; }
+  table.src td.free { color:var(--green-soft); font-style:italic; }
+  table.src tr.tt td { border-top:1px solid rgba(255,255,255,0.15); border-bottom:none; color:var(--text);
+    font-weight:600; padding-top:7px; }
+  .co-read { font-family:'JetBrains Mono',monospace; font-size:8.5px; color:var(--text-dim);
+    line-height:1.55; margin-top:9px; padding-top:9px; border-top:1px dashed rgba(255,255,255,0.08); }
+  .co-read b { color:var(--text); }
+
+
+  /* Search + voice */
+  .srch-wrap { position:sticky; top:0; z-index:40; padding:10px 0 12px;
+    background:linear-gradient(180deg, var(--bg) 78%, rgba(0,0,0,0)); }
+  .srch { display:flex; align-items:center; gap:8px; background:var(--bg-card-hi);
+    border:1px solid var(--line); border-radius:100px; padding:9px 13px;
+    transition:border-color .2s, box-shadow .2s; }
+  .srch:focus-within { border-color:var(--green); box-shadow:0 0 0 3px rgba(108,194,139,0.10); }
+  .srch-ic { width:15px; height:15px; color:var(--text-dim); flex-shrink:0; }
+  .srch input { flex:1; background:none; border:none; outline:none; color:var(--text);
+    font-family:'Inter Tight',sans-serif; font-size:13.5px; min-width:0; }
+  .srch input::placeholder { color:var(--text-dim); }
+  .mic, .clr { background:none; border:none; cursor:pointer; padding:3px; flex-shrink:0;
+    color:var(--text-dim); display:flex; align-items:center; transition:color .15s; }
+  .mic svg { width:16px; height:16px; }
+  .mic:hover, .clr:hover { color:var(--text); }
+  .mic.live { color:var(--red); animation:micpulse 1.1s ease-in-out infinite; }
+  .mic.off { opacity:0.25; }
+  @keyframes micpulse { 0%,100%{ opacity:1; transform:scale(1);} 50%{ opacity:.45; transform:scale(1.14);} }
+  .clr { font-size:13px; line-height:1; display:none; }
+  .clr.on { display:flex; }
+  .srch-status { font-family:'JetBrains Mono',monospace; font-size:9px; color:var(--text-dim);
+    text-align:center; margin-top:7px; min-height:11px; letter-spacing:0.04em; }
+  .srch-status.listening { color:var(--red); }
+  .dimmed { opacity:0.13; transition:opacity .18s; }
+
+
+  .ansbox { display:none; background:linear-gradient(160deg,rgba(108,194,139,0.09),rgba(108,194,139,0.02));
+    border:1px solid rgba(108,194,139,0.30); border-radius:13px; padding:15px 16px; margin:12px 0 4px; }
+  .ansbox.on { display:block; }
+  .ansbox .aq { font-family:'JetBrains Mono',monospace; font-size:8.5px; letter-spacing:0.12em;
+    text-transform:uppercase; color:var(--text-dim); margin-bottom:9px; }
+  .ansbox .av { font-family:'Fraunces',serif; font-size:29px; font-weight:500; line-height:1.05; color:var(--green-soft); }
+  .ansbox .av small { font-size:13px; color:var(--text); font-family:'Inter Tight',sans-serif; margin-left:7px; }
+  .ansbox .asub { font-size:12.5px; color:var(--text); margin-top:8px; line-height:1.5; }
+  .ansbox .abrk { display:flex; gap:7px; margin-top:12px; }
+  .ansbox .ab { flex:1; background:rgba(0,0,0,0.22); border-radius:8px; padding:8px 6px; text-align:center; }
+  .ansbox .ab .k { font-family:'JetBrains Mono',monospace; font-size:7.5px; letter-spacing:0.09em;
+    text-transform:uppercase; color:var(--text-dim); }
+  .ansbox .ab .v { font-family:'Fraunces',serif; font-size:16px; margin-top:3px; }
+  .ansbox .ab .v.g { color:var(--green-soft); } .ansbox .ab .v.r { color:var(--red); }
+  .ansbox .anote { font-size:11px; color:var(--text-dim); margin-top:11px; padding-top:9px;
+    border-top:1px solid rgba(255,255,255,0.07); line-height:1.5; }
+  .chips { display:flex; flex-wrap:wrap; gap:5px; margin-top:9px; }
+  .chip { font-family:'JetBrains Mono',monospace; font-size:9px; padding:5px 9px; border-radius:100px;
+    background:rgba(255,255,255,0.05); border:1px solid var(--line); color:var(--text-dim); cursor:pointer; }
+  .chip:hover { background:rgba(108,194,139,0.14); color:var(--green-soft); border-color:rgba(108,194,139,0.3); }
+
+  .foot { margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--line);
+    font-family: 'JetBrains Mono', monospace; font-size: 9px; color: var(--text-dim); line-height: 1.7; }
+  .foot b { color: var(--text); font-weight: 500; }
+  .foot .motto { display: block; margin-top: 10px; color: var(--accent-soft);
+    letter-spacing: 0.12em; text-transform: uppercase; font-size: 8px; }
+</style>
+</head>
+<body>
+<div class="shell">
+
+  <div class="hdr">
+    <div class="eyebrow">Liberty Command · Marketing Board · ROI Edition</div>
+    <h1>The spend, the juice,<br/><em>and the squeeze.</em></h1>
+    <div class="nw-block">
+      <div>
+        <div class="nw-label">July Signed ÷ July Spend</div>
+        <div class="nw">$18.03</div>
+        <div class="nw-sub">back per $1 · $1,248,081 on $69,235</div>
+      </div>
+      <div class="nw-delta">
+        <b>5.6%</b><br/>marketing as % of<br/>July signed revenue
+      </div>
+    </div>
+  </div>
+
+  <div class="srch-wrap">
+    <div class="srch">
+      <svg class="srch-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/>
+      </svg>
+      <input id="q" type="text" placeholder="Ask anything — "what does a Google lead cost me?"" autocomplete="off"/>
+      <button id="mic" class="mic" title="Speak">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="9" y="2" width="6" height="12" rx="3"/>
+          <path d="M5 11a7 7 0 0 0 14 0M12 18v4"/>
+        </svg>
+      </button>
+      <button id="clr" class="clr" title="Clear">✕</button>
+    </div>
+    <div id="srch-status" class="srch-status"></div>
+  </div>
+
+  <div class="stack">
+
+    <!-- ROI THERMOMETERS -->
+    <div class="card">
+      <div class="card-title">ROI by Paid Source<span class="feed-tag cc">CC Live</span><span class="feed-tag chase">Chase</span></div>
+      <div class="card-sub">July signed dollars ÷ July spend. Gold mark = your $10-per-$1 floor. Scale runs to 20×.</div>
+
+      <div class="thermo">
+        <div class="th-head">
+          <div class="th-name">Google<small>ads + Liam / Gate Digital mgmt</small></div>
+          <div class="th-roas">$11.54</div>
+        </div>
+        <div class="th-bar"><div class="th-fill" style="width:55.5%"></div><div class="th-floor" style="left:50%"></div></div>
+        <div class="th-cap"><span>spend <b>$50,994</b></span><span>115 jobs</span><span>signed <b>$588,592</b></span></div>
+      </div>
+
+      <div class="thermo">
+        <div class="th-head">
+          <div class="th-name">Saving Safari<small>all 3 brands</small></div>
+          <div class="th-roas hot">$16.00</div>
+        </div>
+        <div class="th-bar"><div class="th-fill hot" style="width:80%"></div><div class="th-floor" style="left:50%"></div></div>
+        <div class="th-cap"><span>spend <b>$9,500</b></span><span>26 jobs</span><span>signed <b>$152,184</b></span></div>
+      </div>
+
+      <div class="thermo">
+        <div class="th-head">
+          <div class="th-name">Angi / HomeAdvisor<small>Fencing + Roofing</small></div>
+          <div class="th-roas cold">$4.30</div>
+        </div>
+        <div class="th-bar"><div class="th-fill cold" style="width:21.5%"></div><div class="th-floor" style="left:50%"></div></div>
+        <div class="th-cap"><span>spend <b>$6,287</b></span><span>5 jobs · all Fencing</span><span>signed <b>$27,340</b></span></div>
+      </div>
+    </div>
+
+    <!-- FREE / EARNED -->
+    <div class="card">
+      <div class="card-title">Earned Revenue · No Ad Dollar Attached<span class="feed-tag cc">CC Live</span></div>
+      <div class="card-sub">38.5% of July signed came in near-free. Referral now carries its bonus cost — $1,000/mo, occasional not programmatic.</div>
+      <div class="free-row"><span class="nm">Referral<small>43 jobs · $1,000 bonuses · <b style="color:var(--green-soft)">$222 per $1</b></small></span><span class="amt">$221,660</span></div>
+      <div class="free-row"><span class="nm">Previous Customer<small>38 jobs</small></span><span class="amt">$138,161</span></div>
+      <div class="free-row"><span class="nm">Referral · Self-Gen<small>9 jobs · reps</small></span><span class="amt">$90,484</span></div>
+      <div class="free-row"><span class="nm">Website<small>3 jobs</small></span><span class="amt">$14,292</span></div>
+      <div class="free-row"><span class="nm">Facebook<small>3 jobs · $0 spend</small></span><span class="amt">$11,767</span></div>
+      <div class="free-row"><span class="nm">Slug A Bug<small>1 job · Oasis</small></span><span class="amt">$3,600</span></div>
+    </div>
+
+    <!-- BRAND ROI TILES -->
+    <div class="card">
+      <div class="card-title">Return by Brand · July<span class="feed-tag cc">CC Live</span><span class="feed-tag manual">KD Manual</span></div>
+      <div class="brand-tile">
+        <div class="bt-head"><div class="bt-name">Liberty Fencing</div><div class="bt-roas">$17.85<small> /$1</small></div></div>
+        <div class="bt-rows">
+          <div class="bt-row"><span>Signed · 130 jobs</span><b class="g">$616,776</b></div>
+          <div class="bt-row"><span>Marketing spend</span><b>$34,555</b></div>
+        </div>
+      </div>
+      <div class="brand-tile">
+        <div class="bt-head"><div class="bt-name">Oasis Landscapes</div><div class="bt-roas">$23.19<small> /$1</small></div></div>
+        <div class="bt-rows">
+          <div class="bt-row"><span>Signed · 92 jobs</span><b class="g">$459,650</b></div>
+          <div class="bt-row"><span>Marketing spend</span><b>$19,819</b></div>
+        </div>
+      </div>
+      <div class="brand-tile">
+        <div class="bt-head"><div class="bt-name">Pro-Tec Roofing</div><div class="bt-roas">$11.55<small> /$1</small></div></div>
+        <div class="bt-rows">
+          <div class="bt-row"><span>Signed · 21 jobs</span><b class="g">$171,655</b></div>
+          <div class="bt-row"><span>Marketing spend</span><b>$14,861</b></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- REVENUE BY SOURCE -->
+    <div class="card">
+      <div class="card-title">July Signed by Source<span class="feed-tag cc">CC Live</span></div>
+      <div class="card-sub">243 jobs, every one source-tagged. Zero untagged.</div>
+      <div class="chart-box"><canvas id="srcBars"></canvas></div>
+    </div>
+
+    <!-- VENDOR LEDGER -->
+    <div class="card">
+      <div class="card-title">Spend Ledger · Monthly<span class="feed-tag chase">Chase</span><span class="feed-tag manual">KD</span></div>
+      <div class="card-sub">Heymarket ($866) reclassified to company ops — with EagleView, Pictometry. HubSpot removed — cancelled.</div>
+      <table class="ledger">
+        <tr><th>Vendor</th><th>Fence</th><th>Oasis</th><th>Roof</th><th>Total</th></tr>
+        <tr class="hot"><td>Google Ads</td><td>23,064</td><td>16,522</td><td>8,408</td><td>47,994</td></tr>
+        <tr class="hot"><td>Saving Safari</td><td>5,000</td><td>2,000</td><td>2,500</td><td>9,500</td></tr>
+        <tr class="hot"><td>Angi / HomeAdvisor</td><td>4,187</td><td><span class="nu">—</span></td><td>2,100</td><td>6,287</td></tr>
+        <tr class="hot"><td>Liam / Gate Digital</td><td>1,000</td><td>1,000</td><td>1,000</td><td>3,000</td></tr>
+        <tr><td>Referral bonuses ~</td><td>500</td><td><span class="nu">—</span></td><td>500</td><td>1,000</td></tr>
+        <tr><td>Next Level ⚑3</td><td>297</td><td>297</td><td>297</td><td>891</td></tr>
+        <tr><td>CallFire ⚑3</td><td>185</td><td><span class="nu">—</span></td><td><span class="nu">—</span></td><td>185</td></tr>
+        <tr><td>Mailchimp</td><td>135</td><td><span class="nu">—</span></td><td><span class="nu">—</span></td><td>135</td></tr>
+        <tr><td>Marlie AI</td><td>99</td><td><span class="nu">—</span></td><td><span class="nu">—</span></td><td>99</td></tr>
+        <tr><td>Zapier</td><td>60</td><td><span class="nu">—</span></td><td><span class="nu">—</span></td><td>60</td></tr>
+        <tr><td>GoDaddy</td><td><span class="nu">—</span></td><td><span class="nu">—</span></td><td>56</td><td>56</td></tr>
+        <tr><td>Canva</td><td>28</td><td><span class="nu">—</span></td><td><span class="nu">—</span></td><td>28</td></tr>
+        <tr class="total"><td>TOTAL / MO</td><td>34,555</td><td>19,819</td><td>14,861</td><td>69,235</td></tr>
+      </table>
+    </div>
+
+
+
+    <!-- COST PER LEAD / UNIT -->
+    <div class="card">
+      <div class="card-title">Cost per Lead &amp; per Unit · July<span class="feed-tag cc">CC Live</span></div>
+      <div class="card-sub">Leads = created in July. Units = signed in July. Different cohorts on purpose — CPL measures the faucet, CPU measures what came out.</div>
+      <table class="cpu">
+        <tr><th>Source</th><th>Leads</th><th>Units</th><th>CPL</th><th>Cost / Unit</th></tr>
+        <tr><td>Google</td><td>252</td><td class="u">115</td><td>$202</td><td>$443</td></tr>
+        <tr><td>Saving Safari</td><td>45</td><td class="u">26</td><td>$211</td><td>$365</td></tr>
+        <tr><td>Angi ⚑4</td><td>49</td><td class="u">5</td><td>$128</td><td class="bad">$1,257</td></tr>
+        <tr><td>Referral</td><td>61</td><td class="u">43</td><td class="good">$16</td><td class="good">$23</td></tr>
+        <tr><td>Previous Customer</td><td>67</td><td class="u">38</td><td class="free">free</td><td class="free">free</td></tr>
+        <tr><td>Referral · Self-Gen</td><td>7</td><td class="u">9</td><td class="free">free</td><td class="free">free</td></tr>
+        <tr><td>Website</td><td>4</td><td class="u">3</td><td class="free">free</td><td class="free">free</td></tr>
+        <tr><td>Facebook</td><td>5</td><td class="u">3</td><td class="free">free</td><td class="free">free</td></tr>
+        <tr><td>Slug A Bug</td><td>2</td><td class="u">1</td><td class="free">free</td><td class="free">free</td></tr>
+        <tr class="tot"><td>BLENDED</td><td>504</td><td>243</td><td>$134</td><td>$279</td></tr>
+      </table>
+      <div class="cpu-split">
+        <div class="cs"><div class="k">Paid only</div><div class="v">$457</div>
+          <div class="u2">per unit · $193/lead<br/>346 leads · 146 units</div></div>
+        <div class="cs earn"><div class="k">Earned</div><div class="v">97 units</div>
+          <div class="u2">40% of July units<br/>31% of all leads · ~$0</div></div>
+      </div>
+      <div class="mx-note">Angi costs the least per lead ($128) and the most per unit ($1,257) — cheap leads that don't close. Referrals cost $23 a unit. The earned 158 leads would have cost <b style="color:var(--green-soft)">$30,495/mo</b> at Google-tier prices — that's what Gio's crew saves you every month by asking.</div>
+    </div>
+
+
+    <!-- UNIT ECONOMICS BY COMPANY -->
+    <div class="card">
+      <div class="card-title">Unit Economics · Blended &amp; by Company<span class="feed-tag cc">CC Live · July</span></div>
+      <div class="card-sub">A roof and a fence don't cost the same to sell. Blended is the top line; the three below show who earns it and who drags it.</div>
+      <div class="ue-blend">
+        <div class="ue-b"><div class="k">Cost / Lead</div><div class="v">$137</div><div class="u2">504 leads</div></div>
+        <div class="ue-b"><div class="k">Cost / Unit</div><div class="v">$285</div><div class="u2">243 units</div></div>
+        <div class="ue-b"><div class="k">Avg Ticket</div><div class="v">$5,136</div><div class="u2">$1.25M signed</div></div>
+      </div>
+      <div class="co-block o">
+        <div class="co-hd">
+          <div class="nm">Oasis Landscapes<small>Best unit economics · $23 back</small></div>
+          <div class="co-kpi">
+            <div><div class="kk">CPL</div><div class="vv">$122</div></div>
+            <div><div class="kk">Cost/Unit</div><div class="vv g">$215</div></div>
+            <div><div class="kk">Ticket</div><div class="vv">$4,996</div></div>
+          </div>
+        </div>
+        <table class="src">
+          <tr><th>Source</th><th>Lds</th><th>Un</th><th>Spend</th><th>CPL</th><th>C/Unit</th><th>Revenue</th><th>Ticket</th></tr>
+          <tr><td>Google</td><td>82</td><td>41</td><td>$17,522</td><td class="">$214</td><td class="">$427</td><td>$226,882</td><td>$5,534</td></tr>
+          <tr><td>Saving Safari</td><td>36</td><td>19</td><td>$2,000</td><td class="good">$56</td><td class="good">$105</td><td>$99,192</td><td>$5,221</td></tr>
+          <tr><td>Referral</td><td>19</td><td>14</td><td><span class='free'>—</span></td><td class=""><i style='color:var(--green-soft)'>free</i></td><td class=""><i style='color:var(--green-soft)'>free</i></td><td>$73,242</td><td>$5,232</td></tr>
+          <tr><td>Previous Customer</td><td>20</td><td>15</td><td><span class='free'>—</span></td><td class=""><i style='color:var(--green-soft)'>free</i></td><td class=""><i style='color:var(--green-soft)'>free</i></td><td>$51,799</td><td>$3,453</td></tr>
+          <tr><td>Facebook</td><td>4</td><td>2</td><td><span class='free'>—</span></td><td class=""><i style='color:var(--green-soft)'>free</i></td><td class=""><i style='color:var(--green-soft)'>free</i></td><td>$4,935</td><td>$2,468</td></tr>
+          <tr><td>Slug A Bug</td><td>2</td><td>1</td><td><span class='free'>—</span></td><td class=""><i style='color:var(--green-soft)'>free</i></td><td class=""><i style='color:var(--green-soft)'>free</i></td><td>$3,600</td><td>$3,600</td></tr>
+          <tr class="tt"><td>TOTAL</td><td>163</td><td>92</td><td>$19,819</td><td>$122</td><td>$215</td><td>$459,650</td><td>$4,996</td></tr>
+        </table>
+        <div class="co-read">The efficiency leader. <b>Saving Safari on Oasis is the single best line in the company</b> — $105 a unit, $50 back per dollar. Same vendor costs Fencing $833 a unit. Google here runs $427/unit, mid-pack. Nothing to fix; something to copy.</div>
+      </div>
+      <div class="co-block f">
+        <div class="co-hd">
+          <div class="nm">Liberty Fencing<small>Volume engine · $18 back</small></div>
+          <div class="co-kpi">
+            <div><div class="kk">CPL</div><div class="vv">$119</div></div>
+            <div><div class="kk">Cost/Unit</div><div class="vv g">$266</div></div>
+            <div><div class="kk">Ticket</div><div class="vv">$4,744</div></div>
+          </div>
+        </div>
+        <table class="src">
+          <tr><th>Source</th><th>Lds</th><th>Un</th><th>Spend</th><th>CPL</th><th>C/Unit</th><th>Revenue</th><th>Ticket</th></tr>
+          <tr><td>Google</td><td>156</td><td>70</td><td>$24,064</td><td class="">$154</td><td class="">$344</td><td>$312,572</td><td>$4,465</td></tr>
+          <tr><td>Referral</td><td>33</td><td>24</td><td>$500</td><td class="good">$15</td><td class="good">$21</td><td>$125,936</td><td>$5,247</td></tr>
+          <tr><td>Previous Customer</td><td>35</td><td>18</td><td><span class='free'>—</span></td><td class=""><i style='color:var(--green-soft)'>free</i></td><td class=""><i style='color:var(--green-soft)'>free</i></td><td>$65,662</td><td>$3,648</td></tr>
+          <tr><td>Saving Safari</td><td>8</td><td>6</td><td>$5,000</td><td class="bad">$625</td><td class="bad">$833</td><td>$40,092</td><td>$6,682</td></tr>
+          <tr><td>Angi ⚑</td><td>49</td><td>5</td><td>$4,187</td><td class="bad">$85</td><td class="bad">$837</td><td>$27,340</td><td>$5,468</td></tr>
+          <tr><td>Ref · Self-Gen</td><td>1</td><td>3</td><td><span class='free'>—</span></td><td class=""><i style='color:var(--green-soft)'>free</i></td><td class=""><i style='color:var(--green-soft)'>free</i></td><td>$24,049</td><td>$8,016</td></tr>
+          <tr><td>Website</td><td>4</td><td>3</td><td><span class='free'>—</span></td><td class=""><i style='color:var(--green-soft)'>free</i></td><td class=""><i style='color:var(--green-soft)'>free</i></td><td>$14,292</td><td>$4,764</td></tr>
+          <tr><td>Facebook</td><td>1</td><td>1</td><td><span class='free'>—</span></td><td class=""><i style='color:var(--green-soft)'>free</i></td><td class=""><i style='color:var(--green-soft)'>free</i></td><td>$6,832</td><td>$6,832</td></tr>
+          <tr class="tt"><td>TOTAL</td><td>291</td><td>130</td><td>$34,555</td><td>$119</td><td>$266</td><td>$616,776</td><td>$4,744</td></tr>
+        </table>
+        <div class="co-read">Cheapest leads in the group at $119. Google is healthy — $344/unit on 156 leads. Two leaks: <b>Angi burns $4,187 for 5 jobs ($837/unit, 10% close)</b> and <b>Saving Safari costs $833/unit here vs $105 at Oasis.</b> Same vendor, eight times worse. Ask why before renewing.</div>
+      </div>
+      <div class="co-block r">
+        <div class="co-hd">
+          <div class="nm">Pro-Tec Roofing<small>Referral engine · $12 back</small></div>
+          <div class="co-kpi">
+            <div><div class="kk">CPL</div><div class="vv">$297</div></div>
+            <div><div class="kk">Cost/Unit</div><div class="vv r">$708</div></div>
+            <div><div class="kk">Ticket</div><div class="vv">$8,174</div></div>
+          </div>
+        </div>
+        <table class="src">
+          <tr><th>Source</th><th>Lds</th><th>Un</th><th>Spend</th><th>CPL</th><th>C/Unit</th><th>Revenue</th><th>Ticket</th></tr>
+          <tr><td>Ref · Self-Gen</td><td>6</td><td>6</td><td><span class='free'>—</span></td><td class=""><i style='color:var(--green-soft)'>free</i></td><td class=""><i style='color:var(--green-soft)'>free</i></td><td>$66,435</td><td>$11,072</td></tr>
+          <tr><td>Google</td><td>14</td><td>4</td><td>$9,408</td><td class="bad">$672</td><td class="bad">$2,352</td><td>$49,138</td><td>$12,284</td></tr>
+          <tr><td>Referral</td><td>9</td><td>5</td><td>$500</td><td class="good">$56</td><td class="good">$100</td><td>$22,482</td><td>$4,496</td></tr>
+          <tr><td>Previous Customer</td><td>12</td><td>5</td><td><span class='free'>—</span></td><td class=""><i style='color:var(--green-soft)'>free</i></td><td class=""><i style='color:var(--green-soft)'>free</i></td><td>$20,700</td><td>$4,140</td></tr>
+          <tr><td>Saving Safari</td><td>1</td><td>1</td><td>$2,500</td><td class="bad">$2,500</td><td class="bad">$2,500</td><td>$12,900</td><td>$12,900</td></tr>
+          <tr><td>Angi List</td><td>8</td><td>0</td><td><span class='free'>—</span></td><td class=""><i style='color:var(--green-soft)'>free</i></td><td class=""><i style='color:var(--green-soft)'>free</i></td><td>$0</td><td></td></tr>
+          <tr class="tt"><td>TOTAL</td><td>50</td><td>21</td><td>$14,861</td><td>$297</td><td>$708</td><td>$171,655</td><td>$8,174</td></tr>
+        </table>
+        <div class="co-read">The acquisition thesis, proven: <b>Self-gen referrals went 6-for-6 at an $11,072 ticket — $66,435, free.</b> More revenue than Google produced, at zero cost. But <b>Google costs $672/lead and $2,352/unit here</b> — 14 leads, 4 jobs, $9,408/mo. You bought this company for its book, not for paid leads. That money likely earns more at Oasis.</div>
+      </div>
+    </div>
+
+
+    <!-- COST PER UNIT TREND -->
+    <div class="card">
+      <div class="card-title">Cost per Unit · Trending<span class="feed-tag cc">CC Live</span></div>
+      <div class="card-sub">May → July, company-wide. Small number under each is that month's close rate. Spend held flat — it was.</div>
+
+      <div class="tr-row">
+        <div class="tr-top"><div class="tr-nm">Google<small>252 leads · 115 units</small></div><div class="tr-dir good">▼ 27% cheaper</div></div>
+        <div class="tr-months">
+          <div class="tr-m worst"><div class="mo">May</div><div class="cpu">$607</div><div class="cr">27% close</div></div>
+          <div class="tr-m"><div class="mo">Jun</div><div class="cpu">$510</div><div class="cr">31% close</div></div>
+          <div class="tr-m best"><div class="mo">Jul</div><div class="cpu">$443</div><div class="cr">46% close</div></div>
+        </div>
+      </div>
+
+      <div class="tr-row">
+        <div class="tr-top"><div class="tr-nm">Saving Safari<small>45 leads · 26 units</small></div><div class="tr-dir good">▼ 12% cheaper</div></div>
+        <div class="tr-months">
+          <div class="tr-m"><div class="mo">May</div><div class="cpu">$413</div><div class="cr">46% close</div></div>
+          <div class="tr-m"><div class="mo">Jun</div><div class="cpu">$413</div><div class="cr">47% close</div></div>
+          <div class="tr-m best"><div class="mo">Jul</div><div class="cpu">$365</div><div class="cr">58% close</div></div>
+        </div>
+      </div>
+
+      <div class="tr-row">
+        <div class="tr-top"><div class="tr-nm">Referral<small>61 leads · 43 units</small></div><div class="tr-dir good">▼ 63% cheaper</div></div>
+        <div class="tr-months">
+          <div class="tr-m"><div class="mo">May</div><div class="cpu">$62</div><div class="cr">41% close</div></div>
+          <div class="tr-m"><div class="mo">Jun</div><div class="cpu">$59</div><div class="cr">35% close</div></div>
+          <div class="tr-m best"><div class="mo">Jul</div><div class="cpu">$23</div><div class="cr">70% close</div></div>
+        </div>
+      </div>
+
+      <div class="tr-row">
+        <div class="tr-top"><div class="tr-nm">Angi<small>49 leads · 5 units</small></div><div class="tr-dir bad">✕ no trend</div></div>
+        <div class="tr-months">
+          <div class="tr-m worst"><div class="mo">May</div><div class="cpu">$2,096</div><div class="cr">6% close</div></div>
+          <div class="tr-m"><div class="mo">Jun</div><div class="cpu">$898</div><div class="cr">12% close</div></div>
+          <div class="tr-m worst"><div class="mo">Jul</div><div class="cpu">$1,257</div><div class="cr">10% close</div></div>
+        </div>
+      </div>
+
+      <div class="mx-note"><b style="color:var(--green-soft)">The real finding:</b> Google's cost per <i>lead</i> went UP ($167 → $202) while cost per <i>unit</i> went DOWN ($607 → $443). Fewer leads, closed far harder — 27% to 46%. That's not the ad account improving. <b>That's the sales floor improving.</b> Angi is the control group: three months, no movement, 6–12% close.</div>
+    </div>
+
+
+    <!-- SPEED TO CLOSE -->
+    <div class="card">
+      <div class="card-title">Speed to Close<span class="feed-tag cc">CC Live</span></div>
+      <div class="card-sub">Median days from lead created to contract signed · all signed jobs Apr–Aug</div>
+      <div class="sp-row"><div class="sp-nm">Facebook <small style="color:var(--text-dim)">n=8</small></div><div class="sp-track"><div class="sp-fill" style="width:42%"></div></div><div class="sp-d">5 days</div></div>
+      <div class="sp-row"><div class="sp-nm">Previous Cust <small style="color:var(--text-dim)">n=81</small></div><div class="sp-track"><div class="sp-fill" style="width:42%"></div></div><div class="sp-d">5 days</div></div>
+      <div class="sp-row"><div class="sp-nm">Google <small style="color:var(--text-dim)">n=386</small></div><div class="sp-track"><div class="sp-fill" style="width:50%"></div></div><div class="sp-d">6 days</div></div>
+      <div class="sp-row"><div class="sp-nm">Referral <small style="color:var(--text-dim)">n=57</small></div><div class="sp-track"><div class="sp-fill" style="width:50%"></div></div><div class="sp-d">6 days</div></div>
+      <div class="sp-row"><div class="sp-nm">Saving Safari <small style="color:var(--text-dim)">n=91</small></div><div class="sp-track"><div class="sp-fill" style="width:50%"></div></div><div class="sp-d">6 days</div></div>
+      <div class="sp-row"><div class="sp-nm">Angi <small style="color:var(--text-dim)">n=29</small></div><div class="sp-track"><div class="sp-fill" style="width:50%"></div></div><div class="sp-d">6 days</div></div>
+      <div class="sp-row"><div class="sp-nm">Website <small style="color:var(--text-dim)">n=20</small></div><div class="sp-track"><div class="sp-fill slow" style="width:92%"></div></div><div class="sp-d">11 days</div></div>
+      <div class="sp-row"><div class="sp-nm">Ref · Self-Gen <small style="color:var(--text-dim)">n=8</small></div><div class="sp-track"><div class="sp-fill slow" style="width:100%"></div></div><div class="sp-d">12 days</div></div>
+      <div class="mx-note">Six days, everywhere. Source barely affects speed — <b>your cycle time is a process constant, not a channel property.</b> Two exceptions: Website leads take 11 days (form fills need chasing) and Self-Gen referrals 12 days (bigger tickets, longer decisions — that's the $11K roofing work, worth the wait).</div>
+    </div>
+
+
+    <!-- REP BOARD -->
+    <div class="card">
+      <div class="card-title">Rep Board · July<span class="feed-tag cc">CC Live</span></div>
+      <div class="card-sub">Leads assigned vs units signed. Bar is close rate. Cohorts differ — a rep can sign July jobs from June leads, so rates can run high.</div>
+      <div class='rp'><div class='rp-nm'>Eric Payne<small>Fencing 31 · Roofing 18 · 104 lds → 49 units · $6,272 tkt</small></div><div class='rp-bar'><i style='width:47%;background:#d4b15a'></i></div><div class='rp-pct'>47%</div><div class='rp-amt'>$307K</div></div>
+      <div class='rp'><div class='rp-nm'>Mike LeRoy<small>Oasis 55 · 80 lds → 55 units · $5,432 tkt</small></div><div class='rp-bar'><i style='width:69%;background:#6cc28b'></i></div><div class='rp-pct'>69%</div><div class='rp-amt'>$299K</div></div>
+      <div class='rp'><div class='rp-nm'>Tim Whitson<small>Oasis 35 · 63 lds → 35 units · $4,445 tkt</small></div><div class='rp-bar'><i style='width:56%;background:#d4b15a'></i></div><div class='rp-pct'>56%</div><div class='rp-amt'>$156K</div></div>
+      <div class='rp'><div class='rp-nm'>Jared Heideman<small>Fencing 26 · 25 lds → 26 units · $5,274 tkt</small></div><div class='rp-bar'><i style='width:100%;background:#6cc28b'></i></div><div class='rp-pct'>100%</div><div class='rp-amt'>$137K</div></div>
+      <div class='rp'><div class='rp-nm'>Ron Seidel<small>Fencing 28 · 49 lds → 28 units · $4,448 tkt</small></div><div class='rp-bar'><i style='width:57%;background:#d4b15a'></i></div><div class='rp-pct'>57%</div><div class='rp-amt'>$125K</div></div>
+      <div class='rp'><div class='rp-nm'>Matthew Vedder<small>Fencing 21 · 28 lds → 21 units · $4,364 tkt</small></div><div class='rp-bar'><i style='width:75%;background:#6cc28b'></i></div><div class='rp-pct'>75%</div><div class='rp-amt'>$92K</div></div>
+      <div class='rp'><div class='rp-nm'>Haakon Endreson<small>Fencing 18 · 44 lds → 18 units · $5,063 tkt</small></div><div class='rp-bar'><i style='width:41%;background:#d4b15a'></i></div><div class='rp-pct'>41%</div><div class='rp-amt'>$91K</div></div>
+      <div class='rp'><div class='rp-nm'>House / Gio<small>Fencing 4 · Oasis 2 · Roofing 2 · 6 lds → 8 units · $3,149 tkt</small></div><div class="rp-bar"></div><div class='rp-pct'>—</div><div class='rp-amt'>$25K</div></div>
+      <div class='rp'><div class='rp-nm'>Travis Janke *<small>inside sales · Fencing 2 · Roofing 1 · 38 lds → 3 units · $5,603 tkt</small></div><div class='rp-bar'><i style='width:8%;background:#c96a5e'></i></div><div class='rp-pct'>8%</div><div class='rp-amt'>$17K</div></div>
+      <div class="mx-note">Eric carries the most volume and the most revenue — <b>$307K across two brands.</b> Jared and Vedder convert hardest (100%, 75%) on the fewest leads. <b>Travis is inside sales</b> (*) and measured on the Travis Ruler, not this board — 38 leads, 3 units is a routing question, not a closing one.</div>
+    </div>
+
+    <!-- GOOGLE CONVERSION -->
+    <div class="card">
+      <div class="card-title">Who Closes Google Leads<span class="feed-tag cc">CC Live · July cohort</span></div>
+      <div class="card-sub">Same source, same month, same price per lead — $154 Fencing, $214 Oasis, $672 Roofing. Only the hands change.</div>
+      <div class='rp'><div class='rp-nm'>Jared Heideman<small>Fencing · 17 Google leads → 15 signed</small></div><div class='rp-bar'><i style='width:88%;background:#6cc28b'></i></div><div class='rp-pct'>88%</div><div class='rp-amt'>17 lds</div></div>
+      <div class='rp'><div class='rp-nm'>Matthew Vedder<small>Fencing · 18 Google leads → 14 signed</small></div><div class='rp-bar'><i style='width:78%;background:#6cc28b'></i></div><div class='rp-pct'>78%</div><div class='rp-amt'>18 lds</div></div>
+      <div class='rp'><div class='rp-nm'>Tim Whitson<small>Oasis · 37 Google leads → 21 signed</small></div><div class='rp-bar'><i style='width:57%;background:#d4b15a'></i></div><div class='rp-pct'>57%</div><div class='rp-amt'>37 lds</div></div>
+      <div class='rp'><div class='rp-nm'>Mike LeRoy<small>Oasis · 35 Google leads → 20 signed</small></div><div class='rp-bar'><i style='width:57%;background:#d4b15a'></i></div><div class='rp-pct'>57%</div><div class='rp-amt'>35 lds</div></div>
+      <div class='rp'><div class='rp-nm'>Ron Seidel<small>Fencing · 18 Google leads → 9 signed</small></div><div class='rp-bar'><i style='width:50%;background:#d4b15a'></i></div><div class='rp-pct'>50%</div><div class='rp-amt'>18 lds</div></div>
+      <div class='rp'><div class='rp-nm'>Haakon Endreson<small>Fencing · 27 Google leads → 12 signed</small></div><div class='rp-bar'><i style='width:44%;background:#d4b15a'></i></div><div class='rp-pct'>44%</div><div class='rp-amt'>27 lds</div></div>
+      <div class='rp'><div class='rp-nm'>Eric Payne<small>Fencing / Roofing · 56 Google leads → 21 signed</small></div><div class='rp-bar'><i style='width:38%;background:#c96a5e'></i></div><div class='rp-pct'>38%</div><div class='rp-amt'>56 lds</div></div>
+      <div class='rp'><div class='rp-nm'>Travis Janke *<small>Fencing · 19 Google leads → 1 signed</small></div><div class='rp-bar'><i style='width:5%;background:#c96a5e'></i></div><div class='rp-pct'>5%</div><div class='rp-amt'>19 lds</div></div>
+      <div class='rp'><div class='rp-nm'>TBD — unassigned<small>all · 23 Google leads → 0 signed</small></div><div class='rp-bar'><i style='width:0%;background:#c96a5e'></i></div><div class='rp-pct'>0%</div><div class='rp-amt'>23 lds</div></div>
+      <div class="mx-note"><b style="color:var(--red)">This is the most expensive gap on the page.</b> Jared closes Google at 88% and gets 17 leads. Eric closes at 38% and gets 56 — the most volume to the lowest conversion. At $154 a Fencing lead, moving 20 leads from a 38% desk to an 78–88% desk is roughly <b style="color:var(--green-soft)">8–10 extra jobs a month on spend you're already paying.</b> And 23 Google leads routed to <b>TBD signed zero.</b></div>
+    </div>
+
+    <!-- STALLED PIPELINE -->
+    <div class="card">
+      <div class="card-title">The Stall<span class="feed-tag cc">CC Live · as of Aug 16</span></div>
+      <div class="card-sub">Leads created, never signed, never closed out — still sitting open. This is paid media you already bought.</div>
+      <div class="ue-blend">
+        <div class="ue-b"><div class="k">Open &gt; 30 days</div><div class="v" style="color:var(--red)">1,241</div><div class="u2">915 past 60 days</div></div>
+        <div class="ue-b"><div class="k">Media Sunk</div><div class="v" style="color:var(--red)">$193K</div><div class="u2">at your own CPL</div></div>
+        <div class="ue-b"><div class="k">Unassigned</div><div class="v" style="color:var(--red)">397</div><div class="u2">135 since Jul 1</div></div>
+      </div>
+      <div class="st-row"><div class="st-nm"><b>Liberty Fencing</b></div><div class="st-n hot">854</div><div class="st-sub">638 &gt;60d · $106K</div></div>
+      <div class="st-row"><div class="st-nm"><b>Oasis Landscapes</b></div><div class="st-n hot">320</div><div class="st-sub">240 &gt;60d · $55K</div></div>
+      <div class="st-row"><div class="st-nm"><b>Pro-Tec Roofing</b></div><div class="st-n hot">67</div><div class="st-sub">37 &gt;60d · $32K</div></div>
+      <div style="height:12px"></div>
+      <div class="card-sub" style="margin-bottom:4px">By source · &gt;30 days open</div>
+      <div class="st-row"><div class="st-nm">Google</div><div class="st-n hot">715</div><div class="st-sub">537 &gt;60d</div></div>
+      <div class="st-row"><div class="st-nm">Angi</div><div class="st-n hot">164</div><div class="st-sub">118 &gt;60d</div></div>
+      <div class="st-row"><div class="st-nm">Saving Safari</div><div class="st-n">91</div><div class="st-sub">58 &gt;60d</div></div>
+      <div class="st-row"><div class="st-nm">Referral</div><div class="st-n">84</div><div class="st-sub">50 &gt;60d</div></div>
+      <div class="st-row"><div class="st-nm">Previous Customer</div><div class="st-n">77</div><div class="st-sub">52 &gt;60d</div></div>
+      <div class="st-row"><div class="st-nm">Website</div><div class="st-n">49</div><div class="st-sub">45 &gt;60d</div></div>
+      <div class="mx-note"><b>The Google stall alone:</b> Fencing 429 leads (~$66K media) · Oasis 246 (~$53K) · Roofing 40 (~$27K). These aren't lost — they're <i>untouched</i>. At even a 10% resurrection rate that's <b style="color:var(--green-soft)">~70 jobs</b> from spend already on the card. <b>Unassigned by brand:</b> Fencing 242 · Oasis 132 · Roofing 23.</div>
+    </div>
+
+    <!-- SOURCE x COMPANY -->
+    <div class="card">
+      <div class="card-title">Source × Company<span class="feed-tag cc">CC Live · July signed $</span></div>
+      <div class="card-sub">Where every dollar came from. Green = that source's home brand.</div>
+      <table class="co">
+        <tr><th>Source</th><th>Fencing</th><th>Oasis</th><th>Roofing</th></tr>
+        <tr><td>Google</td><td class="pk">312,572</td><td>226,882</td><td>49,138</td></tr>
+        <tr><td>Referral</td><td class="pk">125,936</td><td>73,242</td><td>22,482</td></tr>
+        <tr><td>Saving Safari</td><td>40,092</td><td class="pk">99,192</td><td>12,900</td></tr>
+        <tr><td>Previous Customer</td><td class="pk">65,662</td><td>51,799</td><td>20,700</td></tr>
+        <tr><td>Ref · Self-Gen</td><td>24,049</td><td class="z">—</td><td class="pk">66,435</td></tr>
+        <tr><td>Angi</td><td class="pk">27,340</td><td class="z">—</td><td class="z">—</td></tr>
+        <tr><td>Website</td><td class="pk">14,292</td><td class="z">—</td><td class="z">—</td></tr>
+        <tr><td>Facebook</td><td>6,832</td><td>4,935</td><td class="z">—</td></tr>
+        <tr><td>Slug A Bug</td><td class="z">—</td><td class="pk">3,600</td><td class="z">—</td></tr>
+      </table>
+      <div class="mx-note">Three different businesses. <b>Fencing is a Google shop</b> (51% of its revenue). <b>Oasis is diversified</b> — Google 49%, but Safari and referrals carry the rest at near-zero cost. <b>Roofing is a referral book</b> — Self-Gen alone beat Google, free. Angi and Website exist only at Fencing; Slug A Bug only at Oasis.</div>
+    </div>
+
+    <!-- WENT QUIET -->
+    <div class="card">
+      <div class="card-title">Went Quiet · Sources That Stopped<span class="feed-tag cc">CC Live</span></div>
+      <div class="card-sub">Earned revenue Apr–Jun, nothing signed in July or August. Bars are Apr→Aug; red stubs are zero months.</div>
+      <div class="quiet-row">
+        <div class="q-pulse dead"></div>
+        <div class="q-body"><div class="q-name">Yard Sign</div><div class="q-meta">last signing Jun · last lead Jun 3 · Fencing</div></div>
+        <div class="q-spark"><i style="height:13px"></i><i style="height:22px"></i><i style="height:3px"></i><i class="z"></i><i class="z"></i></div>
+        <div class="q-lost">$37,726</div>
+      </div>
+      <div class="quiet-row">
+        <div class="q-pulse dead"></div>
+        <div class="q-body"><div class="q-name">Yelp</div><div class="q-meta">last signing May · last lead May · Fencing</div></div>
+        <div class="q-spark"><i style="height:13px"></i><i style="height:22px"></i><i class="z"></i><i class="z"></i><i class="z"></i></div>
+        <div class="q-lost">$19,018</div>
+      </div>
+      <div class="quiet-row">
+        <div class="q-pulse fading"></div>
+        <div class="q-body"><div class="q-name">Marlie AI</div><div class="q-meta">leads still arriving · $99/mo running</div></div>
+        <div class="q-spark"><i class="z"></i><i class="z"></i><i style="height:22px"></i><i class="z"></i><i class="z"></i></div>
+        <div class="q-lost">$10,762</div>
+      </div>
+      <div class="quiet-row">
+        <div class="q-pulse dead"></div>
+        <div class="q-body"><div class="q-name">BNI</div><div class="q-meta">last signing Jun · last lead Jun</div></div>
+        <div class="q-spark"><i class="z"></i><i class="z"></i><i style="height:22px"></i><i class="z"></i><i class="z"></i></div>
+        <div class="q-lost">$3,371</div>
+      </div>
+      <div class="quiet-row">
+        <div class="q-pulse dead"></div>
+        <div class="q-body"><div class="q-name">Thumbtack</div><div class="q-meta">last signing Jun · last lead Jun</div></div>
+        <div class="q-spark"><i class="z"></i><i class="z"></i><i style="height:22px"></i><i class="z"></i><i class="z"></i></div>
+        <div class="q-lost">$3,265</div>
+      </div>
+      <div class="mx-note">$73,542 of proven revenue now producing nothing. Yard Sign is the big one — it worked, then stopped.</div>
+    </div>
+
+    <!-- TREND MATRIX -->
+    <div class="card">
+      <div class="card-title">Signed Revenue by Source · Apr–Aug<span class="feed-tag cc">CC Live</span></div>
+      <div class="card-sub">Every source, every month. Aug is partial through the 16th.</div>
+      <table class="mx">
+        <tr><th>Source</th><th>Apr</th><th>May</th><th>Jun</th><th>Jul</th><th>Aug*</th></tr>
+        <tr><td>Google</td><td>372K</td><td>444K</td><td>565K</td><td class="pk">589K</td><td>212K</td></tr>
+        <tr><td>Referral</td><td class="pk">383K</td><td>55K</td><td>87K</td><td>222K</td><td>70K</td></tr>
+        <tr><td>Previous Cust</td><td>149K</td><td>76K</td><td class="pk">182K</td><td>138K</td><td>59K</td></tr>
+        <tr><td>Ref · Self-Gen</td><td>151K</td><td class="pk">184K</td><td>62K</td><td>90K</td><td>105K</td></tr>
+        <tr><td>Saving Safari</td><td>118K</td><td>86K</td><td>99K</td><td class="pk">152K</td><td>15K</td></tr>
+        <tr><td>Angi</td><td class="pk">72K</td><td>12K</td><td>46K</td><td>27K</td><td>18K</td></tr>
+        <tr><td>Website</td><td>15K</td><td class="pk">31K</td><td>24K</td><td>14K</td><td>20K</td></tr>
+        <tr><td>Facebook</td><td class="z">—</td><td>2K</td><td>10K</td><td class="pk">12K</td><td>2K</td></tr>
+        <tr><td>Slug A Bug</td><td class="z">—</td><td class="z">—</td><td>1K</td><td class="pk">4K</td><td class="z">—</td></tr>
+        <tr class="dim"><td>Yard Sign</td><td>14K</td><td class="pk">22K</td><td>2K</td><td class="z">—</td><td class="z">—</td></tr>
+        <tr class="dim"><td>Yelp</td><td>7K</td><td class="pk">12K</td><td class="z">—</td><td class="z">—</td><td class="z">—</td></tr>
+        <tr class="dim"><td>Marlie AI</td><td class="z">—</td><td class="z">—</td><td class="pk">11K</td><td class="z">—</td><td class="z">—</td></tr>
+        <tr class="dim"><td>BNI</td><td class="z">—</td><td class="z">—</td><td class="pk">3K</td><td class="z">—</td><td class="z">—</td></tr>
+        <tr class="dim"><td>Thumbtack</td><td class="z">—</td><td class="z">—</td><td class="pk">3K</td><td class="z">—</td><td class="z">—</td></tr>
+        <tr><td>SS-Mailer</td><td class="z">—</td><td class="z">—</td><td class="z">—</td><td class="z">—</td><td class="pk">2K</td></tr>
+      </table>
+      <div class="mx-note">Rule applied: sources with no July revenue are excluded from ROI thermometers — shown here for history only.</div>
+    </div>
+
+    <!-- FLAGS -->
+    <div class="card">
+      <div class="card-title">Flags · Read Before Trusting</div>
+      <div class="flag"><div class="fnum">✓0</div><div class="ftxt"><b>Third card confirmed — Amex Gold, Pro-Tec Roofing.</b> KD Aug 16. Roofing spend locked.</div></div>
+      <div class="flag"><div class="fnum">~5</div><div class="ftxt"><b>Referral bonuses are an estimate, not a policy.</b> KD Aug 16: ~$500 Fencing + ~$500 Pro-Tec, $0 Oasis — paid occasionally, not to every referrer. Real payout is knowable from the books if it ever matters; at $222 back per $1 it never will.</div></div>
+      <div class="flag"><div class="fnum">⚑1</div><div class="ftxt"><b>Second Google Ads ID on Roofing card</b> (~$450–590/mo) — likely LSA. Map separately?</div></div>
+      <div class="flag"><div class="fnum">✓2</div><div class="ftxt"><b>Liam IS Gate Digital.</b> KD Aug 16. $2,000/mo double-count removed — one line at $1,000 × 3 brands. Google ROAS rose $11.10 → $11.54.</div></div>
+      <div class="flag"><div class="fnum">⚑3</div><div class="ftxt"><b>Unattributable spend: $1,454/mo</b> (Next Level, CallFire, Mailchimp, Marlie, Zapier, GoDaddy, Canva) — no CC source tag, so no ROI reading. Held in totals, excluded from thermometers.</div></div>
+      <div class="flag hot"><div class="fnum">⚑4</div><div class="ftxt"><b>Angi is the leak — now confirmed twice.</b> $6,287/mo returning $4.30 per dollar, and <b>$1,257 per signed unit</b> vs Google's $443. 49 leads produced 5 jobs. Cheap leads, terrible close. Roofing's $2,100 HomeAdvisor produced zero tagged July signings.</div></div>
+      <div class="flag"><div class="fnum">⚑7</div><div class="ftxt"><b>Attribution is clean.</b> All 2,500 projects pulled carry a source tag — zero nulls, zero blanks. No "unknown" bucket needed.</div></div>
+      <div class="flag"><div class="fnum">⚑8</div><div class="ftxt"><b>Yard Sign went dark Jun 3.</b> $37,726 earned Apr–Jun, then no leads at all. Signs not going out, or the tag not being applied at intake — worth one question to the crew.</div></div>
+      <div class="flag"><div class="fnum">⚑6</div><div class="ftxt"><b>Oasis Safari $2,000 is imputed barter</b> — will not reconcile against QB. Known ghost.</div></div>
+    </div>
+
+  </div>
+
+  <div class="foot">
+    <b>Revenue:</b> Contractors Cloud live pull, Aug 16 2026 — 2,500 projects walked back to Apr 2, deduped by project ID, source names via lead relation. July signed = first_contract_at in July, deleted excluded, CC 1537 excluded. 243 jobs / $1,248,081, 100% source-tagged. Long-cycle signings from pre-April leads may add a residual few. <b>Spend:</b> Chase Ink 1552 + 1571 statements + Amex Gold (Pro-Tec, confirmed KD Aug 16); manual per KD Aug 16: Safari $5,000/$2,000/$2,500, Liam / Gate Digital $1,000×3 (single relationship — prior Gate line removed as double-count). Google ROI folds agency fees into cost. Referral bonuses ~$1,000/mo (KD estimate Aug 16, occasional payouts — Fencing $500, Pro-Tec $500, Oasis $0). Ops tools (Heymarket, EagleView, Pictometry) excluded from marketing. Windsor CC held only 6 of 243 July signings — rolling window, flagged dead for this job; probe walk is the instrument of record.
+    <span class="motto">Trust the instrument, not the retelling.</span>
+  </div>
+
+<script>
+  Chart.defaults.font.family = "'JetBrains Mono', monospace";
+  Chart.defaults.color = '#8aa094';
+  new Chart(document.getElementById('srcBars'), {
+    type: 'bar',
+    data: {
+      labels: ['Google','Referral','Safari','Prev Cust','Self-Gen','Angi','Website','FB','Slug'],
+      datasets: [{ data: [588592,221660,152184,138161,90484,27340,14292,11767,3600],
+        backgroundColor: ['#6cc28b','#d4b15a','#d4b15a','#d4b15a','#d4b15a','#d96a5e','#6ba8c9','#6ba8c9','#6ba8c9'],
+        borderRadius: 4 }]
+    },
+    options: {
+      indexAxis: 'y',
+      plugins: { legend: { display: false },
+        tooltip: { callbacks: { label: c => ' $' + c.parsed.x.toLocaleString() } } },
+      scales: {
+        x: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { font: { size: 9 }, callback: v => '$' + (v/1000) + 'K' } },
+        y: { grid: { display: false }, ticks: { font: { size: 9 } } }
+      },
+      maintainAspectRatio: false
+    }
+  });
+</script>
+</div>
+
+<script>
+(function(){
+  var q=document.getElementById('q'), mic=document.getElementById('mic'),
+      clr=document.getElementById('clr'), st=document.getElementById('srch-status');
+
+  var SEL='.tr-row, .rp, .sp-row, .st-row, table.src tr, table.co tr, .wq-row, .cpl-row, .roi-row, .ledger-row';
+  function apply(term){
+    term=(term||'').trim().toLowerCase();
+    clr.classList.toggle('on', !!term);
+    var nodes=document.querySelectorAll(SEL), hits=0;
+    nodes.forEach(function(n){
+      if(n.querySelector('th')){ n.classList.remove('dimmed'); return; }
+      if(!term){ n.classList.remove('dimmed'); return; }
+      var m=n.textContent.toLowerCase().indexOf(term)>-1;
+      n.classList.toggle('dimmed', !m);
+      if(m) hits++;
+    });
+    st.textContent = term ? (hits ? hits+' matching rows' : 'no match for "'+term+'"') : '';
+    st.classList.remove('listening');
+  }
+  q.addEventListener('input', function(){
+    var handled = window.__answer ? window.__answer(q.value) : false;
+    apply(q.value);
+    if(handled){ st.textContent = 'answered — rows below filtered'; }
+    else if(q.value.trim() && st.textContent.indexOf('no match')===0){
+      st.textContent = 'no direct answer — try naming a source, brand, or metric';
+    }
+  });
+  clr.addEventListener('click', function(){ q.value=''; if(window.__answer) window.__answer(''); apply(''); q.focus(); });
+
+  var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if(!SR){
+    mic.classList.add('off');
+    mic.title='Voice not supported here — use the mic key on your phone keyboard';
+    mic.addEventListener('click', function(){
+      st.textContent='voice needs Chrome or Safari — try your keyboard mic key';
+    });
+    return;
+  }
+  var rec=new SR(), live=false;
+  rec.lang='en-US'; rec.interimResults=true; rec.continuous=false; rec.maxAlternatives=1;
+
+  rec.onstart=function(){ live=true; mic.classList.add('live');
+    st.textContent='listening...'; st.classList.add('listening'); };
+  rec.onresult=function(e){
+    var t='';
+    for(var i=e.resultIndex;i<e.results.length;i++) t+=e.results[i][0].transcript;
+    t=t.replace(/[.,!?]+$/,'');
+    q.value=t;
+    if(e.results[e.results.length-1].isFinal){ apply(t); }
+    else { st.textContent='"'+t+'"'; }
+  };
+  rec.onerror=function(e){
+    mic.classList.remove('live'); live=false; st.classList.remove('listening');
+    st.textContent = e.error==='not-allowed' ? 'mic blocked - allow microphone in site settings'
+                   : e.error==='no-speech' ? 'did not catch that' : 'voice error: '+e.error;
+  };
+  rec.onend=function(){ mic.classList.remove('live'); live=false;
+    st.classList.remove('listening'); if(q.value) apply(q.value); };
+
+  mic.addEventListener('click', function(){
+    if(live){ rec.stop(); return; }
+    try{ rec.start(); }catch(err){ st.textContent='mic busy - tap again'; }
+  });
+})();
+</script>
+
+<script>
+var FACTS=[{"t":"src","co":"Fencing","src":"Google","leads":156,"units":70,"spend":24064,"rev":312572,"cpl":154,"cpu":344,"roas":13.0,"tkt":4465,"close":45},{"t":"src","co":"Fencing","src":"Referral","leads":33,"units":24,"spend":500,"rev":125936,"cpl":15,"cpu":21,"roas":251.9,"tkt":5247,"close":73},{"t":"src","co":"Fencing","src":"Previous Customer","leads":35,"units":18,"spend":0,"rev":65662,"cpl":0,"cpu":0,"roas":null,"tkt":3648,"close":51},{"t":"src","co":"Fencing","src":"Saving Safari","leads":8,"units":6,"spend":5000,"rev":40092,"cpl":625,"cpu":833,"roas":8.0,"tkt":6682,"close":75},{"t":"src","co":"Fencing","src":"Angi","leads":49,"units":5,"spend":4187,"rev":27340,"cpl":85,"cpu":837,"roas":6.5,"tkt":5468,"close":10},{"t":"src","co":"Fencing","src":"Ref Self-Gen","leads":1,"units":3,"spend":0,"rev":24049,"cpl":0,"cpu":0,"roas":null,"tkt":8016,"close":300},{"t":"src","co":"Fencing","src":"Website","leads":4,"units":3,"spend":0,"rev":14292,"cpl":0,"cpu":0,"roas":null,"tkt":4764,"close":75},{"t":"src","co":"Fencing","src":"Facebook","leads":1,"units":1,"spend":0,"rev":6832,"cpl":0,"cpu":0,"roas":null,"tkt":6832,"close":100},{"t":"src","co":"Oasis","src":"Google","leads":82,"units":41,"spend":17522,"rev":226882,"cpl":214,"cpu":427,"roas":12.9,"tkt":5534,"close":50},{"t":"src","co":"Oasis","src":"Saving Safari","leads":36,"units":19,"spend":2000,"rev":99192,"cpl":56,"cpu":105,"roas":49.6,"tkt":5221,"close":53},{"t":"src","co":"Oasis","src":"Referral","leads":19,"units":14,"spend":0,"rev":73242,"cpl":0,"cpu":0,"roas":null,"tkt":5232,"close":74},{"t":"src","co":"Oasis","src":"Previous Customer","leads":20,"units":15,"spend":0,"rev":51799,"cpl":0,"cpu":0,"roas":null,"tkt":3453,"close":75},{"t":"src","co":"Oasis","src":"Facebook","leads":4,"units":2,"spend":0,"rev":4935,"cpl":0,"cpu":0,"roas":null,"tkt":2468,"close":50},{"t":"src","co":"Oasis","src":"Slug A Bug","leads":2,"units":1,"spend":0,"rev":3600,"cpl":0,"cpu":0,"roas":null,"tkt":3600,"close":50},{"t":"src","co":"Roofing","src":"Ref Self-Gen","leads":6,"units":6,"spend":0,"rev":66435,"cpl":0,"cpu":0,"roas":null,"tkt":11072,"close":100},{"t":"src","co":"Roofing","src":"Google","leads":14,"units":4,"spend":9408,"rev":49138,"cpl":672,"cpu":2352,"roas":5.2,"tkt":12284,"close":29},{"t":"src","co":"Roofing","src":"Referral","leads":9,"units":5,"spend":500,"rev":22482,"cpl":56,"cpu":100,"roas":45.0,"tkt":4496,"close":56},{"t":"src","co":"Roofing","src":"Previous Customer","leads":12,"units":5,"spend":0,"rev":20700,"cpl":0,"cpu":0,"roas":null,"tkt":4140,"close":42},{"t":"src","co":"Roofing","src":"Saving Safari","leads":1,"units":1,"spend":2500,"rev":12900,"cpl":2500,"cpu":2500,"roas":5.2,"tkt":12900,"close":100},{"t":"src","co":"Roofing","src":"Angi","leads":8,"units":0,"spend":2100,"rev":0,"cpl":262,"cpu":0,"roas":0.0,"tkt":0,"close":0},{"t":"co","co":"Fencing","leads":291,"units":130,"spend":34555,"rev":616776,"cpl":119,"cpu":266,"roas":17.8,"tkt":4744,"close":45},{"t":"co","co":"Oasis","leads":163,"units":92,"spend":19819,"rev":459650,"cpl":122,"cpu":215,"roas":23.2,"tkt":4996,"close":56},{"t":"co","co":"Roofing","leads":50,"units":21,"spend":14861,"rev":171655,"cpl":297,"cpu":708,"roas":11.6,"tkt":8174,"close":42},{"t":"all","co":"All","leads":504,"units":243,"spend":69235,"rev":1248081,"cpl":137,"cpu":285,"roas":18.0,"tkt":5136,"close":48},{"t":"srcall","co":"All","src":"Google","leads":252,"units":115,"spend":50994,"rev":588592,"cpl":202,"cpu":443,"roas":11.5,"tkt":5118,"close":46},{"t":"srcall","co":"All","src":"Referral","leads":61,"units":43,"spend":1000,"rev":221660,"cpl":16,"cpu":23,"roas":221.7,"tkt":5155,"close":70},{"t":"srcall","co":"All","src":"Previous Customer","leads":67,"units":38,"spend":0,"rev":138161,"cpl":0,"cpu":0,"roas":null,"tkt":3636,"close":57},{"t":"srcall","co":"All","src":"Saving Safari","leads":45,"units":26,"spend":9500,"rev":152184,"cpl":211,"cpu":365,"roas":16.0,"tkt":5853,"close":58},{"t":"srcall","co":"All","src":"Angi","leads":57,"units":5,"spend":6287,"rev":27340,"cpl":110,"cpu":1257,"roas":4.35,"tkt":5468,"close":9},{"t":"srcall","co":"All","src":"Ref Self-Gen","leads":7,"units":9,"spend":0,"rev":90484,"cpl":0,"cpu":0,"roas":null,"tkt":10054,"close":129},{"t":"srcall","co":"All","src":"Website","leads":4,"units":3,"spend":0,"rev":14292,"cpl":0,"cpu":0,"roas":null,"tkt":4764,"close":75},{"t":"srcall","co":"All","src":"Facebook","leads":5,"units":3,"spend":0,"rev":11767,"cpl":0,"cpu":0,"roas":null,"tkt":3922,"close":60},{"t":"srcall","co":"All","src":"Slug A Bug","leads":2,"units":1,"spend":0,"rev":3600,"cpl":0,"cpu":0,"roas":null,"tkt":3600,"close":50},{"t":"srcall","co":"All","src":"Angi List","leads":8,"units":0,"spend":0,"rev":0,"cpl":0,"cpu":0,"roas":null,"tkt":0,"close":0},{"t":"trend","src":"Google","may":[607,27],"jun":[510,31],"jul":[443,46]},{"t":"trend","src":"Saving Safari","may":[413,46],"jun":[413,47],"jul":[365,58]},{"t":"trend","src":"Referral","may":[62,41],"jun":[59,35],"jul":[23,70]},{"t":"trend","src":"Angi","may":[2096,6],"jun":[898,12],"jul":[1257,10]},{"t":"speed","src":"Facebook","days":5},{"t":"speed","src":"Previous Customer","days":5},{"t":"speed","src":"Google","days":6},{"t":"speed","src":"Referral","days":6},{"t":"speed","src":"Saving Safari","days":6},{"t":"speed","src":"Angi","days":6},{"t":"speed","src":"Website","days":11},{"t":"speed","src":"Ref Self-Gen","days":12},{"t":"rep","rep":"Eric Payne","co":"Fencing/Roofing","leads":104,"units":49,"close":47,"rev":307334,"tkt":6272},{"t":"rep","rep":"Mike LeRoy","co":"Oasis","leads":80,"units":55,"close":69,"rev":298736,"tkt":5432},{"t":"rep","rep":"Tim Whitson","co":"Oasis","leads":63,"units":35,"close":56,"rev":155564,"tkt":4445},{"t":"rep","rep":"Jared Heideman","co":"Fencing","leads":25,"units":26,"close":100,"rev":137116,"tkt":5274},{"t":"rep","rep":"Ron Seidel","co":"Fencing","leads":49,"units":28,"close":57,"rev":124548,"tkt":4448},{"t":"rep","rep":"Matthew Vedder","co":"Fencing","leads":28,"units":21,"close":75,"rev":91647,"tkt":4364},{"t":"rep","rep":"Haakon Endreson","co":"Fencing","leads":44,"units":18,"close":41,"rev":91136,"tkt":5063},{"t":"rep","rep":"House/Gio","co":"All","leads":6,"units":8,"close":0,"rev":25190,"tkt":3149},{"t":"rep","rep":"Travis Janke","co":"Fencing","leads":38,"units":3,"close":8,"rev":16810,"tkt":5603},{"t":"gconv","rep":"Jared Heideman","leads":17,"units":15,"close":88},{"t":"gconv","rep":"Matthew Vedder","leads":18,"units":14,"close":78},{"t":"gconv","rep":"Tim Whitson","leads":37,"units":21,"close":57},{"t":"gconv","rep":"Mike LeRoy","leads":35,"units":20,"close":57},{"t":"gconv","rep":"Ron Seidel","leads":18,"units":9,"close":50},{"t":"gconv","rep":"Haakon Endreson","leads":27,"units":12,"close":44},{"t":"gconv","rep":"Eric Payne","leads":56,"units":21,"close":38},{"t":"gconv","rep":"Travis Janke","leads":19,"units":1,"close":5},{"t":"gconv","rep":"TBD","leads":23,"units":0,"close":0},{"t":"stall","co":"Fencing","d30":854,"d60":638,"burn":105631,"tbd":242},{"t":"stall","co":"Oasis","d30":320,"d60":240,"burn":55332,"tbd":132},{"t":"stall","co":"Roofing","d30":67,"d60":37,"burn":31880,"tbd":23},{"t":"stallsrc","src":"Google","d30":715,"d60":537},{"t":"stallsrc","src":"Angi","d30":164,"d60":118},{"t":"stallsrc","src":"Saving Safari","d30":91,"d60":58},{"t":"stallsrc","src":"Referral","d30":84,"d60":50},{"t":"stallsrc","src":"Previous Customer","d30":77,"d60":52},{"t":"stallsrc","src":"Website","d30":49,"d60":45},{"t":"vendor","vendor":"Google Ads","amt":47994,"note":"F 23,064 / O 16,522 / R 8,408"},{"t":"vendor","vendor":"Saving Safari","amt":9500,"note":"F 5,000 / O 2,000 / R 2,500"},{"t":"vendor","vendor":"Angi + HomeAdvisor","amt":6287,"note":"F 4,187 / R 2,100"},{"t":"vendor","vendor":"Liam / Gate Digital","amt":3000,"note":"$1,000 x 3 brands"},{"t":"vendor","vendor":"Referral bonuses","amt":1000,"note":"estimate \u2014 F 500 / R 500"},{"t":"vendor","vendor":"Next Level","amt":891,"note":"all 3 brands"},{"t":"vendor","vendor":"CallFire","amt":185,"note":""},{"t":"vendor","vendor":"Mailchimp","amt":135,"note":""},{"t":"vendor","vendor":"Marlie AI","amt":99,"note":"zero production"},{"t":"vendor","vendor":"Zapier","amt":60,"note":""},{"t":"vendor","vendor":"GoDaddy","amt":56,"note":""},{"t":"vendor","vendor":"Canva","amt":28,"note":""}];
+(function(){
+  var q=document.getElementById('q');
+  var box=document.createElement('div'); box.className='ansbox'; box.id='ansbox';
+  var srch=document.querySelector('.srch');
+  srch.parentNode.insertBefore(box, srch.nextSibling);
+  var chips=document.createElement('div'); chips.className='chips';
+  ['what does a Google lead cost','cost per unit Oasis','Angi ROI','who closes Google best',
+   'how many stalled leads','average ticket roofing','how fast do we close','Fencing revenue']
+   .forEach(function(t){ var c=document.createElement('div'); c.className='chip'; c.textContent=t;
+     c.onclick=function(){ q.value=t; q.dispatchEvent(new Event('input')); }; chips.appendChild(c); });
+  srch.parentNode.insertBefore(chips, box.nextSibling);
+
+  var CO={fencing:'Fencing',fence:'Fencing',lf:'Fencing',oasis:'Oasis',landscap:'Oasis',
+          roofing:'Roofing',roof:'Roofing','pro-tec':'Roofing',protec:'Roofing','pro tec':'Roofing'};
+  var SRC={google:'Google',adwords:'Google',ppc:'Google',angi:'Angi',homeadvisor:'Angi',
+    safari:'Saving Safari','saving safari':'Saving Safari','self-gen':'Ref Self-Gen','self gen':'Ref Self-Gen',
+    selfgen:'Ref Self-Gen','previous customer':'Previous Customer','previous':'Previous Customer',
+    'repeat':'Previous Customer',referral:'Referral',website:'Website','web site':'Website',
+    facebook:'Facebook',fb:'Facebook','slug':'Slug A Bug','yard sign':'Yard Sign'};
+  var money=function(n){return '$'+Math.round(n).toLocaleString();};
+
+  function find(t,f){ return FACTS.filter(function(x){ if(x.t!==t) return false;
+      for(var k in f){ if(f[k]!==null && x[k]!==f[k]) return false; } return true; }); }
+
+  function detect(s,map){ var best=null,bl=0;
+    for(var k in map){ if(s.indexOf(k)>-1 && k.length>bl){ best=map[k]; bl=k.length; } } return best; }
+
+  function metric(s){
+    if(/stall|sitting|untouched|open lead|never sign|dead lead|unwork/.test(s)) return 'stall';
+    if(/how (long|fast)|speed|days to|cycle time|take to close/.test(s)) return 'speed';
+    if(/who|which rep|best closer|worst/.test(s)) return 'who';
+    if(/close rate|conversion|convert|closing/.test(s)) return 'close';
+    if(/roas|roi|return|back per|per dollar/.test(s)) return 'roas';
+    if(/ticket|job size|avg sale|average sale|deal size/.test(s)) return 'tkt';
+    if(/per unit|per job|per sale|per signed|cost per acquisition|cpa|per deal/.test(s)) return 'cpu';
+    if(/per lead|lead cost|cpl|a lead cost|leads cost/.test(s)) return 'cpl';
+    if(/revenue|signed|sold|top line|sales/.test(s)) return 'rev';
+    if(/spend|budget|cost me|paying|pay for|how much.*(cost|spend)/.test(s)) return 'spend';
+    if(/how many lead|lead count|leads did/.test(s)) return 'leads';
+    if(/how many (job|unit|sale)|units/.test(s)) return 'units';
+    return null;
+  }
+
+  var LBL={cpl:'Cost per Lead',cpu:'Cost per Unit',roas:'Return per $1',tkt:'Average Ticket',
+    rev:'Revenue',spend:'Spend',leads:'Leads',units:'Units',close:'Close Rate'};
+  function fmt(m,v){ if(v===null||v===undefined) return '—';
+    if(m==='roas') return '$'+Number(v).toFixed(2); if(m==='close') return v+'%';
+    if(m==='leads'||m==='units') return v.toLocaleString(); return money(v); }
+
+  function render(h){ box.innerHTML=h; box.classList.add('on'); }
+
+  function answer(raw){
+    var s=raw.toLowerCase().trim();
+    if(!s){ box.classList.remove('on'); return false; }
+    var co=detect(s,CO), src=detect(s,SRC), m=metric(s);
+
+    if(m==='stall'){
+      var st=find('stall',{}), tot=0,t60=0,burn=0,tbd=0;
+      st.forEach(function(x){tot+=x.d30;t60+=x.d60;burn+=x.burn;tbd+=x.tbd;});
+      if(co){ var r=find('stall',{co:co})[0];
+        render('<div class="aq">Stalled pipeline · '+co+'</div><div class="av">'+r.d30.toLocaleString()+
+          '<small>leads open &gt; 30 days</small></div><div class="asub">'+r.d60+' of them are past 60 days. At '+
+          co+'\'s own cost per lead that is <b>'+money(r.burn)+'</b> of media already bought and untouched. '+
+          r.tbd+' have no rep assigned at all.</div><div class="anote">Source: CC live, Aug 16. Never signed, never closed out.</div>');
+        return true; }
+      render('<div class="aq">Stalled pipeline · all brands</div><div class="av">'+tot.toLocaleString()+
+        '<small>leads open &gt; 30 days</small></div><div class="asub">'+t60+' past 60 days. Roughly <b>'+money(burn)+
+        '</b> of paid media sitting untouched. '+tbd+' have no rep assigned.</div><div class="abrk">'+
+        st.map(function(x){return '<div class="ab"><div class="k">'+x.co+'</div><div class="v r">'+x.d30+'</div></div>';}).join('')+
+        '</div><div class="anote">Priced at each brand\'s own CPL. Source: CC live, Aug 16.</div>');
+      return true;
+    }
+
+    if(m==='speed'){
+      if(src){ var r=find('speed',{src:src})[0];
+        if(r){ render('<div class="aq">Speed to close · '+src+'</div><div class="av">'+r.days+
+          '<small>days, median — lead to signed</small></div><div class="asub">Company median is 6 days across almost every source.</div>'+
+          '<div class="anote">All signed jobs Apr–Aug. Source: CC live.</div>'); return true; } }
+      var sp=find('speed',{});
+      render('<div class="aq">Speed to close · all sources</div><div class="av">6<small>days, median</small></div>'+
+        '<div class="asub">Source barely moves it — your cycle time is a process constant, not a channel property. '+
+        'Two exceptions: Website 11 days, Self-Gen referrals 12 days (bigger tickets, longer decisions).</div>'+
+        '<div class="anote">Median days lead created → contract signed, all signed jobs Apr–Aug.</div>');
+      return true;
+    }
+
+    if(m==='who'||(m==='close'&&/google/.test(s)&&/who|rep/.test(s))){
+      var g=find('gconv',{}).slice().sort(function(a,b){return b.close-a.close;});
+      render('<div class="aq">Who closes Google leads · July cohort</div><div class="av">'+g[0].rep+
+        '<small>'+g[0].close+'% — '+g[0].leads+' leads, '+g[0].units+' signed</small></div>'+
+        '<div class="asub">Same source, same month, same price per lead. Only the hands change.</div><div class="abrk">'+
+        g.slice(0,3).map(function(x){return '<div class="ab"><div class="k">'+x.rep.split(' ')[0]+'</div><div class="v g">'+x.close+'%</div></div>';}).join('')+
+        '</div><div class="anote">Bottom: Eric Payne 38% on 56 leads (most volume, lowest conversion) · Travis Janke 5% · 23 leads to TBD signed zero.</div>');
+      return true;
+    }
+
+    if(m==='spend'&&!src&&!co){
+      var v=find('vendor',{}), tot=0; v.forEach(function(x){tot+=x.amt;});
+      render('<div class="aq">Marketing spend · monthly</div><div class="av">'+money(tot)+'<small>per month, all brands</small></div>'+
+        '<div class="abrk">'+find('co',{}).map(function(x){return '<div class="ab"><div class="k">'+x.co+'</div><div class="v">'+money(x.spend)+'</div></div>';}).join('')+
+        '</div><div class="anote">Top lines: Google Ads '+money(47994)+' · Saving Safari '+money(9500)+' · Angi '+money(6287)+'.</div>');
+      return true;
+    }
+
+    if(!m) return false;
+
+    // source-level lookup
+    if(src){
+      var recs = co ? find('src',{co:co,src:src}) : find('srcall',{src:src});
+      if(recs.length && recs[0][m]!==undefined){
+        var r=recs[0], scope = co ? src+' · '+co : src+' · all brands';
+        var h='<div class="aq">'+(LBL[m]||m)+' · '+scope+'</div><div class="av">'+fmt(m,r[m])+
+          (m==='cpl'?'<small>per lead</small>':m==='cpu'?'<small>per signed job</small>':m==='roas'?'<small>back per $1 spent</small>':'')+'</div>';
+        h+='<div class="asub">'+r.leads+' leads → '+r.units+' units'+(r.close?' ('+r.close+'% close)':'')+
+           ', '+money(r.spend)+' spend, '+money(r.rev)+' signed.</div>';
+        if(!co && (m==='cpl'||m==='cpu'||m==='roas'||m==='tkt')){
+          var per=['Fencing','Oasis','Roofing'].map(function(c){ var x=find('src',{co:c,src:src})[0];
+            if(!x) return '<div class="ab"><div class="k">'+c+'</div><div class="v" style="opacity:.3">—</div></div>';
+            return '<div class="ab"><div class="k">'+c+'</div><div class="v">'+fmt(m,x[m])+'</div></div>';}).join('');
+          h+='<div class="abrk">'+per+'</div><div class="anote">Blended hides the spread — a roof and a fence don\'t cost the same to sell.</div>';
+        } else { h+='<div class="anote">July 2026 · CC live pull, Aug 16.</div>'; }
+        render(h); return true;
+      }
+    }
+    // company-level
+    if(co){
+      var r=find('co',{co:co})[0];
+      if(r&&r[m]!==undefined){
+        render('<div class="aq">'+(LBL[m]||m)+' · '+co+'</div><div class="av">'+fmt(m,r[m])+'</div>'+
+          '<div class="asub">'+r.leads+' leads → '+r.units+' units ('+r.close+'% close), '+money(r.spend)+
+          ' spend, '+money(r.rev)+' signed, '+money(r.tkt)+' average ticket.</div><div class="anote">July 2026 · CC live.</div>');
+        return true;
+      }
+    }
+    // blended
+    var a=find('all',{})[0];
+    if(a[m]!==undefined){
+      var per=['Fencing','Oasis','Roofing'].map(function(c){ var x=find('co',{co:c})[0];
+        return '<div class="ab"><div class="k">'+c+'</div><div class="v">'+fmt(m,x[m])+'</div></div>';}).join('');
+      render('<div class="aq">'+(LBL[m]||m)+' · blended, all brands</div><div class="av">'+fmt(m,a[m])+'</div>'+
+        '<div class="abrk">'+per+'</div><div class="anote">Blended is the top line — the three below are how it gets there. July 2026 · CC live.</div>');
+      return true;
+    }
+    return false;
+  }
+  window.__answer=answer;
+})();
+</script>
+
+</body>
+</html>
