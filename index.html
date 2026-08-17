@@ -5484,6 +5484,14 @@ function mkt2CardCPU(){
   /* Last month's cost per unit, priced identically. */
   const prevKey = mkISO(mkMonthStart(MKTOFF + 1));
   const prevWin = (MKT2 && !MKT2.err) ? MKT2.series.find(m => !m.err && m.key === prevKey.slice(0, 7)) : null;
+  /* An arrow needs BOTH ends, and there are two different ways to be missing
+     one. The window can fail to answer, or it can answer perfectly against a
+     month nobody ever typed a spend book for. Those were folded together while
+     the month walk was dying wholesale (the 172 grant gap, 17 Aug) — every
+     window was dark, so "the window has not answered" was always the true
+     half. With the walk healthy the second case is the live one, and the note
+     below has to be able to say so or the column reads broken. */
+  const prevBookTyped = !!mkBrandSpend(prevKey);
   const prevCpuOf = src => {
     if (!prevWin) return null;
     const sp = src === 'Google' ? (mkGoogleCard(prevKey) || {}).total
@@ -5551,7 +5559,7 @@ function mkt2CardCPU(){
     </div>
     ${leadsBlind ? `<div class="withheld"><div class="wt">The CPL column is withheld for ${esc(mkMonthLabel(MKTOFF))}</div><div class="wx">
       <b>rpt_report_marketing_roi</b> dates a lead by <b>jobs.created_at</b> — when OUR row was written, not when the lead arrived. The warehouse was loaded in one shot on <b>20 Jul 2026</b>, so a July window returns the whole backfill (Google reads <b>4,282</b> against a true <b>253</b>) and every month before it returns zero, which is not the same as none. From <b>August 2026</b> the column is real and renders. <b>Cost per unit is unaffected</b> and is shown above: units are signings, dated by <b>rpt_signings.signed_on</b>, which is correct in every window.</div></div>` : ''}
-    <div class="m2-note">Spend per source resolves exactly as the thermometers do — Google all-in from the card (170/171), Referral at its typed bonus row (~). ⚑3 vendor rows appear nowhere on this table, blended row included: unattributable spend prices no source, and it is carried where totals belong — the ledger and the headline. The MoM arrow reads from the month walk and lights only when both months carry a priced spend and signed units${!prevWin ? ` — ${MKT2 ? esc(mkMonthLabel(MKTOFF + 1)) + '’s window has not answered' : 'the walk loads with this board'}, so it reads an em-dash for now` : ''}.</div>
+    <div class="m2-note">Spend per source resolves exactly as the thermometers do — Google all-in from the card (170/171), Referral at its typed bonus row (~). ⚑3 vendor rows appear nowhere on this table, blended row included: unattributable spend prices no source, and it is carried where totals belong — the ledger and the headline. The MoM arrow reads from the month walk and lights only when both months carry a priced spend and signed units${!prevWin ? ` — ${MKT2 ? esc(mkMonthLabel(MKTOFF + 1)) + '’s window has not answered' : 'the walk loads with this board'}, so it reads an em-dash for now` : !prevBookTyped ? ` — <b>${esc(mkMonthLabel(MKTOFF + 1))} has no spend book</b>: the window answered and its units are known, but nobody has typed a cost against them, so every arrow on this table reads an em-dash. Key that month into <b>marketing_spend</b> and the column lights with no further deploy` : ''}.</div>
   </div>`;
 }
 
