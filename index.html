@@ -2707,8 +2707,10 @@ function cardQuota(){
   /* A seller at zero stays — showing who is under the floor is the point.
      A non-seller (owner, non-selling manager) appears only in windows where
      they actually signed; their $0 weeks are not a floor miss, they are a
-     different job. */
-  const rows = Q.carriers.filter(r => r.sells || (W.sig[r.id] || 0) > 0).map(r => {
+     different job. A DEPARTED rep is the same shape: they appear only in
+     windows holding their signings (period-roster law) — an empty week of
+     theirs is not a floor miss either, it is an empty seat. */
+  const rows = Q.carriers.filter(r => (r.sells && !r.gone) || (W.sig[r.id] || 0) > 0).map(r => {
     const signed = W.sig[r.id] || 0;
     const delta = signed - W.pace;
     const pct = W.pace ? Math.round(signed / W.pace * 100) : 0;
@@ -2738,7 +2740,7 @@ function cardQuota(){
 
     ${rows.map((r,i) => `<div class="rep-row acc" onclick="openRep('${esc(String(r.id))}')">
       <div class="rep-head">
-        <div class="nm"><span class="rk ${i===0?'top':''}">${i+1}</span>${esc(r.name)}${r.role!=='sales'?`<span class="brand">${esc(r.role)}</span>`:''}</div>
+        <div class="nm"><span class="rk ${i===0?'top':''}">${i+1}</span>${esc(r.name)}${r.gone?'<span class="gone">departed</span>':''}${r.role!=='sales'?`<span class="brand">${esc(r.role)}</span>`:''}</div>
         <div class="amt">${short(r.signed)} <span class="${r.delta>=0?'up':'dn'}">${r.delta>=0?'+':'−'}${short(Math.abs(r.delta))}</span><span class="acc-chev">›</span></div>
       </div>
       <div class="qmeter">
@@ -3122,7 +3124,10 @@ function cardReps(){
   const all = W.reps || [];
   const sellerish = r => { const p = D.roster[String(r.id)] || {};
     return !r.office && (p.sells || p.role === 'sales' || /\bgio\b/i.test(r.name || '')); };
-  const core0 = all.filter(sellerish);
+  /* The no-rep pseudo-row stays on the first screen with the sellers — "pull
+     the uncategorized out and make those obvious." Folding a data gap behind
+     Show-all is how it stops being obvious. */
+  const core0 = all.filter(r => sellerish(r) || r.norep);
   const rest0 = all.filter(r => !core0.includes(r));
   const reps = [...core0, ...rest0], CORE = core0.length, mx = Math.max(1, ...all.map(r=>r.rev));
   const label = { day:'today', week:'this week', month:mSpan(), ytd:'this year' }[k];
@@ -8926,7 +8931,7 @@ function buildPulse(jobs, qbInv){
      biases the past toward the slow payers and makes creep read LOW. That is a
      false all-clear, so it is not drawn. Money is a snapshot, aged, and the
      card says which clock it used. */
-function buildVitals(jobs, qbInv){
+function buildVitals(jobs, qbInv, unionWeek){
   const sod = d => new Date(d.getFullYear(), d.getMonth(), d.getDate());
   const end = new Date(pDayAdd(+sod(new Date()), -1));      // yesterday
   const N = VIT.weeks;                                      // 8 prior + 1 current
@@ -8941,13 +8946,19 @@ function buildVitals(jobs, qbInv){
   const inWeek = (t, w) => t >= w.s && t <= w.e;
 
   /* ── SALES · signed dollars per week ──────────────────────────────────────
-     The same jobs and the same amount column the money tiles count, bucketed
-     into the nine slots. */
+     The same union every money tile counts — signedUnion, passed in from
+     buildData — bucketed into the nine slots. This trace used to walk `jobs`
+     alone: CC only (so no Billdu, and Oasis at its drifted CC amounts), which
+     put a different weekly truth on the first screen than the tiles under it.
+     The CC-only walk remains as the fallback for the fixture path that calls
+     buildVitals without a union. */
   const signed = jobs.filter(j => j.contract_signed_at)
     .map(j => ({ t: +sod(new Date(j.contract_signed_at)), v: Number(j.fin_sold_amount || 0),
                  done: j.completed_at ? +sod(new Date(j.completed_at)) : null }))
     .filter(j => !isNaN(j.t));
-  const salesSeries = weeks.map(w => signed.reduce((n, j) => inWeek(j.t, w) ? n + j.v : n, 0));
+  const salesSeries = weeks.map(w => unionWeek
+    ? unionWeek(new Date(w.s), new Date(pDayAdd(w.e, 1)))
+    : signed.reduce((n, j) => inWeek(j.t, w) ? n + j.v : n, 0));
 
   /* ── PRODUCTION · the stalled share of the open backlog ───────────────────
      Exactly reconstructable at any past date, and it is the one of the four
@@ -9227,6 +9238,58 @@ function buildData(raw){
     return { byBrand, sinceDays: 180 };
   })();
 
+  /* ── THE BELL↔CC MATCH, REP-BLIND (17 Aug: one deal, one dollar, one name) ─
+     The database confirmer (cc_counts_claim behind rep_sale_claim_status)
+     matches a bell to the CC book BY REP — so a contract the office keys with
+     NO rep on it can never silence the bell that rang it. August caught three:
+     Pestik $49,467, Bailey $16,000, Wilrowski $1,800. Each sat in the money
+     TWICE (an unowned CC contract + Eric's open bell) while sales-by-rep held
+     only the bell — which is exactly how the hero and the rep board learned to
+     disagree by $67,267.
+
+     This match is rep-blind: a pending bell is spent when a NON-Oasis CC
+     contract agrees with it on customer name (token-set — "PESTIK, RAYMOND"
+     is "Raymond Pestik") within MATCH.days, and on either the exact dollars
+     or a contract that carries no rep at all (the class the confirmer is
+     structurally blind to). Oasis CC rows are never matched against: they are
+     out of the money (Billdu owns Oasis), so spending a bell against one
+     would drop the dollars entirely.
+
+     And the match runs both ways: a CC contract with no rep INHERITS the
+     matched bell's rep. The deal lands once, under the person who rang it,
+     instead of splitting into an "unowned" line and a bell. The day may shift
+     when CC books late (a ring on the 10th booked on the 14th counts on the
+     14th) — same date-preserving trade the Billdu handoff (148) already
+     made, and the window totals never double while it happens. */
+  const MATCH = { days: 14 };   // how far a booking may trail its bell
+  const nameKey = s => String(s || '').toLowerCase().replace(/[^a-z]+/g, ' ')
+    .split(' ').filter(Boolean).sort().join(' ');
+  const bellMatch = (() => {
+    const spent = new Set(), repFix = new Map();
+    const byName = new Map();
+    for (const j of jobs) {
+      if (!j.contract_signed_at || String(j.cc_company_id) === OASIS) continue;
+      const k = nameKey(custName(j.title)); if (!k) continue;
+      let arr = byName.get(k); if (!arr) byName.set(k, arr = []);
+      arr.push(j);
+    }
+    const dayGap = (iso, ymd) =>
+      Math.abs((new Date(String(iso).slice(0,10)) - new Date(String(ymd).slice(0,10))) / 86400000);
+    for (const c of (claims || [])) {
+      if (c.status !== 'pending' || c.cc_already_counted || c.cc_state === 'job_linked') continue;
+      const k = nameKey(c.customer_name); if (!k) continue;
+      const amt = Math.round(Number(c.claimed_amount || 0));
+      const hits = (byName.get(k) || []).filter(j =>
+        dayGap(j.contract_signed_at, c.signed_on) <= MATCH.days &&
+        (Math.round(Number(j.fin_sold_amount || 0)) === amt || !j.rep_id));
+      if (!hits.length) continue;
+      spent.add(c);
+      if (c.rep_id && repById[c.rep_id])
+        for (const j of hits) if (!j.rep_id && !repFix.has(j)) repFix.set(j, c.rep_id);
+    }
+    return { spent, repFix };
+  })();
+
   /* ── THE RUNG LAYER, WINDOW-SLICED (Kevin's 10 Aug ruling) ────────────────
      "I want my board to show all sales for today, whether it's been fully
       verified or not. That's an internal thing that we can work on later.
@@ -9235,15 +9298,18 @@ function buildData(raw){
      One fold rule, one place — the same rule the rep rows have always used:
      open bells only (status pending), confirmer-suppressed
      (cc_already_counted / job_linked are already in the CC or Billdu money and
-     counting them again is the $42K-vs-$29,052 class), dated by signed_on.
-     No clock since 145 (Kevin, 12 Aug: "no verification process") — a bell
-     stays in this fold at any age until CC or Billdu books it. */
+     counting them again is the $42K-vs-$29,052 class), match-suppressed
+     (bellMatch above — a booking with no rep on it still spends its bell),
+     dated by signed_on. No clock since 145 (Kevin, 12 Aug: "no verification
+     process") — a bell stays in this fold at any age until CC or Billdu books
+     it. */
   const rungAdd = (a, b) => {
     const A = ymdOf(a), B = ymdOf(b);
     const out = { value:0, count:0, byBrand:{}, byRep:{}, list:[] };
     for (const c of (claims || [])) {
       if (c.status !== 'pending') continue;
       if (c.cc_already_counted || c.cc_state === 'job_linked') continue;
+      if (bellMatch.spent.has(c)) continue;
       const d = String(c.signed_on || '').slice(0,10);
       if (d < A || d >= B) continue;
       const rid = c.rep_id; if (!rid || !repById[rid]) continue;
@@ -9259,6 +9325,23 @@ function buildData(raw){
         rep: repById[rid]?.name || 'Unknown', repId: rid });
     }
     return out;
+  };
+
+  /* ── THE ONE SIGNED RULE ──────────────────────────────────────────────────
+     Every surface that prints signed dollars for a window reads ONE union:
+     CC contracts (non-Oasis, bell-deduped, rep from the record or from the
+     bell that rang the deal) + Billdu invoices (all of Oasis) + open rung
+     bells (confirmer- and match-suppressed). slice() is the full instrument;
+     signedUnion() is the same arithmetic reduced to money and counts, for the
+     series that only need totals. The trend charts used to keep their own
+     walk and it drifted — Oasis counted from BOTH books, ~$183K a month of
+     chart that contradicted the headline. If a surface needs signed dollars
+     and reads neither slice() nor signedUnion(), it is wrong by construction. */
+  const signedUnion = (a, b) => {
+    const cc = jobs.filter(j => String(j.cc_company_id) !== OASIS && inR(j.contract_signed_at, a, b));
+    const bd = billduAdd(a, b), rg = rungAdd(a, b);
+    return { rev: cc.reduce((n, j) => n + Number(j.fin_sold_amount || 0), 0) + (bd ? bd.value : 0) + rg.value,
+             jobs: cc.length + (bd ? bd.count : 0) + rg.count, cc, bd, rg };
   };
 
   function slice(a,b){
@@ -9294,18 +9377,24 @@ function buildData(raw){
     const brands = {}, byRep = {}, unowned = [], allRows = [];
     for (const j of js) {
       const bid = rollup(j.cc_company_id || 'unknown');
+      /* Rep from the record, else from the bell that rang this deal
+         (bellMatch.repFix) — a contract the office keyed with no rep lands
+         under its seller once, instead of splitting into an unowned line
+         plus that seller's open bell. */
+      const rid = j.rep_id || bellMatch.repFix.get(j) || null;
       const row = { cust: custName(j.title), brand: bid, resolved: !!BRANDS[bid],
                     amount: Number(j.fin_sold_amount||0), src:'cc',
                     // CC stamps contract_signed_at at ET-midnight (04:00Z), so the
                     // first ten chars ARE the ET day — same trick soldDay uses.
                     at: String(j.contract_signed_at||'').slice(0,10) || null,
-                    rep: j.rep_id ? (repById[j.rep_id]?.name || 'Unknown') : null,
-                    repId: j.rep_id && repById[j.rep_id] ? j.rep_id : null };
+                    viaBell: !j.rep_id && !!rid,
+                    rep: rid ? (repById[rid]?.name || 'Unknown') : null,
+                    repId: rid && repById[rid] ? rid : null };
       allRows.push(row);
       (brands[bid] ??= { jobs:0, rev:0, list:[] });
       brands[bid].jobs++; brands[bid].rev += row.amount; brands[bid].list.push(row);
-      if (j.rep_id) { (byRep[j.rep_id] ??= { jobs:0, rev:0, appts:0, list:[] });
-        byRep[j.rep_id].jobs++; byRep[j.rep_id].rev += row.amount; byRep[j.rep_id].list.push(row); }
+      if (rid) { (byRep[rid] ??= { jobs:0, rev:0, appts:0, list:[] });
+        byRep[rid].jobs++; byRep[rid].rev += row.amount; byRep[rid].list.push(row); }
       else { unowned.push({ ...row, reason:'no-rep' }); }
     }
     for (const x of as) if (x.rep_id) { (byRep[x.rep_id] ??= { jobs:0, rev:0, appts:0, list:[] }); byRep[x.rep_id].appts++; }
@@ -9453,7 +9542,14 @@ function buildData(raw){
                                close: ap ? Math.round(signed / ap * 100) : null }; }),
       apptsUnknownBrand: apptsByBrand.unknown || 0,
       brands: Object.entries(brands).map(([id,v])=>({id, ...capped(v)})),
-      reps: Object.entries(byRep).map(([id,v])=>({
+      /* The rep list must CROSS-FOOT with the company figure — every dollar in
+         rev sits under exactly one row here. Deals with no seller anywhere on
+         the record (CC rep null AND no bell matched them) ride as one visible
+         pseudo-row, same treatment as the Oasis office line: dimmed, not
+         clickable, named as the data gap it is. Before this row existed the
+         sales-by-rep total ran under the hero by exactly the unowned dollars
+         and the two read as different truths. */
+      reps: [...Object.entries(byRep).map(([id,v])=>({
         id,
         name: id === OFFICE ? 'Oasis · unattributed'
                             : (repById[id]?.name ?? 'Unknown'),
@@ -9465,7 +9561,13 @@ function buildData(raw){
         // rings. The union guards upstream keep a deal in exactly one feed, and
         // a ring that CC never confirms leaves numerator and board together.
         close: v.appts ? Math.round(v.jobs/v.appts*100) : null,
-      })).filter(r=>r.rev>0||r.appts>0).sort((x,y)=>y.rev-x.rev),
+      })), ...(() => { const noRep = unowned.filter(r => r.reason === 'no-rep');
+        if (!noRep.length) return [];
+        return [{ id:'__norep', name:'No rep on record', role:'data gap',
+                  office:true, norep:true,
+                  ...capped({ jobs:noRep.length, rev:noRep.reduce((n,r)=>n+r.amount,0),
+                              appts:0, list:noRep }), close:null }];
+      })()].filter(r=>r.rev>0||r.appts>0).sort((x,y)=>y.rev-x.rev),
     };
   }
 
@@ -9475,23 +9577,26 @@ function buildData(raw){
   // phone payload saved rather than downloaded and discarded.
   const brandIds = [...new Set(jobs.map(j => rollup(j.cc_company_id || 'unknown')))];
 
+  /* The stacked trend, the daily strip and the monthly bars all read
+     signedUnion() now. Each used to keep its own walk of `jobs` — and each
+     walk forgot the Oasis-CC exclusion that slice() has had since 096, so
+     every chart counted Oasis from BOTH books (~$183K a month in August)
+     while the headline above it did not. Same union, one function, or the
+     chart contradicts the headline — the 10 Aug that-needs-to-match ruling,
+     finally applied to the drawing code too. */
   const weeks = [];
   for (let i=2;i>=0;i--){
     const a = addD(sow(NOW), -7*i), b = addD(a,7);
-    const js = jobs.filter(j=>inR(j.contract_signed_at,a,b));
+    const u = signedUnion(a,b);
     const br = {};
-    for (const j of js){ const k = rollup(j.cc_company_id||'unknown');
+    for (const j of u.cc){ const k = rollup(j.cc_company_id||'unknown');
       (br[k] ??= {rev:0,jobs:0}); br[k].rev += Number(j.fin_sold_amount||0); br[k].jobs++; }
-    // same union in the stacked trend, or the chart contradicts the headline —
-    // Billdu and the rung layer both, since the 10 Aug that-needs-to-match ruling
-    const wbd = billduAdd(a,b);
-    if (wbd && wbd.value) { (br[OASIS] ??= {rev:0,jobs:0});
-      br[OASIS].rev += wbd.value; br[OASIS].jobs += wbd.count; }
-    const wrg = rungAdd(a,b);
-    for (const [bid,v] of Object.entries(wrg.byBrand)) { (br[bid] ??= {rev:0,jobs:0});
+    if (u.bd && u.bd.value) { (br[OASIS] ??= {rev:0,jobs:0});
+      br[OASIS].rev += u.bd.value; br[OASIS].jobs += u.bd.count; }
+    for (const [bid,v] of Object.entries(u.rg.byBrand)) { (br[bid] ??= {rev:0,jobs:0});
       br[bid].rev += v.value; br[bid].jobs += v.count; }
-    weeks.push({ label:`${a.getMonth()+1}/${a.getDate()}`, current:i===0, jobs:js.length,
-      rev: js.reduce((n,j)=>n+Number(j.fin_sold_amount||0),0) + (wbd?wbd.value:0) + wrg.value,
+    weeks.push({ label:`${a.getMonth()+1}/${a.getDate()}`, current:i===0, jobs:u.cc.length,
+      rev: u.rev,
       brands: Object.entries(br).map(([id,v])=>({id,...v})) });
   }
   /* Trend series for the per-window drill-ins. Each window gets a shape that
@@ -9500,22 +9605,16 @@ function buildData(raw){
   const daily = [];
   for (let i = 13; i >= 0; i--) {
     const a = addD(sod(NOW), -i), b = addD(a, 1);
-    const js = jobs.filter(j => inR(j.contract_signed_at, a, b));
-    const bd = billduAdd(a,b);
-    const rg = rungAdd(a,b);
+    const u = signedUnion(a, b);
     daily.push({ label: `${a.getMonth()+1}/${a.getDate()}`, current: i === 0,
-      jobs: js.length + (bd?bd.count:0) + rg.count,
-      rev: js.reduce((n,j)=>n+Number(j.fin_sold_amount||0),0) + (bd?bd.value:0) + rg.value });
+      jobs: u.jobs, rev: u.rev });
   }
   const monthly = [];
   for (let i = 12; i >= 0; i--) {
     const a = addM(som(NOW), -i), b = addM(a, 1);
-    const js = jobs.filter(j => inR(j.contract_signed_at, a, b));
-    const bd = billduAdd(a,b);
-    const rg = rungAdd(a,b);
+    const u = signedUnion(a, b);
     monthly.push({ label: ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][a.getMonth()],
-      current: i === 0, jobs: js.length + (bd?bd.count:0) + rg.count,
-      rev: js.reduce((n,j)=>n+Number(j.fin_sold_amount||0),0) + (bd?bd.value:0) + rg.value });
+      current: i === 0, jobs: u.jobs, rev: u.rev });
   }
 
   const cadence = (() => {
@@ -10198,18 +10297,17 @@ function buildData(raw){
     const wins = {};
     for (const [k, wv] of Object.entries(WINS)) {
       if (k === 'day') continue;
+      /* The fleet reads slice().reps — the SAME rows the rep board renders,
+         one function, per the one-signed-rule. Its old private walk added
+         each rep's CC contracts and then their Billdu invoices on top, and
+         Oasis CC entries have carried a rep since the import matured — so an
+         Oasis seller's floor number counted every deal from both books
+         (~$183K across August). slice() has held the union guards (Oasis CC
+         out of money, bells deduped) since they were written; the fleet just
+         never read it. Office/no-rep pseudo-rows carry no seat and stay out. */
       const sig = {};
-      for (const j of jobs) if (j.rep_id && inR(j.contract_signed_at, wv.from, wv.to))
-        sig[j.rep_id] = (sig[j.rep_id] || 0) + Number(j.fin_sold_amount || 0);
-      const bd = billduAdd(wv.from, wv.to);
-      if (bd) for (const [rid, v] of Object.entries(bd.byRep))
-        if (rid !== OFFICE) sig[rid] = (sig[rid] || 0) + v.value;
-      // the rung layer too — the fleet reads the same union as the rep board
-      // (10 Aug, "that needs to match"), and a rung week counting toward the
-      // floor is exactly the bell-is-board-credit rule the board already keeps
-      const rg = rungAdd(wv.from, wv.to);
-      for (const [rid, v] of Object.entries(rg.byRep))
-        sig[rid] = (sig[rid] || 0) + v.value;
+      for (const r of slice(wv.from, wv.to).reps)
+        if (!r.office) sig[r.id] = r.rev;
       /* capped at the window's own span: under the time machine a closed month's
          "elapsed" would otherwise keep counting into today and inflate the floor */
       const el = Math.min(elapsedCal(wv.from),
@@ -10222,9 +10320,15 @@ function buildData(raw){
        (077) — role is wrong in both directions: it drops managers who
        genuinely sell and keeps stale sales accounts that do not. Sellers are
        always on the board, zeros included; anyone else rides along only if
-       they actually signed, and cardQuota narrows that to the window shown. */
-    const carriers = reps.filter(r => r.active && (r.sells || producers.has(r.id)))
-                         .map(r => ({ id: r.id, name: r.name, role: r.role, sells: !!r.sells }));
+       they actually signed, and cardQuota narrows that to the window shown.
+       ACTIVE gates only the standing roster — who must carry the floor — never
+       the producers: a departed rep who signed inside the window keeps their
+       row (the period-roster law, PR #49). Their dollars were already in every
+       total; hiding the name while counting the money was the one remaining
+       active-filter on a money surface. */
+    const carriers = reps.filter(r => (r.active && r.sells) || producers.has(r.id))
+                         .map(r => ({ id: r.id, name: r.name, role: r.role, sells: !!r.sells,
+                                      gone: !r.active }));
     return { annual: ANNUAL, monthly: Math.round(ANNUAL/12), daily: Math.round(DAILY),
              incomeAt: 100000, rate: 5.5, wins, carriers };
   })();
@@ -11298,7 +11402,8 @@ function buildData(raw){
        never the browsed month. Its thresholds live in VIT at the top of the
        file; the colours are decided at render time because MARKETING's spend
        half arrives after first paint. */
-    vitals: buildVitals(jobs, qbInv),
+    // The SLS trace reads the same union as every money tile (one-signed-rule).
+    vitals: buildVitals(jobs, qbInv, (a, b) => signedUnion(a, b).rev),
     // the filtered roster by id, for the rep one-pager — name, role and the
     // sells flag travel together so the pager never re-derives who someone is
     roster: Object.fromEntries(reps.map(r =>
