@@ -450,6 +450,20 @@
   .ct-chip.warm { border-color: rgba(212,177,90,.4);   background: rgba(212,177,90,.06); }   .ct-chip.warm .v { color: var(--gold); }
   .ct-chip.cold { border-color: rgba(217,106,94,.4);   background: rgba(217,106,94,.06); }   .ct-chip.cold .v { color: var(--red); }
   .ct-chip.none .v { color: var(--text-dim); font-weight: 400; }
+  /* The closing-% chip that rides beside a board total, banded on Kevin's own
+     hot/cold rule so the colour means the same thing it means on a rep row.
+     Sized to sit at the hero's baseline without competing with it: the rate is
+     Fraunces like the money, the label and the 8-week delta stay mono. */
+  .hero-close { display: inline-flex; align-items: baseline; gap: 5px; border: 1px solid var(--line);
+    border-radius: 7px; padding: 3px 8px 4px; font-family: 'JetBrains Mono', monospace; }
+  .hero-close b { font-family: 'Fraunces', serif; font-size: 18px; font-weight: 600; line-height: 1; }
+  .hero-close i { font-style: normal; font-size: 7.5px; letter-spacing: .12em; text-transform: uppercase; color: var(--text-dim); }
+  .hero-close em { font-style: normal; font-size: 10px; font-weight: 700; letter-spacing: .02em; }
+  .hero-close em.up { color: var(--green); } .hero-close em.dn { color: var(--red); } .hero-close em.flat { color: var(--text-dim); }
+  .hero-close.hot  { border-color: rgba(108,194,139,.45); background: rgba(108,194,139,.08); } .hero-close.hot b  { color: var(--green); }
+  .hero-close.warm { border-color: rgba(212,177,90,.45);  background: rgba(212,177,90,.08); }  .hero-close.warm b { color: var(--gold); }
+  .hero-close.cold { border-color: rgba(217,106,94,.45);  background: rgba(217,106,94,.08); }  .hero-close.cold b { color: var(--red); }
+  .hero-close.none b { color: var(--text-dim); font-weight: 400; }
   .ct-cell.hot b { color: var(--green); } .ct-cell.warm b { color: var(--gold); } .ct-cell.cold b { color: var(--red); }
   /* Attention board layout. The three type rules that used to sit here —
      `.attn .stat-tile` .lbl/.val/.sub, holding the board's tiles at 8/15/9px —
@@ -3211,13 +3225,20 @@ function cardReps(){
          vs rung — because knowing WHICH dollars await the book is the whole
          honesty of the fold. */
       const rung2 = all.reduce((n,r)=>n+(r.rung||0),0);
+      /* The closing % rides at the total's own baseline, right of the up/down —
+         Kevin's placement, and the right one: money and the rate that earned it
+         read as one line instead of the rate living a card away. It asks the
+         window that is selected, so it moves with Day/Week/Month/YTD. */
+      const hc = heroClose(W, k === 'month' && MONTHOFF);
       return `<div style="margin:6px 0 10px">
         <div style="font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--text-dim)">All reps · ${label}</div>
-        <div style="display:flex;align-items:baseline;gap:12px">
+        <div style="display:flex;align-items:baseline;gap:12px;flex-wrap:wrap">
           <span style="font-family:'Fraunces',serif;font-size:44px;font-weight:600;line-height:1.1;color:var(--text)">${short(tot2)}</span>
           ${dp!==null?`<span class="${dp>=0?'up':'dn'}" style="font-family:'JetBrains Mono',monospace;font-size:15px;font-weight:700">${dp>=0?'▲':'▼'} ${Math.abs(dp)}%</span>`:''}
+          ${hc.chip}
         </div>
         <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text-dim);margin-top:2px">${deals2} deal${deals2===1?'':'s'}${dp!==null?` · vs <b style="color:var(--text)">${short(pTot)}</b> ${esc(W.prevLabel||'')}`:''}</div>
+        ${hc.line?`<div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text-dim);margin-top:3px">${hc.line}</div>`:''}
         ${rung2?`<div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text-dim);margin-top:4px">= <b style="color:var(--text)">${short(tot2-rung2)}</b> confirmed · cc + billdu + <b style="color:var(--text)">${short(rung2)}</b> rung 🛎️ awaiting the book — same union as the Signed figure up top, which carries the same bell line</div>`:''}
       </div>`; })()}
     ${reps.map((r,i)=>`<div class="rep-row${r.office?'':' acc'}"${i>=CORE?' data-extra="1" style="display:none"':''} ${r.office?'style="opacity:.8"':`onclick="openRep('${esc(String(r.id))}')"`}>
@@ -3231,7 +3252,7 @@ function cardReps(){
       ${r.office?'':bankMini(r.id)}
     </div>`).join('')}
     ${reps.length>CORE?`<button type="button" class="linkbtn" onclick="const x=[...this.parentElement.querySelectorAll('[data-extra]')];const open=x[0].style.display==='none';x.forEach(e=>e.style.display=open?'':'none');this.textContent=open?'Show fewer':'Show all ${reps.length} ›'">Show all ${reps.length} ›</button>`:''}
-    ${reps.length?`<div class="note">Rep is read from the job's own <b>rep_id</b>. <b>${D.coverage.apptsWithRep.toLocaleString()} of ${D.coverage.appts.toLocaleString()}</b> appointments carry a rep, so close rates below that coverage are unknown rather than assumed.</div>`:''}
+    ${reps.length?`<div class="note">Rep is read from the job's own <b>rep_id</b>. <b>${D.coverage.apptsWithRep.toLocaleString()} of ${D.coverage.appts.toLocaleString()}</b> appointments carry a rep, so close rates below that coverage are unknown rather than assumed. The <b>close %</b> beside the total is this window's own — union signings over appointments elapsed, blended across brands, so it moves with brand mix as well as with closing; it is stated against a trailing <b>8 weeks</b> ending today, and a move inside 3 points reads flat rather than as a direction.</div>`:''}
   </div>`;
 }
 
@@ -3249,6 +3270,62 @@ const momBadge = m => m === null ? ''
    same way: 35%+ hot (green), 30–35 warm (yellow), under 30 cold (red).
    No appointments = no band — a missing denominator is not a cold streak. */
 const closeBand = c => !c || !c.appts ? 'none' : c.close >= 35 ? 'hot' : c.close >= 30 ? 'warm' : 'cold';
+
+/* ── THE BOARD'S OWN CLOSING % ─────────────────────────────────────────────
+   Kevin (18 Aug): "add a closing % immediately to the right of the total for
+   each of the options... closing % is my fav especially if we're already
+   showing the reps closing %."
+
+   The rep rows have carried close rates since the momentum fold; the total
+   above them carried none, so the one number he reads first was the only one
+   on the card that could not answer "and did we close it?". This asks the
+   SAME question of the window on screen — day, week, month or YTD, it moves
+   with the toggle like everything else — and states it against the trailing
+   eight weeks so a rate is never read alone.
+
+   Union signings over CC appointments elapsed, blended from the window's own
+   per-brand rows. A blended rate moves with brand mix as well as with
+   closing (the standing caveat on this page), so the mix warning travels in
+   the tooltip and the fine print rather than being quietly dropped — and the
+   per-brand breakdown is one card away, unchanged.
+
+   No appointments elapsed = a dash, never a zero: a missing denominator is
+   not a cold streak, and today before 9am has no close rate to give. */
+function heroClose(W, stale){
+  const rows = W.closeByBrand || [];
+  if (!rows.length) return { chip:'', line:'' };
+  const b = rows.reduce((o,r)=>({ s:o.s+r.signed, a:o.a+r.appts }), { s:0, a:0 });
+  const close = b.a ? Math.round(b.s / b.a * 100) : null;
+  const base = D.close8w || null;
+  /* The baseline trails TODAY. A browsed past month (the time machine) is not
+     eight weeks away from it in any honest sense, so that comparison is
+     withheld rather than computed — the rate still shows. */
+  const d = (!stale && close !== null && base && base.close !== null && base.appts >= 20)
+    ? close - base.close : null;
+  const band = closeBand({ appts: b.a, close });
+  const tip = close === null
+    ? 'No appointments have elapsed in this window, so there is no close rate to divide.'
+    : `${b.s} signings over ${b.a} appointments elapsed. Signings are the union — CC contracts, Billdu acceptances for Oasis, rung sales pending CC, never both for one deal. Blended across brands, so it moves with brand mix as well as with closing; the per-brand rates are on the close-rate card.`;
+  /* A ±2 point wobble is not a direction. Inside the dead band the glyph goes
+     flat and keeps the signed number, so the chip never sells a rounding
+     difference as a move the way an arrow would. */
+  const arrow = d === null ? '' : d >= 3 ? '▲ +' : d <= -3 ? '▼ −' : d > 0 ? '▬ +' : d < 0 ? '▬ −' : '▬ ';
+  const chip = `<span class="hero-close ${band}" title="${esc(tip)}"><b>${close===null?'—':close+'%'}</b><i>close</i>${
+    d===null?'':`<em class="${d>=3?'up':d<=-3?'dn':'flat'}">${arrow}${Math.abs(d)}</em>`}</span>`;
+  const verdict = d === null ? ''
+    : d >= 3 ? ` — <b style="color:var(--green)">${d} pts ahead of it</b>`
+    : d <= -3 ? ` — <b style="color:var(--red)">${Math.abs(d)} pts under it</b>`
+    : d === 0 ? ' — level with it' : ` — ${Math.abs(d)} pt${Math.abs(d)===1?'':'s'} ${d>0?'over':'under'}, inside the noise`;
+  const line = close === null
+    ? `no appointments have elapsed in this window — a close rate needs a denominator`
+    : `<b style="color:var(--text)">${close}%</b> closed · ${b.s} of ${b.a} appts elapsed${
+        base && base.close !== null
+          ? ` · ${base.weeks}-wk avg <b style="color:var(--text)">${base.close}%</b> (${base.signed}/${base.appts})${
+              stale ? ' — trailing today, so this browsed month is not judged against it'
+                    : d === null ? ' — baseline too thin to judge against' : verdict}`
+          : ''}`;
+  return { chip, line };
+}
 
 /* The trailing-close boxes riding under a rep's revenue bar: four banded
    windows plus the trend. Dash = no appointments to divide by, never a zero. */
@@ -11050,6 +11127,30 @@ function buildData(raw){
              byId: Object.fromEntries(rows.map(r => [r.id, r])), team: finish(team) };
   })();
 
+  /* ── THE EIGHT-WEEK CLOSE BASELINE. Kevin (18 Aug): "closing % is my fav
+     especially if we're already showing the reps closing %" — so the board
+     total finally carries the same number the rep rows carry, and it is asked
+     of whichever window is on screen. A rate with nothing behind it is a
+     number, not a verdict: today's close on four appointments swings twenty
+     points on one signature. So the headline rate is stated against a
+     TRAILING EIGHT WEEKS ending today — long enough to be a baseline, short
+     enough to still be this business (the same reason the rhythm dropped the
+     year-ago ghost).
+
+     It is built by asking slice() for the 56 days and blending its per-brand
+     rows, so the baseline is the SAME arithmetic as the window it is compared
+     against — union signings (CC contracts + Billdu acceptances for Oasis +
+     rung claims pending CC, never both for one deal) over CC appointments
+     elapsed. A baseline computed a second way would drift from the figure it
+     judges and the delta would be measuring the two methods, not the team. */
+  const close8w = (() => {
+    const DAYS = 56, end = addD(sod(NOW), 1);
+    const b = (slice(addD(end, -DAYS), end).closeByBrand || [])
+      .reduce((o, r) => ({ s: o.s + r.signed, a: o.a + r.appts }), { s: 0, a: 0 });
+    return { days: DAYS, weeks: DAYS / 7, signed: b.s, appts: b.a,
+             close: b.a ? Math.round(b.s / b.a * 100) : null };
+  })();
+
   /* ── THE RHYTHM. Kevin (11 Aug), on the intel board: "instead of last years
      marketing historical data it needs to be based on the last 1-4 months
      rhythm. A year ago after a big storm is not relevant data comparison for
@@ -11553,7 +11654,7 @@ function buildData(raw){
 
   return {
     generatedAt: new Date().toISOString(),
-    oasisLag, exclusions, sampleReps, signals, closeTrend, rhythm, bestWorst, discoveries, apptWtd, pipeline, closeLag,
+    oasisLag, exclusions, sampleReps, signals, closeTrend, close8w, rhythm, bestWorst, discoveries, apptWtd, pipeline, closeLag,
     /* THE PULSE reads the whole history in `jobs` and `qb_invoices`, so it is
        deliberately NOT scoped to the month window — a normal built from the
        month the owner happens to be looking at is not a normal. It is the one
