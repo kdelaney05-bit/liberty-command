@@ -263,21 +263,74 @@
   .vit-master .ekg { height: 54px; }
   /* ── THE 2×2 ──
      MARKETING | SALES over PRODUCTION | MONEY, in that order, because that is
-     the order the money moves through the business. One compact row each. */
+     the order the money moves through the business.
+
+     EACH TILE IS THE MASTER IN MINIATURE, not a badge. The first cut gave a
+     micro one tag and a 64px spark, and Kevin read it at phone width for what
+     it was: "the smaller vitals look stupid. Not enough details." So a micro
+     now carries the master's own anatomy at quarter scale — its headline
+     figure, a full-tile trace with the median riding under it, and a
+     week-by-week strip beneath the trace that says COMPARED TO WHAT: one
+     chip per trailing period, green at-or-above its own normal, red under
+     it. The old no-numbers-at-rest law is retired by that same ruling — the
+     figure the tile leads with is the one the drill would open on. */
   .vit-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px;
     max-width: var(--trace-max); margin-right: auto; }
-  .vit-micro { display: flex; align-items: center; gap: 8px; width: 100%;
-    padding: 8px 10px; min-height: 46px; border-radius: 10px; cursor: pointer;
-    font: inherit; color: var(--text); text-align: left;
+  .vit-micro { display: flex; flex-direction: column; align-items: stretch; gap: 6px;
+    width: 100%; padding: 10px 11px 9px; min-height: 92px; border-radius: 10px;
+    cursor: pointer; font: inherit; color: var(--text); text-align: left;
     border: 1px solid rgba(138,160,148,0.18); background: rgba(138,160,148,0.05);
     transition: border-color .15s, background .15s; }
+  .vit-mi-top { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
   .vit-tag { font-family: 'JetBrains Mono', monospace; font-size: 9.5px; letter-spacing: 0.14em;
     font-weight: 600; flex: none; }
-  .vit-trace { flex: 1; display: flex; justify-content: flex-end; line-height: 0; }
-  .vit-trace .rbars { width: 64px; }
-  /* A mini rhythm bar keeps its bars and loses its numbers — the same rule the
-     brand-row sparks use. Nothing on a micro vital may print a figure. */
+  /* The tile's headline, in the hero's own numeral face — small, but a real
+     instrument reading, not a footnote. */
+  .vit-mi-num { font-family: 'Fraunces', serif; font-size: 17px; font-weight: 500;
+    letter-spacing: -0.01em; line-height: 1; white-space: nowrap; }
+  .vit-trace { display: block; line-height: 0; }
+  /* The miniature takes the whole tile's width — the same stretched-viewBox
+     trick every ekg uses, drawn at close to display size so the dot stays
+     round enough. 64px sparks were the "not enough details". */
+  .vit-micro .ekg-mini, .vit-micro .vit-flat { width: 100%; height: 26px; }
+  .vit-trace .rbars { width: 100%; }
+  /* A mini rhythm bar keeps its bars and loses its printed figures — the tile's
+     own headline number already carries the reading. */
   .vit-trace .rb-num, .vit-trace .rb-lab { display: none; }
+  /* ── THE RHYTHM STRIP · compared to what ──────────────────────────────────
+     One chip per trailing period against that vital's own reference. This is
+     Kevin's streak law made visible without a legend: one red chip is a week,
+     two in a row start the worry, three in a row and the red lights go off —
+     consecutive reds READ as a streak because they sit touching. The newest
+     period wears a hairline outline so "now" is findable at a glance. */
+  .vit-mi-foot { display: flex; align-items: center; gap: 8px; min-height: 10px; }
+  /* The master wears the same strip, capped to its own 560px track. */
+  .vit-master .vit-mi-foot { margin-top: 7px; max-width: var(--trace-max); }
+  .vit-chips { display: flex; gap: 3px; flex: 1 1 auto; }
+  .vit-chips i { flex: 1; height: 4px; border-radius: 2px; background: rgba(138,160,148,0.22); }
+  .vit-chips i.good { background: rgba(108,194,139,0.65); }
+  .vit-chips i.bad { background: rgba(217,106,94,0.75); }
+  .vit-chips i.now { outline: 1px solid rgba(255,255,255,0.4); outline-offset: 1px; }
+  .vit-mi-sub { font-family: 'JetBrains Mono', monospace; font-size: 7.5px; letter-spacing: 0.06em;
+    text-transform: uppercase; color: var(--text-dim); white-space: nowrap; flex: none; }
+  .vit-streak { font-family: 'JetBrains Mono', monospace; font-size: 7.5px; letter-spacing: 0.06em;
+    text-transform: uppercase; white-space: nowrap; flex: none; }
+  .vit-streak.worry { color: var(--gold); font-weight: 700; }
+  .vit-streak.alarm { color: var(--red); font-weight: 700; }
+  /* THREE DOWN PERIODS IS AN ALARM, AND AN ALARM MOVES. The pulse rides the
+     box-shadow so the heat glow itself breathes — an animation outranks the
+     tile's inline heat style for the animated property, which is exactly the
+     override needed here and nowhere else. Reduced motion holds it at the
+     bright end instead: still an alarm, never a strobe. */
+  .vit-micro.alarm, .vit-master.alarm { animation: vit-alarm 1.8s ease-in-out infinite; }
+  @keyframes vit-alarm {
+    0%, 100% { box-shadow: inset 0 0 18px rgba(217,106,94,0.12); }
+    50% { box-shadow: inset 0 0 26px rgba(217,106,94,0.30), 0 0 16px -2px rgba(217,106,94,0.35); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .vit-micro.alarm, .vit-master.alarm { animation: none;
+      box-shadow: inset 0 0 24px rgba(217,106,94,0.26), 0 0 12px -2px rgba(217,106,94,0.28); }
+  }
   /* THE HEAT MAP. Trace colour, border and a soft inner glow all move together
      off one state, so the four read as one instrument. The rgb triplets are
      inlined by the renderer (see VIT_RGB) because a CSS custom property cannot
@@ -378,7 +431,8 @@
     .vit-master { padding: 11px 10px 9px; }
     .vit-m-num { font-size: 42px; }
     .vit-master .ekg { height: 48px; }
-    .vit-micro { padding: 7px 8px; min-height: 44px; gap: 6px; }
+    .vit-micro { padding: 9px 9px 8px; min-height: 84px; gap: 5px; }
+    .vit-mi-num { font-size: 15px; }
     .vit-keys { gap: 6px; }
     .vit-key .v { font-size: 15px; }
   }
@@ -6813,6 +6867,9 @@ function vitMarketing(){
       : `$${cur.roi.toFixed(2)} back per $1 — clear of your $${VIT.marketing.floor} line`;
   return { ...base, live:true, band:st.band, dist:st.dist,
     series: priced.map(m => m.roi), ref, read, cur, priced,
+    /* worse/unit drive the tile's rhythm strip and Kevin's streak law; micro
+       is the tile's own headline. Months, because that is this vital's grain. */
+    worse:'below', unit:'mo', micro:{ num:`$${cur.roi.toFixed(2)}`, sub:'per $1' },
     /* MARKETING IS NOT IN THE MASTER, and the master says so: its newest
        reading is a closed month old, so blending it into a weekly line would
        mix two clocks. It colours its own tile and stops there. */
@@ -6844,6 +6901,7 @@ function vitSales(){
   const gap = Math.round((cur / ref - 1) * 100);
   return { key:'sales', tag:'SLS', name:'SALES', label:'signed dollars a week',
     grain:'weeks', live:true, band:st.band, dist:st.dist, series:s, ref, inMaster:true,
+    worse:'below', unit:'wk', micro:{ num: short(cur), sub:'7 days' },
     read: `${short(cur)} signed, ${gap === 0 ? 'level with' : gap > 0 ? `${gap}% above` : `${Math.abs(gap)}% below`} your 8-week median`,
     refNote:'median of your last 8 complete weeks',
     keys: [
@@ -6873,6 +6931,9 @@ function vitProduction(){
   const d = Math.round(cur - ref);
   return { key:'production', tag:'PRD', name:'PRODUCTION', label:'how much of the backlog has stalled',
     grain:'weeks', live:true, band:st.band, dist:st.dist, series:s, ref, inMaster:true,
+    /* worse is ABOVE for this one vital: a stalled share climbing over its
+       median is the bad direction, so the strip and the streak read that way. */
+    worse:'above', unit:'wk', micro:{ num:`${Math.round(cur)}%`, sub:'stalled' },
     read: `${Math.round(cur)}% of the open book is past ${VIT.production.stallDays} days — ${
       d === 0 ? 'level with' : d > 0 ? `${d} points above` : `${Math.abs(d)} points below`} its 8-week median`,
     refNote:'median of your last 8 complete weeks',
@@ -6916,6 +6977,9 @@ function vitMoney(){
        pictures the very thing that decides the colour, which a borrowed
        invoiced-dollars line would not. */
     profile: M.aging, series: [], ref: null, inMaster: false,
+    /* No series means no rhythm strip and no streak — a snapshot cannot have a
+       run of bad weeks. The tile's headline carries the one figure instead. */
+    micro:{ num:`${Math.round(M.meanAge)}d`, sub:'avg age' },
     read: `${Math.round(M.meanAge)} days is the average age of ${short(M.openTotal)} owed to you`,
     refNote:`your line: green to ${VIT.money.good} days, watch to ${VIT.money.watch}, problem past ${VIT.money.problem}`,
     keys: [
@@ -6991,23 +7055,83 @@ function vitMaster(list){
     })() };
 }
 
+/* ── THE STREAK LAW (KD, 19 Aug) ─────────────────────────────────────────────
+   "One bad week don't kill you. Two bad weeks start to worry. Three down
+   weeks red lights need to be going off."
+
+   Counted as TRAILING CONSECUTIVE periods worse than the vital's own
+   reference, in the vital's own worse direction — sales is worse below its
+   median, production is worse above. The count stops at the first
+   at-or-better period and at any hole in the series, so a streak is always a
+   claim about an unbroken run, never about a patchy one.
+
+   PRESENTATION ONLY, deliberately. The streak colours a chip, names the run
+   and rings the alarm — it never feeds vitState or the master's blend, so the
+   whole tuning surface stays the one VIT block and these two numbers. */
+const VIT_STREAK = { worry: 2, alarm: 3 };
+function vitStreak(v){
+  if (!v || !v.live || v.ref == null || !v.series || !v.series.length) return 0;
+  let n = 0;
+  for (let i = v.series.length - 1; i >= 0; i--){
+    const x = v.series[i];
+    if (x == null || !isFinite(x)) break;
+    if (!(v.worse === 'above' ? x > v.ref : x < v.ref)) break;
+    n++;
+  }
+  return n;
+}
+
+/* THE RHYTHM STRIP — compared to what, made explicit. One chip per trailing
+   period against the vital's own reference: green held its normal, red fell
+   short of it, the newest wears the outline. Consecutive reds ARE the streak,
+   visibly, and the line beside the strip says it in words once it matters.
+   No reference claimed → grey chips and the words say why, never a fake
+   green run over a median that was refused. */
+function vitStripHtml(v){
+  if (!v || !v.live || !v.series || v.series.length < 2) return '';
+  const last = v.series.slice(-(VIT.weeks + 1));
+  const chips = last.map((x, i) => {
+    const cls = (v.ref == null || x == null || !isFinite(x)) ? ''
+      : (v.worse === 'above' ? x > v.ref : x < v.ref) ? 'bad' : 'good';
+    return `<i class="${cls}${i === last.length - 1 ? ' now' : ''}"></i>`;
+  }).join('');
+  const stk = vitStreak(v), unit = v.unit || 'wk';
+  const dir = v.worse === 'above' ? 'over' : 'under';
+  const tail = stk >= VIT_STREAK.alarm
+    ? `<span class="vit-streak alarm">${stk} ${unit}s ${dir} normal</span>`
+    : stk >= VIT_STREAK.worry
+    ? `<span class="vit-streak worry">${stk} ${unit}s ${dir} normal</span>`
+    : v.ref != null
+    ? `<span class="vit-mi-sub">${last.length} ${unit}s · ╌ median</span>`
+    : `<span class="vit-mi-sub">no median yet</span>`;
+  return `<span class="vit-mi-foot"><span class="vit-chips">${chips}</span>${tail}</span>`;
+}
+
 /* ── DRAWN ───────────────────────────────────────────────────────────────── */
 function vitMicroHtml(v){
   const c = VIT_C[v.band], rgb = VIT_RGB[v.band];
+  const stk = vitStreak(v);
+  const alarm = stk >= VIT_STREAK.alarm;
   const heat = v.band === 'dark' ? ''
     : ` style="border-color:rgba(${rgb},0.32);background:rgba(${rgb},0.07);box-shadow:inset 0 0 18px rgba(${rgb},0.10)"`;
   /* Money draws its age profile instead of a line — real amounts on a shared
-     floor, no invented history. Everything else draws its rhythm. */
+     floor, no invented history. Everything else draws its rhythm at the
+     tile's own width, median riding under it like the master's. */
   const shape = v.profile
     ? rhythmBars(v.profile.map(a => ({ label:'', v: Math.round(a.v) })),
-        { w:64, h:22, mini:true, refDash:false, color: c })
-    : vitTrace(v, { id:`vit-${v.key}`, w:64, h:22, mini:true });
-  return `<button class="vit-micro${VITOPEN === v.key ? ' on' : ''}" id="vitm-${v.key}" data-vit
+        { w:130, h:26, mini:true, refDash:false, color: c })
+    : vitTrace(v, { id:`vit-${v.key}`, w:130, h:26, mini:true });
+  return `<button class="vit-micro${VITOPEN === v.key ? ' on' : ''}${alarm ? ' alarm' : ''}" id="vitm-${v.key}" data-vit
       onclick="vitOpen('${v.key}')" aria-expanded="${VITOPEN === v.key ? 'true' : 'false'}"
-      aria-label="${esc(v.name)} — ${esc(VIT_WORD[v.band])}. Open for the full reading."${heat}>
-    <span class="vit-tag" style="color:${c}">${v.tag}</span>
+      aria-label="${esc(v.name)} — ${esc(VIT_WORD[v.band])}${alarm ? `, ${stk} ${v.unit || 'wk'}s ${v.worse === 'above' ? 'over' : 'under'} normal` : ''}. Open for the full reading."${heat}>
+    <span class="vit-mi-top">
+      <span class="vit-tag" style="color:${c}">${v.tag}</span>
+      ${v.live && v.micro
+        ? `<span class="vit-mi-num" style="color:${c}">${esc(v.micro.num)} <small class="vit-mi-sub">${esc(v.micro.sub)}</small></span>`
+        : `<span class="vit-dark">${esc(v.chip || 'feed dark')}</span>`}
+    </span>
     <span class="vit-trace">${shape}</span>
-    ${v.live ? '' : `<span class="vit-dark">${esc(v.chip || 'feed dark')}</span>`}
+    ${vitStripHtml(v)}
   </button>`;
 }
 
@@ -7088,10 +7212,17 @@ function cardVitals(){
 
   return `<div class="card vit-card">
     <div class="card-title">Vitals · the business<span class="feed-tag cc">CC live</span><span class="feed-tag qb">QB</span></div>
-    <div class="card-sub">One heartbeat and four organs. Green healthy, gold watch, red problem — tap any of them for the numbers behind the colour.</div>
+    <div class="card-sub">One heartbeat and four organs. Green healthy, gold watch, red problem — tap any of them for the numbers behind the colour. The strip under each trace is the last stretch against its own median: <b>two reds in a row is a worry, three rings the alarm</b>.</div>
 
     <div class="vit-hero">
-    <div class="vit-master"${M.live ? ` style="border-color:rgba(${mrgb},0.24);box-shadow:inset 0 0 26px rgba(${mrgb},0.07)"` : ''}>
+    ${(() => {
+      /* The master wears the same rhythm strip and the same streak law as the
+         tiles — health is worse BELOW its median — so the opening graphic
+         answers "compared to what" before a single tile is read, and three
+         blended weeks under the line ring the same alarm a tile would. */
+      const mv = { live: M.live, series: M.series, ref: M.ref, worse:'below', unit:'wk' };
+      const mAlarm = vitStreak(mv) >= VIT_STREAK.alarm;
+      return `<div class="vit-master${mAlarm ? ' alarm' : ''}"${M.live ? ` style="border-color:rgba(${mrgb},0.24);box-shadow:inset 0 0 26px rgba(${mrgb},0.07)"` : ''}>
       <button class="vit-m-btn" id="vitm-master" data-vit onclick="vitOpen('master')"
         aria-expanded="${VITOPEN === 'master' ? 'true' : 'false'}"
         aria-label="The business — ${esc(M.read)}. Open for what is in this line.">
@@ -7104,10 +7235,11 @@ function cardVitals(){
             ekgSpark(M.series.map(x => ({ v: x, t: M.ref })),
               { id:'vit-master', w:280, h:54, color: mc, glow: mc })}
             <div class="ekg-cap">blended, week by week<span class="ekg-cap-ref">╌╌ median of your last ${VIT.weeks} weeks</span></div>
-          </div>`
+          </div>
+          ${vitStripHtml(mv)}`
         : `<div class="vit-m-num" style="color:var(--text-dim)">—<small>NO BLENDED LINE</small></div>
            <div class="ekg-wrap" style="margin:2px 0 0">${vitFlat()}<div class="ekg-cap">nothing drawn — see below</div></div>`}
-      </button>
+      </button>`; })()}
       ${vitPanelHtml({ key:'master', name:'THE BUSINESS', label:'what is in this line, and what is not',
         band: M.band, live: M.live, read:'', noTrace:true, why: M.note,
         keys: M.live ? [
@@ -8582,7 +8714,7 @@ addEventListener('resize', () => {
    the last one, it is to tell a human which build is on the server and when it
    got there. A number nobody clocked cannot answer that, and the first time it
    is asked in anger will be the morning a stale build is being chased. */
-const BUILD = '2026-08-20T03:00Z-desktop-rail';
+const BUILD = '2026-08-20T03:17Z-micro-vitals';
 const SB_URL = 'https://lzegjjbkfuecrhdvlvay.supabase.co';
 /* The one page that can finish a password reset. Hard-coded rather than derived,
    because every derivation of it so far has been a source of bugs: a bare origin
