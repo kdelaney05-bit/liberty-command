@@ -102,6 +102,7 @@
   .stat-tile .val.orange { color: var(--accent-soft); } .stat-tile .val.gold { color: var(--gold); } .stat-tile .val.blue { color: var(--blue); } .stat-tile .val.green { color: var(--green-soft); } .stat-tile .val.red { color: var(--red); }
   .stat-tile .delta { font-family: 'JetBrains Mono', monospace; font-size: 9px; margin-top: 6px; letter-spacing: 0.02em; }
   .stat-tile .delta.up { color: var(--green-soft); } .stat-tile .delta.down { color: #d8997f; } .stat-tile .delta.flat { color: var(--text-dim); }
+  .stat-tile .delta.warn { color: var(--gold); }
   .wow-hero { display: flex; align-items: stretch; gap: 8px; margin: 10px 0 12px; }
   .wow-col { flex: 1; background: var(--bg-card-hi); border: 1px solid var(--line); border-radius: 10px; padding: 11px 12px; }
   .wow-col .k { font-family: 'JetBrains Mono', monospace; font-size: 8px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-dim); }
@@ -925,6 +926,12 @@
   .money-row .nm { flex: 1; font-size: 14px; font-weight: 500; }
   .money-row .col { font-family: 'JetBrains Mono', monospace; font-size: 12px; width: 92px; text-align: right; }
   .money-row .col.inv { color: var(--green-soft); } .money-row .col.ar { color: var(--accent-soft); }
+  /* the comparison riding under each figure — no naked numbers on this board */
+  .money-row .col .cmp { display: block; font-size: 9px; margin-top: 2px; }
+  .money-row .col .cmp.up { color: var(--green-soft); }
+  .money-row .col .cmp.down { color: #d8997f; }
+  .money-row .col .cmp.flat { color: var(--text-dim); }
+  .money-row .col .cmp.warn { color: var(--gold); }
   .money-head { display: flex; padding-bottom: 8px; border-bottom: 1px solid rgba(255,255,255,0.08); }
   .money-head .nm { flex: 1; }
   .money-head .col { font-family: 'JetBrains Mono', monospace; font-size: 8px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-dim); width: 92px; text-align: right; }
@@ -1192,6 +1199,7 @@
   .snap-bell b { color: var(--gold); font-weight: 600; }
   .snap-d { font-family: 'JetBrains Mono', monospace; font-size: 9px; margin-top: 5px; letter-spacing: 0.02em; }
   .snap-d.up { color: var(--green-soft); } .snap-d.down { color: #d8997f; } .snap-d.flat { color: var(--text-dim); }
+  .snap-d.warn { color: var(--gold); }
   .snaphint { font-family: 'JetBrains Mono', monospace; font-size: 9px; letter-spacing: 0.1em;
     text-transform: uppercase; color: var(--text-dim); text-align: center; margin-top: 12px; }
 
@@ -2252,6 +2260,26 @@ const mSpan = () => MONTHOFF ? D.windows.month.label : 'this month';
 const qbOK = () => D.qb && !D.qb.unavailable;
 const qbw = () => qbOK() ? D.qb.windows.month : null;
 const qbWinOf = k => qbOK() ? D.qb.windows[k] : null;
+/* ── THE ONE A/R AGE READ ───────────────────────────────────────────────────
+   The MNY vital, the Open A/R hero tile, the month card's A/R tile and the
+   by-brand rows all judge an open balance the same way: dollar-weighted mean
+   age against the same fixed band (VIT.money — receivables age in one
+   direction, so the line is a line, never a median). One helper, so four
+   surfaces can never phrase one book two ways. A/R is a position, not a
+   window, so its comparison is this line — never a prior-window delta. */
+const arAgeRead = age => {
+  if (age == null) return null;
+  const over = Math.round(age - VIT.money.good);
+  const st = vitState(age - VIT.money.good,
+    { watch: VIT.money.watch - VIT.money.good, problem: VIT.money.problem - VIT.money.good });
+  return { days: Math.round(age), band: st.band,
+    /* green wears the up tone, watch wears gold, problem wears the down red —
+       a watch-state age rendered dim would be a verdict quietly muted */
+    tone: st.band === 'green' ? 'up' : st.band === 'red' ? 'down'
+        : st.band === 'yellow' ? 'warn' : 'flat',
+    txt: over > 0 ? `▲${over}d past your ${VIT.money.good}d line`
+                  : `inside your ${VIT.money.good}d line` };
+};
 const charts = [];
 
 /* ── header ───────────────────────────────────────────────────────────────── */
@@ -2438,7 +2466,12 @@ function builtTile(){
           <div class="alloc-center"><div class="big">${short(q.invoiced)}</div><div class="lbl">built</div></div></div>
         <div class="alloc-legend mml">${BRAND_ORDER.map(id => { const v = (q.byBrand && q.byBrand[id]) ? q.byBrand[id].invoiced : 0; const m = brandOf(id);
           return `<div class="alloc-row" ${v?'':'style="opacity:.55"'}><div class="alloc-dot" style="background:${m.c}"></div><div class="name">${esc(m.s)}</div><div class="val">${v?`${short(v)} · ${pct(v,q.invoiced)}%`:'—'}</div></div>`; }).join('')}</div>
-        <div class="snap-s">${q.count} invoice${q.count===1?'':'s'} · billed when built · qb</div>`
+        <div class="snap-s">${q.count} invoice${q.count===1?'':'s'} · billed when built · qb</div>
+        ${(() => { /* the same delta the Built dive states, so tile and dive can never disagree */
+          const pq = q.prev || { invoiced: 0 };
+          const dq = pq.invoiced ? Math.round((q.invoiced - pq.invoiced) / pq.invoiced * 100) : null;
+          return dq === null ? `<div class="snap-d flat">no prior baseline</div>`
+            : `<div class="snap-d ${dq >= 0 ? 'up' : 'down'}">${dq >= 0 ? '▲' : '▼'} ${Math.abs(dq)}% vs ${esc(W.prevLabel)}</div>`; })()}`
             : q ? `<div class="snap-v" style="color:var(--gold)">$0</div><div class="snap-s">no invoices ${esc(label==='Today'?'today':'in this window')} · qb</div>`
             : `<div class="snap-v" style="color:var(--text-dim)">withheld</div><div class="snap-s">qb not readable</div>`}
         <div class="snap-go">details ›</div>
@@ -2452,7 +2485,11 @@ function arTile(){
           <div class="alloc-center"><div class="big">${short(D.qb.arTotal)}</div><div class="lbl">open</div></div></div>
         <div class="alloc-legend mml">${BRAND_ORDER.map(id => { const a = (D.qb.ar||[]).find(x=>String(x.id)===id); const v = a?a.ar:0; const m = brandOf(id);
           return `<div class="alloc-row" ${v?'':'style="opacity:.55"'}><div class="alloc-dot" style="background:${m.c}"></div><div class="name">${esc(m.s)}</div><div class="val">${v?`${short(v)} · ${pct(v,D.qb.arTotal)}%`:'—'}</div></div>`; }).join('')}</div>
-        <div class="snap-s">billed, not yet paid · qb · all time, not window-sliced</div>`
+        <div class="snap-s">billed, not yet paid · qb · all time, not window-sliced</div>
+        ${(() => { /* a position has no prior window, so its read is its age —
+             the same arithmetic and phrase the MNY vital carries */
+          const ar = arAgeRead(D.vitals && D.vitals.money ? D.vitals.money.meanAge : null);
+          return ar ? `<div class="snap-d ${ar.tone}">avg age ${ar.days}d · ${ar.txt}</div>` : ''; })()}`
              : qbOK() ? `<div class="snap-v" style="color:var(--accent-soft)">$0</div><div class="snap-s">nothing outstanding · qb</div>`
              : `<div class="snap-v" style="color:var(--text-dim)">withheld</div><div class="snap-s">qb not readable</div>`}
         <div class="snap-go">details ›</div>
@@ -2658,7 +2695,7 @@ function heroAppts(k){
   if (!A || !A.byCompany || !A.byCompany[k]) return '';
   const W = A.byCompany[k];
   const label = { day:'Today', week:'This week', month: MONTHOFF ? D.windows.month.label : 'MTD', ytd:'YTD' }[k] || '';
-  const rows = BRAND_ORDER.map(b => ({ b, m: brandOf(b), n: W.counts[b] || 0, typ: (W.typ[b] || {}).mean || 0 }));
+  const rows = BRAND_ORDER.map(b => ({ b, m: brandOf(b), n: W.counts[b] || 0, typ: (W.typ[b] || {}).typical || 0 }));
   const unknown = W.counts.unknown || 0;
   const branded = rows.reduce((n, r) => n + r.n, 0);
   const tot = branded + unknown;
@@ -2679,11 +2716,13 @@ function heroAppts(k){
     : '';
   const R = A.rhythm && (k === 'day' || k === 'week' || k === 'ytd') ? A.rhythm[k] : null;
   const RA = R ? R.all : null;
-  /* One normal per window, never two. The old byCompany typ (a MEAN of the prior
-     4 weeks) and the rhythm normal (a MEDIAN of the last 8) would otherwise both
-     print the word "typical" on one tile with two different numbers — the exact
-     confusion this card already warns about for the daily alarm. Where a rhythm
-     exists it owns the comparison outright; MTD keeps the original. */
+  /* One normal per window, never two. The byCompany typ and the rhythm normal
+     would otherwise both print the word "typical" on one tile with two
+     different numbers — the exact confusion this card already warns about for
+     the daily alarm. Where a rhythm exists it owns the comparison outright;
+     MTD keeps the original. (Both are MEDIANS now — the byCompany typ dropped
+     its old mean-of-prior-periods — so even where they differ it is a
+     different sample, never a different arithmetic.) */
   let rTop = '', rCap = '', rGap = null, rTypical = null;
   if (RA && k === 'day'){
     const items = RA.samples.map(s => ({ label:s.label, v:s.byHour, ref:RA.norm, dim:true }))
@@ -2969,7 +3008,7 @@ function cardApptByCompany(){
   const rows = BRAND_ORDER.map(b => {
     const m = brandOf(b);
     const n = W.counts[b] || 0;
-    const t = (W.typ[b] || {}).mean || 0;
+    const t = (W.typ[b] || {}).typical || 0;
     const vals = (W.typ[b] || {}).vals || null;
     const rd = Math.round(t);
     const gap = n - rd;
@@ -3051,7 +3090,7 @@ function cardApptByCompany(){
 
     ${K==='day'
       ? `<div class="note">Today is still filling — bookings arrive through the day, so a company below its weekday typical this morning is not yet a slow day. <b>Week and month are the steadier read.</b> Booking basis: counted when the appointment was set.</div>`
-      : `<div class="note">Booking basis — counted when the appointment was <b>set</b>, which is what measures the setting team's output, not what the crews drive to. "Typical" is the mean of the ${esc(W.sampleLabel)} over the same elapsed span, measured rather than targeted; the tick on each bar marks it.</div>`}
+      : `<div class="note">Booking basis — counted when the appointment was <b>set</b>, which is what measures the setting team's output, not what the crews drive to. "Typical" is the median of the ${esc(W.sampleLabel)} over the same elapsed span — the same median law every rhythm baseline on this page keeps, so one storm week cannot drag it — measured rather than targeted; the tick on each bar marks it.</div>`}
   </div>`;
 }
 
@@ -3313,7 +3352,9 @@ function cardStats(){
           : `<div class="val" style="color:var(--text-dim)">—</div><div class="sub">not readable</div><div class="delta flat">see note below</div>`}</div>
     <div class="stat-tile"><div class="lbl">Open A/R</div>
       ${qbOK() ? `<div class="val orange">${short(D.qb.arTotal)}</div><div class="sub">${D.qb.ar.reduce((n,a)=>n+a.count,0)} open · as of now</div>
-      <div class="delta flat">position, not a window</div>`
+      ${(() => { const ar = arAgeRead(D.vitals && D.vitals.money ? D.vitals.money.meanAge : null);
+        return ar ? `<div class="delta ${ar.tone}">avg age ${ar.days}d · ${ar.txt}</div>`
+                  : `<div class="delta flat">position, not a window</div>`; })()}`
       : `<div class="val" style="color:var(--text-dim)">—</div><div class="sub">not readable</div><div class="delta flat">see note below</div>`}</div>
   </div>
     ${MONTHOFF ? '' : closeMtdByBrand(W, pv)}
@@ -4133,13 +4174,26 @@ function cardMoney(){
     <div class="card-sub">Invoiced in ${esc(w().label.toLowerCase())} against total open A/R as of now.</div>
     <div class="money-head"><div class="nm"></div><div class="col">Invoiced</div><div class="col">Open A/R</div></div>
     ${ids.map(id=>{const m=brandOf(id), inv=q.byBrand[id]?.invoiced||0, a=ar[id]?.ar||0;
+      /* Same prior-window per brand the Built dive reads, same elapsed span. */
+      const pinv=(q.prev&&q.prev.byBrand&&q.prev.byBrand[id])?(q.prev.byBrand[id].invoiced||0):0;
+      const dI = pinv ? Math.round((inv-pinv)/pinv*100) : null;
+      /* This brand's own book age, from the one A/R age read. */
+      const ba = D.vitals && D.vitals.money && D.vitals.money.ageByBrand ? D.vitals.money.ageByBrand[id] : null;
+      const age = a && ba ? arAgeRead(ba.age) : null;
       return `<div class="money-row"><div class="nm">${esc(m.n)}</div>
-        <div class="col inv">${inv?short(inv):'—'}</div><div class="col ar">${a?short(a):'—'}</div></div>`}).join('')}
+        <div class="col inv">${inv?short(inv):'—'}${inv?(dI===null
+          ? (pinv?'':`<span class="cmp flat">no prior baseline</span>`)
+          : `<span class="cmp ${dI>=0?'up':'down'}">${dI>=0?'▲':'▼'} ${Math.abs(dI)}% vs ${esc(w().prevLabel)}</span>`):''}</div>
+        <div class="col ar">${a?short(a):'—'}${age?`<span class="cmp ${age.tone}" title="${esc(age.txt)}">${age.days}d avg</span>`:''}</div></div>`}).join('')}
     <div class="money-totals"><div class="nm">Total</div>
-      <div class="col inv">${short(q.invoiced)}</div><div class="col ar">${short(D.qb.arTotal)}</div></div>
+      <div class="col inv">${short(q.invoiced)}${(() => { const p=q.prev&&q.prev.invoiced;
+        const dT = p ? Math.round((q.invoiced-p)/p*100) : null;
+        return dT===null?'':`<span class="cmp ${dT>=0?'up':'down'}">${dT>=0?'▲':'▼'} ${Math.abs(dT)}% vs ${esc(w().prevLabel)}</span>`; })()}</div>
+      <div class="col ar">${short(D.qb.arTotal)}${(() => { const t=arAgeRead(D.vitals&&D.vitals.money?D.vitals.money.meanAge:null);
+        return t?`<span class="cmp ${t.tone}" title="${esc(t.txt)}">${t.days}d avg</span>`:''; })()}</div></div>
     ${missing.length?`<div class="withheld"><div class="wt">Absent, not zero</div><div class="wx">
       ${missing.map(id=>esc(BRANDS[id].n)).join(' and ')} ${missing.length>1?'have':'has'} no QuickBooks invoices at all — not $0 of invoicing, but no invoice records in the feed. Shown as a dash rather than a zero so an empty row is never read as a result.</div></div>`:''}
-    <div class="note">QuickBooks face value, never recomputed from lines and never reconciled against Contractors Cloud. <b>${D.qb.dropped}</b> excluded invoices are omitted. A/R is every open balance as of now and is deliberately not window-sliced.</div>
+    <div class="note">QuickBooks face value, never recomputed from lines and never reconciled against Contractors Cloud. <b>${D.qb.dropped}</b> excluded invoices are omitted. Invoiced is set against the <b>same elapsed span of the prior month</b> — like for like, never a partial month against a finished one. A/R is every open balance as of now and is deliberately not window-sliced; a position has no prior window, so its read is its <b>dollar-weighted average age</b> against your ${VIT.money.good}-day line — the same arithmetic the Money vital scores.</div>
   </div>`;
 }
 
@@ -7567,9 +7621,7 @@ function vitMoney(){
        run of bad weeks. The tile's headline carries the one figure instead,
        and the gap read judges it against the same fixed line the colour does. */
     micro:{ num:`${Math.round(M.meanAge)}d`, sub:'avg age' },
-    gapRead: (() => { const over = Math.round(M.meanAge - VIT.money.good);
-      return over > 0 ? `▲${over}d past your ${VIT.money.good}d line`
-                      : `inside your ${VIT.money.good}d line`; })(),
+    gapRead: arAgeRead(M.meanAge).txt,
     /* The lens: each brand's open TOTAL, then the age that judges it, against
        the same fixed band. The dollars are the number he asked for; the age is
        what decides the colour. A brand with nothing owed says so — "$0 owed"
@@ -10998,11 +11050,15 @@ function buildData(raw){
         }
       return by;
     };
-    /* mean count for one brand across a set of prior periods, each [start, +len days).
-       Samples are kept so the receipt can show which periods the typical came
-       from — a typical nobody can interrogate is exactly what this page refuses
-       to print. */
-    const priorMean = (b, starts, lenDays) => {
+    /* typical count for one brand across a set of prior periods, each
+       [start, +len days). A MEDIAN of the samples, not a mean — the same med()
+       every rhythm baseline on this page already uses, so one storm week in the
+       sample cannot drag the whole baseline the way it did when this was an
+       average, and "typical" stops meaning two different arithmetics depending
+       on which card printed it. Samples are kept so the receipt can show which
+       periods the typical came from — a typical nobody can interrogate is
+       exactly what this page refuses to print. */
+    const priorTypical = (b, starts, lenDays) => {
       const vals = starts.map(s => {
         let n = 0;
         for (let i = 0; i < lenDays; i++)
@@ -11010,7 +11066,7 @@ function buildData(raw){
                  .filter(r => (projBrand[String(r.cc_project_id)]||'unknown') === b).length;
         return n;
       });
-      return { vals, mean: vals.length ? vals.reduce((a,c)=>a+c,0)/vals.length : 0 };
+      return { vals, typical: med(vals) };
     };
     const elapsedWk = ((T.getDay()+6)%7) + 1;   // days Mon..today inclusive
     const elapsedMo = T.getDate();              // days 1..today inclusive
@@ -11023,7 +11079,7 @@ function buildData(raw){
         counts: bookedByBrandInRange(T, winEnd),
         /* the same weekday-and-hour baseline the daily alarm now trusts, so the
            page never shows two different "typical today" numbers for one brand */
-        typ: Object.fromEntries(BRAND_ORDER.map(b => [b, { mean: brandNorm[b].median, vals: null }])),
+        typ: Object.fromEntries(BRAND_ORDER.map(b => [b, { typical: brandNorm[b].median, vals: null }])),
       },
       week: (() => {
         const starts = [1,2,3,4].map(w => addD(sow(T), -7*w));
@@ -11031,7 +11087,7 @@ function buildData(raw){
           typLabel: `the same ${elapsedWk} day${elapsedWk===1?'':'s'} of the prior 4 weeks`,
           sampleLabel: 'prior 4 weeks', partial: elapsedWk < 7,
           counts: bookedByBrandInRange(sow(T), winEnd),
-          typ: Object.fromEntries(BRAND_ORDER.map(b => [b, priorMean(b, starts, elapsedWk)])),
+          typ: Object.fromEntries(BRAND_ORDER.map(b => [b, priorTypical(b, starts, elapsedWk)])),
         };
       })(),
       month: (() => {
@@ -11049,7 +11105,7 @@ function buildData(raw){
                 n += createdOn(ymdL(d))
                        .filter(r => (projBrand[String(r.cc_project_id)]||'unknown') === b).length;
               return n; });
-            return [b, { vals, mean: vals.length ? vals.reduce((a,c)=>a+c,0)/vals.length : 0 }];
+            return [b, { vals, typical: med(vals) }];
           }));
           return {
             typLabel: 'the prior 3 full months — a closed month reads whole against whole',
@@ -11062,7 +11118,7 @@ function buildData(raw){
           typLabel: `the same ${elapsedMo} day${elapsedMo===1?'':'s'} of the prior 3 months`,
           sampleLabel: 'prior 3 months', partial: true,
           counts: bookedByBrandInRange(som(T), winEnd),
-          typ: Object.fromEntries(BRAND_ORDER.map(b => [b, priorMean(b, starts, elapsedMo)])),
+          typ: Object.fromEntries(BRAND_ORDER.map(b => [b, priorTypical(b, starts, elapsedMo)])),
         };
       })(),
       /* This mean-of-prior-periods baseline is still declined for YTD, and always
@@ -11079,7 +11135,7 @@ function buildData(raw){
         typLabel: 'no year-scale baseline',
         sampleLabel: 'counts only · no baseline at this grain', partial: true,
         counts: bookedByBrandInRange(soy(T), winEnd),
-        typ: Object.fromEntries(BRAND_ORDER.map(b => [b, { mean: 0, vals: null }])),
+        typ: Object.fromEntries(BRAND_ORDER.map(b => [b, { typical: 0, vals: null }])),
       },
     };
 
