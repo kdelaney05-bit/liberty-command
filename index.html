@@ -8272,10 +8272,10 @@ function setRepWin(k){ keepScroll(() => { REPWIN = k; }); }
 
    The sections regroup exactly what the single column already carries:
      Vitals    — the hero: master heartbeat + the 2×2
-     Sales     — sales by rep, then appointments by company (the pairing is
-                 deliberate: who sold it and who got the at-bats, one scroll
-                 apart — the rail must not undo it)
-     Marketing — the consolidated marketing room (brand → source → rep)
+     Sales     — sales vitals: the sellers' board (the v9 rep gauges land here)
+     Marketing — appointments by company (the setters' output — KD, 20 Aug:
+                 "a department of sales" that belongs to marketing), then the
+                 consolidated marketing room (brand → source → rep)
      People    — effort × results, then the Effort Room
      Money     — the money row: window switch, month time machine, Signed /
                  Appointments / Built / Open A/R, trending to finish
@@ -8292,12 +8292,17 @@ function setRepWin(k){ keepScroll(() => { REPWIN = k; }); }
 const RAIL_MIN = 900;   // the page's one desktop line — same as the masonry and the folds
 const SECTIONS = [
   { key:'vitals',    name:'Vitals',    render: () => cardVitals() },
-  { key:'sales',     name:'Sales',     render: () => '<div class="stack bands">' + cardReps() + cardApptByCompany() + '</div>' },
+  /* Appointments-by-company moved to MARKETING (KD, 20 Aug: "appointments…
+     should go into marketing, not in sales — it's a department of sales" that
+     measures the SETTING side). This reverses the earlier who-sold-it /
+     who-got-the-at-bats pairing on purpose: the at-bats are marketing's
+     output, and Sales fills out with the v9 rep gauges instead. */
+  { key:'sales',     name:'Sales',     render: () => '<div class="stack bands">' + cardReps() + '</div>' },
   /* The rooms render DIRECT here — the whole board, no preview shelf and no
      open/close state. The rail already solos a section, so the page-level
      takeover the shelves performed is redundant on the desktop; the phone
      column below RAIL_MIN keeps the shelves and their stores untouched. */
-  { key:'marketing', name:'Marketing', render: () => '<div class="stack bands">' + marketingRoom(true) + '</div>' },
+  { key:'marketing', name:'Marketing', render: () => '<div class="stack bands">' + cardApptByCompany() + marketingRoom(true) + '</div>' },
   /* "People" died in review (KD, 20 Aug: "I don't like the name… the people is
      the effort… hustle"). HUSTLE is his word for the whole register — the
      quadrant, the 4-Touch model, the effort instruments — so the rail says it. */
@@ -8921,7 +8926,7 @@ addEventListener('resize', () => {
    the last one, it is to tell a human which build is on the server and when it
    got there. A number nobody clocked cannot answer that, and the first time it
    is asked in anger will be the morning a stale build is being chased. */
-const BUILD = '2026-08-20T06:25Z-hero-container';
+const BUILD = '2026-08-20T06:39Z-apptco-marketing';
 const SB_URL = 'https://lzegjjbkfuecrhdvlvay.supabase.co';
 /* The one page that can finish a password reset. Hard-coded rather than derived,
    because every derivation of it so far has been a source of bugs: a bare origin
