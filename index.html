@@ -2500,7 +2500,11 @@ function builtTile(){
         <div class="alloc-legend mml">${BRAND_ORDER.map(id => { const v = (q.byBrand && q.byBrand[id]) ? q.byBrand[id].invoiced : 0; const m = brandOf(id);
           return `<div class="alloc-row" ${v?'':'style="opacity:.55"'}><div class="alloc-dot" style="background:${m.c}"></div><div class="name">${esc(m.s)}</div><div class="val">${v?`${short(v)} · ${pct(v,q.invoiced)}%`:'—'}</div></div>`; }).join('')}</div>
         <div class="snap-s">${q.count} invoice${q.count===1?'':'s'} · billed when built · qb</div>
-        ${(() => { /* the same delta the Built dive states, so tile and dive can never disagree */
+        ${(() => { /* the same delta the Built dive states, so tile and dive can never disagree.
+             W = flat(k) rode along when this line was lifted from diveBuilt but its
+             binding did not: with a real prior window the tile threw "W is not
+             defined" and took the whole Money section down with it. */
+          const W = flat(k);
           const pq = q.prev || { invoiced: 0 };
           const dq = pq.invoiced ? Math.round((q.invoiced - pq.invoiced) / pq.invoiced * 100) : null;
           return dq === null ? `<div class="snap-d flat">no prior baseline</div>`
@@ -9756,7 +9760,7 @@ addEventListener('resize', () => {
    the last one, it is to tell a human which build is on the server and when it
    got there. A number nobody clocked cannot answer that, and the first time it
    is asked in anger will be the morning a stale build is being chased. */
-const BUILD = '2026-08-20T18:55Z-marketing-tap-latency';
+const BUILD = '2026-08-20T19:28Z-money-built-delta';
 const SB_URL = 'https://lzegjjbkfuecrhdvlvay.supabase.co';
 /* The one page that can finish a password reset. Hard-coded rather than derived,
    because every derivation of it so far has been a source of bugs: a bare origin
