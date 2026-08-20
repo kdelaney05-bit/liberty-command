@@ -557,15 +557,22 @@
   .rg-beat .cap b { color: var(--c, var(--green)); font-weight: 500; }
   .rg-beat.good { --c: var(--green); } .rg-beat.fall { --c: var(--red); }
   .rg-beat.off { padding-bottom: 9px; }
-  .rg-beat svg { width: 100%; height: 74px; display: block; margin-top: 4px; }
+  .rg-beat .plot { position: relative; height: 88px; margin-top: 4px; }
+  .rg-beat svg { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
   .rg-beat .grid line { stroke: rgba(255,255,255,0.05); stroke-width: 1; }
+  .rg-beat .money { fill: rgba(240,234,216,0.09); }
+  .rg-beat .fillA { fill: var(--c, var(--green)); opacity: .10; }
+  .rg-beat .plot span { position: absolute; font-family: 'JetBrains Mono', monospace;
+    line-height: 1; white-space: nowrap; pointer-events: none; }
+  .rg-beat .bv { font-size: 8.5px; color: var(--text-dim); }
+  .rg-beat .bv.now { color: var(--c, var(--green)); font-weight: 600; }
+  .rg-beat .bm { top: 61px; font-size: 8.5px; color: #f0ead8; opacity: .78; }
+  .rg-beat .bm.now { opacity: 1; font-weight: 600; }
+  .rg-beat .bap { top: 72px; font-size: 8px; color: var(--text-dim); }
   .rg-beat .stdline { stroke: #f0ead8; stroke-width: 1; stroke-dasharray: 3 5; opacity: .4; }
   .rg-beat .trace { fill: none; stroke: var(--c, var(--green)); stroke-width: 1.8;
     stroke-linejoin: round; stroke-linecap: round; opacity: .9; }
   .rg-beat .wk { fill: var(--c, var(--green)); }
-  .rg-beat .val { font-size: 8.5px; fill: var(--text-dim); font-family: 'JetBrains Mono', monospace; }
-  .rg-beat .val.now { fill: var(--c, var(--green)); font-weight: 600; }
-  .rg-beat .axis { font-size: 8.5px; fill: var(--text-dim); font-family: 'JetBrains Mono', monospace; }
 
   /* the fine instrument — tank gauges */
   .rg-effort { border-top: 1px solid var(--line); padding: 12px 15px 14px;
@@ -3606,7 +3613,12 @@ function rgGauge(frac, stdFrac){
 /* The heartbeat: nine weekly closes as one trace, values printed on the
    points (the chart must say its own numbers — Kevin's standing law), the
    team standard dashed across. Weeks with no elapsed appointments leave a
-   gap, never a zero — no denominator is not a cold week. */
+   gap, never a zero — no denominator is not a cold week.
+   Grew a second layer (KD, 20 Aug: "I don't know what he did every one of
+   those weeks — put the dollar amount in there too, but keep the heartbeat"):
+   faint bars behind the trace are the week's signed dollars, each labeled,
+   with the week's appointments under that. Bars are amounts, the line is a
+   rate — each keeps its own scale, and the line keeps the verdict color. */
 function rgBeat(rp, std){
   const arr = rp ? rp.close : null;
   if (!arr || arr.filter(v => v != null).length < 2)
@@ -3615,6 +3627,9 @@ function rgBeat(rp, std){
   const vals = arr.filter(v => v != null);
   const max = Math.max(...vals, std || 0, 10) * 1.3;
   const y = v => 58 - (v / max) * 46;
+  const w = rp.w || [];
+  const mmax = Math.max(...w.map(wv => wv.v || 0), 1);
+  const m$ = v => v >= 100000 ? '$' + Math.round(v / 1000) + 'K' : v >= 1000 ? '$' + (v / 1000).toFixed(v < 10000 ? 1 : 0).replace(/\.0$/, '') + 'K' : v > 0 ? '$' + Math.round(v) : '';
   const segs = []; let cur = [];
   arr.forEach((v, i) => { if (v == null) { if (cur.length) segs.push(cur); cur = []; }
     else cur.push(`${x(i).toFixed(1)},${y(v).toFixed(1)}`); });
@@ -3623,17 +3638,32 @@ function rgBeat(rp, std){
   const firstIdx = arr.findIndex(v => v != null);
   const d = arr[lastIdx] - arr[firstIdx];
   const word = d >= 5 ? ['climbing ▲', 'good'] : d <= -5 ? ['fading ▼', 'fall'] : ['steady', 'good'];
+  /* The SVG stretches to fill the card, so it carries GEOMETRY ONLY — any
+     <text> inside would stretch with it (Kevin, 20 Aug: "the numbers look
+     stretched"). Every number is an absolutely-positioned HTML span over the
+     plot: horizontal position by percent (stretch-proof), vertical in px
+     (the plot height is fixed, so px map 1:1). */
+  const px = i => (x(i) / 4).toFixed(2) + '%';
+  const pos = i => i === 0 ? `left:0` : i === n - 1 ? `left:100%;transform:translateX(-100%)` : `left:${px(i)};transform:translateX(-50%)`;
   return `<div class="rg-beat ${word[1]}">
-    <div class="cap"><span>Heartbeat · weekly close rate</span><b>${word[0]}</b></div>
-    <svg viewBox="0 0 400 74" preserveAspectRatio="none">
+    <div class="cap"><span>Heartbeat · weekly close % · bars = $ signed</span><b>${word[0]}</b></div>
+    <div class="plot">
+    <svg viewBox="0 0 400 88" preserveAspectRatio="none">
       <g class="grid"><line x1="0" y1="16" x2="400" y2="16"/><line x1="0" y1="34" x2="400" y2="34"/><line x1="0" y1="52" x2="400" y2="52"/></g>
+      ${w.map((wv, i) => { if (!wv.v) return '';
+        const h = Math.max(2, (wv.v / mmax) * 40);
+        return `<rect class="money" x="${(x(i) - 11).toFixed(1)}" y="${(58 - h).toFixed(1)}" width="22" height="${h.toFixed(1)}" rx="1.5"/>`; }).join('')}
+      ${segs.map(s => s.length === 1 ? '' : `<polygon class="fillA" points="${s[0].split(',')[0]},58 ${s.join(' ')} ${s[s.length-1].split(',')[0]},58"/>`).join('')}
       ${std != null ? `<line class="stdline" x1="0" y1="${y(std).toFixed(1)}" x2="400" y2="${y(std).toFixed(1)}"/>` : ''}
       ${segs.map(s => s.length === 1 ? '' : `<polyline class="trace" points="${s.join(' ')}"/>`).join('')}
       ${arr.map((v, i) => v == null ? '' :
-        `<circle class="wk${i === lastIdx ? ' now' : ''}" cx="${x(i).toFixed(1)}" cy="${y(v).toFixed(1)}" r="${i === lastIdx ? 3.2 : 2.2}"/>
-         <text class="val${i === lastIdx ? ' now' : ''}" x="${x(i).toFixed(1)}" y="${(y(v) - 5).toFixed(1)}" text-anchor="middle">${v}</text>`).join('')}
-      <text class="axis" x="8" y="70">9 wks ago</text><text class="axis" x="360" y="70">this wk</text>
+        `<circle class="wk${i === lastIdx ? ' now' : ''}" cx="${x(i).toFixed(1)}" cy="${y(v).toFixed(1)}" r="${i === lastIdx ? 3.2 : 2.2}"/>`).join('')}
     </svg>
+    ${arr.map((v, i) => v == null ? '' :
+      `<span class="bv${i === lastIdx ? ' now' : ''}" style="${pos(i)};top:${Math.max(0, y(v) - 13).toFixed(0)}px">${v}</span>`).join('')}
+    ${w.map((wv, i) => `<span class="bm${i === lastIdx ? ' now' : ''}" style="${pos(i)}">${m$(wv.v)}</span>
+      <span class="bap" style="${pos(i)}">${wv.a ? wv.a + 'a' : ''}</span>`).join('')}
+    </div>
   </div>`;
 }
 
@@ -3672,10 +3702,15 @@ function rgCard(r, k, sellers, mx){
         goal ? `goal ${goal} <b>${t >= goal ? '+' : '−'}${Math.abs(Math.round(100 * (t - goal) / goal))}%</b> · co avg ${coT}` : `co avg ${coT}`,
         rgRank(teamT.map(x => ({ id: x.id, v: x.month.t })), id, true), true));
 
+  /* "4-Touch complete" — Kevin's rename (20 Aug): call it what it is, the
+     share of the live book with all four plays done or signed. When the
+     Autopilot automation ships, this dial's drill gains the manual-vs-
+     Autopilot split — the touches feed must stamp who made the touch first,
+     so that read waits for the data rather than being invented. */
   const lt = byRep(I.light);
-  if (!lt) dials.push(rgDialHtml(id, 'light', 'off', '4-Touch green', rgGauge(0, 0.5), '—', I.light ? 'no live book' : 'feed loading', '', false));
+  if (!lt) dials.push(rgDialHtml(id, 'light', 'off', '4-Touch complete', rgGauge(0, 0.5), '—', I.light ? 'no live book' : 'feed loading', '', false));
   else { const b = Math.max(1, +lt.green + +lt.yellow + +lt.red), g = Math.round(100 * +lt.green / b);
-    dials.push(rgDialHtml(id, 'light', g >= 50 ? 'good' : g >= 30 ? 'warn' : 'bad', '4-Touch green',
+    dials.push(rgDialHtml(id, 'light', g >= 50 ? 'good' : g >= 30 ? 'warn' : 'bad', '4-Touch complete',
       rgGauge(g / 100, 0.5), `${g}<small>%</small>`,
       `std 50% <b>${g >= 50 ? '+' : '−'}${Math.abs(g - 50)}</b> · ${lt.red} red`,
       rgRank((I.light || []).map(x => ({ id: x.rep_id, v: +x.green / Math.max(1, +x.green + +x.yellow + +x.red) })), id, true), true)); }
@@ -3697,24 +3732,37 @@ function rgCard(r, k, sellers, mx){
       s ? `leader ${leader}d · on standard` : `off standard · leader ${leader}d`,
       rgRank((I.streaks || []).map(x => ({ id: x.rep_id, v: +x.streak })), id, true), true)); }
 
-  const gp = I.game ? I.game[id] : null;
-  const gpVals = I.game ? sellers.map(x => I.game[String(x.id)] || 0) : [];
-  const gpStd = gpVals.length ? pMedian(gpVals.filter(v => v > 0)) || 0 : 0;
+  /* GAME PTS + PARTICIPATION, MERGED (KD, 20 Aug: "combine those and do a
+     double score — 1000 points, participation 3 of 12 categories"). The
+     needle and verdict stay on points vs the team median; the second line is
+     the participation read — how many of the game's plays the rep is earning
+     in, and when one play carries most of the points, which one. Riding one
+     lane is fine ("which is fine") so it never downgrades the verdict — it
+     just refuses to hide. The old days-active participation read moved to
+     the drawer inventory. */
+  const gp = I.game ? I.game.byRep[id] : null;
+  const gpCats = (I.game && I.game.cats.length) || 7;
+  const gpStd = I.game ? (pMedian(sellers.map(x => (I.game.byRep[String(x.id)] || {}).pts || 0).filter(v => v > 0)) || 0) : 0;
   if (!I.game) dials.push(rgDialHtml(id, 'game', 'off', 'Game pts', rgGauge(0, 0.5), '—', 'ledger not readable', '', false));
-  else { const v = gp || 0;
+  else { const v = gp ? gp.pts : 0;
+    const keys = gp ? Object.entries(gp.byKey).sort((a, b2) => b2[1] - a[1]) : [];
+    const topShare = v > 0 && keys.length ? Math.round(100 * keys[0][1] / v) : 0;
+    const breadth = `${keys.length} of ${gpCats} plays${topShare >= 70 && keys.length ? ` · ${topShare}% ${esc(keys[0][0])}` : ''}`;
     dials.push(rgDialHtml(id, 'game', gpStd ? (v >= gpStd ? 'good' : v >= gpStd / 2 ? 'warn' : 'bad') : 'off', 'Game pts',
       rgGauge(gpStd ? v / (2 * gpStd) : 0, 0.5), v.toLocaleString(),
-      gpStd ? `team median ${gpStd.toLocaleString()} <b>${v >= gpStd ? '+' : '−'}${Math.abs(Math.round(100 * (v - gpStd) / gpStd))}%</b>` : 'no team median yet',
-      rgRank(sellers.map(x => ({ id: x.id, v: I.game[String(x.id)] || 0 })), id, true), false)); }
+      `${gpStd ? `median ${gpStd.toLocaleString()} <b>${v >= gpStd ? '+' : '−'}${Math.abs(Math.round(100 * (v - gpStd) / gpStd))}%</b> · ` : ''}${breadth}`,
+      rgRank(sellers.map(x => ({ id: x.id, v: (I.game.byRep[String(x.id)] || {}).pts || 0 })), id, true), true)); }
 
-  const dAct = eff ? eff.daysActiveM : null;
-  if (dAct == null) dials.push(rgDialHtml(id, 'part', 'off', 'Participation', rgGauge(0, 0.5), '—', 'no touch feed', '', false));
-  else { const p = spanM ? Math.round(100 * dAct / spanM) : 0;
-    const coP = teamT.length ? pMedian(teamT.map(x => spanM ? 100 * x.daysActiveM / spanM : 0)) : null;
-    dials.push(rgDialHtml(id, 'part', p >= 80 ? 'good' : p >= 40 ? 'warn' : 'bad', 'Participation',
-      rgGauge(p / 100, coP != null ? coP / 100 : null), `${p}<small>%</small>`,
-      `${dAct} of ${spanM} working days active${coP != null ? ` · team ${Math.round(coP)}%` : ''}`,
-      rgRank(teamT.map(x => ({ id: x.id, v: x.daysActiveM })), id, true), false)); }
+  /* The freed slot goes to the MANDATORY NUMBER (KD, 4 Aug: "must be done on
+     every job") — estimates still owed. Zero owed is the only green. */
+  const esD = byRep(I.est);
+  if (!esD || esD.started === false) dials.push(rgDialHtml(id, 'est', 'off', 'Estimates owed',
+    rgGauge(0, 0), '—', !I.est ? 'feed loading' : esD ? 'not started' : 'no appts in window', '', false));
+  else { const miss = +esD.missing || 0, ran = +esD.appts || 0;
+    dials.push(rgDialHtml(id, 'est', miss === 0 ? 'good' : miss <= 2 ? 'warn' : 'bad', 'Estimates owed',
+      rgGauge(ran ? miss / ran : 0, 0), String(miss),
+      miss ? `of ${ran} appts ran · ${esD.quoted} quoted` : `every appt has its number · ${esD.quoted} quoted`,
+      rgRank((I.est || []).filter(x => x.started !== false).map(x => ({ id: x.rep_id, v: -(+x.missing || 0) })), id, true), true)); }
 
   /* ── the drawer: closing windows, the full inventory, and each dial's
         deeper read (Kevin: "each one opens up to deeper data if we have it") ── */
@@ -3727,6 +3775,9 @@ function rgCard(r, k, sellers, mx){
         <div class="meta">${c.appts ? `${c.signed}/${c.appts}` : 'no appts'}</div></div>`; }).join('')}</div>` : '';
   const b = D.bank && D.bank[id];
   const es = byRep(I.est);
+  /* Participation's old days-active read lives on here — demoted from a dial
+     when Game pts absorbed the participation question (breadth of plays). */
+  const dAct = eff ? eff.daysActiveM : null;
   const inv = [
     b ? `<div class="rg-inv"><span class="k">Bank</span><b>${short(b.banked)}</b></div>` : '',
     b ? `<div class="rg-inv"><span class="k">Coming</span><b>${short(b.coming)}</b></div>` : '',
@@ -3736,6 +3787,7 @@ function rgCard(r, k, sellers, mx){
     `<div class="rg-inv"><span class="k">Deals</span><b>${r.jobs}</b></div>`,
     es && +es.missing ? `<div class="rg-inv"><span class="k">Est. missing</span><b class="r">${es.missing}</b></div>` : '',
     ct ? `<div class="rg-inv"><span class="k">60d appts</span><b>${ct.d60.appts}</b></div>` : '',
+    dAct != null ? `<div class="rg-inv"><span class="k">Active days</span><b>${dAct}/${spanM}</b></div>` : '',
   ].filter(Boolean).join('');
   const mixR = byRep(I.mix);
   const dets = [
@@ -3743,8 +3795,8 @@ function rgCard(r, k, sellers, mx){
     ['light', lt ? `The book: <b class="g">${lt.green} green</b> · <b class="y">${lt.yellow} yellow</b> · <b class="r">${lt.red} red</b> of ${+lt.green + +lt.yellow + +lt.red} live customers. Red = plays overdue with no decision.` : null],
     ['speed', sp ? `${sp.touched} of ${sp.appts} new customers touched in 30 days${+sp.untouched_48h ? ` · <b class="r">${sp.untouched_48h} untouched 48h+</b>` : ''}. The Thank-You gate says same day.` : null],
     ['streak', st ? `${st.week_hits} of ${st.week_days} days on standard this week · goal ${st.goal}/day. Server-counted, working days only.` : null],
-    ['game', gp != null ? `Month-to-date, from the score ledger via each job's own rep — future-dated points capped at now. Components: appointment 10 · invoice 15 · contract 10.` : null],
-    ['part', dAct != null ? `${dAct} of ${spanM} working days this month carried at least one logged touch. Showing up is its own metric.` : null],
+    ['game', I.game ? (gp && gp.pts ? `Where the points came from: ${Object.entries(gp.byKey).sort((a2, b2) => b2[1] - a2[1]).map(([k3, v3]) => `<b>${esc(k3)}</b> ${v3.toLocaleString()}`).join(' · ')} — earning in ${Object.keys(gp.byKey).length} of ${gpCats} plays. Month-to-date via each job's own rep; future-dated points capped at now.` : `No points on the ledger yet this month. ${gpCats} plays pay points; breadth across them is the participation read.`) : null],
+    ['est', esD && esD.started !== false ? `${+esD.missing || 0} appointments ran without an estimate entered${+esD.dollars ? ` · <b>${short(+esD.dollars)}</b> quoted so far` : ''}. The mandatory number: every appointment that runs gets its dollar figure same day.` : null],
   ].filter(x => x[1]).map(([k2, txt]) => `<div class="rg-det" data-k="${k2}">${txt}</div>`).join('');
 
   return `<div class="rg-card${gone ? ' gone' : ''}">
@@ -4291,7 +4343,7 @@ async function loadEffortIntel(){
      are capped at now client-side — a point is not scored before its play. */
   const d0 = new Date();
   const mStart = `${d0.getFullYear()}-${String(d0.getMonth()+1).padStart(2,'0')}-01`;
-  const [mix, close, light, streaks, speed, est, pipe, gameRows] = await Promise.all([
+  const [mix, close, light, streaks, speed, est, pipe, gameRows, gameCats] = await Promise.all([
     q(`rpc/touch_board?p_win=${win}`).catch(() => null),
     q('rpc/touch_close_stats').catch(() => null),
     q('rpc/touch_light_board').catch(() => null),
@@ -4300,15 +4352,26 @@ async function loadEffortIntel(){
     q(`rpc/estimate_board?p_win=${win}`).catch(() => null),
     q('rpc/pipeline_value').catch(() => null),
     q(`score_events?select=points_awarded,occurred_at,component_key,jobs(rep_id)&state=eq.done&occurred_at=gte.${mStart}`).catch(() => null),
+    /* The breadth denominator comes from the rulebook itself, never a
+       hardcoded count — a new milestone play added in the app widens the
+       "N of M plays" read with no console deploy. */
+    q('score_components?select=key,weight&kind=eq.milestone').catch(() => null),
   ]);
   let game = null;
   if (Array.isArray(gameRows)) {
-    game = Object.create(null);
+    /* Double score (KD, 20 Aug): the points AND the participation — is the
+       rep earning across the game's plays, or riding one lane. byKey keeps
+       each rep's points per component so the dial can say "2 of 7 plays ·
+       71% from invoices" and the drill can show the split. */
+    game = { byRep: Object.create(null),
+      cats: Array.isArray(gameCats) ? gameCats.map(c => c.key) : [] };
     const now = Date.now();
     for (const r of gameRows) {
       const rid = r.jobs && r.jobs.rep_id;
       if (!rid || new Date(r.occurred_at).getTime() > now) continue;
-      game[String(rid)] = (game[String(rid)] || 0) + Number(r.points_awarded || 0);
+      const g = game.byRep[String(rid)] ??= { pts: 0, byKey: Object.create(null) };
+      g.pts += Number(r.points_awarded || 0);
+      g.byKey[r.component_key] = (g.byKey[r.component_key] || 0) + Number(r.points_awarded || 0);
     }
   }
   /* touch_hit_rates and book_coverage are no longer pulled: the cards that read
@@ -12156,23 +12219,29 @@ function buildData(raw){
     const bounds = [];
     for (let i = NW - 1; i >= 0; i--) bounds.push([addD(endD, -7*(i+1)), addD(endD, -7*i)]);
     const seller = Object.fromEntries(reps.filter(r => r.active).map(r => [r.id, r]));
-    const blank2 = () => bounds.map(() => ({ a: 0, s: 0 }));
+    /* Each bucket carries the week's whole story: appointments elapsed (a),
+       signings (s), and the DOLLARS those signings were worth (v) — Kevin
+       (20 Aug): "I don't know what he did every one of those weeks — put the
+       dollar amount in there too." Same union as everything else. */
+    const blank2 = () => bounds.map(() => ({ a: 0, s: 0, v: 0 }));
     const by = {};
-    const at = (rid, t, f) => { if (!rid || !seller[rid] || t == null || isNaN(t)) return;
-      for (let i = 0; i < NW; i++) if (t >= bounds[i][0].getTime() && t < bounds[i][1].getTime() + (i === NW-1 ? 86400000 : 0)) { (by[rid] ??= blank2())[i][f]++; return; } };
+    const at = (rid, t, f, amt) => { if (!rid || !seller[rid] || t == null || isNaN(t)) return;
+      for (let i = 0; i < NW; i++) if (t >= bounds[i][0].getTime() && t < bounds[i][1].getTime() + (i === NW-1 ? 86400000 : 0)) {
+        const wv = (by[rid] ??= blank2())[i]; wv[f]++; if (amt) wv.v += amt; return; } };
     for (const x of appts) { if (!x.starts_at) continue;
       const t = new Date(x.starts_at).getTime();
       if (t <= NOW.getTime()) at(x.rep_id, t, 'a'); }
-    for (const j of jobs) if (j.contract_signed_at) at(j.rep_id, new Date(j.contract_signed_at).getTime(), 's');
+    for (const j of jobs) if (j.contract_signed_at)
+      at(j.rep_id, new Date(j.contract_signed_at).getTime(), 's', Number(j.fin_sold_amount || 0));
     if (billdu && billdu.feed) for (const r of billdu.feed) {
       const rid = bRepOf[String(r.billdu_id)];
       if (!rid || rid === OFFICE) continue;
       if (r.job_id && ccSignedMap && ccSignedMap[r.job_id] === true) continue;
-      if (r.accepted_at) at(rid, new Date(r.accepted_at).getTime(), 's');
+      if (r.accepted_at) at(rid, new Date(r.accepted_at).getTime(), 's', Number(r.accepted_value || 0));
     }
     for (const c of (claims || [])) {
       if (c.status !== 'pending' || c.cc_already_counted || c.cc_state === 'job_linked') continue;
-      at(c.rep_id, new Date(String(c.signed_on || '').slice(0,10) + 'T12:00:00').getTime(), 's');
+      at(c.rep_id, new Date(String(c.signed_on || '').slice(0,10) + 'T12:00:00').getTime(), 's', Number(c.claimed_amount || 0));
     }
     const closes = v => v.map(wv => wv.a ? Math.round(100 * wv.s / wv.a) : null);
     const team = bounds.map((_, i) => { let a = 0, s = 0;
