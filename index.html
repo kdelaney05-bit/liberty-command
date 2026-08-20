@@ -1760,6 +1760,29 @@
       border: 1px solid rgba(212,177,90,0.45); border-radius: 100px; padding: 1px 7px; }
   }
 
+  /* ── THE PHONE'S RAIL ──────────────────────────────────────────────────────
+     The same six sections as a bottom tab bar, where a thumb lives, plus ALL —
+     the classic single-column reading, one tap away instead of retired. Fixed
+     over the safe area; the body clears it so the footer never hides. */
+  .mrail { display: none; }
+  @media (max-width: 899.98px) {
+    body.mnav { padding-bottom: calc(62px + env(safe-area-inset-bottom)); }
+    .mrail { position: fixed; left: 0; right: 0; bottom: 0; z-index: 60;
+      display: flex; gap: 2px; padding: 6px 6px calc(6px + env(safe-area-inset-bottom));
+      background: rgba(13,31,23,0.96); border-top: 1px solid var(--line);
+      overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    .mrail-btn { flex: 1 0 auto; min-width: 46px; background: none;
+      border: 1px solid transparent; border-radius: 9px; padding: 9px 8px;
+      color: var(--text-dim); font-family: 'JetBrains Mono', monospace;
+      font-size: 8.5px; letter-spacing: .06em; text-transform: uppercase;
+      cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 4px; }
+    .mrail-btn.on { color: var(--accent-soft); border-color: rgba(240,131,74,0.4);
+      background: rgba(240,131,74,0.07); }
+    .mrail-badge { font-family: 'JetBrains Mono', monospace; font-size: 8px;
+      font-weight: 700; color: var(--gold); border: 1px solid rgba(212,177,90,0.45);
+      border-radius: 100px; padding: 0 5px; }
+  }
+
   /* ── THE MARKETING BOARD · ROI EDITION ────────────────────────────────────
      Ported from the approved standalone board (liberty-command-marketing-
      board-v2.html). Every declaration below is the approved one; the only
@@ -8673,15 +8696,17 @@ let SECTION = (() => {
      from that week still resolve rather than falling back to Vitals. */
   const legacy = v => v === 'people' ? 'hustle' : v;
   const h = legacy((location.hash || '').replace(/^#/, ''));
-  if (SECTIONS.some(s => s.key === h)) return h;
+  if (SECTIONS.some(s => s.key === h) || h === 'all') return h;
   if (h) return 'vitals';
   try { const s = legacy(localStorage.getItem(SECTION_STORE));
-    if (SECTIONS.some(x => x.key === s)) return s; } catch(e){}
+    if (SECTIONS.some(x => x.key === s) || s === 'all') return s; } catch(e){}
   return 'vitals';
 })();
 function setSection(k){
   if (k === 'people') k = 'hustle';
-  if (!SECTIONS.some(s => s.key === k)) k = 'vitals';
+  /* 'all' is the phone's seventh tab — the classic single-column reading.
+     The desktop rail has no such key and resolves it to Vitals. */
+  if (!SECTIONS.some(s => s.key === k) && k !== 'all') k = 'vitals';
   SECTION = k;
   try { localStorage.setItem(SECTION_STORE, k); } catch(e){}
   render();
@@ -8699,6 +8724,21 @@ function railHtml(){
   </nav>`;
 }
 
+/* The phone's rail (KD, 20 Aug: "the search bar… on the mobile — it's so much
+   easier when you can just click through the screens"). Same SECTIONS list,
+   same stored choice, same hashes — a bottom tab bar because that is where a
+   thumb lives — plus the one tab the desktop doesn't need: ALL, the classic
+   single-column reading, kept one tap away rather than retired. */
+function mrailHtml(){
+  const tabs = [...SECTIONS, { key:'all', name:'All' }];
+  return `<nav class="mrail" aria-label="Sections">${tabs.map(s => {
+    const n = s.badge ? s.badge() : 0;
+    return `<button type="button" class="mrail-btn${SECTION === s.key ? ' on' : ''}"
+      aria-current="${SECTION === s.key ? 'true' : 'false'}" onclick="setSection('${s.key}')">${esc(s.name)}${
+      n ? `<span class="mrail-badge">${n}</span>` : ''}</button>`;
+  }).join('')}</nav>`;
+}
+
 /* One footer, both layouts — the data stamp must not fork between them. */
 function pageFoot(){
   return `<div class="foot">Trust the instrument, not the retelling<br/>
@@ -8711,13 +8751,13 @@ function pageFoot(){
 /* ── render ───────────────────────────────────────────────────────────────── */
 function render(){
   if (RDIVE) {
-    document.body.classList.remove('railed');
+    document.body.classList.remove('railed', 'mnav');
     document.getElementById('app').innerHTML = repView(RDIVE) +
       `<div class="foot">Trust the instrument, not the retelling</div>`;
     return;
   }
   if (DIVE) {
-    document.body.classList.remove('railed');
+    document.body.classList.remove('railed', 'mnav');
     document.getElementById('app').innerHTML = diveView(DIVE) +
       `<div class="foot">Trust the instrument, not the retelling</div>`;
     drawCharts();
@@ -8728,6 +8768,7 @@ function render(){
      so the two layouts can never show different numbers. */
   const desktop = window.innerWidth >= RAIL_MIN;
   document.body.classList.toggle('railed', desktop);
+  document.body.classList.toggle('mnav', !desktop);
   if (desktop) {
     const sec = SECTIONS.find(s => s.key === SECTION) || SECTIONS[0];
     /* The hash mirrors the selected section so it can be bookmarked.
@@ -8739,6 +8780,20 @@ function render(){
     drawCharts();
     return;
   }
+  /* The phone: same sections, bottom tab bar, plus the ALL tab holding the
+     classic column. One section mounted at a time here too — the point of
+     click-through is not rendering five screens you are not on. */
+  if (SECTION !== 'all') {
+    const sec = SECTIONS.find(s => s.key === SECTION) || SECTIONS[0];
+    if ((location.hash || '').slice(1) !== sec.key)
+      try { history.replaceState(history.state, '', location.pathname + '#' + sec.key); } catch(e){}
+    document.getElementById('app').innerHTML =
+      hdrTitle() + askBar() + sec.render() + pageFoot() + mrailHtml();
+    drawCharts();
+    return;
+  }
+  if ((location.hash || '').slice(1) !== 'all')
+    try { history.replaceState(history.state, '', location.pathname + '#all'); } catch(e){}
   /* ── THE SIX BANDS · THE PHONE READING ─────────────────────────────────────
      Below the rail's desktop line the console stays what it has always been:
      one continuous column, top to bottom as one argument, and the order is the
@@ -8830,7 +8885,7 @@ function render(){
       /* …and the room, directly under the quadrant. Its preview shelf is always
          drawn; what is open inside it is remembered per device. */
       effortRoom(),
-    ].join('') + '</div>' + pageFoot();
+    ].join('') + '</div>' + pageFoot() + mrailHtml();
   drawCharts();
 }
 
@@ -9275,7 +9330,7 @@ addEventListener('resize', () => {
    the last one, it is to tell a human which build is on the server and when it
    got there. A number nobody clocked cannot answer that, and the first time it
    is asked in anger will be the morning a stale build is being chased. */
-const BUILD = '2026-08-20T12:09Z-rep-gauges-v9';
+const BUILD = '2026-08-20T12:13Z-rep-gauges-mrail';
 const SB_URL = 'https://lzegjjbkfuecrhdvlvay.supabase.co';
 /* The one page that can finish a password reset. Hard-coded rather than derived,
    because every derivation of it so far has been a source of bugs: a bare origin
