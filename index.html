@@ -2379,7 +2379,9 @@ function rhythmBars(items, { w = 280, h = 62, mini = false, refDash = true, colo
   const bars = items.map((it, i) => {
     if (it.v == null) return '';
     const y = Y(it.v), bh = (h - padB) - y;
-    const fill = it.hot ? 'var(--accent)' : it.dim ? 'rgba(138,160,148,0.30)' : color;
+    /* A caller may give a bar its own verdict colour (the money aging buckets
+       — green young, red old); hot/dim keep their meanings where it does not. */
+    const fill = it.fill || (it.hot ? 'var(--accent)' : it.dim ? 'rgba(138,160,148,0.30)' : color);
     return `<rect x="${(padX + i*bw + bw*0.16).toFixed(1)}" y="${y.toFixed(1)}"
       width="${(bw*0.68).toFixed(1)}" height="${Math.max(0, bh).toFixed(1)}" rx="2" fill="${fill}"/>`;
   }).join('');
@@ -6937,27 +6939,37 @@ function vitMarketing(){
 
   const cur = priced[priced.length - 1];
   const prior = priced.slice(0, -1).map(m => m.roi);
-  const ref = prior.length >= VIT.minMonths ? vitMed(prior) : null;
+  const med = prior.length >= VIT.minMonths ? vitMed(prior) : null;
+  /* THE DASH ALWAYS MEANS SOMETHING (KD, 20 Aug: every box says "relative to
+     what"). Too few priced months to claim a median → the reference IS the
+     $10 line, the ruling every ROI on this console answers to. The trace's
+     dash, the chips and the gap read all judge against it, and the caption
+     names which reference is in force — "no median yet" with no line drawn
+     was a tile that refused to say compared-to-what. */
+  const ref = med != null ? med : VIT.marketing.floor;
   /* Two shortfalls, and the worse one wins: against the trailing median, and
      against KD's $10 line. The floor is here for the same reason days-out has
      one — a business that has spent a year under the line has a median under
      the line, and scoring against that alone would call a chronic problem
      normal. */
-  const badMed   = ref ? Math.max(0, 1 - cur.roi / ref) : null;
+  const badMed   = med ? Math.max(0, 1 - cur.roi / med) : null;
   const badFloor = Math.max(0, 1 - cur.roi / VIT.marketing.floor);
   const bad = badMed == null ? badFloor : Math.max(badMed, badFloor);
   const st = vitState(bad, VIT.marketing);
   const under = cur.roi < VIT.marketing.floor;
   const read = under
     ? `$${cur.roi.toFixed(2)} back per $1 — under your $${VIT.marketing.floor} line`
-    : ref && cur.roi < ref
-      ? `$${cur.roi.toFixed(2)} back per $1 — ${Math.round((1 - cur.roi/ref) * 100)}% under your median month`
+    : med && cur.roi < med
+      ? `$${cur.roi.toFixed(2)} back per $1 — ${Math.round((1 - cur.roi/med) * 100)}% under your median month`
       : `$${cur.roi.toFixed(2)} back per $1 — clear of your $${VIT.marketing.floor} line`;
+  const mg = Math.round((cur.roi / ref - 1) * 100);
   return { ...base, live:true, band:st.band, dist:st.dist,
     series: priced.map(m => m.roi), ref, read, cur, priced,
     /* worse/unit drive the tile's rhythm strip and Kevin's streak law; micro
        is the tile's own headline. Months, because that is this vital's grain. */
     worse:'below', unit:'mo', micro:{ num:`$${cur.roi.toFixed(2)}`, sub:'per $1' },
+    /* The gap read: arrow is the literal direction, colour is the verdict. */
+    gapRead: `${mg >= 0 ? '▲' : '▼'}${Math.abs(mg)}% vs ${med != null ? 'median mo' : `$${VIT.marketing.floor} line`}`,
     /* The lens here is a NUMBER per brand, not a trace: a per-brand ROI needs
        the month's book keyed BY BRAND (167), and most history is unsplit — a
        two-point trace would be noise wearing a shape. Judged against the $10
@@ -6976,9 +6988,9 @@ function vitMarketing(){
        reading is a closed month old, so blending it into a weekly line would
        mix two clocks. It colours its own tile and stops there. */
     inMaster: false,
-    refNote: ref
+    refNote: med != null
       ? `median of the ${prior.length} closed month${prior.length === 1 ? '' : 's'} before it`
-      : `no median claimed — ${prior.length} closed month${prior.length === 1 ? '' : 's'} behind it, and this hero wants ${VIT.minMonths}`,
+      : `your $${VIT.marketing.floor}-per-$1 line — under ${VIT.minMonths} priced months, so no median is claimed yet`,
     keys: [
       { k: `${cur.label} · back per $1`, v: `$${cur.roi.toFixed(2)}` },
       { k: 'spend book', v: short(cur.spend) },
@@ -7004,6 +7016,7 @@ function vitSales(){
   return { key:'sales', tag:'SLS', name:'SALES', label:'signed dollars a week',
     grain:'weeks', live:true, band:st.band, dist:st.dist, series:s, ref, inMaster:true,
     worse:'below', unit:'wk', micro:{ num: short(cur), sub:'7 days' },
+    gapRead: `${gap >= 0 ? '▲' : '▼'}${Math.abs(gap)}% vs 8-wk median`,
     /* The brand lens: the same weeks, the same union, one brand at a time —
        each judged against ITS OWN median by the vital's own rule, because a
        brand a third the size is not a third as healthy. No median → no verdict. */
@@ -7014,7 +7027,7 @@ function vitSales(){
       const bst = vitState(Math.max(0, 1 - bc / br), VIT.sales);
       const g = Math.round((bc / br - 1) * 100);
       return { id: bid, s: brandOf(bid).s, c: brandOf(bid).c, series: bs, ref: br,
-        band: bst.band, chip: `${g >= 0 ? '+' : '−'}${Math.abs(g)}%` };
+        band: bst.band, chip: `${g >= 0 ? '▲' : '▼'}${Math.abs(g)}%` };
     }) : null,
     read: `${short(cur)} signed, ${gap === 0 ? 'level with' : gap > 0 ? `${gap}% above` : `${Math.abs(gap)}% below`} your 8-week median`,
     refNote:'median of your last 8 complete weeks',
@@ -7046,8 +7059,11 @@ function vitProduction(){
   return { key:'production', tag:'PRD', name:'PRODUCTION', label:'how much of the backlog has stalled',
     grain:'weeks', live:true, band:st.band, dist:st.dist, series:s, ref, inMaster:true,
     /* worse is ABOVE for this one vital: a stalled share climbing over its
-       median is the bad direction, so the strip and the streak read that way. */
+       median is the bad direction. The arrows stay LITERAL — ▲ means the share
+       rose — and the colour carries the verdict, so a green ▲2pt and a red
+       ▲9pt read correctly without a legend. */
     worse:'above', unit:'wk', micro:{ num:`${Math.round(cur)}%`, sub:'stalled' },
+    gapRead: `${d >= 0 ? '▲' : '▼'}${Math.abs(d)}pt vs median`,
     brands: V.production.byBrand ? BRAND_ORDER.map(bid => {
       const bs = V.production.byBrand[bid], bc = bs[N], br = vitMed(bs.slice(0, N));
       if (bc == null || br == null) return { id: bid, s: brandOf(bid).s, c: brandOf(bid).c,
@@ -7055,7 +7071,7 @@ function vitProduction(){
       const bst = vitState(bc - br, VIT.production);
       const g = Math.round(bc - br);
       return { id: bid, s: brandOf(bid).s, c: brandOf(bid).c, series: bs, ref: br,
-        band: bst.band, chip: `${g >= 0 ? '+' : '−'}${Math.abs(g)}pt` };
+        band: bst.band, chip: `${g >= 0 ? '▲' : '▼'}${Math.abs(g)}pt` };
     }) : null,
     read: `${Math.round(cur)}% of the open book is past ${VIT.production.stallDays} days — ${
       d === 0 ? 'level with' : d > 0 ? `${d} points above` : `${Math.abs(d)} points below`} its 8-week median`,
@@ -7101,8 +7117,12 @@ function vitMoney(){
        invoiced-dollars line would not. */
     profile: M.aging, series: [], ref: null, inMaster: false,
     /* No series means no rhythm strip and no streak — a snapshot cannot have a
-       run of bad weeks. The tile's headline carries the one figure instead. */
+       run of bad weeks. The tile's headline carries the one figure instead,
+       and the gap read judges it against the same fixed line the colour does. */
     micro:{ num:`${Math.round(M.meanAge)}d`, sub:'avg age' },
+    gapRead: (() => { const over = Math.round(M.meanAge - VIT.money.good);
+      return over > 0 ? `▲${over}d past your ${VIT.money.good}d line`
+                      : `inside your ${VIT.money.good}d line`; })(),
     /* The lens: each brand's own dollar-weighted mean age against the same
        fixed band. A brand with nothing owed reads a dash, never 0 days. */
     brands: BRAND_ORDER.map(bid => {
@@ -7201,6 +7221,10 @@ function vitMaster(list){
    and rings the alarm — it never feeds vitState or the master's blend, so the
    whole tuning surface stays the one VIT block and these two numbers. */
 const VIT_STREAK = { worry: 2, alarm: 3 };
+/* The aging buckets' own verdict colours, oldest last — one place, used by the
+   money tile's mini profile and the drill's full one, so the two can never
+   tell the same dollars two different stories. */
+const VIT_AGE_C = ['var(--green)', 'var(--gold)', 'var(--accent-soft)', 'var(--red)'];
 function vitStreak(v){
   if (!v || !v.live || v.ref == null || !v.series || !v.series.length) return 0;
   let n = 0;
@@ -7220,7 +7244,12 @@ function vitStreak(v){
    No reference claimed → grey chips and the words say why, never a fake
    green run over a median that was refused. */
 function vitStripHtml(v){
-  if (!v || !v.live || !v.series || v.series.length < 2) return '';
+  if (!v || !v.live) return '';
+  /* A snapshot vital (money) has no periods to chip, but it still owes the
+     same foot line as everyone else: its distance from its own line, in the
+     verdict's colour. Same slot, same grammar, no chips. */
+  if (!v.series || v.series.length < 2)
+    return v.gapRead ? `<span class="vit-mi-foot"><span class="vit-streak" style="color:${VIT_C[v.band]}">${esc(v.gapRead)}</span></span>` : '';
   const last = v.series.slice(-(VIT.weeks + 1));
   const chips = last.map((x, i) => {
     const cls = (v.ref == null || x == null || !isFinite(x)) ? ''
@@ -7229,10 +7258,16 @@ function vitStripHtml(v){
   }).join('');
   const stk = vitStreak(v), unit = v.unit || 'wk';
   const dir = v.worse === 'above' ? 'over' : 'under';
+  /* Tail precedence: a live streak outranks everything, then the gap read —
+     arrow literal, colour the verdict — then the plain caption. One slot,
+     every tile, so "relative to what and the up or down" reads identically
+     across the four boxes (KD, 20 Aug). */
   const tail = stk >= VIT_STREAK.alarm
     ? `<span class="vit-streak alarm">${stk} ${unit}s ${dir} normal</span>`
     : stk >= VIT_STREAK.worry
     ? `<span class="vit-streak worry">${stk} ${unit}s ${dir} normal</span>`
+    : v.gapRead
+    ? `<span class="vit-streak" style="color:${VIT_C[v.band]}">${esc(v.gapRead)}</span>`
     : v.ref != null
     ? `<span class="vit-mi-sub">${last.length} ${unit}s · ╌ median</span>`
     : `<span class="vit-mi-sub">no median yet</span>`;
@@ -7247,10 +7282,14 @@ function vitMicroHtml(v){
   const heat = v.band === 'dark' ? ''
     : ` style="border-color:rgba(${rgb},0.32);background:rgba(${rgb},0.07);box-shadow:inset 0 0 18px rgba(${rgb},0.10)"`;
   /* Money draws its age profile instead of a line — real amounts on a shared
-     floor, no invented history. Everything else draws its rhythm at the
-     tile's own width, median riding under it like the master's. */
+     floor, no invented history. Each bucket wears ITS OWN verdict colour
+     (young money green through old money red), so the shape says where the
+     dollars sit AND how bad that is in one glance — a profile in one flat
+     tint answered "where" and went silent on "how bad". Everything else
+     draws its rhythm at the tile's own width, median riding under it. */
   const shape = v.profile
-    ? rhythmBars(v.profile.map(a => ({ label:'', v: Math.round(a.v) })),
+    ? rhythmBars(v.profile.map((a, i) => ({ label:'', v: Math.round(a.v),
+        fill: VIT_AGE_C[i] || VIT_AGE_C[VIT_AGE_C.length - 1] })),
         { w:130, h:26, mini:true, refDash:false, color: c })
     : vitTrace(v, { id:`vit-${v.key}`, w:130, h:26, mini:true });
   return `<button class="vit-micro${VITOPEN === v.key ? ' on' : ''}${alarm ? ' alarm' : ''}" id="vitm-${v.key}" data-vit
@@ -7294,8 +7333,9 @@ function vitPanelHtml(v){
      padding. What the drawer owes them is the roster and the keys. */
   const big = v.noTrace ? ''
     : v.profile
-      ? rhythmBars(v.profile.map(a => ({ label: a.label.replace(' days',''),
-          v: Math.round(a.v), num: short(a.v) })), { w:280, h:62, refDash:false, color: c })
+      ? rhythmBars(v.profile.map((a, i) => ({ label: a.label.replace(' days',''),
+          v: Math.round(a.v), num: short(a.v),
+          fill: VIT_AGE_C[i] || VIT_AGE_C[VIT_AGE_C.length - 1] })), { w:280, h:62, refDash:false, color: c })
       : vitTrace(v, { id:`vit-${v.key}-big`, w:280, h:48 });
   const flags = src.map(p => [
     /* The rail is named even when there is only one of them, because MONEY
@@ -7365,7 +7405,11 @@ function cardVitals(){
          tiles — health is worse BELOW its median — so the opening graphic
          answers "compared to what" before a single tile is read, and three
          blended weeks under the line ring the same alarm a tile would. */
-      const mv = { live: M.live, series: M.series, ref: M.ref, worse:'below', unit:'wk' };
+      const mv = { live: M.live, series: M.series, ref: M.ref, worse:'below', unit:'wk',
+        band: M.band,
+        gapRead: (M.live && M.ref != null && M.health != null)
+          ? `${M.health >= M.ref ? '▲' : '▼'}${Math.abs(Math.round(M.health - M.ref))} vs median`
+          : null };
       const mAlarm = vitStreak(mv) >= VIT_STREAK.alarm;
       return `<div class="vit-master${mAlarm ? ' alarm' : ''}"${M.live ? ` style="border-color:rgba(${mrgb},0.24);box-shadow:inset 0 0 26px rgba(${mrgb},0.07)"` : ''}>
       <button class="vit-m-btn" id="vitm-master" data-vit onclick="vitOpen('master')"
@@ -8866,7 +8910,7 @@ addEventListener('resize', () => {
    the last one, it is to tell a human which build is on the server and when it
    got there. A number nobody clocked cannot answer that, and the first time it
    is asked in anger will be the morning a stale build is being chased. */
-const BUILD = '2026-08-20T04:58Z-sales-vitals-hustle';
+const BUILD = '2026-08-20T05:20Z-verdict-language';
 const SB_URL = 'https://lzegjjbkfuecrhdvlvay.supabase.co';
 /* The one page that can finish a password reset. Hard-coded rather than derived,
    because every derivation of it so far has been a source of bugs: a bare origin
