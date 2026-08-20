@@ -1516,6 +1516,49 @@
     .shell { max-width: 1560px; }
   }
 
+  /* ── THE SECTION RAIL ──────────────────────────────────────────────────────
+     On a desktop the console is no longer one continuous column: a persistent
+     left rail selects ONE section, and only that section is in the DOM. The
+     page becomes the room — the same solo-and-close reading the Effort Room
+     taught, promoted to the whole console.
+
+     MOUNTED, NEVER HIDDEN. The unselected sections are not display:none'd —
+     they are not rendered at all. Six sections alive behind five hidden ones
+     would keep every chart and every after-paint fetch running for surfaces
+     nobody is reading, which defeats the point of sectioning.
+
+     DESKTOP ONLY, AND 900px IS THE LINE — the same line the masonry, the
+     minor-card folds and minorOpen() already break on, so "has a rail" and
+     "reads as a desktop" can never disagree. Below it the single-column
+     scroll is byte-for-byte what it was, which also keeps phone.html and
+     preview.html honest: both frame this page at phone width, and an iframe
+     answers media queries with its own viewport. */
+  .rail { display: none; }
+  @media (min-width: 900px) {
+    body.railed { padding-left: 214px; }
+    .rail { position: fixed; left: 0; top: 0; bottom: 0; width: 188px; z-index: 50;
+      display: flex; flex-direction: column; gap: 4px; padding: 26px 12px;
+      background: rgba(13,31,23,0.92); border-right: 1px solid var(--line); }
+    .rail-eyebrow { font-family: 'JetBrains Mono', monospace; font-size: 10px;
+      letter-spacing: 0.18em; text-transform: uppercase; color: var(--accent);
+      padding: 0 12px 14px; }
+    .rail-btn { display: flex; align-items: center; gap: 8px; width: 100%;
+      background: none; border: 1px solid transparent; border-radius: 10px;
+      padding: 10px 12px; cursor: pointer; text-align: left; color: var(--text-dim);
+      font-family: 'JetBrains Mono', monospace; font-size: 11px;
+      letter-spacing: 0.12em; text-transform: uppercase;
+      transition: color .12s, background .12s, border-color .12s; }
+    .rail-btn:hover { color: var(--text); background: rgba(255,255,255,0.04); }
+    .rail-btn.on { color: var(--accent-soft); border-color: rgba(240,131,74,0.4);
+      background: rgba(240,131,74,0.07); }
+    /* The one badge the rail carries: how many rows the Attention board holds
+       right now. No other section gets a count — a rail of six numbers is an
+       alarm panel, and the whole board is one click away. */
+    .rail-badge { margin-left: auto; font-family: 'JetBrains Mono', monospace;
+      font-size: 9px; font-weight: 700; color: var(--gold);
+      border: 1px solid rgba(212,177,90,0.45); border-radius: 100px; padding: 1px 7px; }
+  }
+
   /* ── THE MARKETING BOARD · ROI EDITION ────────────────────────────────────
      Ported from the approved standalone board (liberty-command-marketing-
      board-v2.html). Every declaration below is the approved one; the only
@@ -7051,7 +7094,10 @@ function cardVitals(){
   </div>`;
 }
 
-function cardAttention(){
+/* The board's row selection, separated from its drawing: the section rail's
+   Flags badge counts these same rows, and a badge computed by a second walk of
+   the registers would eventually disagree with the board it advertises. */
+function attnRows(){
   const R = D.rhythm, BW = D.bestWorst, DISC = D.discoveries || [];
   const pressing = [], found = [];
 
@@ -7146,7 +7192,11 @@ function cardAttention(){
   take1(found[0]);
   take1(mktRows[1]);
   take1(found[1]);
-  const rows = chosen.sort((a, b) => (a.ord ?? 9) - (b.ord ?? 9));
+  return chosen.sort((a, b) => (a.ord ?? 9) - (b.ord ?? 9));
+}
+
+function cardAttention(){
+  const rows = attnRows();
   /* `lead` is the headline scale. The board sits second on the page now — under
      the ask box, above the money — so it is set to be read, not scanned past. */
   return `<div class="card attn lead">
@@ -7843,22 +7893,120 @@ function closeRep(){
 }
 function setRepWin(k){ keepScroll(() => { REPWIN = k; }); }
 
+/* ═══ THE SECTION RAIL ═══════════════════════════════════════════════════════
+   On a desktop the console is ONE SECTION AT A TIME, picked from a persistent
+   left rail. The rail is driven from this list, never from markup — the list
+   is the seam role-based tiering plugs into later: a role that sees four
+   sections is a filter over this array, not a second nav.
+
+   The sections regroup exactly what the single column already carries:
+     Vitals    — the hero: master heartbeat + the 2×2
+     Sales     — sales by rep, then appointments by company (the pairing is
+                 deliberate: who sold it and who got the at-bats, one scroll
+                 apart — the rail must not undo it)
+     Marketing — the consolidated marketing room (brand → source → rep)
+     People    — effort × results, then the Effort Room
+     Money     — the money row: window switch, month time machine, Signed /
+                 Appointments / Built / Open A/R, trending to finish
+     Flags     — the Attention board
+
+   ONLY THE SELECTED SECTION IS IN THE DOM. Leaving a section unmounts it —
+   never render-and-hide, which would keep five sections of charts and
+   after-paint fetches alive for surfaces nobody is reading.
+
+   KNOWN LIMIT, taken deliberately: MONTHOFF and HEROWIN stay global, so a
+   month shift made in Money still governs the month-scoped cards in Sales and
+   Marketing, while the "viewing July" banner renders only where its own
+   pagers do. Logged as a follow-up rather than half-fixed here. */
+const RAIL_MIN = 900;   // the page's one desktop line — same as the masonry and the folds
+const SECTIONS = [
+  { key:'vitals',    name:'Vitals',    render: () => cardVitals() },
+  { key:'sales',     name:'Sales',     render: () => '<div class="stack bands">' + cardReps() + cardApptByCompany() + '</div>' },
+  { key:'marketing', name:'Marketing', render: () => '<div class="stack bands">' + marketingRoom() + '</div>' },
+  { key:'people',    name:'People',    render: () => '<div class="stack bands">' + cardQuadrant() + effortRoom() + '</div>' },
+  { key:'money',     name:'Money',     render: () => hdr() },
+  /* The one counted section: the badge is the Attention board's own row list
+     (attnRows), so the number on the rail and the rows behind the click are
+     one computation and cannot drift apart. */
+  { key:'flags',     name:'Flags',     render: () => cardAttention(), badge: () => attnRows().length },
+];
+const SECTION_STORE = 'lcc.section';   // its own key — lcc.room belongs to the Effort Room
+let SECTION = (() => {
+  /* A deep link wins, then the remembered choice, then Vitals. An UNKNOWN hash
+     falls back to Vitals silently — it may be a dive hash (#month), a spent
+     recovery link, or a typo, and none of those earns an error. The dive and
+     recovery hash grammars are untouched and never collide with these six
+     words. */
+  const h = (location.hash || '').replace(/^#/, '');
+  if (SECTIONS.some(s => s.key === h)) return h;
+  if (h) return 'vitals';
+  try { const s = localStorage.getItem(SECTION_STORE);
+    if (SECTIONS.some(x => x.key === s)) return s; } catch(e){}
+  return 'vitals';
+})();
+function setSection(k){
+  if (!SECTIONS.some(s => s.key === k)) k = 'vitals';
+  SECTION = k;
+  try { localStorage.setItem(SECTION_STORE, k); } catch(e){}
+  render();
+  window.scrollTo({ top: 0 });
+}
+function railHtml(){
+  return `<nav class="rail" aria-label="Sections">
+    <div class="rail-eyebrow">TruReview</div>
+    ${SECTIONS.map(s => {
+      const n = s.badge ? s.badge() : 0;
+      return `<button type="button" class="rail-btn${s.key === SECTION ? ' on' : ''}"
+        aria-current="${s.key === SECTION ? 'true' : 'false'}" onclick="setSection('${s.key}')">${esc(s.name)}${
+        n ? `<span class="rail-badge">${n}</span>` : ''}</button>`;
+    }).join('')}
+  </nav>`;
+}
+
+/* One footer, both layouts — the data stamp must not fork between them. */
+function pageFoot(){
+  return `<div class="foot">Trust the instrument, not the retelling<br/>
+      Read ${new Date(D.generatedAt).toLocaleString('en-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'})} ·
+      ${D.coverage.jobs.toLocaleString()} jobs · ${D.coverage.appts.toLocaleString()} appts${qbOK()?` · ${D.qb.total.toLocaleString()} invoices`:''}
+      <br/>build ${esc(BUILD)}
+      <br/><button class="signout" style="margin-top:12px" onclick="signOut()">Sign out</button></div>`;
+}
+
 /* ── render ───────────────────────────────────────────────────────────────── */
 function render(){
   if (RDIVE) {
+    document.body.classList.remove('railed');
     document.getElementById('app').innerHTML = repView(RDIVE) +
       `<div class="foot">Trust the instrument, not the retelling</div>`;
     return;
   }
   if (DIVE) {
+    document.body.classList.remove('railed');
     document.getElementById('app').innerHTML = diveView(DIVE) +
       `<div class="foot">Trust the instrument, not the retelling</div>`;
     drawCharts();
     return;
   }
-  /* ── THE SIX BANDS ──────────────────────────────────────────────────────────
-     The console reads top to bottom as one argument, and the order is the whole
-     statement:
+  /* Desktop: the rail and exactly one section. The section's cards render
+     byte-for-byte what the single column renders — same functions, regrouped —
+     so the two layouts can never show different numbers. */
+  const desktop = window.innerWidth >= RAIL_MIN;
+  document.body.classList.toggle('railed', desktop);
+  if (desktop) {
+    const sec = SECTIONS.find(s => s.key === SECTION) || SECTIONS[0];
+    /* The hash mirrors the selected section so it can be bookmarked.
+       replaceState, never pushState — the back button belongs to the dives. */
+    if ((location.hash || '').slice(1) !== sec.key)
+      try { history.replaceState(history.state, '', location.pathname + '#' + sec.key); } catch(e){}
+    document.getElementById('app').innerHTML =
+      railHtml() + hdrTitle() + askBar() + sec.render() + pageFoot();
+    drawCharts();
+    return;
+  }
+  /* ── THE SIX BANDS · THE PHONE READING ─────────────────────────────────────
+     Below the rail's desktop line the console stays what it has always been:
+     one continuous column, top to bottom as one argument, and the order is the
+     whole statement:
 
        1  the ask box            — the question he arrived with, always first
        1b THE VITALS HERO        — one master heartbeat and a 2×2 of micro
@@ -7946,12 +8094,7 @@ function render(){
       /* …and the room, directly under the quadrant. Its preview shelf is always
          drawn; what is open inside it is remembered per device. */
       effortRoom(),
-    ].join('') + '</div>' +
-    `<div class="foot">Trust the instrument, not the retelling<br/>
-      Read ${new Date(D.generatedAt).toLocaleString('en-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'})} ·
-      ${D.coverage.jobs.toLocaleString()} jobs · ${D.coverage.appts.toLocaleString()} appts${qbOK()?` · ${D.qb.total.toLocaleString()} invoices`:''}
-      <br/>build ${esc(BUILD)}
-      <br/><button class="signout" style="margin-top:12px" onclick="signOut()">Sign out</button></div>`;
+    ].join('') + '</div>' + pageFoot();
   drawCharts();
 }
 
