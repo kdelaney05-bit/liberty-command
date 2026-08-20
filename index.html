@@ -2608,7 +2608,8 @@ function ekgSpark(days, { id, w = 280, h = 48, mini = false, color = 'var(--gree
   </svg>`;
 }
 /* ── RHYTHM BARS ────────────────────────────────────────────────────────────
-   The comparison shape for Today, Week and YTD. Bars, because an appointment
+   The comparison shape for every window — Today, Week, MTD and YTD, one visual
+   language across all four tabs. Bars, because an appointment
    count is an AMOUNT — adding two of them means something — which is the test
    THE TOPS OF MOUNTAINS sets for whether a number may be a bar at all. The
    normal rides as a dashed reference LINE, never a second bar, so "how many"
@@ -2697,6 +2698,24 @@ const rhySamples = (n, noun) => n === 1 ? `your last ${noun}` : `your last ${n} 
    one feed-floor date on this page recognises the next one. */
 const monthYear = d => new Date(d).toLocaleDateString('en-US', { month:'long', year:'numeric' });
 
+/* The MTD day series collapsed to the weeks of the month — Monday-started, the
+   same week the WEEK tab draws, edge weeks partial exactly as the month is.
+   The reference per bar is the sum of the same weekday medians over the same
+   days, so a part-week's mark is part-sized and the live week never reads
+   short against a full one. Each bar is labelled by the date it starts on;
+   `dow` comes off the stored row, never re-derived from the date string —
+   parsing "YYYY-MM-DD" lands in UTC and can shift the weekday. */
+function mtdWeeks(days, val, typ){
+  const out = [];
+  for (const x of days){
+    if (!out.length || x.dow === 1) out.push({
+      label: `${+x.date.slice(5,7)}/${+x.date.slice(8,10)}`, v: 0, ref: 0 });
+    const b = out[out.length - 1];
+    b.v += val(x); b.ref += typ(x); if (x.today) b.hot = true;
+  }
+  return out;
+}
+
 function heroAppts(k){
   const A = D.appointments;
   if (!A || !A.byCompany || !A.byCompany[k]) return '';
@@ -2713,13 +2732,16 @@ function heroAppts(k){
      never quietly dropped, and never measured against a baseline built without
      it. */
   const d = typ ? Math.round((branded - typ) / typ * 100) : null;
-  /* MTD keeps its EKG exactly as it was — it is the one grain this page has
-     always kept day by day and Kevin reads it as-is. The other three tabs used
-     to fall through to a bare number; they now draw their own rhythm at their
-     own grain. See A.rhythm. */
+  /* MTD used to keep the old EKG line while the other three tabs drew rhythm
+     bars — one tab in four speaking a different visual language, which Kevin
+     called out (20 Aug: "zero continuity there — pick a style"). The style
+     picked is the bars, so MTD draws them too, at its own natural grain: one
+     bar per week of the month, the way Today draws its sample days, Week its
+     days and YTD its months. Same day-by-day series and same weekday-median
+     typical underneath — only the shape changed, never the arithmetic. */
   const mtdDays = (k === 'month' && !MONTHOFF) ? A.bookedSeriesMTD : null;
-  const headline = mtdDays && mtdDays.length > 1
-    ? ekgSpark(mtdDays.map(x => ({ v: x.n, t: x.typ })), { id:'hero-appts', w:280, h:48 })
+  const headline = mtdDays && mtdDays.length
+    ? rhythmBars(mtdWeeks(mtdDays, x => x.n, x => x.typ))
     : '';
   const R = A.rhythm && (k === 'day' || k === 'week' || k === 'ytd') ? A.rhythm[k] : null;
   const RA = R ? R.all : null;
@@ -2784,7 +2806,7 @@ function heroAppts(k){
     <div class="snap-v" style="color:var(--blue)">${RA && k === 'day' ? RA.soFar : tot}${
       rTypical != null ? ` <span style="font-size:16px;color:var(--text-dim)">of ${Math.round(rTypical)} normal</span>`
       : typ ? ` <span style="font-size:16px;color:var(--text-dim)">of ${Math.round(typ)} typical</span>` : ''}</div>
-    ${headline ? `<div class="ekg-wrap">${headline}<div class="ekg-cap">booked per day, month to date<span class="ekg-cap-ref">╌╌ typical for that weekday</span></div></div>` : ''}
+    ${headline ? `<div class="ekg-wrap">${headline}<div class="ekg-cap">booked per week, month to date<span class="ekg-cap-ref">╌╌ typical for the same days</span></div></div>` : ''}
     ${rTop ? `<div class="ekg-wrap">${rTop}<div class="ekg-cap">${rCap}</div></div>` : ''}
     ${/* LAST YEAR, DEMOTED TO CONTEXT. It is still worth seeing — Kevin knows what
           last summer felt like — but it is one sample from the noisiest month in
@@ -2799,9 +2821,9 @@ function heroAppts(k){
       : `The appointment feed reaches back to ${esc(monthYear(RA.feedFrom))}, so last year sits outside it. Nothing above depends on it — the reference is your own trailing months.`}</div>` : ''}
     <div class="alloc-legend mml" style="margin:10px 0 8px">${rows.map(r => {
       const rb = R ? R.brands[r.b] : null;
-      const trace = mtdDays && mtdDays.length > 1
-        ? ekgSpark(mtdDays.map(x => ({ v: x.byBrand[r.b] || 0, t: x.typByBrand[r.b] || 0 })),
-            { id:`hero-appts-${r.b}`, w:64, h:22, mini:true, color:r.m.c, glow:r.m.c })
+      const trace = mtdDays && mtdDays.length
+        ? rhythmBars(mtdWeeks(mtdDays, x => x.byBrand[r.b] || 0, x => x.typByBrand[r.b] || 0)
+            .map(b => ({ ...b, label:'' })), { w:64, h:22, mini:true, color:r.m.c })
         /* Per-brand rhythm, from that brand's OWN history — a brand that books
            one a week must not be judged against the house shape. */
         : rb && k === 'week'
@@ -9516,7 +9538,7 @@ addEventListener('resize', () => {
    the last one, it is to tell a human which build is on the server and when it
    got there. A number nobody clocked cannot answer that, and the first time it
    is asked in anger will be the morning a stale build is being chased. */
-const BUILD = '2026-08-20T13:47Z-game-breadth';
+const BUILD = '2026-08-20T14:25Z-rhythm-continuity';
 const SB_URL = 'https://lzegjjbkfuecrhdvlvay.supabase.co';
 /* The one page that can finish a password reset. Hard-coded rather than derived,
    because every derivation of it so far has been a source of bugs: a bare origin
@@ -11211,7 +11233,8 @@ function buildData(raw){
                           n:createdOn(ymdL(d)).length,
                           today:i===0, weekend:d.getDay()===0||d.getDay()===6 }); }
     /* ── MTD, day by day, per brand ──────────────────────────────────────────
-       For the EKG trace on the Appointments hero tile. No new feed: same
+       For the Appointments hero tile's MTD rhythm bars — mtdWeeks() collapses
+       this to week buckets at draw time. No new feed: same
        createdOn/projBrand walk bookedByBrandInRange already does day-by-day,
        just keeping each day instead of collapsing it into one range total.
        Reference value per day is that weekday's own measured median
