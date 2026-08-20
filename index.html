@@ -6803,6 +6803,12 @@ function cardBrandReturn(){
       const m = BRANDS[id];
       const sp = book && book.byBrand[id] != null ? book.byBrand[id] : null;
       const roas = sp > 0 ? (rev[id] || 0) / sp : null;
+      /* Spend as % of revenue (KD, 20 Aug: "the actual marketing expense as a
+         percentage of revenue — on all three"). The same two numbers as the
+         /$1 figure, read the other way up, so the two can never disagree.
+         Same refusal rules as the ÷ above: no spend row or no revenue in the
+         month and the row states which, never a 0.0% or an ∞. */
+      const pct = sp > 0 && (rev[id] || 0) > 0 ? sp / rev[id] * 100 : null;
       return `<div class="m2-brand-tile">
         <div class="m2-bt-head"><div class="m2-bt-name">${esc(m.n)}</div>
           ${roas != null
@@ -6811,6 +6817,9 @@ function cardBrandReturn(){
         <div class="m2-bt-rows">
           <div class="m2-bt-row"><span>Signed · ${(jobs[id] || 0).toLocaleString()} job${(jobs[id] || 0) === 1 ? '' : 's'}</span><b class="g">${money(rev[id] || 0)}</b></div>
           <div class="m2-bt-row"><span>Marketing spend</span><b>${sp != null ? money(sp) : '<span style="color:var(--gold);font-weight:400">not entered</span>'}</b></div>
+          <div class="m2-bt-row"><span>Spend as % of revenue</span><b>${pct != null
+            ? `${pct.toFixed(1)}%`
+            : `<span style="color:var(--gold);font-weight:400">${sp == null ? 'spend not entered' : sp === 0 ? 'no spend' : 'no revenue'}</span>`}</b></div>
         </div>
       </div>`; }).join('')}
     ${book && book.unsplit > 0 ? `<div class="m2-note"><b>${money(book.unsplit)}</b> of this month's typed spend was entered as unsplit totals and belongs to no brand tile — those dollars are in the headline and the ledger total but in no tile's ÷, which therefore reads slightly high. Split those rows by brand and they land.</div>` : ''}
@@ -9935,7 +9944,7 @@ addEventListener('resize', () => {
    the last one, it is to tell a human which build is on the server and when it
    got there. A number nobody clocked cannot answer that, and the first time it
    is asked in anger will be the morning a stale build is being chased. */
-const BUILD = '2026-08-20T20:15Z-spread-and-time-clocks';
+const BUILD = '2026-08-20T20:50Z-brand-spend-share';
 const SB_URL = 'https://lzegjjbkfuecrhdvlvay.supabase.co';
 /* The one page that can finish a password reset. Hard-coded rather than derived,
    because every derivation of it so far has been a source of bugs: a bare origin
