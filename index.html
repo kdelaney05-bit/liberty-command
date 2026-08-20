@@ -592,11 +592,11 @@
   /* the fine instrument — tank gauges */
   .rg-effort { border-top: 1px solid var(--line); padding: 12px 15px 14px;
     background: linear-gradient(180deg, rgba(0,0,0,0.12), transparent); }
-  .rg-effort .cap, .rg-drawer .cap { font-family: 'JetBrains Mono', monospace;
+  .rg-effort .cap, .rg-drawer .cap, .rg-closewrap .cap { font-family: 'JetBrains Mono', monospace;
     font-size: 9.5px; letter-spacing: .2em; color: var(--gold);
     text-transform: uppercase; margin-bottom: 11px; display: flex;
     align-items: center; gap: 10px; }
-  .rg-effort .cap::after { content: ""; flex: 1; height: 1px;
+  .rg-effort .cap::after, .rg-closewrap .cap::after { content: ""; flex: 1; height: 1px;
     background: linear-gradient(90deg, var(--gold), transparent); }
   .rg-dialgrid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
   .rg-dial { border-radius: 14px; padding: 12px 10px 11px; text-align: center;
@@ -636,13 +636,44 @@
   .rg-dial .sub { font-family: 'JetBrains Mono', monospace; font-size: 8px; letter-spacing: 0.02em;
     color: var(--text-dim); margin-top: 3px; line-height: 1.5; }
 
-  /* one More-data door per card */
-  .rg-invrow { padding: 0 15px 13px; }
-  .rg-invbtn { width: 100%; background: none; border: 1px dashed var(--line);
-    border-radius: 11px; color: var(--text-dim); font-family: 'JetBrains Mono', monospace;
-    font-size: 10px; letter-spacing: .14em; text-transform: uppercase;
-    cursor: pointer; padding: 8px 12px; }
-  @media (hover: hover) { .rg-invbtn:hover { color: var(--gold); border-color: var(--gold); } }
+  /* THE CLOSING WINDOWS RIDE THE HEARTBEAT (KD, 20 Aug: "move the little
+     green closing windows up — one week, two week, thirty, sixty — directly
+     underneath their vitals chart… shrink it a little"). Same strip the
+     drawer used to hold, one size down, no drawer between it and the trace. */
+  .rg-closewrap { padding: 11px 15px 0; }
+  .rg-closewrap .cap { margin-bottom: 7px; }
+  .rg-closewrap .rg-closestrip { margin-bottom: 0; }
+  .rg-closewrap .rg-cw { padding: 5px 9px 7px; }
+  .rg-closewrap .rg-cw .k { font-size: 7.5px; }
+  .rg-closewrap .rg-cw .n { font-size: 14px; }
+  .rg-closewrap .rg-cw .n small { font-size: 9px; }
+  .rg-closewrap .rg-cw .meta { font-size: 8px; }
+
+  /* one scorecard door per card (KD, 20 Aug: "More data — I can barely see
+     that… make the click-here a little bigger, more obvious: click here for
+     the guts, the internals, the real vitals" → the door says EFFORT
+     SCORECARD and dresses like a door, not a footnote), and beside it the
+     bank pill ("just says bank — a thing for us to see their bank, it
+     doesn't really need to display"): the word until tapped, the three
+     ledger figures when it is. */
+  .rg-invrow { padding: 0 15px 13px; display: flex; gap: 8px; align-items: stretch; }
+  .rg-scorebtn { flex: 1; background: rgba(212,177,90,0.07); border: 1px solid rgba(212,177,90,0.5);
+    border-radius: 11px; color: var(--gold); font-family: 'JetBrains Mono', monospace;
+    font-size: 12px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase;
+    cursor: pointer; padding: 10px 12px; }
+  .rg-scorebtn small { display: block; font-weight: 400; font-size: 8.5px; letter-spacing: .06em;
+    text-transform: none; color: var(--text-dim); margin-top: 3px; }
+  @media (hover: hover) { .rg-scorebtn:hover { background: rgba(212,177,90,0.14); } }
+  .rg-bankbtn { background: none; border: 1px dashed var(--line); border-radius: 11px;
+    color: var(--text-dim); font-family: 'JetBrains Mono', monospace; font-size: 10px;
+    letter-spacing: .14em; text-transform: uppercase; cursor: pointer; padding: 8px 15px; }
+  @media (hover: hover) { .rg-bankbtn:hover { color: var(--gold); border-color: var(--gold); } }
+  .rg-bankline { display: none; padding: 0 15px 13px; font-family: 'JetBrains Mono', monospace;
+    font-size: 11px; color: var(--text); gap: 14px; }
+  .rg-bankline.open { display: flex; flex-wrap: wrap; }
+  .rg-bankline i { font-style: normal; color: var(--text-dim); font-size: 9px;
+    letter-spacing: .08em; text-transform: uppercase; margin-right: 4px; }
+  .rg-bankline b { font-family: 'Fraunces', serif; font-weight: 500; font-size: 13px; }
   .rg-drawer { display: none; border-top: 1px dashed var(--line);
     padding: 12px 15px 14px; background: rgba(0,0,0,0.10); }
   .rg-drawer.open { display: block; }
@@ -3934,24 +3965,26 @@ function rgCard(r, k, sellers, mx){
       `${coP != null ? `co avg ${short(Math.round(coP))}` : 'no co avg yet'}${pp && +pp.unquoted ? ` · <b>${pp.unquoted} unpriced</b>` : ''}`,
       rgRank((I.pipe || []).map(x => ({ id: x.rep_id, v: +x.dollars || 0 })), id, true), true)); }
 
-  /* ── the drawer: closing windows, the full inventory, and each dial's
-        deeper read (Kevin: "each one opens up to deeper data if we have it") ── */
+  /* ── closing windows: OUT of the drawer, directly under the heartbeat
+        (KD, 20 Aug: "move the little green closing windows up — the one
+        week, two week, thirty, sixty — directly underneath their vitals
+        chart") — the drawer keeps the inventory and each dial's deeper read
+        (Kevin: "each one opens up to deeper data if we have it") ── */
   const ct = D.closeTrend && D.closeTrend.byId[id];
   const cwCls = { hot: 'good', warm: 'warn', cold: 'bad', none: '' };
-  const closing = ct ? `<div class="cap">Closing windows</div>
+  const closing = ct ? `<div class="rg-closewrap"><div class="cap">Closing windows</div>
     <div class="rg-closestrip">${D.closeTrend.spans.map(sp2 => { const c = ct[sp2.key];
       return `<div class="rg-cw ${cwCls[closeBand(c)]}"><div class="k">${esc(sp2.label)}</div>
         <div class="n">${c.appts ? c.close + '<small>%</small>' : '—'}</div>
-        <div class="meta">${c.appts ? `${c.signed}/${c.appts}` : 'no appts'}</div></div>`; }).join('')}</div>` : '';
+        <div class="meta">${c.appts ? `${c.signed}/${c.appts}` : 'no appts'}</div></div>`; }).join('')}</div></div>` : '';
   const b = D.bank && D.bank[id];
   const es = byRep(I.est);
   /* Participation's old days-active read lives on here — demoted from a dial
      when Game pts absorbed the participation question (breadth of plays). */
   const dAct = eff ? eff.daysActiveM : null;
+  /* The bank rows left this grid for the bank pill beside the scorecard door
+     (KD, 20 Aug) — one word on the card, the ledger figures on the tap. */
   const inv = [
-    b ? `<div class="rg-inv"><span class="k">Bank</span><b>${short(b.banked)}</b></div>` : '',
-    b ? `<div class="rg-inv"><span class="k">Coming</span><b>${short(b.coming)}</b></div>` : '',
-    b ? `<div class="rg-inv"><span class="k">Paid YTD</span><b>${short(b.paidYtd)}</b></div>` : '',
     `<div class="rg-inv"><span class="k">Avg deal</span><b>${r.jobs ? short(Math.round(r.rev / r.jobs)) : '—'}</b></div>`,
     r.rung ? `<div class="rg-inv"><span class="k">Pending CC</span><b>${short(r.rung)}</b> rung</div>` : '',
     `<div class="rg-inv"><span class="k">Deals</span><b>${r.jobs}</b></div>`,
@@ -3997,14 +4030,18 @@ function rgCard(r, k, sellers, mx){
       }
       return rgBeat(rp, D.repPulse ? D.repPulse.std : null, tw);
     })()}
+    ${closing}
     <div class="rg-effort">
       <div class="cap">The work behind it</div>
       <div class="rg-dialgrid">${dials.join('')}</div>
     </div>
-    <div class="rg-invrow"><button type="button" class="rg-invbtn" onclick="event.stopPropagation();this.closest('.rg-card').querySelector('.rg-drawer').classList.toggle('open')">More data ▾</button></div>
+    <div class="rg-invrow">
+      <button type="button" class="rg-scorebtn" onclick="event.stopPropagation();this.closest('.rg-card').querySelector('.rg-drawer').classList.toggle('open')">Effort scorecard ▾<small>the guts — every number behind this card</small></button>
+      ${b ? `<button type="button" class="rg-bankbtn" onclick="event.stopPropagation();this.closest('.rg-card').querySelector('.rg-bankline').classList.toggle('open')">Bank</button>` : ''}
+    </div>
+    ${b ? `<div class="rg-bankline"><span><i>bank</i> <b>${short(b.banked)}</b></span><span><i>coming</i> <b>${short(b.coming)}</b></span><span><i>paid ytd</i> <b>${short(b.paidYtd)}</b></span>${b.bankedDeals ? `<span><i>cleared</i> <b>${b.bankedDeals} deal${b.bankedDeals === 1 ? '' : 's'}</b></span>` : ''}</div>` : ''}
     <div class="rg-drawer">
       ${dets}
-      ${closing}
       <div class="cap">Full inventory — ${esc(r.name)}</div>
       <div class="rg-invgrid">${inv}</div>
     </div>
@@ -9944,7 +9981,7 @@ addEventListener('resize', () => {
    the last one, it is to tell a human which build is on the server and when it
    got there. A number nobody clocked cannot answer that, and the first time it
    is asked in anger will be the morning a stale build is being chased. */
-const BUILD = '2026-08-20T20:50Z-brand-spend-share';
+const BUILD = '2026-08-20T23:40Z-effort-scorecard';
 const SB_URL = 'https://lzegjjbkfuecrhdvlvay.supabase.co';
 /* The one page that can finish a password reset. Hard-coded rather than derived,
    because every derivation of it so far has been a source of bugs: a bare origin
