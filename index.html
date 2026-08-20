@@ -2376,8 +2376,30 @@ function hdrTitle(){
     <h1>TruReview <em>Autopilot</em></h1>
   </div>`;
 }
-function hdr(){
+/* ── THE HERO ROW, TAKEN APART BY MEANING (KD, 20 Aug: "money to me is
+   receivables… you have appointments under money when we have marketing").
+   The old money row bundled four different questions into one section. Each
+   tile now lives where its question lives — Signed in SALES, Appointments in
+   MARKETING, Built + A/R in MONEY — while the phone's ALL tab still composes
+   the classic row via hdr(). One seg, one HEROWIN, wherever it renders: the
+   window switch is global state, so flipping it in one section flips it in
+   all of them, which is the "everything just shifts" law, not a leak. */
+function heroSeg(){
   const mBtn = MONTHOFF ? MNAMES[new Date(new Date().getFullYear(), new Date().getMonth() - MONTHOFF, 1).getMonth()].slice(0,3) : 'MTD';
+  const k = HEROWIN;
+  return `${monthBanner()}
+    <div class="seg" style="margin:0 0 10px">
+      ${[['day','Today'],['week','Week'],['month',mBtn],['ytd','YTD']].map(([kk,l])=>`<button class="${kk===k?'on':''}" onclick="setHeroWin('${kk}')">${l}</button>`).join('')}
+    </div>
+    ${k === 'month' ? `<div class="mnav">
+      <button class="mn-btn" ${MONTHOFF>=12?'disabled':''} onclick="setMonthOff(MONTHOFF+1)" aria-label="Previous month">‹</button>
+      <span class="mn-cur${MONTHOFF?' back':''}">${MONTHOFF ? esc(D.windows.month.label) : 'This month'}</span>
+      <button class="mn-btn" ${MONTHOFF?'':'disabled'} onclick="setMonthOff(MONTHOFF-1)" aria-label="Next month">›</button>
+      ${MONTHOFF?`<button class="mn-now" onclick="setMonthOff(0)">back to now</button>`:''}
+    </div>` : ''}`;
+}
+
+function signedTile(){
   const k = HEROWIN, label = { day:'Today', week:'This week', month: MONTHOFF ? D.windows.month.label : 'MTD', ytd:'YTD' }[k];
   const W = flat(k), pv = W.prev;
   const d = pv.rev ? Math.round((W.rev - pv.rev)/pv.rev*100) : null;
@@ -2389,20 +2411,7 @@ function hdr(){
     : (W.billdu || W.rungRev)
       ? seam
       : (W.prevSpanDays >= spanOf(k) ? `${W.jobs} signed` : `pace ${short(paceOf(k))}`);
-  const q = qbWinOf(k);
-  return `<div class="hdr">
-    ${monthBanner()}
-    <div class="seg" style="margin:0 0 10px">
-      ${[['day','Today'],['week','Week'],['month',mBtn],['ytd','YTD']].map(([kk,l])=>`<button class="${kk===k?'on':''}" onclick="setHeroWin('${kk}')">${l}</button>`).join('')}
-    </div>
-    ${k === 'month' ? `<div class="mnav">
-      <button class="mn-btn" ${MONTHOFF>=12?'disabled':''} onclick="setMonthOff(MONTHOFF+1)" aria-label="Previous month">‹</button>
-      <span class="mn-cur${MONTHOFF?' back':''}">${MONTHOFF ? esc(D.windows.month.label) : 'This month'}</span>
-      <button class="mn-btn" ${MONTHOFF?'':'disabled'} onclick="setMonthOff(MONTHOFF-1)" aria-label="Next month">›</button>
-      ${MONTHOFF?`<button class="mn-now" onclick="setMonthOff(0)">back to now</button>`:''}
-    </div>` : ''}
-    <div class="hero1">
-      <button class="snap bigsnap" onclick="openWindow('${k}')" aria-label="Signed ${esc(label)} — open details">
+  return `<button class="snap bigsnap" onclick="openWindow('${k}')" aria-label="Signed ${esc(label)} — open details">
         <div class="snap-k" style="color:var(--green)">Signed · ${esc(label)}</div>
         <div class="alloc-chart"><canvas id="cHeroMix"></canvas>
           <div class="alloc-center"><div class="big">${short(W.rev)}</div><div class="lbl">signed</div></div></div>
@@ -2417,9 +2426,13 @@ function hdr(){
         <div class="snap-s">${sub}</div>
         <div class="snap-d ${d===null?'flat':d>=0?'up':'down'}">${d===null?'—':(d>=0?'▲':'▼')+' '+Math.abs(d)+'% vs '+esc(W.prevLabel)}</div>
         <div class="snap-go">details <span class="go-chev">›</span></div>
-      </button>
-      ${heroAppts(k)}
-      <button class="snap" onclick="openWindow('${k}')" aria-label="Built ${esc(label)} — open details">
+      </button>`;
+}
+
+function builtTile(){
+  const k = HEROWIN, label = { day:'Today', week:'This week', month: MONTHOFF ? D.windows.month.label : 'MTD', ytd:'YTD' }[k];
+  const q = qbWinOf(k);
+  return `<button class="snap" onclick="openWindow('${k}')" aria-label="Built ${esc(label)} — open details">
         <div class="snap-k" style="color:var(--gold)">Built · ${esc(label)}</div>
         ${q && q.invoiced ? `<div class="alloc-chart mm"><canvas id="cHeroBuilt"></canvas>
           <div class="alloc-center"><div class="big">${short(q.invoiced)}</div><div class="lbl">built</div></div></div>
@@ -2429,8 +2442,11 @@ function hdr(){
             : q ? `<div class="snap-v" style="color:var(--gold)">$0</div><div class="snap-s">no invoices ${esc(label==='Today'?'today':'in this window')} · qb</div>`
             : `<div class="snap-v" style="color:var(--text-dim)">withheld</div><div class="snap-s">qb not readable</div>`}
         <div class="snap-go">details ›</div>
-      </button>
-      <button class="snap" onclick="openWindow('month')" aria-label="Open accounts receivable — open details">
+      </button>`;
+}
+
+function arTile(){
+  return `<button class="snap" onclick="openWindow('month')" aria-label="Open accounts receivable — open details">
         <div class="snap-k" style="color:var(--accent-soft)">Open A/R</div>
         ${qbOK() && D.qb.arTotal ? `<div class="alloc-chart mm"><canvas id="cHeroAR"></canvas>
           <div class="alloc-center"><div class="big">${short(D.qb.arTotal)}</div><div class="lbl">open</div></div></div>
@@ -2440,10 +2456,61 @@ function hdr(){
              : qbOK() ? `<div class="snap-v" style="color:var(--accent-soft)">$0</div><div class="snap-s">nothing outstanding · qb</div>`
              : `<div class="snap-v" style="color:var(--text-dim)">withheld</div><div class="snap-s">qb not readable</div>`}
         <div class="snap-go">details ›</div>
-      </button>
-    </div>
-    ${k === 'month' ? heroTrend() : ''}
-    <div class="snaphint">Signed = every sale on the board — CC contracts + Oasis via Billdu + 🔔 rung bells awaiting the book, each part labeled, same union as the rep board below (Kevin's 10 Aug ruling: "that needs to match"). A bell counts the moment it rings, hands off to the feed the moment CC or Billdu books it, and comes off after 5 business days if never turned in — the managers get a notification when one does. Built = invoiced in QuickBooks; Signed and Built are never added together.</div>
+      </button>`;
+}
+
+const SIGNED_HINT = `Signed = every sale on the board — CC contracts + Oasis via Billdu + 🔔 rung bells awaiting the book, each part labeled, same union as the rep board below (Kevin's 10 Aug ruling: "that needs to match"). A bell counts the moment it rings, hands off to the feed the moment CC or Billdu books it, and comes off after 5 business days if never turned in — the managers get a notification when one does.`;
+
+/* SALES leads with the signed money over the rep cards. */
+function salesHero(){
+  return `<div class="hdr">${heroSeg()}
+    <div class="hero1">${signedTile()}</div>
+    ${HEROWIN === 'month' ? heroTrend() : ''}
+    <div class="snaphint">${SIGNED_HINT}</div>
+  </div>`;
+}
+
+/* MARKETING leads with the appointments hero — the setters' output. */
+function mktApptsHero(){
+  const t = heroAppts(HEROWIN);
+  return t ? `<div class="hdr">${heroSeg()}<div class="hero1">${t}</div></div>` : '';
+}
+
+/* MONEY is receivables and billing, the way Kevin defines it. */
+function moneyHero(){
+  return `<div class="hdr">${heroSeg()}
+    <div class="hero1">${builtTile()}${arTile()}</div>
+    <div class="snaphint">Built = invoiced in QuickBooks — a job is billed when it is built, so the invoice is the built record. Signed lives in Sales; the two count different events and are never added together.</div>
+  </div>` + cardMoneyAging();
+}
+
+/* The open book aged, with each company's owed total — the depth the Money
+   section gains now that it means only money (KD, 20 Aug, option A). Same
+   figures the MNY vital reads, so the tile and this card cannot disagree. */
+function cardMoneyAging(){
+  const M = D.vitals && D.vitals.money;
+  if (!M || !M.n) return '';
+  return `<div class="card full" style="margin-bottom:26px">
+    <div class="card-title">The open book · by age<span class="feed-tag qb">live · qb</span></div>
+    <div class="card-sub">Where the <b>${short(M.openTotal)}</b> owed to you sits, aged from the invoice date — young money green, old money red. Mean age <b>${Math.round(M.meanAge)}d</b> against your ${VIT.money.good}/${VIT.money.watch}/${VIT.money.problem}-day lines.</div>
+    <div class="ekg-wrap">${rhythmBars(M.aging.map((a, i) => ({ label: a.label.replace(' days',''),
+      v: Math.round(a.v), num: short(a.v), fill: VIT_AGE_C[i] || VIT_AGE_C[VIT_AGE_C.length - 1] })),
+      { w:280, h:62, refDash:false })}</div>
+    ${BRAND_ORDER.map(bid => { const b = M.ageByBrand ? M.ageByBrand[bid] : null; const m = brandOf(bid);
+      return `<div class="pd-brand"><span class="pd-dot" style="background:${m.c}"></span>
+        <span class="pd-brand-n">${esc(m.s)}</span>
+        <span class="pd-brand-z">${b && b.age != null ? short(b.total) : '$0 owed'}</span>
+        <span class="pd-brand-v">${b && b.age != null ? `avg ${Math.round(b.age)}d old` : 'nothing outstanding'}</span></div>`; }).join('')}
+    <div class="note">Aged from the <b>invoice date</b> — due_date is not among the fetched columns, so the clock named is the clock used. The oldest, largest balances are the collections pass.</div>
+  </div>`;
+}
+
+/* The classic composed row — the phone's ALL tab still reads it whole. */
+function hdr(){
+  return `<div class="hdr">${heroSeg()}
+    <div class="hero1">${signedTile()}${heroAppts(HEROWIN)}${builtTile()}${arTile()}</div>
+    ${HEROWIN === 'month' ? heroTrend() : ''}
+    <div class="snaphint">${SIGNED_HINT} Built = invoiced in QuickBooks; Signed and Built are never added together.</div>
   </div>`;
 }
 
@@ -8669,17 +8736,21 @@ const SECTIONS = [
      measures the SETTING side). This reverses the earlier who-sold-it /
      who-got-the-at-bats pairing on purpose: the at-bats are marketing's
      output, and Sales fills out with the v9 rep gauges instead. */
-  { key:'sales',     name:'Sales',     render: () => '<div class="stack bands">' + cardReps() + '</div>' },
+  /* Option A (KD, 20 Aug): each old money-row tile lives where its question
+     lives. Sales = the signed dollars over the rep cards; Marketing = the
+     appointments hero over the by-company band and the room; Money = billing
+     and receivables only — Built, Open A/R, and the aged open book. */
+  { key:'sales',     name:'Sales',     render: () => salesHero() + '<div class="stack bands">' + cardReps() + '</div>' },
   /* The rooms render DIRECT here — the whole board, no preview shelf and no
      open/close state. The rail already solos a section, so the page-level
      takeover the shelves performed is redundant on the desktop; the phone
      column below RAIL_MIN keeps the shelves and their stores untouched. */
-  { key:'marketing', name:'Marketing', render: () => '<div class="stack bands">' + cardApptByCompany() + marketingRoom(true) + '</div>' },
+  { key:'marketing', name:'Marketing', render: () => mktApptsHero() + '<div class="stack bands">' + cardApptByCompany() + marketingRoom(true) + '</div>' },
   /* "People" died in review (KD, 20 Aug: "I don't like the name… the people is
      the effort… hustle"). HUSTLE is his word for the whole register — the
      quadrant, the 4-Touch model, the effort instruments — so the rail says it. */
   { key:'hustle',    name:'Hustle',    render: () => '<div class="stack bands">' + cardQuadrant() + effortRoom(true) + '</div>' },
-  { key:'money',     name:'Money',     render: () => hdr() },
+  { key:'money',     name:'Money',     render: () => moneyHero() },
   /* The one counted section: the badge is the Attention board's own row list
      (attnRows), so the number on the rail and the rows behind the click are
      one computation and cannot drift apart. */
@@ -9330,7 +9401,7 @@ addEventListener('resize', () => {
    the last one, it is to tell a human which build is on the server and when it
    got there. A number nobody clocked cannot answer that, and the first time it
    is asked in anger will be the morning a stale build is being chased. */
-const BUILD = '2026-08-20T12:13Z-rep-gauges-mrail';
+const BUILD = '2026-08-20T12:31Z-sections-by-meaning';
 const SB_URL = 'https://lzegjjbkfuecrhdvlvay.supabase.co';
 /* The one page that can finish a password reset. Hard-coded rather than derived,
    because every derivation of it so far has been a source of bugs: a bare origin
