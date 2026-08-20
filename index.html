@@ -5498,9 +5498,26 @@ const MK_SRC_RPC_FROM = '2026-07'; // first month the RPC can group by source
 
 /* Eastern, matching the window the RPC buckets leads in (`at time zone
    'America/New_York'`). A UTC month key would drift the boundary by 4-5 hours
-   and move deals between months at the seam. en-CA renders YYYY-MM-DD. */
-const mkET = ts => { try { return new Date(ts).toLocaleDateString('en-CA', { timeZone:'America/New_York' }); }
-                     catch (e) { return String(ts).slice(0, 10); } };
+   and move deals between months at the seam. en-CA renders YYYY-MM-DD.
+
+   ONE FORMATTER, AND A MEMO. toLocaleDateString builds a fresh
+   Intl.DateTimeFormat on every call, and this function runs inside the
+   per-row loops of every marketing panel — ~50k calls per render, which put
+   SIX SECONDS between Kevin's tap and the screen answering (measured against
+   the live July book: 989ms per 7,777-appt pass the old way, 127ms with the
+   formatter reused, ~0ms once memoized). The memo is safe because a
+   timestamp's Eastern date never changes, and bounded because its keys are
+   the dataset's own timestamps. */
+const mkETfmt = new Intl.DateTimeFormat('en-CA', { timeZone:'America/New_York' });
+const mkETmemo = new Map();
+const mkET = ts => {
+  let v = mkETmemo.get(ts);
+  if (v === undefined) {
+    try { v = mkETfmt.format(new Date(ts)); } catch (e) { v = String(ts).slice(0, 10); }
+    mkETmemo.set(ts, v);
+  }
+  return v;
+};
 
 const mkRoiClass = roi => Math.abs(roi - MK_LINE) <= MK_NEAR ? 'near' : (roi >= MK_LINE ? 'hit' : 'miss');
 
@@ -9739,7 +9756,7 @@ addEventListener('resize', () => {
    the last one, it is to tell a human which build is on the server and when it
    got there. A number nobody clocked cannot answer that, and the first time it
    is asked in anger will be the morning a stale build is being chased. */
-const BUILD = '2026-08-20T18:22Z-rep-card-perspective';
+const BUILD = '2026-08-20T18:55Z-marketing-tap-latency';
 const SB_URL = 'https://lzegjjbkfuecrhdvlvay.supabase.co';
 /* The one page that can finish a password reset. Hard-coded rather than derived,
    because every derivation of it so far has been a source of bugs: a bare origin
