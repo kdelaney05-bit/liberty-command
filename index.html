@@ -7020,14 +7020,17 @@ function vitSales(){
     /* The brand lens: the same weeks, the same union, one brand at a time —
        each judged against ITS OWN median by the vital's own rule, because a
        brand a third the size is not a third as healthy. No median → no verdict. */
+    /* The chip leads with the brand's ACTUAL dollars (KD, 20 Aug: "people are
+       number people — always put the company's actual number"), the arrow and
+       the colour carry the verdict beside it. */
     brands: V.sales.byBrand ? BRAND_ORDER.map(bid => {
       const bs = V.sales.byBrand[bid], bc = bs[N], br = vitMed(bs.slice(0, N));
       if (!(br > 0)) return { id: bid, s: brandOf(bid).s, c: brandOf(bid).c,
-        series: bs, ref: null, band:'dark', chip:'—' };
+        series: bs, ref: null, band:'dark', chip: bc > 0 ? short(bc) : '—' };
       const bst = vitState(Math.max(0, 1 - bc / br), VIT.sales);
       const g = Math.round((bc / br - 1) * 100);
       return { id: bid, s: brandOf(bid).s, c: brandOf(bid).c, series: bs, ref: br,
-        band: bst.band, chip: `${g >= 0 ? '▲' : '▼'}${Math.abs(g)}%` };
+        band: bst.band, chip: `${short(bc)} ${g >= 0 ? '▲' : '▼'}${Math.abs(g)}%` };
     }) : null,
     read: `${short(cur)} signed, ${gap === 0 ? 'level with' : gap > 0 ? `${gap}% above` : `${Math.abs(gap)}% below`} your 8-week median`,
     refNote:'median of your last 8 complete weeks',
@@ -7071,7 +7074,7 @@ function vitProduction(){
       const bst = vitState(bc - br, VIT.production);
       const g = Math.round(bc - br);
       return { id: bid, s: brandOf(bid).s, c: brandOf(bid).c, series: bs, ref: br,
-        band: bst.band, chip: `${g >= 0 ? '▲' : '▼'}${Math.abs(g)}pt` };
+        band: bst.band, chip: `${Math.round(bc)}% ${g >= 0 ? '▲' : '▼'}${Math.abs(g)}pt` };
     }) : null,
     read: `${Math.round(cur)}% of the open book is past ${VIT.production.stallDays} days — ${
       d === 0 ? 'level with' : d > 0 ? `${d} points above` : `${Math.abs(d)} points below`} its 8-week median`,
@@ -7123,14 +7126,17 @@ function vitMoney(){
     gapRead: (() => { const over = Math.round(M.meanAge - VIT.money.good);
       return over > 0 ? `▲${over}d past your ${VIT.money.good}d line`
                       : `inside your ${VIT.money.good}d line`; })(),
-    /* The lens: each brand's own dollar-weighted mean age against the same
-       fixed band. A brand with nothing owed reads a dash, never 0 days. */
+    /* The lens: each brand's open TOTAL, then the age that judges it, against
+       the same fixed band. The dollars are the number he asked for; the age is
+       what decides the colour. A brand with nothing owed says so — "$0 owed"
+       is a clean fact, never a 0-day book. */
     brands: BRAND_ORDER.map(bid => {
-      const age = M.ageByBrand ? M.ageByBrand[bid] : null;
-      if (age == null) return { id: bid, s: brandOf(bid).s, c: brandOf(bid).c, band:'dark', chip:'—' };
-      const bst = vitState(age - VIT.money.good,
+      const b = M.ageByBrand ? M.ageByBrand[bid] : null;
+      if (!b || b.age == null) return { id: bid, s: brandOf(bid).s, c: brandOf(bid).c, band:'dark', chip:'$0 owed' };
+      const bst = vitState(b.age - VIT.money.good,
         { watch: VIT.money.watch - VIT.money.good, problem: VIT.money.problem - VIT.money.good });
-      return { id: bid, s: brandOf(bid).s, c: brandOf(bid).c, band: bst.band, chip: `${Math.round(age)}d` };
+      return { id: bid, s: brandOf(bid).s, c: brandOf(bid).c, band: bst.band,
+        chip: `${short(b.total)} · ${Math.round(b.age)}d` };
     }),
     read: `${Math.round(M.meanAge)} days is the average age of ${short(M.openTotal)} owed to you`,
     refNote:`your line: green to ${VIT.money.good} days, watch to ${VIT.money.watch}, problem past ${VIT.money.problem}`,
@@ -8910,7 +8916,7 @@ addEventListener('resize', () => {
    the last one, it is to tell a human which build is on the server and when it
    got there. A number nobody clocked cannot answer that, and the first time it
    is asked in anger will be the morning a stale build is being chased. */
-const BUILD = '2026-08-20T05:20Z-verdict-language';
+const BUILD = '2026-08-20T05:57Z-brand-totals';
 const SB_URL = 'https://lzegjjbkfuecrhdvlvay.supabase.co';
 /* The one page that can finish a password reset. Hard-coded rather than derived,
    because every derivation of it so far has been a source of bugs: a bare origin
@@ -9643,12 +9649,15 @@ function buildVitals(jobs, qbInv, unionWeek, unionWeekBrand){
                  age: pDayDiff(+end, +sod(new Date(r.txn_date))) }))
     .filter(r => isFinite(r.age));
   const openTotal = open.reduce((n, r) => n + r.v, 0);
-  /* The lens for money: each brand's own dollar-weighted mean age. null where
-     a brand holds no open balance — nothing owed is not a 0-day book. */
+  /* The lens for money: each brand's open TOTAL and its dollar-weighted mean
+     age — the number people read and the number that judges it (KD, 20 Aug:
+     "always put the company's actual number"). Age null where a brand holds
+     no open balance — nothing owed is not a 0-day book. */
   const ageByBrand = Object.fromEntries(BRAND_ORDER.map(bid => {
     const mine = open.filter(r => r.b === bid);
     const tot = mine.reduce((n, r) => n + r.v, 0);
-    return [bid, tot > 0 ? mine.reduce((n, r) => n + r.v * Math.max(0, r.age), 0) / tot : null];
+    return [bid, { total: tot,
+      age: tot > 0 ? mine.reduce((n, r) => n + r.v * Math.max(0, r.age), 0) / tot : null }];
   }));
   const meanAge = openTotal > 0
     ? open.reduce((n, r) => n + r.v * Math.max(0, r.age), 0) / openTotal : null;
