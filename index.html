@@ -609,6 +609,17 @@
   .rg-dial .rk { display: inline-block; margin-top: 5px; font-family: 'JetBrains Mono', monospace;
     font-size: 9px; letter-spacing: .1em; color: var(--text-dim); }
   .rg-dial .rk b { color: var(--c, var(--text)); font-weight: 500; }
+  /* The dial's perspective strip — the metric's prior weeks as a mini
+     heartbeat with the company line dashed across (KD, 20 Aug: "where they
+     were the prior 1–4 weeks, smaller heartbeat in there too — and company
+     avg/expectation"). Fixed pixel size, so nothing in it can stretch. */
+  .rg-dial .spark { display: block; width: 56px; height: 16px; margin: 3px auto 0; overflow: visible; }
+  .rg-dial .spark .ln { fill: none; stroke: var(--c, var(--text-dim)); stroke-width: 1.4; stroke-linejoin: round; }
+  .rg-dial .spark .fl { fill: var(--c, var(--text-dim)); opacity: .12; }
+  .rg-dial .spark .pt { fill: var(--c, var(--text-dim)); }
+  .rg-dial .spark .co { stroke: #f0ead8; stroke-width: 1; stroke-dasharray: 2 3; opacity: .5; }
+  .rg-dial .sub { font-family: 'JetBrains Mono', monospace; font-size: 8px; letter-spacing: 0.02em;
+    color: var(--text-dim); margin-top: 3px; line-height: 1.5; }
 
   /* one More-data door per card */
   .rg-invrow { padding: 0 15px 13px; }
@@ -3601,12 +3612,23 @@ function cardMix(){
      First touch  0 → 96h, std mark at the 24h Thank-You gate; a LOW needle
                   is a FAST rep — the caption says so.
      Streak       0 → the current leader's streak (min 10), std mark at the
-                  leader: the race as it stands today.
+                  leader: the race as it stands today. Counted on UNIQUE
+                  customers per day (KD, 20 Aug: "I don't want to count the
+                  same customer back and forth — needs to be extra effort"),
+                  company goal 10/day, declared on the dial.
      Game pts     0 → 2× the team median MTD, std mark at the median.
                   score_events via the jobs join, future-dated points capped
-                  at now — a point is never scored before its play.
-     Particip.    0 → 100% of working days this month with at least one
-                  logged touch, std mark at the team median.
+                  at now — a point is never scored before its play. Carries
+                  the chat-thread participation read as its sub-line: how
+                  much of the team's hype-thread chatter is this rep.
+     Pipeline $   0 → 2× the company average open pipeline, std mark at the
+                  average. pipeline_value()'s stock: every open customer's
+                  latest on-file amount — how much they are sitting on.
+   Each dial also wears a PERSPECTIVE STRIP where its feed has a past — the
+   prior weeks as a mini trace with the company line dashed across. A metric
+   that is a snapshot (the live book, first-touch speed, the pipeline stock)
+   draws no strip: a snapshot has no history to draw, and inventing one is
+   the fake-reference failure in miniature.
    A gauge whose feed has not answered reads a dash on a grey dial — absent,
    never a fake zero. */
 const RG_CREAM = '#f0ead8';
@@ -3689,12 +3711,35 @@ function rgBeat(rp, std){
   </div>`;
 }
 
-const rgDialHtml = (repId, key, cls, label, gauge, num, cmp, rank, hasDeeper) =>
+/* The perspective strip: up to four prior weeks of the metric as a mini
+   heartbeat, the company average dashed across. GEOMETRY ONLY at this size —
+   no printed numbers (the same concession every mini on this page makes);
+   the cmp line beneath carries the words. Fewer than two prior weeks draws
+   nothing: one dot is not a trend, and a strip must never pretend to one. */
+function rgSpark(vals, ref){
+  const vs = (vals || []).map(v => v == null ? null : +v).filter(v => v != null);
+  if (vs.length < 2) return '';
+  const W = 56, H = 16, p = 2;
+  const max = Math.max(...vs, ref || 0, 1) * 1.15;
+  const x = i => p + i * (W - 2 * p) / (vs.length - 1);
+  const y = v => H - p - (Math.max(0, v) / max) * (H - 2 * p);
+  const pts = vs.map((v, i) => `${x(i).toFixed(1)},${y(v).toFixed(1)}`).join(' ');
+  return `<svg class="spark" viewBox="0 0 ${W} ${H}" aria-hidden="true">
+    ${ref != null && isFinite(ref) ? `<line class="co" x1="0" y1="${y(ref).toFixed(1)}" x2="${W}" y2="${y(ref).toFixed(1)}"/>` : ''}
+    <polygon class="fl" points="${x(0).toFixed(1)},${H - p} ${pts} ${x(vs.length - 1).toFixed(1)},${H - p}"/>
+    <polyline class="ln" points="${pts}"/>
+    <circle class="pt" cx="${x(vs.length - 1).toFixed(1)}" cy="${y(vs[vs.length - 1]).toFixed(1)}" r="1.8"/>
+  </svg>`;
+}
+
+const rgDialHtml = (repId, key, cls, label, gauge, num, cmp, rank, hasDeeper, spark, sub) =>
   `<button type="button" class="rg-dial ${cls}" onclick="event.stopPropagation();rgDialOpen(this,'${key}')"
      title="${hasDeeper ? 'Tap for the deeper read' : 'Tap for more data'}">
     <div class="lbl">${label}</div>${gauge}
     <div class="num">${num}</div>
+    ${spark || ''}
     <div class="cmp">${cmp}</div>
+    ${sub ? `<div class="sub">${sub}</div>` : ''}
     ${rank ? `<span class="rk">${rank}</span>` : ''}
   </button>`;
 
@@ -3718,41 +3763,68 @@ function rgCard(r, k, sellers, mx){
   const t = eff ? eff.month.t : null;
   const teamT = (D.effort.rows || []).filter(x => sellers.some(s => String(s.id) === String(x.id)));
   const coT = teamT.length ? Math.round(teamT.reduce((n, x) => n + x.month.t, 0) / teamT.length) : 0;
+  /* Per-rep prior weeks from touch_weekly() (draft migration 183) and the
+     company weekly average — the perspective strip's two ingredients. The
+     feed absent (migration not applied yet) just means no strip: absent,
+     never invented. */
+  const wkR = (I.weekly || []).find(x => String(x.rep_id) === id) || null;
+  const coWk = kf => { const rs = (I.weekly || []).filter(x => sellers.some(s => String(s.id) === String(x.rep_id)))
+      .map(x => (x[kf] || []).reduce((a, c) => a + (+c || 0), 0) / Math.max(1, (x[kf] || []).length));
+    return rs.length ? rs.reduce((a, c) => a + c, 0) / rs.length : null; };
   dials.push(t == null ? rgDialHtml(id, 'touch', 'off', 'Touches MTD', rgGauge(0, 0.5), '—', 'no touch feed', '', false)
     : rgDialHtml(id, 'touch', !goal ? 'off' : t >= goal ? 'good' : t >= goal / 2 ? 'warn' : 'bad',
         'Touches MTD', rgGauge(goal ? t / (2 * goal) : 0, 0.5), String(t),
         goal ? `goal ${goal} <b>${t >= goal ? '+' : '−'}${Math.abs(Math.round(100 * (t - goal) / goal))}%</b> · co avg ${coT}` : `co avg ${coT}`,
-        rgRank(teamT.map(x => ({ id: x.id, v: x.month.t })), id, true), true));
+        rgRank(teamT.map(x => ({ id: x.id, v: x.month.t })), id, true), true,
+        rgSpark(wkR && wkR.touches, coWk('touches')),
+        wkR && (wkR.touches || []).filter(v => v != null).length >= 2 ? 'prior weeks · ╌ co avg' : ''));
 
-  /* "4-Touch complete" — Kevin's rename (20 Aug): call it what it is, the
-     share of the live book with all four plays done or signed. When the
-     Autopilot automation ships, this dial's drill gains the manual-vs-
-     Autopilot split — the touches feed must stamp who made the touch first,
-     so that read waits for the data rather than being invented. */
+  /* "4-Touch self-completed" — Kevin's second rename (20 Aug): the share of
+     the live book where the rep got all four plays done or signed themselves.
+     When the Autopilot automation ships, this dial's drill gains the manual-
+     vs-Autopilot split — the touches feed must stamp who made the touch
+     first, so that read waits for the data rather than being invented.
+     The book is a SNAPSHOT, so this dial has no prior-weeks strip to draw —
+     its perspective is the company average on the cmp line. */
   const lt = byRep(I.light);
-  if (!lt) dials.push(rgDialHtml(id, 'light', 'off', '4-Touch complete', rgGauge(0, 0.5), '—', I.light ? 'no live book' : 'feed loading', '', false));
+  const coG = (() => { const rs = (I.light || []).filter(x => sellers.some(s => String(s.id) === String(x.rep_id)))
+      .map(x => 100 * +x.green / Math.max(1, +x.green + +x.yellow + +x.red));
+    return rs.length ? Math.round(rs.reduce((a, c) => a + c, 0) / rs.length) : null; })();
+  if (!lt) dials.push(rgDialHtml(id, 'light', 'off', '4-Touch self-completed', rgGauge(0, 0.5), '—', I.light ? 'no live book' : 'feed loading', '', false));
   else { const b = Math.max(1, +lt.green + +lt.yellow + +lt.red), g = Math.round(100 * +lt.green / b);
-    dials.push(rgDialHtml(id, 'light', g >= 50 ? 'good' : g >= 30 ? 'warn' : 'bad', '4-Touch complete',
+    dials.push(rgDialHtml(id, 'light', g >= 50 ? 'good' : g >= 30 ? 'warn' : 'bad', '4-Touch self-completed',
       rgGauge(g / 100, 0.5), `${g}<small>%</small>`,
-      `std 50% <b>${g >= 50 ? '+' : '−'}${Math.abs(g - 50)}</b> · ${lt.red} red`,
+      `std 50% <b>${g >= 50 ? '+' : '−'}${Math.abs(g - 50)}</b>${coG != null ? ` · co avg ${coG}%` : ''} · ${lt.red} red`,
       rgRank((I.light || []).map(x => ({ id: x.rep_id, v: +x.green / Math.max(1, +x.green + +x.yellow + +x.red) })), id, true), true)); }
 
   const sp = byRep(I.speed);
+  /* 30-day snapshot — no weekly strip; company average is the perspective. */
+  const coH = (() => { const rs = (I.speed || []).filter(x => x.avg_hours != null && sellers.some(s => String(s.id) === String(x.rep_id)))
+      .map(x => +x.avg_hours);
+    return rs.length ? rs.reduce((a, c) => a + c, 0) / rs.length : null; })();
   if (!sp || sp.avg_hours == null) dials.push(rgDialHtml(id, 'speed', 'off', 'First touch', rgGauge(0, 0.25), '—', sp ? 'nothing touched yet' : 'feed loading', '', false));
   else { const h = +sp.avg_hours;
     dials.push(rgDialHtml(id, 'speed', h <= 24 ? 'good' : h <= 72 ? 'warn' : 'bad', 'First touch',
       rgGauge(Math.min(1, h / 96), 0.25), `${h.toFixed(1)}<small>h</small>`,
-      `std 24h · low needle = <b>fast</b>`,
+      `std 24h${coH != null ? ` · co avg ${coH.toFixed(0)}h` : ''} · low = <b>fast</b>`,
       rgRank((I.speed || []).filter(x => x.avg_hours != null).map(x => ({ id: x.rep_id, v: -x.avg_hours })), id, true), true)); }
 
+  /* STREAK, on the unique-customer standard (KD, 20 Aug: "measured off unique
+     10 touches per day — I don't want to count the same customer back and
+     forth. Needs to be extra effort. Declare 10 per day is company goal.")
+     The counting is server-side (touch_streaks, draft migration 183 counts
+     DISTINCT customers and pins the goal at 10 for everyone); this dial
+     declares the standard and shows the run. Its strip is days-on-standard
+     per prior week, 0–5. */
   const st = byRep(I.streaks);
   const leader = (I.streaks || []).reduce((m, x) => Math.max(m, +x.streak || 0), 0);
   if (!st) dials.push(rgDialHtml(id, 'streak', 'off', 'Streak', rgGauge(0, 1), '—', I.streaks ? 'no streak record' : 'feed loading', '', false));
-  else { const s = +st.streak || 0, full = Math.max(leader, 10);
+  else { const s = +st.streak || 0, full = Math.max(leader, 10), g10 = +st.goal || 10;
     dials.push(rgDialHtml(id, 'streak', s >= 2 ? 'good' : s === 1 ? 'warn' : 'bad', 'Streak',
       rgGauge(s / full, leader / full), `${s}<small>d</small>`,
-      s ? `leader ${leader}d · on standard` : `off standard · leader ${leader}d`,
-      rgRank((I.streaks || []).map(x => ({ id: x.rep_id, v: +x.streak })), id, true), true)); }
+      `co goal <b>${g10}/day</b> unique customers · ${s ? `leader ${leader}d` : 'off standard'}`,
+      rgRank((I.streaks || []).map(x => ({ id: x.rep_id, v: +x.streak })), id, true), true,
+      rgSpark(wkR && wkR.hits, coWk('hits')))); }
 
   /* GAME PTS + PARTICIPATION, MERGED (KD, 20 Aug: "combine those and do a
      double score — 1000 points, participation 3 of 12 categories"). The
@@ -3765,6 +3837,19 @@ function rgCard(r, k, sellers, mx){
   const gp = I.game ? I.game.byRep[id] : null;
   const gpCats = (I.game && I.game.cats.length) || 7;
   const gpStd = I.game ? (pMedian(sellers.map(x => (I.game.byRep[String(x.id)] || {}).pts || 0).filter(v => v > 0)) || 0) : 0;
+  /* The chat-thread read rides UNDER Game pts (KD, 20 Aug: "how much are they
+     chatting people up in the chat thread — see who the team player is").
+     Posts + reactions in the hype thread over 30 days, as a share of the
+     whole team's chatter. Share of a real total, never a scale invented for
+     it; a quiet thread says so instead of printing 0% of nothing. */
+  const ch = I.chat;
+  const chMine = ch ? ch.byRep[id] : null;
+  const chatSub = !ch ? '' : !ch.total ? 'chat thread quiet · 30d'
+    : `chat thread: ${chMine ? chMine.p : 0} post${chMine && chMine.p === 1 ? '' : 's'} · ${chMine ? chMine.r : 0} react${chMine && chMine.r === 1 ? '' : 's'} · <b>${Math.round(100 * (chMine ? chMine.p + chMine.r : 0) / ch.total)}%</b> of team chatter · 30d`;
+  const gwR = I.gameWk ? I.gameWk.byRep[id] : null;
+  const coGW = I.gameWk ? (() => { const rs = sellers.map(x => (I.gameWk.byRep[String(x.id)] || [0,0,0,0]))
+      .map(a => a.reduce((n, c) => n + c, 0) / Math.max(1, a.length));
+    return pMedian(rs.filter(v => v > 0)) || null; })() : null;
   if (!I.game) dials.push(rgDialHtml(id, 'game', 'off', 'Game pts', rgGauge(0, 0.5), '—', 'ledger not readable', '', false));
   else { const v = gp ? gp.pts : 0;
     const keys = gp ? Object.entries(gp.byKey).sort((a, b2) => b2[1] - a[1]) : [];
@@ -3773,18 +3858,27 @@ function rgCard(r, k, sellers, mx){
     dials.push(rgDialHtml(id, 'game', gpStd ? (v >= gpStd ? 'good' : v >= gpStd / 2 ? 'warn' : 'bad') : 'off', 'Game pts',
       rgGauge(gpStd ? v / (2 * gpStd) : 0, 0.5), v.toLocaleString(),
       `${gpStd ? `median ${gpStd.toLocaleString()} <b>${v >= gpStd ? '+' : '−'}${Math.abs(Math.round(100 * (v - gpStd) / gpStd))}%</b> · ` : ''}${breadth}`,
-      rgRank(sellers.map(x => ({ id: x.id, v: (I.game.byRep[String(x.id)] || {}).pts || 0 })), id, true), true)); }
+      rgRank(sellers.map(x => ({ id: x.id, v: (I.game.byRep[String(x.id)] || {}).pts || 0 })), id, true), true,
+      rgSpark(gwR, coGW), chatSub)); }
 
-  /* The freed slot goes to the MANDATORY NUMBER (KD, 4 Aug: "must be done on
-     every job") — estimates still owed. Zero owed is the only green. */
-  const esD = byRep(I.est);
-  if (!esD || esD.started === false) dials.push(rgDialHtml(id, 'est', 'off', 'Estimates owed',
-    rgGauge(0, 0), '—', !I.est ? 'feed loading' : esD ? 'not started' : 'no appts in window', '', false));
-  else { const miss = +esD.missing || 0, ran = +esD.appts || 0;
-    dials.push(rgDialHtml(id, 'est', miss === 0 ? 'good' : miss <= 2 ? 'warn' : 'bad', 'Estimates owed',
-      rgGauge(ran ? miss / ran : 0, 0), String(miss),
-      miss ? `of ${ran} appts ran · ${esD.quoted} quoted` : `every appt has its number · ${esD.quoted} quoted`,
-      rgRank((I.est || []).filter(x => x.started !== false).map(x => ({ id: x.rep_id, v: -(+x.missing || 0) })), id, true), true)); }
+  /* The estimates-owed dial is RETIRED (KD, 20 Aug: "remove the estimates
+     owed box, don't need it") — the mandatory number polices itself through
+     the 5pm nudge push + email now. The slot shows what he asked for
+     instead: "the total value of each rep's total pipeline in dollars — see
+     how much they are sitting on." Same stock pipeline_value() the
+     Estimates card reads: every open customer's latest on-file amount,
+     120-day book, sold work and lost files out. A stock has no prior weeks
+     to strip — the company average is its perspective. */
+  const pp = byRep(I.pipe);
+  const coP = (() => { const rs = (I.pipe || []).filter(x => sellers.some(s => String(s.id) === String(x.rep_id)))
+      .map(x => +x.dollars || 0);
+    return rs.length ? rs.reduce((a, c) => a + c, 0) / rs.length : null; })();
+  if (!I.pipe) dials.push(rgDialHtml(id, 'pipe', 'off', 'Pipeline $', rgGauge(0, 0.5), '—', 'feed loading', '', false));
+  else { const v = pp ? +pp.dollars || 0 : 0;
+    dials.push(rgDialHtml(id, 'pipe', coP ? (v >= coP ? 'good' : v >= coP / 2 ? 'warn' : 'bad') : 'off', 'Pipeline $',
+      rgGauge(coP ? v / (2 * coP) : 0, 0.5), short(v),
+      `${coP != null ? `co avg ${short(Math.round(coP))}` : 'no co avg yet'}${pp && +pp.unquoted ? ` · <b>${pp.unquoted} unpriced</b>` : ''}`,
+      rgRank((I.pipe || []).map(x => ({ id: x.rep_id, v: +x.dollars || 0 })), id, true), true)); }
 
   /* ── the drawer: closing windows, the full inventory, and each dial's
         deeper read (Kevin: "each one opens up to deeper data if we have it") ── */
@@ -3816,9 +3910,9 @@ function rgCard(r, k, sellers, mx){
     ['touch', mixR ? `Channel mix: <b>${+mixR.calls || 0}</b> calls · <b>${+mixR.texts || 0}</b> texts · <b>${+mixR.emails || 0}</b> emails ${esc({day:'today',week:'this week',month:'this month'}[I.win] || '')} — a rep who never calls shows here first.` : null],
     ['light', lt ? `The book: <b class="g">${lt.green} green</b> · <b class="y">${lt.yellow} yellow</b> · <b class="r">${lt.red} red</b> of ${+lt.green + +lt.yellow + +lt.red} live customers. Red = plays overdue with no decision.` : null],
     ['speed', sp ? `${sp.touched} of ${sp.appts} new customers touched in 30 days${+sp.untouched_48h ? ` · <b class="r">${sp.untouched_48h} untouched 48h+</b>` : ''}. The Thank-You gate says same day.` : null],
-    ['streak', st ? `${st.week_hits} of ${st.week_days} days on standard this week · goal ${st.goal}/day. Server-counted, working days only.` : null],
+    ['streak', st ? `${st.week_hits} of ${st.week_days} days on standard this week · the standard: <b>${+st.goal || 10} different customers</b> touched in a day — the same customer twice is one. Company goal, server-counted, working days only.` : null],
     ['game', I.game ? (gp && gp.pts ? `Where the points came from: ${Object.entries(gp.byKey).sort((a2, b2) => b2[1] - a2[1]).map(([k3, v3]) => `<b>${esc(k3)}</b> ${v3.toLocaleString()}`).join(' · ')} — earning in ${Object.keys(gp.byKey).length} of ${gpCats} plays. Month-to-date via each job's own rep; future-dated points capped at now.` : `No points on the ledger yet this month. ${gpCats} plays pay points; breadth across them is the participation read.`) : null],
-    ['est', esD && esD.started !== false ? `${+esD.missing || 0} appointments ran without an estimate entered${+esD.dollars ? ` · <b>${short(+esD.dollars)}</b> quoted so far` : ''}. The mandatory number: every appointment that runs gets its dollar figure same day.` : null],
+    ['pipe', pp && +pp.dollars ? `Sitting on <b>${money(+pp.dollars)}</b> across ${pp.quoted_open} priced open file${+pp.quoted_open === 1 ? '' : 's'}${+pp.unquoted ? ` · <b class="r">${pp.unquoted} with no $ on file</b>` : ''}${+pp.inherited ? ` · ${pp.inherited} inherited to work` : ''}. A stock, not a window — 120-day book, sold work and lost files out.` : null],
   ].filter(x => x[1]).map(([k2, txt]) => `<div class="rg-det" data-k="${k2}">${txt}</div>`).join('');
 
   return `<div class="rg-card${gone ? ' gone' : ''}">
@@ -4365,7 +4459,12 @@ async function loadEffortIntel(){
      are capped at now client-side — a point is not scored before its play. */
   const d0 = new Date();
   const mStart = `${d0.getFullYear()}-${String(d0.getMonth()+1).padStart(2,'0')}-01`;
-  const [mix, close, light, streaks, speed, est, pipe, gameRows, gameCats] = await Promise.all([
+  /* 35 days reaches both the MTD points (mStart is never more than 31 days
+     back) and the four complete prior weeks the dial perspective strip
+     draws — one fetch, two reads, filtered client-side. */
+  const d35 = new Date(Date.now() - 35 * 864e5).toISOString();
+  const d30 = new Date(Date.now() - 30 * 864e5).toISOString();
+  const [mix, close, light, streaks, speed, est, pipe, gameRows, gameCats, weekly, hypeMsgs, hypeReacts] = await Promise.all([
     q(`rpc/touch_board?p_win=${win}`).catch(() => null),
     q('rpc/touch_close_stats').catch(() => null),
     q('rpc/touch_light_board').catch(() => null),
@@ -4373,33 +4472,67 @@ async function loadEffortIntel(){
     q('rpc/first_touch_speed').catch(() => null),
     q(`rpc/estimate_board?p_win=${win}`).catch(() => null),
     q('rpc/pipeline_value').catch(() => null),
-    q(`score_events?select=points_awarded,occurred_at,component_key,jobs(rep_id)&state=eq.done&occurred_at=gte.${mStart}`).catch(() => null),
+    q(`score_events?select=points_awarded,occurred_at,component_key,jobs(rep_id)&state=eq.done&occurred_at=gte.${d35}`).catch(() => null),
     /* The breadth denominator comes from the rulebook itself, never a
        hardcoded count — a new milestone play added in the app widens the
        "N of M plays" read with no console deploy. */
     q('score_components?select=key,weight&kind=eq.milestone').catch(() => null),
+    /* Prior 4 complete weeks per rep (touches / unique customers / days on
+       standard) — draft migration 183. Absent until it is applied; the
+       dials simply draw no strip. */
+    q('rpc/touch_weekly').catch(() => null),
+    /* The chat-thread read: the hype thread is human posts only by standing
+       ruling, so posts + reactions ARE the social participation. */
+    q(`hype_messages?select=author_id,created_at&created_at=gte.${d30}`).catch(() => null),
+    q(`hype_reactions?select=rep_id,created_at&created_at=gte.${d30}`).catch(() => null),
   ]);
-  let game = null;
+  let game = null, gameWk = null;
   if (Array.isArray(gameRows)) {
     /* Double score (KD, 20 Aug): the points AND the participation — is the
        rep earning across the game's plays, or riding one lane. byKey keeps
        each rep's points per component so the dial can say "2 of 7 plays ·
-       71% from invoices" and the drill can show the split. */
+       71% from invoices" and the drill can show the split.
+       The MTD filter moved client-side: the fetch reaches 35 days back so
+       the same rows also fill the dial's prior-4-weeks strip. */
     game = { byRep: Object.create(null),
       cats: Array.isArray(gameCats) ? gameCats.map(c => c.key) : [] };
+    gameWk = { byRep: Object.create(null) };
     const now = Date.now();
+    const mT = new Date(`${mStart}T00:00:00`).getTime();
+    /* This week's Monday, local — the strip holds the four COMPLETE weeks
+       before it, oldest first, so the live week never reads as a collapse. */
+    const w0 = (() => { const x = new Date(); x.setHours(0, 0, 0, 0);
+      x.setDate(x.getDate() - (x.getDay() + 6) % 7); return x.getTime(); })();
     for (const r of gameRows) {
       const rid = r.jobs && r.jobs.rep_id;
-      if (!rid || new Date(r.occurred_at).getTime() > now) continue;
-      const g = game.byRep[String(rid)] ??= { pts: 0, byKey: Object.create(null) };
-      g.pts += Number(r.points_awarded || 0);
-      g.byKey[r.component_key] = (g.byKey[r.component_key] || 0) + Number(r.points_awarded || 0);
+      const tms = new Date(r.occurred_at).getTime();
+      if (!rid || tms > now) continue;
+      if (tms >= mT) {
+        const g = game.byRep[String(rid)] ??= { pts: 0, byKey: Object.create(null) };
+        g.pts += Number(r.points_awarded || 0);
+        g.byKey[r.component_key] = (g.byKey[r.component_key] || 0) + Number(r.points_awarded || 0);
+      }
+      if (tms < w0 && tms >= w0 - 28 * 864e5) {
+        const a = gameWk.byRep[String(rid)] ??= [0, 0, 0, 0];
+        a[Math.floor((tms - (w0 - 28 * 864e5)) / (7 * 864e5))] += Number(r.points_awarded || 0);
+      }
     }
+  }
+  /* Chat participation: posts + reactions per rep, and the team total the
+     percentage is a share of. Either feed answering builds the read; both
+     failing leaves it absent, never zero. */
+  let chat = null;
+  if (Array.isArray(hypeMsgs) || Array.isArray(hypeReacts)) {
+    chat = { byRep: Object.create(null), total: 0 };
+    for (const m of hypeMsgs || []) { if (!m.author_id) continue;
+      const c = chat.byRep[String(m.author_id)] ??= { p: 0, r: 0 }; c.p++; chat.total++; }
+    for (const x of hypeReacts || []) { if (!x.rep_id) continue;
+      const c = chat.byRep[String(x.rep_id)] ??= { p: 0, r: 0 }; c.r++; chat.total++; }
   }
   /* touch_hit_rates and book_coverage are no longer pulled: the cards that read
      them are gone — hit rates duplicated the channel mix, and the cooling book
      belongs to TruOdds now. The RPCs are untouched in the database. */
-  EFF_INTEL = { mix, close, light, streaks, speed, est, pipe, game, win };
+  EFF_INTEL = { mix, close, light, streaks, speed, est, pipe, game, gameWk, chat, weekly, win };
   render();
 }
 
@@ -4841,7 +4974,9 @@ function cardEstimates(){
 }
 
 /* CONSISTENCY · STREAKS & STANDARD — server-side streaks so the whole team
-   sees them, not just each rep's own phone. Standard = each rep's own goal. */
+   sees them, not just each rep's own phone. Standard = the company goal:
+   10 DIFFERENT customers touched in a day (Kevin, 20 Aug — the same customer
+   back and forth is one touch; migration 183). */
 function cardConsistency(){
   if (!EFF_INTEL) return '';
   const st = EFF_INTEL.streaks;
@@ -4851,7 +4986,7 @@ function cardConsistency(){
   const any = rows.some(r => +r.streak > 0 || +r.week_hits > 0);
   return `<div class="card full">
     <div class="card-title">Consistency · streaks &amp; standard<span class="feed-tag ${any?'':'none'}">${any?'live · db':'awaiting logging'}</span></div>
-    <div class="card-sub">Days on standard, counted by the server — working days only, ET buckets, each rep against their own goal. An unfinished today never breaks a streak; it just doesn't count yet.</div>
+    <div class="card-sub">Days on standard, counted by the server — working days only, ET buckets. The standard is the company goal: <b>10 different customers</b> touched in a day — the same customer back and forth counts once. An unfinished today never breaks a streak; it just doesn't count yet.</div>
     ${rows.map(r => {
       const wd = Math.max(1, +r.week_days);
       const p = Math.min(100, Math.round(100*+r.week_hits/wd));
@@ -4862,7 +4997,7 @@ function cardConsistency(){
         <div class="meter"><div class="meter-fill" style="width:${p}%;background:${p>=80?'#6cc28b':p>=40?'#d4b15a':'#8aa094'}"></div></div>
         <div class="tgt-cap"><span>goal ${r.goal}/day</span><span class="${p>=80?'hit':'miss'}">${p}%</span></div>
       </div>`; }).join('')}
-    <div class="note">From <b>touch_streaks()</b> (119). The app's streak ring lives on each rep's own device; this is the official team-visible count, same rules — hit your own goal, working days only.</div>
+    <div class="note">From <b>touch_streaks()</b> (119/183). The app's streak ring lives on each rep's own device; this is the official team-visible count — 10 unique customers a day, working days only. Until the app adopts the unique-customer rule, a phone ring and this board can disagree on a back-and-forth day; the board is the official count.</div>
   </div>`;
 }
 
