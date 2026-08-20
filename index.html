@@ -4026,6 +4026,18 @@ function rgDialOpen(btn, key){
 }
 
 /* ── 6. sales by rep ──────────────────────────────────────────────────────── */
+/* Kevin (11 Aug): "Gio is owner — don't include any intel on him"; extended
+   20 Aug to the sales board itself: "he's an owner. If he's running
+   appointments, we're usually down a man." The owner is not on the sales
+   floor — no front-row seat, no coaching verdict, no team median moved by
+   his numbers. This does NOT take him off the money: his deals are the
+   company's deals and every total keeps counting them. Resolved from the
+   roster's own role first, with the name as the second arm (a role column
+   that drifts must not silently put the owner back on a board). One
+   definition for every board that asks — the intel boards below read this
+   same test. */
+const isOwnerRep = r => !!r && (String(r.role || '').toLowerCase() === 'owner'
+                                || /\bgio\b/i.test(r.name || ''));
 let REPSWIN = 'month';
 function setRepsWin(k){ keepScroll(() => { REPSWIN = k; }); }
 function cardReps(){
@@ -4033,34 +4045,38 @@ function cardReps(){
      useful, should be used anytime we can." So the sales box gets the same
      window toggle the fleet has, instead of being frozen on MTD. */
   const k = REPSWIN, W = D.windows[k] || {};
-  /* Kevin: only the sellers and Gio on the list; everyone else compresses
-     behind one tap.
-     WHO COUNTS AS A SELLER IS ASKED OF THE PERIOD, NOT OF TODAY. The `sells`
+  /* WHO COUNTS AS A SELLER IS ASKED OF THE PERIOD, NOT OF TODAY. The `sells`
      flag alone is flipped off the day someone leaves, which buried Jared
      Heideman — 26 jobs, $137,116, the fourth-biggest book in July — under
      "Show all" on the July board, one tap away from a month he was fourth
      in. A window is a record of what happened; a roster filter that only
-     knows the present cannot edit it. So the visible list is anyone who sold
-     in this window whom the roster knows as a seller in any tense — the live
-     flag, or a sales role that outlived it. Gio keeps his standing
-     exception. Office-sent rows are not sellers in any tense and stay behind
-     the tap where they have always been. */
+     knows the present cannot edit it. Office-sent rows are not sellers in
+     any tense and stay behind the tap where they have always been. */
   const all = W.reps || [];
   /* WHO STANDS ON THE FIRST SCREEN — narrowed to the LIVE DESK (KD, 20 Aug:
      "remove any salespeople below Hawkins… you can bury the other people,
      they're dead"). Core is active sellers — the `sells` flag, Kevin's
-     build-36 ruling — plus Gio's standing exception and the no-rep gap row.
-     Everyone else FOLDS behind Show all: departed books, supervisors who
-     hustle the odd referral, cold desks. Buried, never deleted — their
-     dollars stay in every total above, the fold counts its departed out
-     loud, and one tap opens the record. This deliberately supersedes the
-     Jared-era CORE placement (departed sellers used to hold a first-screen
-     row in windows they sold); the period-roster law itself is untouched —
-     the window's NUMBERS still build from the period's data, so nothing a
-     departed rep signed leaves this board's totals. */
+     build-36 ruling — plus the no-rep gap row. Everyone else FOLDS behind
+     Show all: departed books, supervisors who hustle the odd referral, cold
+     desks. Buried, never deleted — their dollars stay in every total above,
+     the fold counts its departed out loud, and one tap opens the record.
+     This deliberately supersedes the Jared-era CORE placement (departed
+     sellers used to hold a first-screen row in windows they sold); the
+     period-roster law itself is untouched — the window's NUMBERS still
+     build from the period's data, so nothing a departed rep signed leaves
+     this board's totals.
+
+     GIO'S STANDING EXCEPTION IS REVOKED (KD, 20 Aug: "he's an owner. If
+     he's running appointments, we're usually down a man. Just keep active
+     salespeople on there"). The owner folds behind Show all with a `sells`
+     flag the desk no longer honors for him — same isOwnerRep test the
+     intel boards have always used, so a role column that drifts cannot
+     put him back. His deals stay in every total and his row is one tap
+     away; only the front roster, the gauge cards and their team medians
+     stop counting him as a seller. */
   const rosterOf = r => D.roster[String(r.id)] || {};
   const live = r => !r.office && rosterOf(r).active !== false
-    && (rosterOf(r).sells || /\bgio\b/i.test(r.name || ''));
+    && rosterOf(r).sells && !isOwnerRep(r);
   /* The no-rep pseudo-row stays on the first screen with the sellers — "pull
      the uncategorized out and make those obvious." Folding a data gap behind
      Show-all is how it stops being obvious. */
@@ -9760,7 +9776,7 @@ addEventListener('resize', () => {
    the last one, it is to tell a human which build is on the server and when it
    got there. A number nobody clocked cannot answer that, and the first time it
    is asked in anger will be the morning a stale build is being chased. */
-const BUILD = '2026-08-20T19:28Z-money-built-delta';
+const BUILD = '2026-08-20T19:38Z-owner-off-the-desk';
 const SB_URL = 'https://lzegjjbkfuecrhdvlvay.supabase.co';
 /* The one page that can finish a password reset. Hard-coded rather than derived,
    because every derivation of it so far has been a source of bugs: a bare origin
@@ -12705,16 +12721,9 @@ function buildData(raw){
              wins: RHY_WINS.map(([a, b]) => ({ from: +a, to: +b })) };
   })();
 
-  /* Kevin (11 Aug): "Gio is owner — don't include any intel on him." The intel
-     board reads the SALES FLOOR, and the owner is not on it: no best-of, no
-     worst-of, no momentum verdict, no discovery written about him. This does
-     NOT take him off the money — his deals are the company's deals and the
-     boards keep counting them exactly as before. Resolved from the roster's
-     own role first, with the name as the second arm, the same way cardReps has
-     always found him (a role column that drifts must not silently put the
-     owner back on a coaching board). */
-  const isOwnerRep = r => !!r && (String(r.role || '').toLowerCase() === 'owner'
-                                  || /\bgio\b/i.test(r.name || ''));
+  /* isOwnerRep moved to the top level (20 Aug): cardReps' live desk now asks
+     the same question the intel boards always have, and one test must answer
+     both — two copies is how the owner ends up on one board and off another. */
 
   /* ── BEST OF BEST, WORST OF WORST. Kevin (11 Aug): "this intel board is best
      of best and worst of worst. These guys are trending crushing. These guys
