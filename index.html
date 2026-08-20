@@ -418,16 +418,21 @@
      the row is a plain block and the order is byte-for-byte what it was:
      master, grid, panels, foot. Mobile is untouched.
 
-     THE BREAKPOINT IS 1040px, NOT 900px, AND THAT NUMBER IS THE TRACE CAP DOING
-     ITS JOB. Splitting at 900 would have handed each column ~390px of a 808px
-     card interior — which shrinks the master's trace to 390 and puts a slope on
-     this page that no other trace on the page has, the exact failure the cap
-     exists to prevent, only now WITHIN one screen instead of across two. So the
-     master's track is a hard 560px and the row only forms once there is room
-     for it plus a 2×2 wide enough to still read as tiles. The 2×2's own track
-     takes what is left, up to the same 560: it holds no trace, only four fixed
-     64px sparks, so it is the one of the pair that can flex. */
-  @media (min-width: 1040px) {
+     THE BREAKPOINT IS THE CARD'S OWN WIDTH, NOT THE WINDOW'S — and that is the
+     20 Aug fix. The old 1040px viewport query was written before the section
+     rail existed; the rail eats 214px of every railed viewport, so on Kevin's
+     desktop the window passed the test while the card did not, and the hero
+     either stacked into the left half of its own card ("it just can't fix it
+     on desktop… smooshed") or formed a row it could not actually fit. A
+     container query asks the only box that knows: the row forms when the CARD
+     interior can hold 560 + 26 + 320 — rail or no rail, dive or home. The
+     number itself is still the trace cap doing its job: splitting narrower
+     would shrink the master's 560px track and put a slope on this page no
+     other trace has, the exact failure the cap exists to prevent. The 2×2's
+     own track takes what is left, up to the same 560: it holds no trace, only
+     fixed 64px sparks, so it is the one of the pair that can flex. */
+  .vit-card { container-type: inline-size; }
+  @container (min-width: 920px) {
     .vit-hero { display: grid; align-items: start; gap: 26px; margin-top: 10px;
       grid-template-columns: var(--trace-max) minmax(320px, var(--trace-max));
       justify-content: start; }
@@ -8916,7 +8921,7 @@ addEventListener('resize', () => {
    the last one, it is to tell a human which build is on the server and when it
    got there. A number nobody clocked cannot answer that, and the first time it
    is asked in anger will be the morning a stale build is being chased. */
-const BUILD = '2026-08-20T05:57Z-brand-totals';
+const BUILD = '2026-08-20T06:25Z-hero-container';
 const SB_URL = 'https://lzegjjbkfuecrhdvlvay.supabase.co';
 /* The one page that can finish a password reset. Hard-coded rather than derived,
    because every derivation of it so far has been a source of bugs: a bare origin
