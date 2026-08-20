@@ -557,8 +557,10 @@
   .rg-beat .cap b { color: var(--c, var(--green)); font-weight: 500; }
   .rg-beat.good { --c: var(--green); } .rg-beat.fall { --c: var(--red); }
   .rg-beat.off { padding-bottom: 9px; }
-  .rg-beat .plot { position: relative; height: 88px; margin-top: 4px; }
-  .rg-beat svg { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+  /* The svg keeps its 88px so the value labels' px mapping stays 1:1; the
+     plot grew a row for the touches figures beneath the $ and appts rows. */
+  .rg-beat .plot { position: relative; height: 101px; margin-top: 4px; }
+  .rg-beat svg { position: absolute; top: 0; left: 0; width: 100%; height: 88px; display: block; }
   .rg-beat .grid line { stroke: rgba(255,255,255,0.05); stroke-width: 1; }
   .rg-beat .money { fill: rgba(240,234,216,0.09); }
   .rg-beat .fillA { fill: var(--c, var(--green)); opacity: .10; }
@@ -570,6 +572,19 @@
   .rg-beat .bm.now { opacity: 1; font-weight: 600; }
   .rg-beat .bap { top: 72px; font-size: 8px; color: var(--text-dim); }
   .rg-beat .stdline { stroke: #f0ead8; stroke-width: 1; stroke-dasharray: 3 5; opacity: .4; }
+  /* The touches layer (KD, 20 Aug: "tie in touch weeks with revenue… put in
+     the number of touches they did that week so you see the effort") — its
+     own color, riding over the shading without changing it. Simulated weeks
+     (feed younger than the chart) go dashed, italic and ~marked: a guess
+     must never pass for a record. */
+  .rg-beat .tline { fill: none; stroke: var(--blue); stroke-width: 1.2; opacity: .5; }
+  .rg-beat .tline.sim { stroke-dasharray: 3 3; opacity: .3; }
+  .rg-beat .bt { top: 88px; font-size: 8.5px; color: var(--blue); opacity: .85; }
+  .rg-beat .bt.sim { opacity: .5; font-style: italic; }
+  .rg-beat .bt.now { font-weight: 600; opacity: 1; }
+  .rg-beat .cap .tk { color: var(--blue); font-weight: 500; }
+  .rg-beat .simnote { font-family: 'JetBrains Mono', monospace; font-size: 8px;
+    color: var(--text-dim); margin-top: 3px; }
   .rg-beat .trace { fill: none; stroke: var(--c, var(--green)); stroke-width: 1.8;
     stroke-linejoin: round; stroke-linecap: round; opacity: .9; }
   .rg-beat .wk { fill: var(--c, var(--green)); }
@@ -3663,7 +3678,7 @@ function rgGauge(frac, stdFrac){
    faint bars behind the trace are the week's signed dollars, each labeled,
    with the week's appointments under that. Bars are amounts, the line is a
    rate — each keeps its own scale, and the line keeps the verdict color. */
-function rgBeat(rp, std){
+function rgBeat(rp, std, tw){
   const arr = rp ? rp.close : null;
   if (!arr || arr.filter(v => v != null).length < 2)
     return `<div class="rg-beat off"><div class="cap"><span>Heartbeat · weekly close rate</span><b>too few weeks with appointments to draw</b></div></div>`;
@@ -3689,8 +3704,22 @@ function rgBeat(rp, std){
      (the plot height is fixed, so px map 1:1). */
   const px = i => (x(i) / 4).toFixed(2) + '%';
   const pos = i => i === 0 ? `left:0` : i === n - 1 ? `left:100%;transform:translateX(-100%)` : `left:${px(i)};transform:translateX(-50%)`;
+  /* THE TOUCHES LAYER (KD, 20 Aug: "tie in touch weeks with revenue — on
+     weeks where they had a lot of touches I would think revenue would go up
+     … put in the number so you see the effort"). Its own color, its own
+     scale, a thin line so the effort wave reads against the $ bars without
+     touching the shading. Simulated weeks draw dashed with ~figures. */
+  const tv = tw && tw.v ? tw.v : null;
+  const tmax = tv ? Math.max(...tv.filter(v2 => v2 != null), 1) : 1;
+  const ty = v2 => 58 - (Math.max(0, v2) / tmax) * 46;
+  let tline = '';
+  if (tv) for (let i = 0; i < n - 1; i++) {
+    if (tv[i] == null || tv[i + 1] == null) continue;
+    tline += `<line class="tline${tw.sim[i] || tw.sim[i + 1] ? ' sim' : ''}"
+      x1="${x(i).toFixed(1)}" y1="${ty(tv[i]).toFixed(1)}" x2="${x(i + 1).toFixed(1)}" y2="${ty(tv[i + 1]).toFixed(1)}"/>`;
+  }
   return `<div class="rg-beat ${word[1]}">
-    <div class="cap"><span>Heartbeat · weekly close % · bars = $ signed</span><b>${word[0]}</b></div>
+    <div class="cap"><span>Heartbeat · weekly close % · bars = $${tv ? ` · <span class="tk">t = touches</span>` : ''}</span><b>${word[0]}</b></div>
     <div class="plot">
     <svg viewBox="0 0 400 88" preserveAspectRatio="none">
       <g class="grid"><line x1="0" y1="16" x2="400" y2="16"/><line x1="0" y1="34" x2="400" y2="34"/><line x1="0" y1="52" x2="400" y2="52"/></g>
@@ -3699,6 +3728,7 @@ function rgBeat(rp, std){
         return `<rect class="money" x="${(x(i) - 11).toFixed(1)}" y="${(58 - h).toFixed(1)}" width="22" height="${h.toFixed(1)}" rx="1.5"/>`; }).join('')}
       ${segs.map(s => s.length === 1 ? '' : `<polygon class="fillA" points="${s[0].split(',')[0]},58 ${s.join(' ')} ${s[s.length-1].split(',')[0]},58"/>`).join('')}
       ${std != null ? `<line class="stdline" x1="0" y1="${y(std).toFixed(1)}" x2="400" y2="${y(std).toFixed(1)}"/>` : ''}
+      ${tline}
       ${segs.map(s => s.length === 1 ? '' : `<polyline class="trace" points="${s.join(' ')}"/>`).join('')}
       ${arr.map((v, i) => v == null ? '' :
         `<circle class="wk${i === lastIdx ? ' now' : ''}" cx="${x(i).toFixed(1)}" cy="${y(v).toFixed(1)}" r="${i === lastIdx ? 3.2 : 2.2}"/>`).join('')}
@@ -3707,7 +3737,10 @@ function rgBeat(rp, std){
       `<span class="bv${i === lastIdx ? ' now' : ''}" style="${pos(i)};top:${Math.max(0, y(v) - 13).toFixed(0)}px">${v}</span>`).join('')}
     ${w.map((wv, i) => `<span class="bm${i === lastIdx ? ' now' : ''}" style="${pos(i)}">${m$(wv.v)}</span>
       <span class="bap" style="${pos(i)}">${wv.a ? wv.a + 'a' : ''}</span>`).join('')}
+    ${tv ? tv.map((v2, i) => v2 == null ? '' :
+      `<span class="bt${tw.sim[i] ? ' sim' : ''}${i === lastIdx ? ' now' : ''}" style="${pos(i)}">${tw.sim[i] ? '~' : ''}${v2}t</span>`).join('') : ''}
     </div>
+    ${tv && tw.sim.some(Boolean) ? `<div class="simnote">~ = estimated — the touch feed is younger than this chart; older weeks are simulated from the last 3 real weeks</div>` : ''}
   </div>`;
 }
 
@@ -3759,25 +3792,39 @@ function rgCard(r, k, sellers, mx){
   /* ── the six tanks, each with its stated scale (see the block comment) ── */
   const dials = [];
   const spanM = D.effort.spans ? (D.effort.spans.month || 1) : 1;
-  const goal = eff ? ((eff.goal ?? D.effort.defaultGoal) || 0) * spanM : 0;
-  const t = eff ? eff.month.t : null;
+  /* TOUCHES FOLLOW THE BOARD'S WINDOW (KD, 20 Aug: "touches month to date —
+     that needs to be granular; this board needs the same day, week, month,
+     year thing"). Same Day/Week/Month/YTD seg the whole Sales-vitals card
+     already obeys — k arrives from it — and the goal scales to the window's
+     working days. The other dials keep their own stated bases (a live-book
+     snapshot, a 30-day speed, a stock) rather than pretending to window. */
+  const winKey = k === 'ytd' ? 'year' : (k === 'day' || k === 'week' || k === 'month') ? k : 'month';
+  const winL = { day: 'Today', week: 'Week', month: 'MTD', year: 'YTD' }[winKey];
+  const spanW = D.effort.spans ? (D.effort.spans[winKey] || 0) : 0;
+  const goal = eff ? ((eff.goal ?? D.effort.defaultGoal) || 0) * spanW : 0;
+  const t = eff ? eff[winKey].t : null;
   const teamT = (D.effort.rows || []).filter(x => sellers.some(s => String(s.id) === String(x.id)));
-  const coT = teamT.length ? Math.round(teamT.reduce((n, x) => n + x.month.t, 0) / teamT.length) : 0;
-  /* Per-rep prior weeks from touch_weekly() (draft migration 183) and the
-     company weekly average — the perspective strip's two ingredients. The
-     feed absent (migration not applied yet) just means no strip: absent,
-     never invented. */
+  const coT = teamT.length ? Math.round(teamT.reduce((n, x) => n + x[winKey].t, 0) / teamT.length) : 0;
+  /* Per-rep weekly buckets from touch_weekly() (draft migration 183) — nine
+     rolling 7-day buckets aligned to the heartbeat's own bounds, null where
+     the bucket predates the touch feed. The dial strip reads the four
+     complete weeks before the live one; the company weekly average rides as
+     the dashed line. Feed absent just means no strip: absent, never
+     invented. */
   const wkR = (I.weekly || []).find(x => String(x.rep_id) === id) || null;
+  const wSlice = a => (a || []).slice(4, 8);
   const coWk = kf => { const rs = (I.weekly || []).filter(x => sellers.some(s => String(s.id) === String(x.rep_id)))
-      .map(x => (x[kf] || []).reduce((a, c) => a + (+c || 0), 0) / Math.max(1, (x[kf] || []).length));
+      .map(x => { const a = wSlice(x[kf]).filter(v => v != null);
+        return a.length ? a.reduce((q, c) => q + c, 0) / a.length : null; })
+      .filter(v => v != null);
     return rs.length ? rs.reduce((a, c) => a + c, 0) / rs.length : null; };
-  dials.push(t == null ? rgDialHtml(id, 'touch', 'off', 'Touches MTD', rgGauge(0, 0.5), '—', 'no touch feed', '', false)
+  dials.push(t == null ? rgDialHtml(id, 'touch', 'off', `Touches · ${winL}`, rgGauge(0, 0.5), '—', 'no touch feed', '', false)
     : rgDialHtml(id, 'touch', !goal ? 'off' : t >= goal ? 'good' : t >= goal / 2 ? 'warn' : 'bad',
-        'Touches MTD', rgGauge(goal ? t / (2 * goal) : 0, 0.5), String(t),
+        `Touches · ${winL}`, rgGauge(goal ? t / (2 * goal) : 0, 0.5), String(t),
         goal ? `goal ${goal} <b>${t >= goal ? '+' : '−'}${Math.abs(Math.round(100 * (t - goal) / goal))}%</b> · co avg ${coT}` : `co avg ${coT}`,
-        rgRank(teamT.map(x => ({ id: x.id, v: x.month.t })), id, true), true,
-        rgSpark(wkR && wkR.touches, coWk('touches')),
-        wkR && (wkR.touches || []).filter(v => v != null).length >= 2 ? 'prior weeks · ╌ co avg' : ''));
+        rgRank(teamT.map(x => ({ id: x.id, v: x[winKey].t })), id, true), true,
+        rgSpark(wkR && wSlice(wkR.touches), coWk('touches')),
+        wkR && wSlice(wkR.touches).filter(v => v != null).length >= 2 ? 'prior weeks · ╌ co avg' : ''));
 
   /* "4-Touch self-completed" — Kevin's second rename (20 Aug): the share of
      the live book where the rep got all four plays done or signed themselves.
@@ -3824,7 +3871,7 @@ function rgCard(r, k, sellers, mx){
       rgGauge(s / full, leader / full), `${s}<small>d</small>`,
       `co goal <b>${g10}/day</b> unique customers · ${s ? `leader ${leader}d` : 'off standard'}`,
       rgRank((I.streaks || []).map(x => ({ id: x.rep_id, v: +x.streak })), id, true), true,
-      rgSpark(wkR && wkR.hits, coWk('hits')))); }
+      rgSpark(wkR && wSlice(wkR.hits), coWk('hits')))); }
 
   /* GAME PTS + PARTICIPATION, MERGED (KD, 20 Aug: "combine those and do a
      double score — 1000 points, participation 3 of 12 categories"). The
@@ -3923,7 +3970,26 @@ function rgCard(r, k, sellers, mx){
     <div class="rg-rankline">Sales rank <span class="rg-chip${rank === 1 ? ' top' : rank >= sellers.length - 1 && sellers.length > 2 ? ' low' : ''}">#${rank} of ${sellers.length}</span>${
       vsAvg != null ? `<span class="rg-chip${vsAvg < -33 ? ' low' : ''}">${vsAvg >= 0 ? '+' : '−'}${Math.abs(vsAvg)}% vs co avg</span>` : ''}${
       repCap(r) ? `<span class="rg-seam">${short(r.rev - (r.billdu || 0) - (r.rung || 0))} CC${r.billdu ? ` + ${short(r.billdu)} Billdu` : ''}${r.rung ? ` + ${short(r.rung)} 🔔` : ''}</span>` : ''}</div>
-    ${rgBeat(rp, D.repPulse ? D.repPulse.std : null)}
+    ${(() => {
+      /* Touch weeks INTO the heartbeat (KD, 20 Aug: "tie in touch weeks
+         with revenue"). touch_weekly()'s nine buckets are server-aligned to
+         the heartbeat's own bounds, so index i here IS week i there. Weeks
+         older than the touch feed are SIMULATED backwards from the rep's
+         last three real weeks — Kevin's explicit call ("let's simulate
+         backwards, based on what they've done over the last three weeks") —
+         and every simulated figure wears the ~, the italic and the dashed
+         line, so a guess can never pass for a record. No real weeks at all
+         means no layer: three simulations averaged from nothing is nothing. */
+      let tw = null;
+      if (rp && wkR && Array.isArray(wkR.touches) && wkR.touches.length === (rp.close || []).length) {
+        const real = wkR.touches.filter(v => v != null);
+        const base = real.slice(-3);
+        const avg3 = base.length ? Math.round(base.reduce((a, c) => a + c, 0) / base.length) : null;
+        if (avg3 != null) tw = { v: wkR.touches.map(v => v == null ? avg3 : +v),
+                                 sim: wkR.touches.map(v => v == null) };
+      }
+      return rgBeat(rp, D.repPulse ? D.repPulse.std : null, tw);
+    })()}
     <div class="rg-effort">
       <div class="cap">The work behind it</div>
       <div class="rg-dialgrid">${dials.join('')}</div>

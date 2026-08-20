@@ -17,10 +17,16 @@
 --    unique-customer rule, a rep's phone ring and the board can disagree on
 --    a back-and-forth day. Board (this function) is the official count.
 --
--- 2) touch_weekly(): the four COMPLETE Mon-started weeks before this one,
---    per active selling rep — total touches, unique customers, and days on
---    the 10-unique standard (working days only). Feeds the rep-card dials'
---    perspective strips ("where they were the prior 1-4 weeks").
+-- 2) touch_weekly(): NINE rolling 7-day buckets ending today (ET), oldest
+--    first, per active selling rep — total touches, unique customers, and
+--    days on the 10-unique standard (working days only). The buckets are
+--    aligned exactly to the console heartbeat's own bounds (repPulse: nine
+--    weeks ending today, the last bucket including today), so the touches
+--    layer on the heartbeat and the dial perspective strips read the same
+--    arrays. A bucket that ends before the feed's first touch day is NULL,
+--    never zero — the console simulates those backwards (Kevin's call) and
+--    marks them ~, which only works if absence is distinguishable from a
+--    real quiet week.
 
 create or replace function public.touch_streaks()
  returns table(rep_id uuid, name text, initials text, goal integer, streak integer, week_hits integer, week_days integer)
@@ -73,11 +79,17 @@ create or replace function public.touch_weekly()
  stable security definer
  set search_path to 'public', 'pg_temp'
 as $function$
-  with et as (select date_trunc('week', (now() at time zone 'America/New_York')::date)::date as w0),
-  weeks as (
-    -- the four complete weeks before this one, oldest first
-    select n as idx, (et.w0 - (4 - n) * 7)::date as ws
-    from et, generate_series(0, 3) n),
+  with et as (select (now() at time zone 'America/New_York')::date as today),
+  fl as (
+    select min((t.occurred_at at time zone 'America/New_York'))::date as floor_day
+    from app_private.touches t where t.source_kind <> 'app_sample'),
+  buckets as (
+    -- nine rolling 7-day buckets ending today, oldest first, matching the
+    -- console repPulse bounds; the last bucket includes today itself
+    select n as idx,
+      (et.today - (9 - n) * 7)::date as ws,
+      case when n = 8 then (et.today + 1)::date else (et.today - (8 - n) * 7)::date end as we
+    from et, generate_series(0, 8) n),
   g as (select r.id from reps r where r.active and r.sells),
   tt as (
     select t.rep_id,
@@ -85,19 +97,22 @@ as $function$
       coalesce(t.customer_id, t.id) as cust
     from app_private.touches t
     where t.source_kind <> 'app_sample'
-      and t.occurred_at >= now() - interval '40 days'),
+      and t.occurred_at >= now() - interval '70 days'),
   daily as (
     select rep_id, day, count(*) as n, count(distinct cust) as u
     from tt group by 1, 2),
   per as (
-    select g.id as rep, w.idx, w.ws,
-      coalesce(sum(d.n), 0)::int as touches,
-      (select count(distinct t2.cust) from tt t2
-        where t2.rep_id = g.id and t2.day >= w.ws and t2.day < w.ws + 7)::int as uniq,
-      count(*) filter (where d.u >= 10 and extract(isodow from d.day) between 1 and 5)::int as hits
-    from g cross join weeks w
-    left join daily d on d.rep_id = g.id and d.day >= w.ws and d.day < w.ws + 7
-    group by 1, 2, 3)
+    select g.id as rep, b.idx,
+      case when fl.floor_day is null or b.we <= fl.floor_day then null
+        else coalesce(sum(d.n), 0)::int end as touches,
+      case when fl.floor_day is null or b.we <= fl.floor_day then null
+        else (select count(distinct t2.cust) from tt t2
+          where t2.rep_id = g.id and t2.day >= b.ws and t2.day < b.we)::int end as uniq,
+      case when fl.floor_day is null or b.we <= fl.floor_day then null
+        else count(*) filter (where d.u >= 10 and extract(isodow from d.day) between 1 and 5)::int end as hits
+    from g cross join buckets b cross join fl
+    left join daily d on d.rep_id = g.id and d.day >= b.ws and d.day < b.we
+    group by 1, 2, b.ws, b.we, fl.floor_day)
   select rep,
     array_agg(touches order by idx),
     array_agg(uniq order by idx),
