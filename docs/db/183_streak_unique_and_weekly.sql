@@ -1,6 +1,6 @@
--- 183_streak_unique_and_weekly.sql · DRAFT — not applied yet.
--- Applied via the Supabase MCP once Kevin approves the rep-card rendering;
--- kept in the repo so the PR shows the server half of the change.
+-- 183_streak_unique_and_weekly.sql · APPLIED 20 Aug 2026 (Supabase MCP,
+-- after Kevin approved the rendering: "This is the winner"). Kept in the
+-- repo so the PR shows the server half of the change.
 --
 -- Kevin, 20 Aug: "The streak should be measured off unique 10 touches per
 -- day. I don't want to count the same customer back and forth. Needs to be
