@@ -2591,7 +2591,7 @@ function heroAppts(k){
   if (!A || !A.byCompany || !A.byCompany[k]) return '';
   const W = A.byCompany[k];
   const label = { day:'Today', week:'This week', month: MONTHOFF ? D.windows.month.label : 'MTD', ytd:'YTD' }[k] || '';
-  const rows = BRAND_ORDER.map(b => ({ b, m: brandOf(b), n: W.counts[b] || 0, typ: (W.typ[b] || {}).mean || 0 }));
+  const rows = BRAND_ORDER.map(b => ({ b, m: brandOf(b), n: W.counts[b] || 0, typ: (W.typ[b] || {}).typical || 0 }));
   const unknown = W.counts.unknown || 0;
   const branded = rows.reduce((n, r) => n + r.n, 0);
   const tot = branded + unknown;
@@ -2612,11 +2612,13 @@ function heroAppts(k){
     : '';
   const R = A.rhythm && (k === 'day' || k === 'week' || k === 'ytd') ? A.rhythm[k] : null;
   const RA = R ? R.all : null;
-  /* One normal per window, never two. The old byCompany typ (a MEAN of the prior
-     4 weeks) and the rhythm normal (a MEDIAN of the last 8) would otherwise both
-     print the word "typical" on one tile with two different numbers — the exact
-     confusion this card already warns about for the daily alarm. Where a rhythm
-     exists it owns the comparison outright; MTD keeps the original. */
+  /* One normal per window, never two. The byCompany typ and the rhythm normal
+     would otherwise both print the word "typical" on one tile with two
+     different numbers — the exact confusion this card already warns about for
+     the daily alarm. Where a rhythm exists it owns the comparison outright;
+     MTD keeps the original. (Both are MEDIANS now — the byCompany typ dropped
+     its old mean-of-prior-periods — so even where they differ it is a
+     different sample, never a different arithmetic.) */
   let rTop = '', rCap = '', rGap = null, rTypical = null;
   if (RA && k === 'day'){
     const items = RA.samples.map(s => ({ label:s.label, v:s.byHour, ref:RA.norm, dim:true }))
@@ -2902,7 +2904,7 @@ function cardApptByCompany(){
   const rows = BRAND_ORDER.map(b => {
     const m = brandOf(b);
     const n = W.counts[b] || 0;
-    const t = (W.typ[b] || {}).mean || 0;
+    const t = (W.typ[b] || {}).typical || 0;
     const vals = (W.typ[b] || {}).vals || null;
     const rd = Math.round(t);
     const gap = n - rd;
@@ -2984,7 +2986,7 @@ function cardApptByCompany(){
 
     ${K==='day'
       ? `<div class="note">Today is still filling — bookings arrive through the day, so a company below its weekday typical this morning is not yet a slow day. <b>Week and month are the steadier read.</b> Booking basis: counted when the appointment was set.</div>`
-      : `<div class="note">Booking basis — counted when the appointment was <b>set</b>, which is what measures the setting team's output, not what the crews drive to. "Typical" is the mean of the ${esc(W.sampleLabel)} over the same elapsed span, measured rather than targeted; the tick on each bar marks it.</div>`}
+      : `<div class="note">Booking basis — counted when the appointment was <b>set</b>, which is what measures the setting team's output, not what the crews drive to. "Typical" is the median of the ${esc(W.sampleLabel)} over the same elapsed span — the same median law every rhythm baseline on this page keeps, so one storm week cannot drag it — measured rather than targeted; the tick on each bar marks it.</div>`}
   </div>`;
 }
 
@@ -10927,11 +10929,15 @@ function buildData(raw){
         }
       return by;
     };
-    /* mean count for one brand across a set of prior periods, each [start, +len days).
-       Samples are kept so the receipt can show which periods the typical came
-       from — a typical nobody can interrogate is exactly what this page refuses
-       to print. */
-    const priorMean = (b, starts, lenDays) => {
+    /* typical count for one brand across a set of prior periods, each
+       [start, +len days). A MEDIAN of the samples, not a mean — the same med()
+       every rhythm baseline on this page already uses, so one storm week in the
+       sample cannot drag the whole baseline the way it did when this was an
+       average, and "typical" stops meaning two different arithmetics depending
+       on which card printed it. Samples are kept so the receipt can show which
+       periods the typical came from — a typical nobody can interrogate is
+       exactly what this page refuses to print. */
+    const priorTypical = (b, starts, lenDays) => {
       const vals = starts.map(s => {
         let n = 0;
         for (let i = 0; i < lenDays; i++)
@@ -10939,7 +10945,7 @@ function buildData(raw){
                  .filter(r => (projBrand[String(r.cc_project_id)]||'unknown') === b).length;
         return n;
       });
-      return { vals, mean: vals.length ? vals.reduce((a,c)=>a+c,0)/vals.length : 0 };
+      return { vals, typical: med(vals) };
     };
     const elapsedWk = ((T.getDay()+6)%7) + 1;   // days Mon..today inclusive
     const elapsedMo = T.getDate();              // days 1..today inclusive
@@ -10952,7 +10958,7 @@ function buildData(raw){
         counts: bookedByBrandInRange(T, winEnd),
         /* the same weekday-and-hour baseline the daily alarm now trusts, so the
            page never shows two different "typical today" numbers for one brand */
-        typ: Object.fromEntries(BRAND_ORDER.map(b => [b, { mean: brandNorm[b].median, vals: null }])),
+        typ: Object.fromEntries(BRAND_ORDER.map(b => [b, { typical: brandNorm[b].median, vals: null }])),
       },
       week: (() => {
         const starts = [1,2,3,4].map(w => addD(sow(T), -7*w));
@@ -10960,7 +10966,7 @@ function buildData(raw){
           typLabel: `the same ${elapsedWk} day${elapsedWk===1?'':'s'} of the prior 4 weeks`,
           sampleLabel: 'prior 4 weeks', partial: elapsedWk < 7,
           counts: bookedByBrandInRange(sow(T), winEnd),
-          typ: Object.fromEntries(BRAND_ORDER.map(b => [b, priorMean(b, starts, elapsedWk)])),
+          typ: Object.fromEntries(BRAND_ORDER.map(b => [b, priorTypical(b, starts, elapsedWk)])),
         };
       })(),
       month: (() => {
@@ -10978,7 +10984,7 @@ function buildData(raw){
                 n += createdOn(ymdL(d))
                        .filter(r => (projBrand[String(r.cc_project_id)]||'unknown') === b).length;
               return n; });
-            return [b, { vals, mean: vals.length ? vals.reduce((a,c)=>a+c,0)/vals.length : 0 }];
+            return [b, { vals, typical: med(vals) }];
           }));
           return {
             typLabel: 'the prior 3 full months — a closed month reads whole against whole',
@@ -10991,7 +10997,7 @@ function buildData(raw){
           typLabel: `the same ${elapsedMo} day${elapsedMo===1?'':'s'} of the prior 3 months`,
           sampleLabel: 'prior 3 months', partial: true,
           counts: bookedByBrandInRange(som(T), winEnd),
-          typ: Object.fromEntries(BRAND_ORDER.map(b => [b, priorMean(b, starts, elapsedMo)])),
+          typ: Object.fromEntries(BRAND_ORDER.map(b => [b, priorTypical(b, starts, elapsedMo)])),
         };
       })(),
       /* This mean-of-prior-periods baseline is still declined for YTD, and always
@@ -11008,7 +11014,7 @@ function buildData(raw){
         typLabel: 'no year-scale baseline',
         sampleLabel: 'counts only · no baseline at this grain', partial: true,
         counts: bookedByBrandInRange(soy(T), winEnd),
-        typ: Object.fromEntries(BRAND_ORDER.map(b => [b, { mean: 0, vals: null }])),
+        typ: Object.fromEntries(BRAND_ORDER.map(b => [b, { typical: 0, vals: null }])),
       },
     };
 
