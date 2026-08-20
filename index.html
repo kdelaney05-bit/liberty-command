@@ -1802,24 +1802,27 @@
   }
 
   /* ── THE PHONE'S RAIL ──────────────────────────────────────────────────────
-     The same six sections as a bottom tab bar, where a thumb lives, plus ALL —
+     The five sections as a bottom tab bar, where a thumb lives, plus ALL —
      the classic single-column reading, one tap away instead of retired. Fixed
-     over the safe area; the body clears it so the footer never hides. */
+     over the safe area; the body clears it so the footer never hides.
+     Sized up 20 Aug (KD: "on the mobile… they're almost too small to see on
+     iOS") — Vitals leaving paid for the room: six tabs share the width the
+     seven used to split. */
   .mrail { display: none; }
   @media (max-width: 899.98px) {
-    body.mnav { padding-bottom: calc(62px + env(safe-area-inset-bottom)); }
+    body.mnav { padding-bottom: calc(66px + env(safe-area-inset-bottom)); }
     .mrail { position: fixed; left: 0; right: 0; bottom: 0; z-index: 60;
       display: flex; gap: 2px; padding: 6px 6px calc(6px + env(safe-area-inset-bottom));
       background: rgba(13,31,23,0.96); border-top: 1px solid var(--line);
       overflow-x: auto; -webkit-overflow-scrolling: touch; }
-    .mrail-btn { flex: 1 0 auto; min-width: 46px; background: none;
-      border: 1px solid transparent; border-radius: 9px; padding: 9px 8px;
+    .mrail-btn { flex: 1 0 auto; min-width: 52px; background: none;
+      border: 1px solid transparent; border-radius: 9px; padding: 11px 8px;
       color: var(--text-dim); font-family: 'JetBrains Mono', monospace;
-      font-size: 8.5px; letter-spacing: .06em; text-transform: uppercase;
+      font-size: 10px; letter-spacing: .06em; text-transform: uppercase;
       cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 4px; }
     .mrail-btn.on { color: var(--accent-soft); border-color: rgba(240,131,74,0.4);
       background: rgba(240,131,74,0.07); }
-    .mrail-badge { font-family: 'JetBrains Mono', monospace; font-size: 8px;
+    .mrail-badge { font-family: 'JetBrains Mono', monospace; font-size: 9px;
       font-weight: 700; color: var(--gold); border: 1px solid rgba(212,177,90,0.45);
       border-radius: 100px; padding: 0 5px; }
   }
@@ -4550,7 +4553,7 @@ async function loadEffortIntel(){
      draws — one fetch, two reads, filtered client-side. */
   const d35 = new Date(Date.now() - 35 * 864e5).toISOString();
   const d30 = new Date(Date.now() - 30 * 864e5).toISOString();
-  const [mix, close, light, streaks, speed, est, pipe, gameRows, gameCats, weekly, hypeMsgs, hypeReacts] = await Promise.all([
+  const [mix, close, light, streaks, speed, est, pipe, gameRows, gameCats, weekly, hypeMsgs, hypeReacts, spread, spreadTot, appTime, textTime, talkTime] = await Promise.all([
     q(`rpc/touch_board?p_win=${win}`).catch(() => null),
     q('rpc/touch_close_stats').catch(() => null),
     q('rpc/touch_light_board').catch(() => null),
@@ -4571,6 +4574,21 @@ async function loadEffortIntel(){
        ruling, so posts + reactions ARE the social participation. */
     q(`hype_messages?select=author_id,created_at&created_at=gte.${d30}`).catch(() => null),
     q(`hype_reactions?select=rep_id,created_at&created_at=gte.${d30}`).catch(() => null),
+    /* THE SPREAD (Kevin, 20 Aug): unique customers touched, per seller and the
+       team tiles — migration 185. Same real-only filter and windows as
+       touch_board, so the two boards can never disagree about "today". */
+    q(`rpc/touch_spread?p_win=${win}`).catch(() => null),
+    q('rpc/touch_spread_totals').catch(() => null),
+    /* THE TIME CLOCKS (same ruling: "not to sales guys" — owner console only).
+       app_time_board is live but reads zero until the next app build starts
+       the phones pinging. text_time_board / talk_time_board DO NOT EXIST YET
+       on purpose: their feeds carry no per-rep attribution today (Heymarket
+       outbound = house until reps have seats; Uvoice CDR ingest unbuilt).
+       The 404 lands here as null and the cards render "feed connecting" —
+       when those migrations ship, the cards light up with no console deploy. */
+    q(`rpc/app_time_board?p_win=${win}`).catch(() => null),
+    q(`rpc/text_time_board?p_win=${win}`).catch(() => null),
+    q(`rpc/talk_time_board?p_win=${win}`).catch(() => null),
   ]);
   let game = null, gameWk = null;
   if (Array.isArray(gameRows)) {
@@ -4618,7 +4636,8 @@ async function loadEffortIntel(){
   /* touch_hit_rates and book_coverage are no longer pulled: the cards that read
      them are gone — hit rates duplicated the channel mix, and the cooling book
      belongs to TruOdds now. The RPCs are untouched in the database. */
-  EFF_INTEL = { mix, close, light, streaks, speed, est, pipe, game, gameWk, chat, weekly, win };
+  EFF_INTEL = { mix, close, light, streaks, speed, est, pipe, game, gameWk, chat, weekly, win,
+                spread, spreadTot, appTime, textTime, talkTime };
   render();
 }
 
@@ -5123,6 +5142,128 @@ function cardSpeed(){
   </div>`;
 }
 
+/* ── THE SPREAD · UNIQUE CUSTOMERS TOUCHED (Kevin, 20 Aug: "different
+   customers… that means you're hitting everybody, not just calling the people
+   you think are interested. Make it very prominent… toward the top.")
+   The Hustle section's hero. Counting is NOT new policy: touch_streaks/183
+   already define a day on standard as 10 distinct customers — this surfaces
+   the standard the streak was already grading. Feed is migration 185's
+   touch_spread/touch_spread_totals: sellers-only, real-only, zeros included,
+   windowed exactly like touch_board so the two boards agree on "today". */
+function cardSpread(){
+  if (!EFF_INTEL) return '';
+  const sp = EFF_INTEL.spread;
+  const tot = Array.isArray(EFF_INTEL.spreadTot) ? EFF_INTEL.spreadTot[0] : null;
+  if (!Array.isArray(sp)) return effAwait('Unique customers touched',
+    'The spread feed (migration 185, <b>touch_spread</b>) did not answer.');
+  const K = EFF_INTEL.win;
+  const label = { day:'today', week:'this week', month:'this month' }[K] || 'this week';
+  const logged = sp.filter(r => +r.uniq_customers > 0);
+  const silent = sp.length - logged.length;
+  const mx = Math.max(1, ...sp.map(r => +r.uniq_customers));
+  /* 10/day is the streak standard (183); scale it by the window's working
+     days the same way the Effort Board scales its goal. */
+  const span = (D.effort && D.effort.spans && D.effort.spans[K]) || 1;
+  const goal = 10 * span;
+  return `<div class="card full">
+    <div class="card-title">Unique customers touched<span class="feed-tag">live · app</span></div>
+    <div class="card-sub">Different customers reached — the spread, not the dials. Hitting everybody beats re-dialing the list you like. Tap a name for the one-pager.</div>
+    <div class="seg">
+      ${[['day','Day'],['week','Week'],['month','Month']]
+        .map(([k,l])=>`<button class="${k===K?'on':''}" onclick="setEff('${k}')">${l}</button>`).join('')}
+    </div>
+    ${tot ? `<div class="stat-grid" style="margin-bottom:14px;grid-template-columns:1.2fr 1fr 1fr">
+      <div class="stat-tile"><div class="lbl">Team · today</div>
+        <div class="val ${+tot.uniq_day?'gold':''}" style="font-size:28px">${+tot.uniq_day}</div>
+        <div class="sub">customers reached</div></div>
+      <div class="stat-tile"><div class="lbl">This week</div><div class="val">${+tot.uniq_week}</div></div>
+      <div class="stat-tile"><div class="lbl">This month</div><div class="val">${+tot.uniq_month}</div></div>
+    </div>` : ''}
+    ${logged.map((r,i) => {
+      const pager = D.roster && D.roster[String(r.rep_id)];
+      const n = +r.uniq_customers;
+      return `<div class="rep-row${pager?' acc':''}"${pager?` onclick="openRep('${esc(String(r.rep_id))}')"`:''}>
+        <div class="rep-head">
+          <div class="nm"><span class="rk ${i===0?'top':''}">${i+1}</span>${esc(r.name)}</div>
+          <div class="amt">${n} <span>· customers</span>${pager?'<span class="acc-chev">›</span>':''}</div>
+        </div>
+        <div class="meter"><div class="meter-fill" style="width:${Math.max(4,Math.round(100*n/mx))}%;background:${n>=goal?'#6cc28b':'#d4b15a'}"></div></div>
+      </div>`; }).join('')}
+    ${silent ? `<div class="withheld"><div class="wt">${logged.length?'Quiet so far':'Honest zero'}</div><div class="wx">
+      ${silent} seller${silent===1?' has':'s have'} reached nobody ${esc(label)} yet. Zeros are real, never back-filled.</div></div>` : ''}
+    <div class="note">LIVE · from <b>touch_spread()</b> (185) — count of distinct customers with at least one logged touch in the window. Green bar = on the company standard of <b>10 different customers a day</b>, the same rule the streak already grades. Team tiles are distinct across the team, so they are deliberately not the sum of the bars — one customer worked by two reps counts once up top and once each below.</div>
+  </div>`;
+}
+
+/* ── THE TIME CLOCKS (Kevin, 20 Aug: "how much time they spend in the app, on
+   the texting and calling when we get that connected… not to sales guys").
+   Console-only by grant, not by styling: app_time_board() raises for
+   non-managers, and the text/talk boards do not exist until their feeds can
+   name a rep honestly. Each card wears its true feed state. */
+function fmtClockMin(m){ m = Math.round(+m||0); return m >= 60 ? `${Math.floor(m/60)}h ${m%60}m` : `${m}m`; }
+
+function clockRows(rows, unit){
+  const mx = Math.max(1, ...rows.map(r => +r.minutes));
+  return rows.filter(r => +r.minutes > 0 || +r.sessions > 0).map((r,i) => {
+    const pager = D.roster && D.roster[String(r.rep_id)];
+    return `<div class="rep-row${pager?' acc':''}"${pager?` onclick="openRep('${esc(String(r.rep_id))}')"`:''}>
+      <div class="rep-head">
+        <div class="nm"><span class="rk ${i===0?'top':''}">${i+1}</span>${esc(r.name)}</div>
+        <div class="amt">${fmtClockMin(r.minutes)} <span>· ${unit}</span>${pager?'<span class="acc-chev">›</span>':''}</div>
+      </div>
+      <div class="meter"><div class="meter-fill" style="width:${Math.max(4,Math.round(100*+r.minutes/mx))}%"></div></div>
+    </div>`; }).join('');
+}
+
+function cardAppTime(){
+  if (!EFF_INTEL) return '';
+  const rows = EFF_INTEL.appTime;
+  const label = { day:'today', week:'this week', month:'this month' }[EFF_INTEL.win] || 'this week';
+  if (!Array.isArray(rows)) return effAwait('Time in the app',
+    'The clock (migration 185, <b>app_time_board</b>) did not answer — it is manager-only, so a rep session reading this page is refused by design.');
+  const live = rows.some(r => +r.minutes > 0 || +r.sessions > 0);
+  if (!live) return `<div class="card full">
+    <div class="card-title">Time in the app<span class="feed-tag none">awaiting the next app build</span></div>
+    <div class="card-sub">Minutes with the app open and in front, per rep.</div>
+    <div class="withheld"><div class="wt">Counting starts with the next build</div><div class="wx">The clock is live server-side (185). Phones begin reporting foreground minutes when the next app build reaches the field — nothing is estimated in the meantime, and a phone in a pocket will never count.</div></div></div>`;
+  return `<div class="card full">
+    <div class="card-title">Time in the app<span class="feed-tag">live · app</span></div>
+    <div class="card-sub">Minutes with the app open and in front, ${label}. Screen-on, app-in-front only — a phone in a pocket counts nothing.</div>
+    ${clockRows(rows, 'in app')}
+    <div class="note">LIVE · from <b>app_time_board()</b> (185): one-minute heartbeats while the app is foregrounded, session time clipped to the window. Owner console only — the rep app never shows this.</div>
+  </div>`;
+}
+
+function cardTextTime(){
+  if (!EFF_INTEL) return '';
+  const rows = EFF_INTEL.textTime;
+  if (!Array.isArray(rows)) return `<div class="card full">
+    <div class="card-title">Text time<span class="feed-tag none">feed connecting</span></div>
+    <div class="card-sub">Active texting minutes, per rep.</div>
+    <div class="withheld"><div class="wt">Honestly absent</div><div class="wx">Texts are flowing in from the office lines, but none resolve to a <b>rep</b> yet — the ingest names the customer, not the sender, until rep seats and extension mapping land. When they do, <b>text_time_board()</b> ships in a migration and this card lights up with no console deploy. Until then: no guesses.</div></div></div>`;
+  return `<div class="card full">
+    <div class="card-title">Text time<span class="feed-tag">live · db</span></div>
+    <div class="card-sub">Active texting minutes, per rep.</div>
+    ${clockRows(rows, 'texting')}
+    <div class="note">LIVE · from <b>text_time_board()</b>.</div>
+  </div>`;
+}
+
+function cardTalkTime(){
+  if (!EFF_INTEL) return '';
+  const rows = EFF_INTEL.talkTime;
+  if (!Array.isArray(rows)) return `<div class="card full">
+    <div class="card-title">Talk time<span class="feed-tag none">feed connecting</span></div>
+    <div class="card-sub">Real minutes on calls, per rep.</div>
+    <div class="withheld"><div class="wt">Honestly absent</div><div class="wx">Call records with true durations are already landing on our server from the phone system — the reader that files them per rep is the next build in the phone consolidation. When <b>talk_time_board()</b> ships, real talk minutes appear here. Never estimates.</div></div></div>`;
+  return `<div class="card full">
+    <div class="card-title">Talk time<span class="feed-tag">live · db</span></div>
+    <div class="card-sub">Real minutes on calls, per rep.</div>
+    ${clockRows(rows, 'on calls')}
+    <div class="note">LIVE · from <b>talk_time_board()</b>.</div>
+  </div>`;
+}
+
 /* EFFORT × RESULTS · THE QUADRANT — touches against signed dollars, one dot
    per seller, this month. Presentation only: both feeds already live. */
 function cardQuadrant(){
@@ -5392,22 +5533,25 @@ const ROOM_KIT = [
   { key:'streaks', name:'Consistency · streaks',         card: cardConsistency, tile: ptConsistency },
 ];
 
-function effortRoom(direct){
+function effortRoom(direct, omit){
   /* THE SECTION FORM. On the railed desktop this room IS the People section:
      the rail already solos it, so a second door in front of it is a door
-     inside a door — the seven instruments render open, no tiles, no solo/all
+     inside a door — the instruments render open, no tiles, no solo/all
      state, nothing to close. The phone keeps the shelf below: there the room
      still sits mid-column, and seven full instruments in a row is the wall
-     the shelf was built to prevent. lcc.room keeps governing the phone. */
-  if (direct) return `<div class="room" id="effort-room">
+     the shelf was built to prevent. lcc.room keeps governing the phone.
+     `omit` (20 Aug) lets the Hustle rail promote an instrument above the room
+     without rendering it twice — the phone shelf keeps the full kit. */
+  if (direct) { const kit = omit ? ROOM_KIT.filter(i => i.key !== omit) : ROOM_KIT;
+  return `<div class="room" id="effort-room">
     <div class="shelf-head">
       <div class="shelf-titles">
         <div class="card-title">Why a rep's numbers look like that</div>
-        <div class="card-sub">Seven instruments — who dials, who finishes the plays, who captures the number, how fast the first touch goes out. This is where a rep gets diagnosed rather than ranked.</div>
+        <div class="card-sub">The instruments — who dials, who finishes the plays, who captures the number. This is where a rep gets diagnosed rather than ranked.</div>
       </div>
     </div>
-    <div class="room-body">${prodBand()}${ROOM_KIT.map(i => i.card()).join('')}</div>
-  </div>`;
+    <div class="room-body">${prodBand()}${kit.map(i => i.card()).join('')}</div>
+  </div>`; }
   const all = ROOM_VIEW.mode === 'all';
   const solo = ROOM_VIEW.mode === 'solo' ? ROOM_KIT.find(i => i.key === ROOM_VIEW.key) : null;
 
@@ -8211,6 +8355,11 @@ function vitOpen(k){
   if (t){ t.classList.add('on'); t.setAttribute('aria-expanded', 'true'); }
 }
 
+/* RETIRED FROM EVERY SURFACE, 20 Aug (KD: "remove the vitals option
+   completely"). No rail button, no tab, no band in ALL renders this any more.
+   The hero and its micro-dial helpers are kept intact below in case the screen
+   is ever recalled; buildVitals() and D.vitals stay live regardless — the
+   Revenue hero and the A/R age reads still eat from D.vitals.money. */
 function cardVitals(){
   if (!D.vitals) return '';
   /* MARKETING | SALES over PRODUCTION | MONEY — the order the money moves. */
@@ -9085,15 +9234,21 @@ function setRepWin(k){ keepScroll(() => { REPWIN = k; }); }
    sections is a filter over this array, not a second nav.
 
    The sections regroup exactly what the single column already carries:
-     Vitals    — the hero: master heartbeat + the 2×2
      Sales     — sales vitals: the sellers' board (the v9 rep gauges land here)
      Marketing — appointments by company (the setters' output — KD, 20 Aug:
                  "a department of sales" that belongs to marketing), then the
                  consolidated marketing room (brand → source → rep)
-     People    — effort × results, then the Effort Room
-     Money     — the money row: window switch, month time machine, Signed /
+     Hustle    — effort × results, then the Effort Room
+     Revenue   — the money row: window switch, month time machine, Signed /
                  Appointments / Built / Open A/R, trending to finish
      Flags     — the Attention board
+
+   VITALS IS GONE FROM EVERY SURFACE (KD, 20 Aug: "remove the vitals option
+   completely — there's really no reason for that screen"). Not demoted, not
+   folded into ALL: the hero told the coarse story the five sections now tell
+   in detail, and a screen nobody needs teaches people to skip screens. The
+   measurements behind it (buildVitals) stay — the Revenue hero and the A/R
+   age reads still eat from D.vitals.money.
 
    ONLY THE SELECTED SECTION IS IN THE DOM. Leaving a section unmounts it —
    never render-and-hide, which would keep five sections of charts and
@@ -9105,7 +9260,6 @@ function setRepWin(k){ keepScroll(() => { REPWIN = k; }); }
    pagers do. Logged as a follow-up rather than half-fixed here. */
 const RAIL_MIN = 900;   // the page's one desktop line — same as the masonry and the folds
 const SECTIONS = [
-  { key:'vitals',    name:'Vitals',    render: () => cardVitals() },
   /* Appointments-by-company moved to MARKETING (KD, 20 Aug: "appointments…
      should go into marketing, not in sales — it's a department of sales" that
      measures the SETTING side). This reverses the earlier who-sold-it /
@@ -9124,8 +9278,14 @@ const SECTIONS = [
   /* "People" died in review (KD, 20 Aug: "I don't like the name… the people is
      the effort… hustle"). HUSTLE is his word for the whole register — the
      quadrant, the 4-Touch model, the effort instruments — so the rail says it. */
-  { key:'hustle',    name:'Hustle',    render: () => '<div class="stack bands">' + cardQuadrant() + effortRoom(true) + '</div>' },
-  { key:'money',     name:'Money',     render: () => moneyHero() },
+  /* HUSTLE's order is a ruling (Kevin, 20 Aug): the spread hero first, speed
+     to first touch ranked right under it (promoted out of the room), then the
+     quadrant and the room, then the owner-only time clocks. */
+  { key:'hustle',    name:'Hustle',    render: () => '<div class="stack bands">' + cardSpread() + cardSpeed() + cardQuadrant() + effortRoom(true,'speed') + cardAppTime() + cardTextTime() + cardTalkTime() + '</div>' },
+  /* The label says REVENUE (KD, 20 Aug: "what do we wanna call revenue? …
+     Revenue"); the key stays 'money' so every #money bookmark and remembered
+     choice from the Money weeks still lands here instead of on the default. */
+  { key:'money',     name:'Revenue',   render: () => moneyHero() },
   /* The one counted section: the badge is the Attention board's own row list
      (attnRows), so the number on the rail and the rows behind the click are
      one computation and cannot drift apart. */
@@ -9133,26 +9293,26 @@ const SECTIONS = [
 ];
 const SECTION_STORE = 'lcc.section';   // its own key — lcc.room belongs to the Effort Room
 let SECTION = (() => {
-  /* A deep link wins, then the remembered choice, then Vitals. An UNKNOWN hash
-     falls back to Vitals silently — it may be a dive hash (#month), a spent
-     recovery link, or a typo, and none of those earns an error. The dive and
-     recovery hash grammars are untouched and never collide with these six
-     words. */
+  /* A deep link wins, then the remembered choice, then Sales. An UNKNOWN hash
+     falls back to Sales silently — it may be a dive hash (#month), a spent
+     recovery link, a #vitals bookmark from before that screen was retired, or
+     a typo, and none of those earns an error. The dive and recovery hash
+     grammars are untouched and never collide with these six words. */
   /* 'people' was this section's launch name; bookmarks and stored choices
-     from that week still resolve rather than falling back to Vitals. */
+     from that week still resolve rather than falling back to the default. */
   const legacy = v => v === 'people' ? 'hustle' : v;
   const h = legacy((location.hash || '').replace(/^#/, ''));
   if (SECTIONS.some(s => s.key === h) || h === 'all') return h;
-  if (h) return 'vitals';
+  if (h) return 'sales';
   try { const s = legacy(localStorage.getItem(SECTION_STORE));
     if (SECTIONS.some(x => x.key === s) || s === 'all') return s; } catch(e){}
-  return 'vitals';
+  return 'sales';
 })();
 function setSection(k){
   if (k === 'people') k = 'hustle';
-  /* 'all' is the phone's seventh tab — the classic single-column reading.
-     The desktop rail has no such key and resolves it to Vitals. */
-  if (!SECTIONS.some(s => s.key === k) && k !== 'all') k = 'vitals';
+  /* 'all' is the phone's sixth tab — the classic single-column reading.
+     The desktop rail has no such key and resolves it to Sales. */
+  if (!SECTIONS.some(s => s.key === k) && k !== 'all') k = 'sales';
   SECTION = k;
   try { localStorage.setItem(SECTION_STORE, k); } catch(e){}
   render();
@@ -9246,24 +9406,13 @@ function render(){
      whole statement:
 
        1  the ask box            — the question he arrived with, always first
-       1b THE VITALS HERO        — one master heartbeat and a 2×2 of micro
-                                   vitals, and the whole of it fits one 390px
-                                   phone screen with nothing scrolled. It sits
-                                   above ATTENTION because it answers a coarser
-                                   question first, and answers it as a SHAPE
-                                   and a COLOUR: is anything wrong at all.
-                                   ATTENTION then says what, in words. It shows
-                                   symptoms and never prescribes.
 
-                                   It replaced THE PULSE card, which asked the
-                                   same question at four times the height — a
-                                   composite plus five full rails, each nearly
-                                   as large as the composite, so the eye had
-                                   six things to rank and ranked none of them.
-                                   Nothing that card measured was dropped: its
-                                   rails' sub-vitals, brand cuts, aging buckets
-                                   and every withheld-feed note are carried
-                                   whole inside the four expanded cards here.
+     (THE VITALS HERO led this column between the pulse card's retirement and
+     20 Aug, when the whole vitals surface was removed — see the note over
+     SECTIONS. ATTENTION inherits the top of the reading: the coarse "is
+     anything wrong" and the specific "what" were always one question, and the
+     board that names things won it.)
+
        2  ATTENTION              — what is off its rhythm, at headline size. It
                                    was a footnote under the money; it is the
                                    reason he opened the page, so it leads.
@@ -9303,7 +9452,7 @@ function render(){
      coverage / going cold (the TruOdds cooling book owns that question now).
      ────────────────────────────────────────────────────────────────────────── */
   document.getElementById('app').innerHTML =
-    hdrTitle() + askBar() + cardVitals() + cardAttention() + hdr() + '<div class="stack bands">' + [
+    hdrTitle() + askBar() + cardAttention() + hdr() + '<div class="stack bands">' + [
       /* 4 · WHO SOLD IT */
       cardReps(),
 
@@ -9323,6 +9472,10 @@ function render(){
          cardLeads() is long gone the same way. */
       marketingRoom(),
 
+      /* 5b · THE SPREAD (Kevin, 20 Aug): unique customers touched, prominent
+         on the phone too — hero above the quadrant. */
+      cardSpread(),
+
       /* 6 · WHERE EFFORT AND RESULTS DISAGREE. Stays visible even though the
          rest of the effort suite folded: this is the card that reads both
          halves of the page at once, and it is no use behind a tap. */
@@ -9331,6 +9484,12 @@ function render(){
       /* …and the room, directly under the quadrant. Its preview shelf is always
          drawn; what is open inside it is remembered per device. */
       effortRoom(),
+
+      /* 7 · THE TIME CLOCKS — owner-only (the rep app never shows these;
+         app_time_board is manager-gated server-side). */
+      cardAppTime(),
+      cardTextTime(),
+      cardTalkTime(),
     ].join('') + '</div>' + pageFoot() + mrailHtml();
   drawCharts();
 }
@@ -9776,7 +9935,7 @@ addEventListener('resize', () => {
    the last one, it is to tell a human which build is on the server and when it
    got there. A number nobody clocked cannot answer that, and the first time it
    is asked in anger will be the morning a stale build is being chased. */
-const BUILD = '2026-08-20T19:38Z-owner-off-the-desk';
+const BUILD = '2026-08-20T20:15Z-spread-and-time-clocks';
 const SB_URL = 'https://lzegjjbkfuecrhdvlvay.supabase.co';
 /* The one page that can finish a password reset. Hard-coded rather than derived,
    because every derivation of it so far has been a source of bugs: a bare origin
