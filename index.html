@@ -523,6 +523,125 @@
   .ct-line.hustle { display: flex; flex-wrap: wrap; }
   .ct-line.hustle > span { flex: 0 0 auto; min-width: 0; }
   .ct-line.hustle > span:last-child { min-width: 0; font-weight: 400; font-size: 8.5px; }
+
+  /* ═══ THE v9 REP CARD · heartbeat + tanks ══════════════════════════════════
+     Ported from sales-effort-blend-mock-v9.html ("proceed to v9 exactly"),
+     re-voiced into the console's own palette and faces: Fraunces numerals in
+     v9's cream, JetBrains Mono for the working type, the house green/gold/red
+     as the only verdict colours — v9's own note: blue is gone. Each dial is a
+     BUTTON (Kevin, 20 Aug morning: each one opens to its deeper read). */
+  .rg-card { background: rgba(255,255,255,0.02); border: 1px solid var(--line);
+    border-radius: 14px; margin-bottom: 14px; overflow: hidden; }
+  .rg-card.gone { opacity: .8; }
+  .rg-head { display: flex; justify-content: space-between; align-items: baseline;
+    padding: 13px 15px 2px; flex-wrap: wrap; gap: 6px; }
+  .rg-head .name { font-family: 'Fraunces', serif; font-size: 19px; color: #f0ead8; }
+  .rg-head .tot { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--text-dim); }
+  .rg-head .tot b { font-family: 'Fraunces', serif; font-weight: 600; font-size: 18px; color: #f0ead8; }
+  .rg-rankline { padding: 0 15px 9px; font-family: 'JetBrains Mono', monospace;
+    font-size: 10px; color: var(--text-dim); display: flex; align-items: center;
+    gap: 6px; flex-wrap: wrap; }
+  .rg-chip { display: inline-block; font-size: 9px; letter-spacing: .06em;
+    border-radius: 8px; padding: 1px 7px; border: 1px solid var(--line); color: var(--text); }
+  .rg-chip.top { border-color: var(--green); color: var(--green); }
+  .rg-chip.low { border-color: var(--red); color: var(--red); }
+  .rg-seam { font-size: 9px; opacity: .8; }
+
+  /* the heartbeat — v9's quieter beat box, the console's colours */
+  .rg-beat { margin: 2px 15px 12px; background: rgba(0,0,0,0.18);
+    border: 1px solid var(--line); border-radius: 12px; padding: 9px 13px 7px; }
+  .rg-beat .cap { font-family: 'JetBrains Mono', monospace; font-size: 9px;
+    letter-spacing: .18em; color: var(--text-dim); text-transform: uppercase;
+    display: flex; justify-content: space-between; gap: 8px; }
+  .rg-beat .cap b { color: var(--c, var(--green)); font-weight: 500; }
+  .rg-beat.good { --c: var(--green); } .rg-beat.fall { --c: var(--red); }
+  .rg-beat.off { padding-bottom: 9px; }
+  .rg-beat svg { width: 100%; height: 74px; display: block; margin-top: 4px; }
+  .rg-beat .grid line { stroke: rgba(255,255,255,0.05); stroke-width: 1; }
+  .rg-beat .stdline { stroke: #f0ead8; stroke-width: 1; stroke-dasharray: 3 5; opacity: .4; }
+  .rg-beat .trace { fill: none; stroke: var(--c, var(--green)); stroke-width: 1.8;
+    stroke-linejoin: round; stroke-linecap: round; opacity: .9; }
+  .rg-beat .wk { fill: var(--c, var(--green)); }
+  .rg-beat .val { font-size: 8.5px; fill: var(--text-dim); font-family: 'JetBrains Mono', monospace; }
+  .rg-beat .val.now { fill: var(--c, var(--green)); font-weight: 600; }
+  .rg-beat .axis { font-size: 8.5px; fill: var(--text-dim); font-family: 'JetBrains Mono', monospace; }
+
+  /* the fine instrument — tank gauges */
+  .rg-effort { border-top: 1px solid var(--line); padding: 12px 15px 14px;
+    background: linear-gradient(180deg, rgba(0,0,0,0.12), transparent); }
+  .rg-effort .cap, .rg-drawer .cap { font-family: 'JetBrains Mono', monospace;
+    font-size: 9.5px; letter-spacing: .2em; color: var(--gold);
+    text-transform: uppercase; margin-bottom: 11px; display: flex;
+    align-items: center; gap: 10px; }
+  .rg-effort .cap::after { content: ""; flex: 1; height: 1px;
+    background: linear-gradient(90deg, var(--gold), transparent); }
+  .rg-dialgrid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+  .rg-dial { border-radius: 14px; padding: 12px 10px 11px; text-align: center;
+    background: var(--bg-card-hi); border: 1px solid var(--line); cursor: pointer;
+    font: inherit; color: var(--text); transition: border-color .15s; }
+  @media (hover: hover) { .rg-dial:hover { border-color: var(--c, var(--text-dim)); } }
+  .rg-dial.good { --c: var(--green); } .rg-dial.warn { --c: var(--gold); }
+  .rg-dial.bad { --c: var(--red); } .rg-dial.off { --c: var(--text-dim); opacity: .75; }
+  .rg-dial .lbl { font-family: 'JetBrains Mono', monospace; font-size: 9px;
+    letter-spacing: .14em; color: var(--text-dim); text-transform: uppercase; margin-bottom: 7px; }
+  .rg-gauge { width: 96px; height: 58px; margin: 0 auto; display: block; }
+  .rg-gauge .track { stroke: rgba(255,255,255,0.10); stroke-width: 2; fill: none; }
+  .rg-gauge .ticks line { stroke: rgba(255,255,255,0.18); stroke-width: 1.5; }
+  .rg-gauge .std { stroke: #f0ead8; stroke-width: 1.5; opacity: .65; }
+  .rg-gauge .fillarc { stroke: var(--c, var(--text-dim)); stroke-width: 8; fill: none;
+    stroke-linecap: round; opacity: .28; }
+  .rg-gauge .needle { stroke: var(--c, var(--text-dim)); stroke-width: 2; stroke-linecap: round; }
+  .rg-gauge .hub, .rg-gauge .jewel { fill: var(--c, var(--text-dim)); }
+  .rg-dial .num { font-family: 'Fraunces', serif; font-weight: 500; font-size: 21px;
+    color: #f0ead8; margin-top: -6px; }
+  .rg-dial .num small { font-size: 12px; color: var(--text-dim); }
+  .rg-dial .cmp { font-family: 'JetBrains Mono', monospace; font-size: 9px;
+    color: var(--text-dim); margin-top: 4px; line-height: 1.55; }
+  .rg-dial .cmp b { color: var(--c, var(--text)); font-weight: 500; }
+  .rg-dial .rk { display: inline-block; margin-top: 5px; font-family: 'JetBrains Mono', monospace;
+    font-size: 9px; letter-spacing: .1em; color: var(--text-dim); }
+  .rg-dial .rk b { color: var(--c, var(--text)); font-weight: 500; }
+
+  /* one More-data door per card */
+  .rg-invrow { padding: 0 15px 13px; }
+  .rg-invbtn { width: 100%; background: none; border: 1px dashed var(--line);
+    border-radius: 11px; color: var(--text-dim); font-family: 'JetBrains Mono', monospace;
+    font-size: 10px; letter-spacing: .14em; text-transform: uppercase;
+    cursor: pointer; padding: 8px 12px; }
+  @media (hover: hover) { .rg-invbtn:hover { color: var(--gold); border-color: var(--gold); } }
+  .rg-drawer { display: none; border-top: 1px dashed var(--line);
+    padding: 12px 15px 14px; background: rgba(0,0,0,0.10); }
+  .rg-drawer.open { display: block; }
+  .rg-det { display: none; font-size: 12px; line-height: 1.6; color: var(--text-dim);
+    background: rgba(212,177,90,0.05); border-left: 2px solid rgba(212,177,90,0.45);
+    border-radius: 0 7px 7px 0; padding: 8px 10px; margin-bottom: 11px; }
+  .rg-det.show { display: block; }
+  .rg-det .g { color: var(--green); } .rg-det .y { color: var(--gold); } .rg-det .r { color: var(--red); }
+  .rg-closestrip { display: grid; grid-template-columns: repeat(4, 1fr);
+    background: var(--bg-card-hi); border: 1px solid var(--line); border-radius: 12px;
+    overflow: hidden; margin-bottom: 12px; }
+  .rg-cw { padding: 8px 11px; border-left: 1px solid var(--line); position: relative; }
+  .rg-cw:first-child { border-left: none; }
+  .rg-cw.good { --c: var(--green); } .rg-cw.warn { --c: var(--gold); } .rg-cw.bad { --c: var(--red); }
+  .rg-cw::after { content: ""; position: absolute; left: 11px; right: 11px; bottom: 0;
+    height: 2px; border-radius: 2px 2px 0 0; background: var(--c, transparent); opacity: .75; }
+  .rg-cw .k { font-family: 'JetBrains Mono', monospace; font-size: 8.5px;
+    letter-spacing: .16em; color: var(--text-dim); text-transform: uppercase; }
+  .rg-cw .n { font-family: 'Fraunces', serif; font-weight: 500; font-size: 18px;
+    color: #f0ead8; line-height: 1.15; }
+  .rg-cw .n small { font-size: 11px; color: var(--text-dim); }
+  .rg-cw .meta { font-family: 'JetBrains Mono', monospace; font-size: 9px; color: var(--text-dim); }
+  .rg-invgrid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+  .rg-inv { font-family: 'JetBrains Mono', monospace; font-size: 11px; }
+  .rg-inv .k { color: var(--text-dim); font-size: 9px; letter-spacing: .08em;
+    text-transform: uppercase; display: block; }
+  .rg-inv b { font-family: 'Fraunces', serif; font-weight: 500; font-size: 14px; color: var(--text); }
+  .rg-inv b.r { color: var(--red); }
+  @media (max-width: 720px) {
+    .rg-dialgrid { grid-template-columns: 1fr 1fr; }
+    .rg-invgrid { grid-template-columns: 1fr 1fr; }
+    .rg-gauge { width: 86px; height: 52px; }
+  }
   .ct-chips { display: grid; grid-template-columns: repeat(5, 1fr); gap: 3px; margin-top: 4px; max-width: 340px; }
   .ct-chip { border: 1px solid var(--line); border-radius: 5px; padding: 2px 2px 3px; text-align: center; min-width: 0; }
   .ct-chip .k { font-family: 'JetBrains Mono', monospace; font-size: 6px; letter-spacing: .06em; text-transform: uppercase; color: var(--text-dim); }
@@ -1639,6 +1758,29 @@
     .rail-badge { margin-left: auto; font-family: 'JetBrains Mono', monospace;
       font-size: 9px; font-weight: 700; color: var(--gold);
       border: 1px solid rgba(212,177,90,0.45); border-radius: 100px; padding: 1px 7px; }
+  }
+
+  /* ── THE PHONE'S RAIL ──────────────────────────────────────────────────────
+     The same six sections as a bottom tab bar, where a thumb lives, plus ALL —
+     the classic single-column reading, one tap away instead of retired. Fixed
+     over the safe area; the body clears it so the footer never hides. */
+  .mrail { display: none; }
+  @media (max-width: 899.98px) {
+    body.mnav { padding-bottom: calc(62px + env(safe-area-inset-bottom)); }
+    .mrail { position: fixed; left: 0; right: 0; bottom: 0; z-index: 60;
+      display: flex; gap: 2px; padding: 6px 6px calc(6px + env(safe-area-inset-bottom));
+      background: rgba(13,31,23,0.96); border-top: 1px solid var(--line);
+      overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    .mrail-btn { flex: 1 0 auto; min-width: 46px; background: none;
+      border: 1px solid transparent; border-radius: 9px; padding: 9px 8px;
+      color: var(--text-dim); font-family: 'JetBrains Mono', monospace;
+      font-size: 8.5px; letter-spacing: .06em; text-transform: uppercase;
+      cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 4px; }
+    .mrail-btn.on { color: var(--accent-soft); border-color: rgba(240,131,74,0.4);
+      background: rgba(240,131,74,0.07); }
+    .mrail-badge { font-family: 'JetBrains Mono', monospace; font-size: 8px;
+      font-weight: 700; color: var(--gold); border: 1px solid rgba(212,177,90,0.45);
+      border-radius: 100px; padding: 0 5px; }
   }
 
   /* ── THE MARKETING BOARD · ROI EDITION ────────────────────────────────────
@@ -3304,6 +3446,239 @@ function cardMix(){
   </div>`;
 }
 
+/* ═══ THE v9 REP CARD · heartbeat + tanks ════════════════════════════════════
+   Design authority: sales-effort-blend-mock-v9.html (recovered 20 Aug, ruled
+   "proceed to v9 exactly"; Points relabelled GAME PTS per the same ruling —
+   touches stay binary everywhere). Each core seller on Sales vitals is one
+   card: their weekly close-rate HEARTBEAT against the team's own standard,
+   then six tank gauges — the work behind the number — then everything else
+   behind one More-data door. Kevin's follow-up ruling (20 Aug morning): each
+   tank opens to its own deeper read where a feed holds one, so a dial is a
+   door, not just a dial.
+
+   EVERY GAUGE STATES ITS SCALE, because a needle with a secret scale is a
+   vibe, not an instrument:
+     Touches      0 → 2× goal (goal = rep's own daily goal × working days
+                  elapsed), so the std mark sits mid-arc at the goal.
+     4-Touch      0 → 100%, std mark at the house green line (50%).
+     First touch  0 → 96h, std mark at the 24h Thank-You gate; a LOW needle
+                  is a FAST rep — the caption says so.
+     Streak       0 → the current leader's streak (min 10), std mark at the
+                  leader: the race as it stands today.
+     Game pts     0 → 2× the team median MTD, std mark at the median.
+                  score_events via the jobs join, future-dated points capped
+                  at now — a point is never scored before its play.
+     Particip.    0 → 100% of working days this month with at least one
+                  logged touch, std mark at the team median.
+   A gauge whose feed has not answered reads a dash on a grey dial — absent,
+   never a fake zero. */
+const RG_CREAM = '#f0ead8';
+
+function rgGauge(frac, stdFrac){
+  const f = Math.max(0.02, Math.min(1, frac || 0));
+  const th = Math.PI * f;
+  const nx = (50 - 33 * Math.cos(th)).toFixed(1), ny = (50 - 33 * Math.sin(th)).toFixed(1);
+  let std = '';
+  if (stdFrac != null && isFinite(stdFrac)) {
+    const s = Math.PI * Math.max(0.02, Math.min(1, stdFrac));
+    std = `<line class="std" x1="${(50 - 38 * Math.cos(s)).toFixed(1)}" y1="${(52 - 38 * Math.sin(s)).toFixed(1)}"
+      x2="${(50 - 44 * Math.cos(s)).toFixed(1)}" y2="${(52 - 44 * Math.sin(s)).toFixed(1)}"/>`;
+  }
+  return `<svg class="rg-gauge" viewBox="0 0 100 60" aria-hidden="true">
+    <path class="track" d="M 12 52 A 38 38 0 0 1 88 52"/>
+    <g class="ticks"><line x1="12" y1="52" x2="17" y2="49"/><line x1="24" y1="30" x2="28" y2="34"/><line x1="50" y1="14" x2="50" y2="19"/><line x1="76" y1="30" x2="72" y2="34"/><line x1="88" y1="52" x2="83" y2="49"/></g>
+    ${std}
+    <path class="fillarc" d="M 12 52 A 38 38 0 0 1 88 52" pathLength="100" stroke-dasharray="${(f * 100).toFixed(0)} 100"/>
+    <line class="needle" x1="50" y1="50" x2="${nx}" y2="${ny}"/>
+    <circle class="hub" cx="50" cy="50" r="3"/>
+    <circle class="jewel" cx="90" cy="12" r="2.5"/>
+  </svg>`;
+}
+
+/* The heartbeat: nine weekly closes as one trace, values printed on the
+   points (the chart must say its own numbers — Kevin's standing law), the
+   team standard dashed across. Weeks with no elapsed appointments leave a
+   gap, never a zero — no denominator is not a cold week. */
+function rgBeat(rp, std){
+  const arr = rp ? rp.close : null;
+  if (!arr || arr.filter(v => v != null).length < 2)
+    return `<div class="rg-beat off"><div class="cap"><span>Heartbeat · weekly close rate</span><b>too few weeks with appointments to draw</b></div></div>`;
+  const n = arr.length, W2 = 400, x = i => 8 + i * (W2 - 16) / (n - 1);
+  const vals = arr.filter(v => v != null);
+  const max = Math.max(...vals, std || 0, 10) * 1.3;
+  const y = v => 58 - (v / max) * 46;
+  const segs = []; let cur = [];
+  arr.forEach((v, i) => { if (v == null) { if (cur.length) segs.push(cur); cur = []; }
+    else cur.push(`${x(i).toFixed(1)},${y(v).toFixed(1)}`); });
+  if (cur.length) segs.push(cur);
+  const lastIdx = arr.map((v, i) => v != null ? i : -1).filter(i => i >= 0).pop();
+  const firstIdx = arr.findIndex(v => v != null);
+  const d = arr[lastIdx] - arr[firstIdx];
+  const word = d >= 5 ? ['climbing ▲', 'good'] : d <= -5 ? ['fading ▼', 'fall'] : ['steady', 'good'];
+  return `<div class="rg-beat ${word[1]}">
+    <div class="cap"><span>Heartbeat · weekly close rate</span><b>${word[0]}</b></div>
+    <svg viewBox="0 0 400 74" preserveAspectRatio="none">
+      <g class="grid"><line x1="0" y1="16" x2="400" y2="16"/><line x1="0" y1="34" x2="400" y2="34"/><line x1="0" y1="52" x2="400" y2="52"/></g>
+      ${std != null ? `<line class="stdline" x1="0" y1="${y(std).toFixed(1)}" x2="400" y2="${y(std).toFixed(1)}"/>` : ''}
+      ${segs.map(s => s.length === 1 ? '' : `<polyline class="trace" points="${s.join(' ')}"/>`).join('')}
+      ${arr.map((v, i) => v == null ? '' :
+        `<circle class="wk${i === lastIdx ? ' now' : ''}" cx="${x(i).toFixed(1)}" cy="${y(v).toFixed(1)}" r="${i === lastIdx ? 3.2 : 2.2}"/>
+         <text class="val${i === lastIdx ? ' now' : ''}" x="${x(i).toFixed(1)}" y="${(y(v) - 5).toFixed(1)}" text-anchor="middle">${v}</text>`).join('')}
+      <text class="axis" x="8" y="70">9 wks ago</text><text class="axis" x="360" y="70">this wk</text>
+    </svg>
+  </div>`;
+}
+
+const rgDialHtml = (repId, key, cls, label, gauge, num, cmp, rank, hasDeeper) =>
+  `<button type="button" class="rg-dial ${cls}" onclick="event.stopPropagation();rgDialOpen(this,'${key}')"
+     title="${hasDeeper ? 'Tap for the deeper read' : 'Tap for more data'}">
+    <div class="lbl">${label}</div>${gauge}
+    <div class="num">${num}</div>
+    <div class="cmp">${cmp}</div>
+    ${rank ? `<span class="rk">${rank}</span>` : ''}
+  </button>`;
+
+/* One card. `sellers` is the core roster for ranks and averages — a rank on
+   a board is a rank among the people ON the board. */
+function rgCard(r, k, sellers, mx){
+  const id = String(r.id);
+  const I = EFF_INTEL || {};
+  const eff = (D.effort.rows || []).find(x => String(x.id) === id);
+  const rp = D.repPulse && D.repPulse.byId[id];
+  const gone = (D.roster[id] || {}).active === false;
+  const rank = sellers.findIndex(x => String(x.id) === id) + 1;
+  const coAvg = sellers.length ? sellers.reduce((n, x) => n + x.rev, 0) / sellers.length : 0;
+  const vsAvg = coAvg > 0 ? Math.round((r.rev / coAvg - 1) * 100) : null;
+  const byRep = (list, kf) => (list || []).find(x => String(x.rep_id) === id);
+
+  /* ── the six tanks, each with its stated scale (see the block comment) ── */
+  const dials = [];
+  const spanM = D.effort.spans ? (D.effort.spans.month || 1) : 1;
+  const goal = eff ? ((eff.goal ?? D.effort.defaultGoal) || 0) * spanM : 0;
+  const t = eff ? eff.month.t : null;
+  const teamT = (D.effort.rows || []).filter(x => sellers.some(s => String(s.id) === String(x.id)));
+  const coT = teamT.length ? Math.round(teamT.reduce((n, x) => n + x.month.t, 0) / teamT.length) : 0;
+  dials.push(t == null ? rgDialHtml(id, 'touch', 'off', 'Touches MTD', rgGauge(0, 0.5), '—', 'no touch feed', '', false)
+    : rgDialHtml(id, 'touch', !goal ? 'off' : t >= goal ? 'good' : t >= goal / 2 ? 'warn' : 'bad',
+        'Touches MTD', rgGauge(goal ? t / (2 * goal) : 0, 0.5), String(t),
+        goal ? `goal ${goal} <b>${t >= goal ? '+' : '−'}${Math.abs(Math.round(100 * (t - goal) / goal))}%</b> · co avg ${coT}` : `co avg ${coT}`,
+        rgRank(teamT.map(x => ({ id: x.id, v: x.month.t })), id, true), true));
+
+  const lt = byRep(I.light);
+  if (!lt) dials.push(rgDialHtml(id, 'light', 'off', '4-Touch green', rgGauge(0, 0.5), '—', I.light ? 'no live book' : 'feed loading', '', false));
+  else { const b = Math.max(1, +lt.green + +lt.yellow + +lt.red), g = Math.round(100 * +lt.green / b);
+    dials.push(rgDialHtml(id, 'light', g >= 50 ? 'good' : g >= 30 ? 'warn' : 'bad', '4-Touch green',
+      rgGauge(g / 100, 0.5), `${g}<small>%</small>`,
+      `std 50% <b>${g >= 50 ? '+' : '−'}${Math.abs(g - 50)}</b> · ${lt.red} red`,
+      rgRank((I.light || []).map(x => ({ id: x.rep_id, v: +x.green / Math.max(1, +x.green + +x.yellow + +x.red) })), id, true), true)); }
+
+  const sp = byRep(I.speed);
+  if (!sp || sp.avg_hours == null) dials.push(rgDialHtml(id, 'speed', 'off', 'First touch', rgGauge(0, 0.25), '—', sp ? 'nothing touched yet' : 'feed loading', '', false));
+  else { const h = +sp.avg_hours;
+    dials.push(rgDialHtml(id, 'speed', h <= 24 ? 'good' : h <= 72 ? 'warn' : 'bad', 'First touch',
+      rgGauge(Math.min(1, h / 96), 0.25), `${h.toFixed(1)}<small>h</small>`,
+      `std 24h · low needle = <b>fast</b>`,
+      rgRank((I.speed || []).filter(x => x.avg_hours != null).map(x => ({ id: x.rep_id, v: -x.avg_hours })), id, true), true)); }
+
+  const st = byRep(I.streaks);
+  const leader = (I.streaks || []).reduce((m, x) => Math.max(m, +x.streak || 0), 0);
+  if (!st) dials.push(rgDialHtml(id, 'streak', 'off', 'Streak', rgGauge(0, 1), '—', I.streaks ? 'no streak record' : 'feed loading', '', false));
+  else { const s = +st.streak || 0, full = Math.max(leader, 10);
+    dials.push(rgDialHtml(id, 'streak', s >= 2 ? 'good' : s === 1 ? 'warn' : 'bad', 'Streak',
+      rgGauge(s / full, leader / full), `${s}<small>d</small>`,
+      s ? `leader ${leader}d · on standard` : `off standard · leader ${leader}d`,
+      rgRank((I.streaks || []).map(x => ({ id: x.rep_id, v: +x.streak })), id, true), true)); }
+
+  const gp = I.game ? I.game[id] : null;
+  const gpVals = I.game ? sellers.map(x => I.game[String(x.id)] || 0) : [];
+  const gpStd = gpVals.length ? pMedian(gpVals.filter(v => v > 0)) || 0 : 0;
+  if (!I.game) dials.push(rgDialHtml(id, 'game', 'off', 'Game pts', rgGauge(0, 0.5), '—', 'ledger not readable', '', false));
+  else { const v = gp || 0;
+    dials.push(rgDialHtml(id, 'game', gpStd ? (v >= gpStd ? 'good' : v >= gpStd / 2 ? 'warn' : 'bad') : 'off', 'Game pts',
+      rgGauge(gpStd ? v / (2 * gpStd) : 0, 0.5), v.toLocaleString(),
+      gpStd ? `team median ${gpStd.toLocaleString()} <b>${v >= gpStd ? '+' : '−'}${Math.abs(Math.round(100 * (v - gpStd) / gpStd))}%</b>` : 'no team median yet',
+      rgRank(sellers.map(x => ({ id: x.id, v: I.game[String(x.id)] || 0 })), id, true), false)); }
+
+  const dAct = eff ? eff.daysActiveM : null;
+  if (dAct == null) dials.push(rgDialHtml(id, 'part', 'off', 'Participation', rgGauge(0, 0.5), '—', 'no touch feed', '', false));
+  else { const p = spanM ? Math.round(100 * dAct / spanM) : 0;
+    const coP = teamT.length ? pMedian(teamT.map(x => spanM ? 100 * x.daysActiveM / spanM : 0)) : null;
+    dials.push(rgDialHtml(id, 'part', p >= 80 ? 'good' : p >= 40 ? 'warn' : 'bad', 'Participation',
+      rgGauge(p / 100, coP != null ? coP / 100 : null), `${p}<small>%</small>`,
+      `${dAct} of ${spanM} working days active${coP != null ? ` · team ${Math.round(coP)}%` : ''}`,
+      rgRank(teamT.map(x => ({ id: x.id, v: x.daysActiveM })), id, true), false)); }
+
+  /* ── the drawer: closing windows, the full inventory, and each dial's
+        deeper read (Kevin: "each one opens up to deeper data if we have it") ── */
+  const ct = D.closeTrend && D.closeTrend.byId[id];
+  const cwCls = { hot: 'good', warm: 'warn', cold: 'bad', none: '' };
+  const closing = ct ? `<div class="cap">Closing windows</div>
+    <div class="rg-closestrip">${D.closeTrend.spans.map(sp2 => { const c = ct[sp2.key];
+      return `<div class="rg-cw ${cwCls[closeBand(c)]}"><div class="k">${esc(sp2.label)}</div>
+        <div class="n">${c.appts ? c.close + '<small>%</small>' : '—'}</div>
+        <div class="meta">${c.appts ? `${c.signed}/${c.appts}` : 'no appts'}</div></div>`; }).join('')}</div>` : '';
+  const b = D.bank && D.bank[id];
+  const es = byRep(I.est);
+  const inv = [
+    b ? `<div class="rg-inv"><span class="k">Bank</span><b>${short(b.banked)}</b></div>` : '',
+    b ? `<div class="rg-inv"><span class="k">Coming</span><b>${short(b.coming)}</b></div>` : '',
+    b ? `<div class="rg-inv"><span class="k">Paid YTD</span><b>${short(b.paidYtd)}</b></div>` : '',
+    `<div class="rg-inv"><span class="k">Avg deal</span><b>${r.jobs ? short(Math.round(r.rev / r.jobs)) : '—'}</b></div>`,
+    r.rung ? `<div class="rg-inv"><span class="k">Pending CC</span><b>${short(r.rung)}</b> rung</div>` : '',
+    `<div class="rg-inv"><span class="k">Deals</span><b>${r.jobs}</b></div>`,
+    es && +es.missing ? `<div class="rg-inv"><span class="k">Est. missing</span><b class="r">${es.missing}</b></div>` : '',
+    ct ? `<div class="rg-inv"><span class="k">60d appts</span><b>${ct.d60.appts}</b></div>` : '',
+  ].filter(Boolean).join('');
+  const mixR = byRep(I.mix);
+  const dets = [
+    ['touch', mixR ? `Channel mix: <b>${+mixR.calls || 0}</b> calls · <b>${+mixR.texts || 0}</b> texts · <b>${+mixR.emails || 0}</b> emails ${esc({day:'today',week:'this week',month:'this month'}[I.win] || '')} — a rep who never calls shows here first.` : null],
+    ['light', lt ? `The book: <b class="g">${lt.green} green</b> · <b class="y">${lt.yellow} yellow</b> · <b class="r">${lt.red} red</b> of ${+lt.green + +lt.yellow + +lt.red} live customers. Red = plays overdue with no decision.` : null],
+    ['speed', sp ? `${sp.touched} of ${sp.appts} new customers touched in 30 days${+sp.untouched_48h ? ` · <b class="r">${sp.untouched_48h} untouched 48h+</b>` : ''}. The Thank-You gate says same day.` : null],
+    ['streak', st ? `${st.week_hits} of ${st.week_days} days on standard this week · goal ${st.goal}/day. Server-counted, working days only.` : null],
+    ['game', gp != null ? `Month-to-date, from the score ledger via each job's own rep — future-dated points capped at now. Components: appointment 10 · invoice 15 · contract 10.` : null],
+    ['part', dAct != null ? `${dAct} of ${spanM} working days this month carried at least one logged touch. Showing up is its own metric.` : null],
+  ].filter(x => x[1]).map(([k2, txt]) => `<div class="rg-det" data-k="${k2}">${txt}</div>`).join('');
+
+  return `<div class="rg-card${gone ? ' gone' : ''}">
+    <div class="rg-head">
+      <div class="name tapname" onclick="openRep('${esc(id)}')">${esc(r.name)}${gone ? '<span class="gone">departed</span>' : ''}${r.billdu ? '<span class="tick">billdu</span>' : ''}</div>
+      <div class="tot"><b>${short(r.rev)}</b> · ${r.jobs} deal${r.jobs === 1 ? '' : 's'}</div>
+    </div>
+    <div class="rg-rankline">Sales rank <span class="rg-chip${rank === 1 ? ' top' : rank >= sellers.length - 1 && sellers.length > 2 ? ' low' : ''}">#${rank} of ${sellers.length}</span>${
+      vsAvg != null ? `<span class="rg-chip${vsAvg < -33 ? ' low' : ''}">${vsAvg >= 0 ? '+' : '−'}${Math.abs(vsAvg)}% vs co avg</span>` : ''}${
+      repCap(r) ? `<span class="rg-seam">${short(r.rev - (r.billdu || 0) - (r.rung || 0))} CC${r.billdu ? ` + ${short(r.billdu)} Billdu` : ''}${r.rung ? ` + ${short(r.rung)} 🔔` : ''}</span>` : ''}</div>
+    ${rgBeat(rp, D.repPulse ? D.repPulse.std : null)}
+    <div class="rg-effort">
+      <div class="cap">The work behind it</div>
+      <div class="rg-dialgrid">${dials.join('')}</div>
+    </div>
+    <div class="rg-invrow"><button type="button" class="rg-invbtn" onclick="event.stopPropagation();this.closest('.rg-card').querySelector('.rg-drawer').classList.toggle('open')">More data ▾</button></div>
+    <div class="rg-drawer">
+      ${dets}
+      ${closing}
+      <div class="cap">Full inventory — ${esc(r.name)}</div>
+      <div class="rg-invgrid">${inv}</div>
+    </div>
+  </div>`;
+}
+
+/* Rank within a value list, dense enough for a chip. `desc` = biggest is #1. */
+function rgRank(list, id, desc){
+  const rows = list.filter(x => x.v != null).sort((a, b) => desc ? b.v - a.v : a.v - b.v);
+  const i = rows.findIndex(x => String(x.id) === String(id));
+  return i < 0 ? '' : `rank <b>#${i + 1}</b> of ${rows.length}`;
+}
+
+function rgDialOpen(btn, key){
+  const card = btn.closest('.rg-card');
+  const d = card.querySelector('.rg-drawer');
+  d.classList.add('open');
+  let any = false;
+  card.querySelectorAll('.rg-det').forEach(x => { const on = x.dataset.k === key;
+    x.classList.toggle('show', on); if (on) any = true; });
+  if (!any) d.scrollIntoView({ block: 'nearest' });
+}
+
 /* ── 6. sales by rep ──────────────────────────────────────────────────────── */
 let REPSWIN = 'month';
 function setRepsWin(k){ keepScroll(() => { REPSWIN = k; }); }
@@ -3382,7 +3757,14 @@ function cardReps(){
         ${hc.line?`<div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text-dim);margin-top:3px">${hc.line}</div>`:''}
         ${rung2?`<div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text-dim);margin-top:4px">= <b style="color:var(--text)">${short(tot2-rung2)}</b> confirmed · cc + billdu + <b style="color:var(--text)">${short(rung2)}</b> rung 🛎️ awaiting the book — same union as the Signed figure up top, which carries the same bell line</div>`:''}
       </div>`; })()}
-    ${reps.map((r,i)=>`<div class="rep-row${r.office?'':' acc'}"${i>=CORE?' data-extra="1" style="display:none"':''} ${r.office?'style="opacity:.8"':`onclick="openRep('${esc(String(r.id))}')"`}>
+    ${(() => {
+      /* Core sellers render as v9 cards — heartbeat, tanks, drawer. The rest
+         (the no-rep gap row, office pseudo-rows, and everything behind Show
+         all) keep the compact row: a folded record does not need six dials. */
+      const sellers = core0.filter(x => !x.norep && !x.office);
+      return reps.map((r, i) => i < CORE && !r.norep && !r.office
+        ? rgCard(r, k, sellers, mx)
+        : `<div class="rep-row${r.office?'':' acc'}"${i>=CORE?' data-extra="1" style="display:none"':''} ${r.office?'style="opacity:.8"':`onclick="openRep('${esc(String(r.id))}')"`}>
       <div class="rep-head">
         <div class="nm">${esc(r.name)}${(D.roster[String(r.id)]||{}).active===false?'<span class="gone">departed</span>':''}${r.billdu?'<span class="tick">billdu</span>':''}${r.role&&r.role!=='sales'&&!r.office?`<span class="brand">${esc(r.role)}</span>`:''}</div>
         <div class="amt">${short(r.rev)} <span>· ${r.jobs} deal${r.jobs===1?'':'s'}</span>${r.office?'':'<span class="acc-chev">›</span>'}</div>
@@ -3391,8 +3773,7 @@ function cardReps(){
       ${repCap(r)}
       ${r.office?'':closeMini(r.id)}
       ${r.office?'':bankMini(r.id)}
-      ${r.office?'':hustleMini(r.id, k)}
-    </div>`).join('')}
+    </div>`).join(''); })()}
     ${reps.length>CORE?`<button type="button" class="linkbtn" onclick="const x=[...this.parentElement.querySelectorAll('[data-extra]')];const open=x[0].style.display==='none';x.forEach(e=>e.style.display=open?'':'none');this.textContent=open?'Show fewer':'Show all ${reps.length}${nGone?` · ${nGone} departed`:''} ›'">Show all ${reps.length}${nGone?` · ${nGone} departed`:''} ›</button>`:''}
     ${reps.length?`<div class="note">Rep is read from the job's own <b>rep_id</b>. <b>${D.coverage.apptsWithRep.toLocaleString()} of ${D.coverage.appts.toLocaleString()}</b> appointments carry a rep, so close rates below that coverage are unknown rather than assumed. The <b>close %</b> beside the total is this window's own — union signings over appointments elapsed, blended across brands, so it moves with brand mix as well as with closing; it is stated against a trailing <b>8 weeks</b> ending today, and a move inside 3 points reads flat rather than as a direction.</div>`:''}
   </div>`;
@@ -3496,37 +3877,9 @@ function bankMini(id){
   return `<div class="ct-line"><span class="none"><i>bank</i> ${short(b.banked)}</span><span class="none"><i>coming</i> ${short(b.coming)}</span><span class="none"><i>paid ytd</i> ${short(b.paidYtd)}</span></div>`;
 }
 
-/* ── THE HUSTLE STRIP (KD, 20 Aug: "box in all that cool effort data underneath
-   [each rep] … blend the hustle into the sales vitals") ─────────────────────
-   One compact line of effort under a seller's money line, in the close row's
-   own chip grammar: touches against goal for the board's window, the streak,
-   the 4-Touch book at a glance, estimates still owed, speed to first touch.
-   Every chip is the full card's own number shrunk, never a second computation
-   — the deep boards stay in the Hustle section for the working. Feeds that
-   have not answered simply contribute no chip: absent, never a fake zero. */
-function hustleMini(id, k){
-  const eff = (D.effort && D.effort.rows || []).find(x => String(x.id) === String(id));
-  const I = EFF_INTEL || {};
-  const ek = k === 'ytd' ? 'year' : k;
-  const span = (D.effort && D.effort.spans) ? (D.effort.spans[ek] || 1) : 1;
-  const t = eff && eff[ek] ? eff[ek].t : null;
-  const goal = eff ? ((eff.goal ?? D.effort.defaultGoal) || 0) * span : 0;
-  const pct = t != null && goal ? Math.round(100 * t / goal) : null;
-  const st = (I.streaks || []).find(x => String(x.rep_id) === String(id));
-  const lt = (I.light || []).find(x => String(x.rep_id) === String(id));
-  const es = (I.est || []).find(x => String(x.rep_id) === String(id));
-  const sp = (I.speed || []).find(x => String(x.rep_id) === String(id));
-  const chips = [];
-  if (t != null) chips.push(`<span class="${pct == null ? 'none' : pct >= 100 ? 'hot' : pct >= 50 ? 'warm' : 'cold'}" title="touches logged in the app vs their own goal, this window"><i>hustle</i> ${t}${goal ? `/${goal}` : ''}</span>`);
-  if (st && +st.streak >= 2) chips.push(`<span class="hot" title="consecutive working days on their touch standard"><i>streak</i> ${st.streak}d 🔥</span>`);
-  if (lt && +lt.book > 0) { const b = Math.max(1, +lt.green + +lt.yellow + +lt.red);
-    const g = Math.round(100 * +lt.green / b);
-    chips.push(`<span class="${g >= 50 ? 'hot' : g >= 30 ? 'warm' : 'cold'}" title="live customers with all four plays done or signed · red = plays overdue"><i>4-touch</i> ${g}% green${+lt.red ? ` · ${lt.red} red` : ''}</span>`); }
-  if (es && +es.missing > 0) chips.push(`<span class="cold" title="appointments that ran with no estimate on the customer file yet"><i>est</i> ${es.missing} owed</span>`);
-  if (sp && sp.avg_hours != null) chips.push(`<span class="${+sp.avg_hours <= 24 ? 'hot' : +sp.avg_hours <= 72 ? 'warm' : 'cold'}" title="average hours from a customer's first appointment to their first logged touch, 30 days"><i>1st touch</i> ${(+sp.avg_hours).toFixed(0)}h</span>`);
-  if (!chips.length) return '';
-  return `<div class="ct-line hustle">${chips.join('')}</div>`;
-}
+/* hustleMini — the one-line effort chip strip (#60) — is gone: the v9 rep
+   card's six tanks are that strip grown up, and one card must not say the
+   same fact twice. The .ct-line.hustle CSS stays for the drawer's chips. */
 
 function closeMini(id){
   const ct = D.closeTrend && D.closeTrend.byId[String(id)];
@@ -3809,7 +4162,15 @@ function cardEffort(){
 let EFF_INTEL = null;
 async function loadEffortIntel(){
   const win = EFFWIN === 'day' ? 'day' : EFFWIN === 'month' ? 'month' : 'week';
-  const [mix, close, light, streaks, speed, est, pipe] = await Promise.all([
+  /* GAME PTS (the v9 tank, Kevin's 20 Aug ruling: keep the points gauge,
+     relabel it "Game pts" — touches stay binary everywhere else). The ledger
+     is score_events, which carries NO rep_id — attribution rides the jobs FK,
+     embedded server-side. Two honesty guards: rows are month-to-date only,
+     and future-dated events (appt points exist for appointments not yet run)
+     are capped at now client-side — a point is not scored before its play. */
+  const d0 = new Date();
+  const mStart = `${d0.getFullYear()}-${String(d0.getMonth()+1).padStart(2,'0')}-01`;
+  const [mix, close, light, streaks, speed, est, pipe, gameRows] = await Promise.all([
     q(`rpc/touch_board?p_win=${win}`).catch(() => null),
     q('rpc/touch_close_stats').catch(() => null),
     q('rpc/touch_light_board').catch(() => null),
@@ -3817,11 +4178,22 @@ async function loadEffortIntel(){
     q('rpc/first_touch_speed').catch(() => null),
     q(`rpc/estimate_board?p_win=${win}`).catch(() => null),
     q('rpc/pipeline_value').catch(() => null),
+    q(`score_events?select=points_awarded,occurred_at,component_key,jobs(rep_id)&state=eq.done&occurred_at=gte.${mStart}`).catch(() => null),
   ]);
+  let game = null;
+  if (Array.isArray(gameRows)) {
+    game = Object.create(null);
+    const now = Date.now();
+    for (const r of gameRows) {
+      const rid = r.jobs && r.jobs.rep_id;
+      if (!rid || new Date(r.occurred_at).getTime() > now) continue;
+      game[String(rid)] = (game[String(rid)] || 0) + Number(r.points_awarded || 0);
+    }
+  }
   /* touch_hit_rates and book_coverage are no longer pulled: the cards that read
      them are gone — hit rates duplicated the channel mix, and the cooling book
      belongs to TruOdds now. The RPCs are untouched in the database. */
-  EFF_INTEL = { mix, close, light, streaks, speed, est, pipe, win };
+  EFF_INTEL = { mix, close, light, streaks, speed, est, pipe, game, win };
   render();
 }
 
@@ -8324,15 +8696,17 @@ let SECTION = (() => {
      from that week still resolve rather than falling back to Vitals. */
   const legacy = v => v === 'people' ? 'hustle' : v;
   const h = legacy((location.hash || '').replace(/^#/, ''));
-  if (SECTIONS.some(s => s.key === h)) return h;
+  if (SECTIONS.some(s => s.key === h) || h === 'all') return h;
   if (h) return 'vitals';
   try { const s = legacy(localStorage.getItem(SECTION_STORE));
-    if (SECTIONS.some(x => x.key === s)) return s; } catch(e){}
+    if (SECTIONS.some(x => x.key === s) || s === 'all') return s; } catch(e){}
   return 'vitals';
 })();
 function setSection(k){
   if (k === 'people') k = 'hustle';
-  if (!SECTIONS.some(s => s.key === k)) k = 'vitals';
+  /* 'all' is the phone's seventh tab — the classic single-column reading.
+     The desktop rail has no such key and resolves it to Vitals. */
+  if (!SECTIONS.some(s => s.key === k) && k !== 'all') k = 'vitals';
   SECTION = k;
   try { localStorage.setItem(SECTION_STORE, k); } catch(e){}
   render();
@@ -8350,6 +8724,21 @@ function railHtml(){
   </nav>`;
 }
 
+/* The phone's rail (KD, 20 Aug: "the search bar… on the mobile — it's so much
+   easier when you can just click through the screens"). Same SECTIONS list,
+   same stored choice, same hashes — a bottom tab bar because that is where a
+   thumb lives — plus the one tab the desktop doesn't need: ALL, the classic
+   single-column reading, kept one tap away rather than retired. */
+function mrailHtml(){
+  const tabs = [...SECTIONS, { key:'all', name:'All' }];
+  return `<nav class="mrail" aria-label="Sections">${tabs.map(s => {
+    const n = s.badge ? s.badge() : 0;
+    return `<button type="button" class="mrail-btn${SECTION === s.key ? ' on' : ''}"
+      aria-current="${SECTION === s.key ? 'true' : 'false'}" onclick="setSection('${s.key}')">${esc(s.name)}${
+      n ? `<span class="mrail-badge">${n}</span>` : ''}</button>`;
+  }).join('')}</nav>`;
+}
+
 /* One footer, both layouts — the data stamp must not fork between them. */
 function pageFoot(){
   return `<div class="foot">Trust the instrument, not the retelling<br/>
@@ -8362,13 +8751,13 @@ function pageFoot(){
 /* ── render ───────────────────────────────────────────────────────────────── */
 function render(){
   if (RDIVE) {
-    document.body.classList.remove('railed');
+    document.body.classList.remove('railed', 'mnav');
     document.getElementById('app').innerHTML = repView(RDIVE) +
       `<div class="foot">Trust the instrument, not the retelling</div>`;
     return;
   }
   if (DIVE) {
-    document.body.classList.remove('railed');
+    document.body.classList.remove('railed', 'mnav');
     document.getElementById('app').innerHTML = diveView(DIVE) +
       `<div class="foot">Trust the instrument, not the retelling</div>`;
     drawCharts();
@@ -8379,6 +8768,7 @@ function render(){
      so the two layouts can never show different numbers. */
   const desktop = window.innerWidth >= RAIL_MIN;
   document.body.classList.toggle('railed', desktop);
+  document.body.classList.toggle('mnav', !desktop);
   if (desktop) {
     const sec = SECTIONS.find(s => s.key === SECTION) || SECTIONS[0];
     /* The hash mirrors the selected section so it can be bookmarked.
@@ -8390,6 +8780,20 @@ function render(){
     drawCharts();
     return;
   }
+  /* The phone: same sections, bottom tab bar, plus the ALL tab holding the
+     classic column. One section mounted at a time here too — the point of
+     click-through is not rendering five screens you are not on. */
+  if (SECTION !== 'all') {
+    const sec = SECTIONS.find(s => s.key === SECTION) || SECTIONS[0];
+    if ((location.hash || '').slice(1) !== sec.key)
+      try { history.replaceState(history.state, '', location.pathname + '#' + sec.key); } catch(e){}
+    document.getElementById('app').innerHTML =
+      hdrTitle() + askBar() + sec.render() + pageFoot() + mrailHtml();
+    drawCharts();
+    return;
+  }
+  if ((location.hash || '').slice(1) !== 'all')
+    try { history.replaceState(history.state, '', location.pathname + '#all'); } catch(e){}
   /* ── THE SIX BANDS · THE PHONE READING ─────────────────────────────────────
      Below the rail's desktop line the console stays what it has always been:
      one continuous column, top to bottom as one argument, and the order is the
@@ -8481,7 +8885,7 @@ function render(){
       /* …and the room, directly under the quadrant. Its preview shelf is always
          drawn; what is open inside it is remembered per device. */
       effortRoom(),
-    ].join('') + '</div>' + pageFoot();
+    ].join('') + '</div>' + pageFoot() + mrailHtml();
   drawCharts();
 }
 
@@ -8926,7 +9330,7 @@ addEventListener('resize', () => {
    the last one, it is to tell a human which build is on the server and when it
    got there. A number nobody clocked cannot answer that, and the first time it
    is asked in anger will be the morning a stale build is being chased. */
-const BUILD = '2026-08-20T06:39Z-apptco-marketing';
+const BUILD = '2026-08-20T12:13Z-rep-gauges-mrail';
 const SB_URL = 'https://lzegjjbkfuecrhdvlvay.supabase.co';
 /* The one page that can finish a password reset. Hard-coded rather than derived,
    because every derivation of it so far has been a source of bugs: a bare origin
@@ -11063,7 +11467,10 @@ function buildData(raw){
       r.all++; r.plays[t.play] = (r.plays[t.play]||0)+1;
       const bump = b2 => { b2.t++; b2.p += pts; };
       if (inR(t.occurred_at,yearA,yearB)) bump(r.year);
-      if (inR(t.occurred_at,monthA,monthB)) bump(r.month);
+      if (inR(t.occurred_at,monthA,monthB)) { bump(r.month);
+        /* Which DAYS this month carried at least one touch — the v9 card's
+           participation tank reads it: showing up is its own metric. */
+        (r.mdays ??= new Set()).add(String(t.occurred_at).slice(0,10)); }
       if (inR(t.occurred_at,weekA,weekB)) bump(r.week);
       if (inR(t.occurred_at,todayA,todayB)) bump(r.day);
     }
@@ -11071,6 +11478,7 @@ function buildData(raw){
     const rows = active.map(r => { const v = byRep[r.id]||blank(); const g = goals[r.id];
       return { id:r.id, name:r.name, initials:r.initials, role:r.role,
         goal: g?.daily_touch_goal ?? null, goalSource: g?.goal_source ?? null,
+        daysActiveM: v.mdays ? v.mdays.size : 0,
         today:v.day.t, week:v.week.t, month:v.month.t, points:v.month.p, ...v }; })
       .sort((a,b2)=>b2.month.t-a.month.t || b2.all-a.all || a.name.localeCompare(b2.name));
     const bizDays = (a,b2) => { let n=0;
@@ -11604,6 +12012,50 @@ function buildData(raw){
              byId: Object.fromEntries(rows.map(r => [r.id, r])), team: finish(team) };
   })();
 
+  /* ── THE REP HEARTBEAT (v9) ──────────────────────────────────────────────────
+     Each seller's WEEKLY close rate over the last nine 7-day buckets ending
+     today — the trace at the top of the v9 rep card. Signings are the same
+     union closeTrend counts (CC contracts, non-duplicated Billdu acceptances,
+     open rung bells), appointments are CC's calendar capped at now, so this
+     heartbeat and the trailing-window chips can never disagree about what a
+     signing is. The dashed STANDARD on every card is one line with one
+     meaning: the median of the TEAM's blended weekly close over these same
+     nine weeks — a rep is read against the floor's own rhythm, not a number
+     typed from memory. A week with no elapsed appointments is a null, never
+     a zero: no denominator is not a cold week. */
+  const repPulse = (() => {
+    const NW = 9;
+    const endD = sod(NOW);
+    const bounds = [];
+    for (let i = NW - 1; i >= 0; i--) bounds.push([addD(endD, -7*(i+1)), addD(endD, -7*i)]);
+    const seller = Object.fromEntries(reps.filter(r => r.active).map(r => [r.id, r]));
+    const blank2 = () => bounds.map(() => ({ a: 0, s: 0 }));
+    const by = {};
+    const at = (rid, t, f) => { if (!rid || !seller[rid] || t == null || isNaN(t)) return;
+      for (let i = 0; i < NW; i++) if (t >= bounds[i][0].getTime() && t < bounds[i][1].getTime() + (i === NW-1 ? 86400000 : 0)) { (by[rid] ??= blank2())[i][f]++; return; } };
+    for (const x of appts) { if (!x.starts_at) continue;
+      const t = new Date(x.starts_at).getTime();
+      if (t <= NOW.getTime()) at(x.rep_id, t, 'a'); }
+    for (const j of jobs) if (j.contract_signed_at) at(j.rep_id, new Date(j.contract_signed_at).getTime(), 's');
+    if (billdu && billdu.feed) for (const r of billdu.feed) {
+      const rid = bRepOf[String(r.billdu_id)];
+      if (!rid || rid === OFFICE) continue;
+      if (r.job_id && ccSignedMap && ccSignedMap[r.job_id] === true) continue;
+      if (r.accepted_at) at(rid, new Date(r.accepted_at).getTime(), 's');
+    }
+    for (const c of (claims || [])) {
+      if (c.status !== 'pending' || c.cc_already_counted || c.cc_state === 'job_linked') continue;
+      at(c.rep_id, new Date(String(c.signed_on || '').slice(0,10) + 'T12:00:00').getTime(), 's');
+    }
+    const closes = v => v.map(wv => wv.a ? Math.round(100 * wv.s / wv.a) : null);
+    const team = bounds.map((_, i) => { let a = 0, s = 0;
+      for (const v of Object.values(by)) { a += v[i].a; s += v[i].s; }
+      return a ? Math.round(100 * s / a) : null; });
+    return { labels: bounds.map(([a]) => `${a.getMonth()+1}/${a.getDate()}`),
+      byId: Object.fromEntries(Object.entries(by).map(([id, v]) => [id, { close: closes(v), w: v }])),
+      team, std: pMedian(team.filter(x => x != null)) };
+  })();
+
   /* ── THE EIGHT-WEEK CLOSE BASELINE. Kevin (18 Aug): "closing % is my fav
      especially if we're already showing the reps closing %" — so the board
      total finally carries the same number the rep rows carry, and it is asked
@@ -12131,7 +12583,7 @@ function buildData(raw){
 
   return {
     generatedAt: new Date().toISOString(),
-    oasisLag, exclusions, sampleReps, signals, closeTrend, close8w, rhythm, bestWorst, discoveries, apptWtd, pipeline, closeLag, signedPulse,
+    oasisLag, exclusions, sampleReps, signals, closeTrend, close8w, rhythm, bestWorst, discoveries, apptWtd, pipeline, closeLag, signedPulse, repPulse,
     /* THE PULSE reads the whole history in `jobs` and `qb_invoices`, so it is
        deliberately NOT scoped to the month window — a normal built from the
        month the owner happens to be looking at is not a normal. It is the one
