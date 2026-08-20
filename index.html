@@ -4266,7 +4266,9 @@ function roomRedraw(){
   const el = document.getElementById('effort-room');
   if (!el) { render(); return; }
   const y = window.scrollY;
-  el.outerHTML = effortRoom();
+  /* The railed body class says which form of the room is on screen, so an
+     in-place redraw can never swap the section form for the shelf one. */
+  el.outerHTML = effortRoom(document.body.classList.contains('railed'));
   window.scrollTo({ top: y });
   /* No instrument in the room draws to a canvas today. The guard stays because
      one that grows a chart later must be measured after it is visible: a canvas
@@ -4442,7 +4444,22 @@ const ROOM_KIT = [
   { key:'streaks', name:'Consistency · streaks',         card: cardConsistency, tile: ptConsistency },
 ];
 
-function effortRoom(){
+function effortRoom(direct){
+  /* THE SECTION FORM. On the railed desktop this room IS the People section:
+     the rail already solos it, so a second door in front of it is a door
+     inside a door — the seven instruments render open, no tiles, no solo/all
+     state, nothing to close. The phone keeps the shelf below: there the room
+     still sits mid-column, and seven full instruments in a row is the wall
+     the shelf was built to prevent. lcc.room keeps governing the phone. */
+  if (direct) return `<div class="room" id="effort-room">
+    <div class="shelf-head">
+      <div class="shelf-titles">
+        <div class="card-title">Why a rep's numbers look like that</div>
+        <div class="card-sub">Seven instruments — who dials, who finishes the plays, who captures the number, how fast the first touch goes out. This is where a rep gets diagnosed rather than ranked.</div>
+      </div>
+    </div>
+    <div class="room-body">${prodBand()}${ROOM_KIT.map(i => i.card()).join('')}</div>
+  </div>`;
   const all = ROOM_VIEW.mode === 'all';
   const solo = ROOM_VIEW.mode === 'solo' ? ROOM_KIT.find(i => i.key === ROOM_VIEW.key) : null;
 
@@ -5239,7 +5256,9 @@ function mktRedraw(){
   const el = document.getElementById('marketing-room');
   if (!el) { render(); return; }
   const y = window.scrollY;
-  el.outerHTML = marketingRoom();
+  /* Same rule as roomRedraw: the railed body class picks the form, so a month
+     step or a saved spend redraws the board the reader is actually in. */
+  el.outerHTML = marketingRoom(document.body.classList.contains('railed'));
   window.scrollTo({ top: y });
 }
 function mktSolo(key){
@@ -5358,7 +5377,27 @@ function mktGate(){
    one-value state machine as the Effort Room: nothing open, one level open,
    or all three — the body is built from exactly one branch, so opening a
    tile and then expanding all cannot render a section twice. */
-function marketingRoom(){
+function marketingRoom(direct){
+  /* THE SECTION FORM — same reasoning as effortRoom(direct): on the railed
+     desktop this room IS the Marketing section, so the whole board renders
+     open in its reading order, brand → source → rep. The month pager, the
+     nag, the gate, the flags and the footer ride exactly as they do when the
+     shelf opens the board. The phone keeps the shelf and lcc.mkt below. */
+  if (direct) {
+    loadMktWalk();   // the source level is on screen, so the walk is owed now
+    const gate = mktGate();
+    const inner = gate || MKT_KIT.map(i => i.panel()).join('');
+    const tail = gate ? '' : `<div class="m2-stack" style="margin-top:12px">${mkHeldAsk()}${cardMktFlags()}</div>` + mkFoot();
+    return `<div class="room" id="marketing-room">
+      <div class="shelf-head">
+        <div class="shelf-titles">
+          <div class="card-title">Marketing · what it cost and what it gave back</div>
+          <div class="card-sub">One board, three levels, reading brand → source → rep — the month against the whole spend book by brand, every source against the ten-times line, and which rep closes which kind of lead. Sections with no honest feed say so where they sit.</div>
+        </div>
+      </div>
+      <div class="room-body">${mkMonthBar()}${gate ? '' : mkNag()}${inner}${tail}</div>
+    </div>`;
+  }
   const all = MKT_VIEW.mode === 'all';
   const solo = MKT_VIEW.mode === 'solo' ? MKT_KIT.find(i => i.key === MKT_VIEW.key) : null;
   const open = all || !!solo;
@@ -7922,8 +7961,12 @@ const RAIL_MIN = 900;   // the page's one desktop line — same as the masonry a
 const SECTIONS = [
   { key:'vitals',    name:'Vitals',    render: () => cardVitals() },
   { key:'sales',     name:'Sales',     render: () => '<div class="stack bands">' + cardReps() + cardApptByCompany() + '</div>' },
-  { key:'marketing', name:'Marketing', render: () => '<div class="stack bands">' + marketingRoom() + '</div>' },
-  { key:'people',    name:'People',    render: () => '<div class="stack bands">' + cardQuadrant() + effortRoom() + '</div>' },
+  /* The rooms render DIRECT here — the whole board, no preview shelf and no
+     open/close state. The rail already solos a section, so the page-level
+     takeover the shelves performed is redundant on the desktop; the phone
+     column below RAIL_MIN keeps the shelves and their stores untouched. */
+  { key:'marketing', name:'Marketing', render: () => '<div class="stack bands">' + marketingRoom(true) + '</div>' },
+  { key:'people',    name:'People',    render: () => '<div class="stack bands">' + cardQuadrant() + effortRoom(true) + '</div>' },
   { key:'money',     name:'Money',     render: () => hdr() },
   /* The one counted section: the badge is the Attention board's own row list
      (attnRows), so the number on the rail and the rows behind the click are
