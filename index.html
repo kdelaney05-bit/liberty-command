@@ -306,6 +306,22 @@
   .vit-mi-foot { display: flex; align-items: center; gap: 8px; min-height: 10px; }
   /* The master wears the same strip, capped to its own 560px track. */
   .vit-master .vit-mi-foot { margin-top: 7px; max-width: var(--trace-max); }
+  /* ── THE BRAND LENS ────────────────────────────────────────────────────────
+     Under the company trace, the same visual per brand (KD, 19 Aug: "a smaller
+     exact same visual but by branch/company"). Sales and production draw each
+     brand's own weeks against its OWN median; marketing and money carry a
+     judged figure instead, because their per-brand history cannot honestly be
+     a trace yet — the tile's drop-down says why. */
+  .vit-brands { display: flex; flex-direction: column; gap: 3px; margin-top: 2px;
+    padding-top: 5px; border-top: 1px solid rgba(255,255,255,0.06); }
+  .vit-br { display: flex; align-items: center; gap: 5px; min-height: 14px; }
+  .vit-br-dot { width: 6px; height: 6px; border-radius: 50%; flex: none; }
+  .vit-br-n { font-family: 'JetBrains Mono', monospace; font-size: 8px; font-weight: 700;
+    color: var(--text-dim); width: 8px; flex: none; }
+  .vit-br-spark { flex: 1 1 auto; line-height: 0; }
+  .vit-br-spark .ekg-mini { width: 100%; height: 14px; }
+  .vit-br-v { font-family: 'JetBrains Mono', monospace; font-size: 8px; font-weight: 700;
+    letter-spacing: 0.02em; white-space: nowrap; flex: none; }
   .vit-chips { display: flex; gap: 3px; flex: 1 1 auto; }
   .vit-chips i { flex: 1; height: 4px; border-radius: 2px; background: rgba(138,160,148,0.22); }
   .vit-chips i.good { background: rgba(108,194,139,0.65); }
@@ -2186,6 +2202,20 @@ function heroTrend(){
   </div>`;
 }
 
+/* The Signed hero's perspective strip — its window's own trailing grain as
+   bars, the median dashed across, the live period in accent. Reads from
+   D.signedPulse (buildData), which walks signedUnion, so these bars and the
+   donut above them are one arithmetic. Hidden under the month time machine:
+   the strip is anchored to NOW and would caption a shifted month wrong. */
+function signedPulseHtml(k){
+  if (MONTHOFF) return '';
+  const P = D.signedPulse && D.signedPulse[k];
+  if (!P || !P.items || P.items.length < 3) return '';
+  return `<div class="ekg-wrap" style="margin-top:10px">${
+    rhythmBars(P.items.map(x => ({ ...x, ref: P.ref, num: short(x.v) })), { w:280, h:62, color:'var(--green)' })}
+    <div class="ekg-cap">${esc(P.cap)}${P.ref != null ? `<span class="ekg-cap-ref">╌╌ ${esc(P.refCap)}</span>` : ''}</div></div>`;
+}
+
 function hdrTitle(){
   return `<div style="margin-bottom:14px">
     <div class="eyebrow">TruReview · three companies</div>
@@ -2229,6 +2259,7 @@ function hdr(){
             <div class="name">${esc(m.n)}${b.billdu?'<span class="tick">billdu</span>':''}${rg?`<span class="tick bell">🔔 ${short(rg.value)} rung</span>`:''}</div>
             <div class="val">${b.rev?`${short(b.rev)} · ${pct(b.rev, W.rev)}%`:'$0'}</div></div>`; }).join('')}</div>
         ${W.rung && W.rung.value ? `<div class="snap-bell">incl. 🔔 <b>${short(W.rung.value)}</b> rung · ${W.rung.count} deal${W.rung.count===1?'':'s'} awaiting the book — comes off in 5 business days if never turned in<span class="feed-tag bell">bell</span></div>` : ''}
+        ${signedPulseHtml(k)}
         <div class="snap-s">${sub}</div>
         <div class="snap-d ${d===null?'flat':d>=0?'up':'down'}">${d===null?'—':(d>=0?'▲':'▼')+' '+Math.abs(d)+'% vs '+esc(W.prevLabel)}</div>
         <div class="snap-go">details <span class="go-chev">›</span></div>
@@ -6870,6 +6901,20 @@ function vitMarketing(){
     /* worse/unit drive the tile's rhythm strip and Kevin's streak law; micro
        is the tile's own headline. Months, because that is this vital's grain. */
     worse:'below', unit:'mo', micro:{ num:`$${cur.roi.toFixed(2)}`, sub:'per $1' },
+    /* The lens here is a NUMBER per brand, not a trace: a per-brand ROI needs
+       the month's book keyed BY BRAND (167), and most history is unsplit — a
+       two-point trace would be noise wearing a shape. Judged against the $10
+       line, the ruling every ROI on this console answers to. */
+    brands: (() => {
+      const book = mkBrandSpend(cur.key), by = cur.byBrand || {};
+      return BRAND_ORDER.map(bid => {
+        const sp = book && book.byBrand[bid] > 0 ? book.byBrand[bid] : null;
+        if (!sp) return { id: bid, s: brandOf(bid).s, c: brandOf(bid).c, band:'dark', chip:'unsplit' };
+        const roi = (by[bid] || 0) / sp;
+        const bst = vitState(Math.max(0, 1 - roi / VIT.marketing.floor), VIT.marketing);
+        return { id: bid, s: brandOf(bid).s, c: brandOf(bid).c, band: bst.band, chip: `$${roi.toFixed(1)}` };
+      });
+    })(),
     /* MARKETING IS NOT IN THE MASTER, and the master says so: its newest
        reading is a closed month old, so blending it into a weekly line would
        mix two clocks. It colours its own tile and stops there. */
@@ -6902,6 +6947,18 @@ function vitSales(){
   return { key:'sales', tag:'SLS', name:'SALES', label:'signed dollars a week',
     grain:'weeks', live:true, band:st.band, dist:st.dist, series:s, ref, inMaster:true,
     worse:'below', unit:'wk', micro:{ num: short(cur), sub:'7 days' },
+    /* The brand lens: the same weeks, the same union, one brand at a time —
+       each judged against ITS OWN median by the vital's own rule, because a
+       brand a third the size is not a third as healthy. No median → no verdict. */
+    brands: V.sales.byBrand ? BRAND_ORDER.map(bid => {
+      const bs = V.sales.byBrand[bid], bc = bs[N], br = vitMed(bs.slice(0, N));
+      if (!(br > 0)) return { id: bid, s: brandOf(bid).s, c: brandOf(bid).c,
+        series: bs, ref: null, band:'dark', chip:'—' };
+      const bst = vitState(Math.max(0, 1 - bc / br), VIT.sales);
+      const g = Math.round((bc / br - 1) * 100);
+      return { id: bid, s: brandOf(bid).s, c: brandOf(bid).c, series: bs, ref: br,
+        band: bst.band, chip: `${g >= 0 ? '+' : '−'}${Math.abs(g)}%` };
+    }) : null,
     read: `${short(cur)} signed, ${gap === 0 ? 'level with' : gap > 0 ? `${gap}% above` : `${Math.abs(gap)}% below`} your 8-week median`,
     refNote:'median of your last 8 complete weeks',
     keys: [
@@ -6934,6 +6991,15 @@ function vitProduction(){
     /* worse is ABOVE for this one vital: a stalled share climbing over its
        median is the bad direction, so the strip and the streak read that way. */
     worse:'above', unit:'wk', micro:{ num:`${Math.round(cur)}%`, sub:'stalled' },
+    brands: V.production.byBrand ? BRAND_ORDER.map(bid => {
+      const bs = V.production.byBrand[bid], bc = bs[N], br = vitMed(bs.slice(0, N));
+      if (bc == null || br == null) return { id: bid, s: brandOf(bid).s, c: brandOf(bid).c,
+        series: bs, ref: null, band:'dark', chip:'—' };
+      const bst = vitState(bc - br, VIT.production);
+      const g = Math.round(bc - br);
+      return { id: bid, s: brandOf(bid).s, c: brandOf(bid).c, series: bs, ref: br,
+        band: bst.band, chip: `${g >= 0 ? '+' : '−'}${Math.abs(g)}pt` };
+    }) : null,
     read: `${Math.round(cur)}% of the open book is past ${VIT.production.stallDays} days — ${
       d === 0 ? 'level with' : d > 0 ? `${d} points above` : `${Math.abs(d)} points below`} its 8-week median`,
     refNote:'median of your last 8 complete weeks',
@@ -6980,6 +7046,15 @@ function vitMoney(){
     /* No series means no rhythm strip and no streak — a snapshot cannot have a
        run of bad weeks. The tile's headline carries the one figure instead. */
     micro:{ num:`${Math.round(M.meanAge)}d`, sub:'avg age' },
+    /* The lens: each brand's own dollar-weighted mean age against the same
+       fixed band. A brand with nothing owed reads a dash, never 0 days. */
+    brands: BRAND_ORDER.map(bid => {
+      const age = M.ageByBrand ? M.ageByBrand[bid] : null;
+      if (age == null) return { id: bid, s: brandOf(bid).s, c: brandOf(bid).c, band:'dark', chip:'—' };
+      const bst = vitState(age - VIT.money.good,
+        { watch: VIT.money.watch - VIT.money.good, problem: VIT.money.problem - VIT.money.good });
+      return { id: bid, s: brandOf(bid).s, c: brandOf(bid).c, band: bst.band, chip: `${Math.round(age)}d` };
+    }),
     read: `${Math.round(M.meanAge)} days is the average age of ${short(M.openTotal)} owed to you`,
     refNote:`your line: green to ${VIT.money.good} days, watch to ${VIT.money.watch}, problem past ${VIT.money.problem}`,
     keys: [
@@ -7132,6 +7207,19 @@ function vitMicroHtml(v){
     </span>
     <span class="vit-trace">${shape}</span>
     ${vitStripHtml(v)}
+    ${v.brands ? `<span class="vit-brands">${v.brands.map(b => {
+      const bc2 = VIT_C[b.band];
+      const pts = (b.series || []).filter(x => x != null && isFinite(x));
+      const spark = pts.length >= 2
+        ? ekgSpark(pts.map(x => ({ v: x, t: b.ref })),
+            { id:`vit-${v.key}-${b.id}`, w:70, h:14, mini:true, color: bc2, glow: bc2 })
+        : '';
+      return `<span class="vit-br">
+        <i class="vit-br-dot" style="background:${b.c}"></i>
+        <span class="vit-br-n">${esc(b.s.slice(0, 1))}</span>
+        <span class="vit-br-spark">${spark}</span>
+        <span class="vit-br-v" style="color:${bc2}">${esc(b.chip)}</span>
+      </span>`; }).join('')}</span>` : ''}
   </button>`;
 }
 
@@ -8714,7 +8802,7 @@ addEventListener('resize', () => {
    the last one, it is to tell a human which build is on the server and when it
    got there. A number nobody clocked cannot answer that, and the first time it
    is asked in anger will be the morning a stale build is being chased. */
-const BUILD = '2026-08-20T03:17Z-micro-vitals';
+const BUILD = '2026-08-20T03:52Z-brand-lens';
 const SB_URL = 'https://lzegjjbkfuecrhdvlvay.supabase.co';
 /* The one page that can finish a password reset. Hard-coded rather than derived,
    because every derivation of it so far has been a source of bugs: a bare origin
@@ -9372,7 +9460,7 @@ function buildPulse(jobs, qbInv){
      biases the past toward the slow payers and makes creep read LOW. That is a
      false all-clear, so it is not drawn. Money is a snapshot, aged, and the
      card says which clock it used. */
-function buildVitals(jobs, qbInv, unionWeek){
+function buildVitals(jobs, qbInv, unionWeek, unionWeekBrand){
   const sod = d => new Date(d.getFullYear(), d.getMonth(), d.getDate());
   const end = new Date(pDayAdd(+sod(new Date()), -1));      // yesterday
   const N = VIT.weeks;                                      // 8 prior + 1 current
@@ -9395,11 +9483,19 @@ function buildVitals(jobs, qbInv, unionWeek){
      buildVitals without a union. */
   const signed = jobs.filter(j => j.contract_signed_at)
     .map(j => ({ t: +sod(new Date(j.contract_signed_at)), v: Number(j.fin_sold_amount || 0),
+                 b: rollup(j.cc_company_id),
                  done: j.completed_at ? +sod(new Date(j.completed_at)) : null }))
     .filter(j => !isNaN(j.t));
   const salesSeries = weeks.map(w => unionWeek
     ? unionWeek(new Date(w.s), new Date(pDayAdd(w.e, 1)))
     : signed.reduce((n, j) => inWeek(j.t, w) ? n + j.v : n, 0));
+  /* THE BRAND LENS (KD, 19 Aug: "underneath the overall companies graph…a
+     smaller exact same visual but by branch/company"). The same union, sliced
+     to one brand per week — Oasis from Billdu, bells by brand, exactly the
+     dollars the company line above them sums. Only built when the brand-aware
+     closure is supplied. */
+  const salesByBrand = unionWeekBrand ? Object.fromEntries(BRAND_ORDER.map(bid =>
+    [bid, weeks.map(w => unionWeekBrand(bid, new Date(w.s), new Date(pDayAdd(w.e, 1))))])) : null;
 
   /* ── PRODUCTION · the stalled share of the open backlog ───────────────────
      Exactly reconstructable at any past date, and it is the one of the four
@@ -9411,9 +9507,10 @@ function buildVitals(jobs, qbInv, unionWeek){
      would make the share prettier and less true; leaving them in only lifts
      the LEVEL, and this vital is scored on points off its own trailing median,
      which the level cannot reach. They are named in the drill. */
-  const openAt = t => {
+  const openAt = (t, bid) => {
     let n = 0, stalled = 0, deep = 0;
     for (const j of signed){
+      if (bid && j.b !== bid) continue;
       if (j.t > t || (j.done !== null && j.done <= t)) continue;
       n++;
       const age = pDayDiff(t, j.t);
@@ -9424,15 +9521,27 @@ function buildVitals(jobs, qbInv, unionWeek){
   };
   const prodAt = weeks.map(w => openAt(w.e));
   const prodSeries = prodAt.map(o => o.n ? 100 * o.stalled / o.n : null);
+  /* The lens again — each brand's own backlog aged by the same rule. A brand
+     with no open book in a week reads null there, never a fake 0% stalled. */
+  const prodByBrand = Object.fromEntries(BRAND_ORDER.map(bid =>
+    [bid, weeks.map(w => { const o = openAt(w.e, bid); return o.n ? 100 * o.stalled / o.n : null; })]));
 
   /* ── MONEY · the open book, aged from the invoice date ────────────────────
      due_date is not among the columns this console fetches, so the age is from
      the invoice date and the card says so rather than implying a due clock it
      never read. */
   const open = (qbInv || []).filter(r => !r.reporting_excluded && Number(r.balance || 0) > 0)
-    .map(r => ({ v: Number(r.balance || 0), age: pDayDiff(+end, +sod(new Date(r.txn_date))) }))
+    .map(r => ({ v: Number(r.balance || 0), b: r.cc_company_id ? rollup(r.cc_company_id) : null,
+                 age: pDayDiff(+end, +sod(new Date(r.txn_date))) }))
     .filter(r => isFinite(r.age));
   const openTotal = open.reduce((n, r) => n + r.v, 0);
+  /* The lens for money: each brand's own dollar-weighted mean age. null where
+     a brand holds no open balance — nothing owed is not a 0-day book. */
+  const ageByBrand = Object.fromEntries(BRAND_ORDER.map(bid => {
+    const mine = open.filter(r => r.b === bid);
+    const tot = mine.reduce((n, r) => n + r.v, 0);
+    return [bid, tot > 0 ? mine.reduce((n, r) => n + r.v * Math.max(0, r.age), 0) / tot : null];
+  }));
   const meanAge = openTotal > 0
     ? open.reduce((n, r) => n + r.v * Math.max(0, r.age), 0) / openTotal : null;
   const AGE_B = [[0,30,'0–30 days'],[30,60,'30–60'],[60,90,'60–90'],[90,1e9,'over 90']];
@@ -9461,13 +9570,13 @@ function buildVitals(jobs, qbInv, unionWeek){
   for (const j of signed){
     const d = new Date(j.t);
     const hit = months.find(x => x.y === d.getFullYear() && x.m === d.getMonth());
-    if (hit) hit.signed += j.v;
+    if (hit) { hit.signed += j.v; (hit.byBrand ??= {})[j.b] = (hit.byBrand?.[j.b] || 0) + j.v; }
   }
 
   return { end, weeks, months,
-           sales: { series: salesSeries },
-           production: { series: prodSeries, at: prodAt, now: prodAt[N] },
-           money: { aging, meanAge, openTotal, n: open.length } };
+           sales: { series: salesSeries, byBrand: salesByBrand },
+           production: { series: prodSeries, at: prodAt, now: prodAt[N], byBrand: prodByBrand },
+           money: { aging, meanAge, openTotal, n: open.length, ageByBrand } };
 }
 
 function buildData(raw){
@@ -10057,6 +10166,44 @@ function buildData(raw){
     monthly.push({ label: ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][a.getMonth()],
       current: i === 0, jobs: u.jobs, rev: u.rev });
   }
+
+  /* ── SIGNED, AGAINST ITS OWN RHYTHM ─────────────────────────────────────────
+     KD (19 Aug), on the Signed hero: it "still doesn't say anything that gives
+     perspective." A $48K donut with no normal beside it is a number asking to
+     be guessed at. Each hero window now carries the last stretch of its own
+     grain as bars with the median dashed across — the read the appointments
+     tile already earned. TODAY compares SAME WEEKDAYS (a Wednesday against
+     your last 8 Wednesdays — signed dollars have the same weekday rhythm
+     bookings do), the week against 8 complete weeks, the month against full
+     months. All from signedUnion, the one signed rule. */
+  const signedPulse = (() => {
+    const med = a => pMedian(a.filter(v => v != null && isFinite(v)));
+    const dow = NOW.getDay();
+    const dayPrior = [];
+    for (let i = 8; i >= 1; i--){ const a = addD(sod(NOW), -7*i);
+      dayPrior.push({ label:`${a.getMonth()+1}/${a.getDate()}`, v: signedUnion(a, addD(a, 1)).rev }); }
+    const day = { items:[...dayPrior, { label:'today', v: signedUnion(sod(NOW), addD(sod(NOW), 1)).rev, hot:true }],
+      ref: med(dayPrior.map(x => x.v)),
+      cap:`signed per ${DAYNAME[dow]} · today still filling`,
+      refCap:`median of your last 8 ${DAYNAME[dow]}s` };
+    const wkPrior = [];
+    for (let i = 8; i >= 1; i--){ const a = addD(sow(NOW), -7*i);
+      wkPrior.push({ label:`${a.getMonth()+1}/${a.getDate()}`, v: signedUnion(a, addD(a, 7)).rev }); }
+    const week = { items:[...wkPrior, { label:'this wk', v: signedUnion(sow(NOW), addD(sow(NOW), 7)).rev, hot:true }],
+      ref: med(wkPrior.map(x => x.v)),
+      cap:'signed per week · current week still filling',
+      refCap:'median of your last 8 complete weeks' };
+    const mPrior = monthly.slice(0, -1).slice(-8);
+    const mCur = monthly[monthly.length - 1];
+    const month = { items:[...mPrior.map(m => ({ label: m.label, v: m.rev })),
+        { label: mCur.label, v: mCur.rev, hot:true }],
+      ref: med(mPrior.map(m => m.rev)),
+      cap:'signed per month · current month still filling',
+      refCap:`median of your last ${mPrior.length} full months` };
+    /* YTD wears the monthly shape too: a year has no prior years on this feed
+       to be a bar against, and months are the honest grain underneath it. */
+    return { day, week, month, ytd: month };
+  })();
 
   const cadence = (() => {
     const a = sow(NOW), names = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
@@ -11857,7 +12004,7 @@ function buildData(raw){
 
   return {
     generatedAt: new Date().toISOString(),
-    oasisLag, exclusions, sampleReps, signals, closeTrend, close8w, rhythm, bestWorst, discoveries, apptWtd, pipeline, closeLag,
+    oasisLag, exclusions, sampleReps, signals, closeTrend, close8w, rhythm, bestWorst, discoveries, apptWtd, pipeline, closeLag, signedPulse,
     /* THE PULSE reads the whole history in `jobs` and `qb_invoices`, so it is
        deliberately NOT scoped to the month window — a normal built from the
        month the owner happens to be looking at is not a normal. It is the one
@@ -11868,7 +12015,14 @@ function buildData(raw){
        file; the colours are decided at render time because MARKETING's spend
        half arrives after first paint. */
     // The SLS trace reads the same union as every money tile (one-signed-rule).
-    vitals: buildVitals(jobs, qbInv, (a, b) => signedUnion(a, b).rev),
+    // The second closure is the same union sliced to one brand, for the brand
+    // lens under each vital's company trace — one arithmetic, two grains.
+    vitals: buildVitals(jobs, qbInv, (a, b) => signedUnion(a, b).rev,
+      (bid, a, b) => { const u = signedUnion(a, b);
+        return u.cc.filter(j => rollup(j.cc_company_id) === bid)
+                 .reduce((n, j) => n + Number(j.fin_sold_amount || 0), 0)
+          + (bid === OASIS && u.bd ? u.bd.value : 0)
+          + ((u.rg.byBrand[bid] || {}).value || 0); }),
     // the filtered roster by id, for the rep one-pager — name, role and the
     // sells flag travel together so the pager never re-derives who someone is
     roster: Object.fromEntries(reps.map(r =>
