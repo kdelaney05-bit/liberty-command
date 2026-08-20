@@ -511,6 +511,13 @@
   .ct-line .warm { color: var(--gold);  border-color: rgba(212,177,90,.45);  background: rgba(212,177,90,.08); }
   .ct-line .cold { color: var(--red);   border-color: rgba(217,106,94,.45);  background: rgba(217,106,94,.08); }
   .ct-line .none { color: var(--text-dim); }
+  /* The hustle strip under a seller's sales row — effort blended into the
+     money board. Same chip grammar as the close row above it, but FLEXED:
+     its chip count varies with what the feeds hold for that rep, and the
+     close row's fixed five-column grid would stretch two chips into planks. */
+  .ct-line.hustle { display: flex; flex-wrap: wrap; }
+  .ct-line.hustle > span { flex: 0 0 auto; min-width: 0; }
+  .ct-line.hustle > span:last-child { min-width: 0; font-weight: 400; font-size: 8.5px; }
   .ct-chips { display: grid; grid-template-columns: repeat(5, 1fr); gap: 3px; margin-top: 4px; max-width: 340px; }
   .ct-chip { border: 1px solid var(--line); border-radius: 5px; padding: 2px 2px 3px; text-align: center; min-width: 0; }
   .ct-chip .k { font-family: 'JetBrains Mono', monospace; font-size: 6px; letter-spacing: .06em; text-transform: uppercase; color: var(--text-dim); }
@@ -3311,17 +3318,31 @@ function cardReps(){
      exception. Office-sent rows are not sellers in any tense and stay behind
      the tap where they have always been. */
   const all = W.reps || [];
-  const sellerish = r => { const p = D.roster[String(r.id)] || {};
-    return !r.office && (p.sells || p.role === 'sales' || /\bgio\b/i.test(r.name || '')); };
+  /* WHO STANDS ON THE FIRST SCREEN — narrowed to the LIVE DESK (KD, 20 Aug:
+     "remove any salespeople below Hawkins… you can bury the other people,
+     they're dead"). Core is active sellers — the `sells` flag, Kevin's
+     build-36 ruling — plus Gio's standing exception and the no-rep gap row.
+     Everyone else FOLDS behind Show all: departed books, supervisors who
+     hustle the odd referral, cold desks. Buried, never deleted — their
+     dollars stay in every total above, the fold counts its departed out
+     loud, and one tap opens the record. This deliberately supersedes the
+     Jared-era CORE placement (departed sellers used to hold a first-screen
+     row in windows they sold); the period-roster law itself is untouched —
+     the window's NUMBERS still build from the period's data, so nothing a
+     departed rep signed leaves this board's totals. */
+  const rosterOf = r => D.roster[String(r.id)] || {};
+  const live = r => !r.office && rosterOf(r).active !== false
+    && (rosterOf(r).sells || /\bgio\b/i.test(r.name || ''));
   /* The no-rep pseudo-row stays on the first screen with the sellers — "pull
      the uncategorized out and make those obvious." Folding a data gap behind
      Show-all is how it stops being obvious. */
-  const core0 = all.filter(r => sellerish(r) || r.norep);
+  const core0 = all.filter(r => live(r) || r.norep);
   const rest0 = all.filter(r => !core0.includes(r));
   const reps = [...core0, ...rest0], CORE = core0.length, mx = Math.max(1, ...all.map(r=>r.rev));
+  const nGone = rest0.filter(r => rosterOf(r).active === false).length;
   const label = { day:'today', week:'this week', month:mSpan(), ytd:'this year' }[k];
   return `<div class="card">
-    <div class="card-title">Sales by rep<span class="feed-tag cc">live · cc</span></div>
+    <div class="card-title">Sales vitals<span class="feed-tag cc">live · cc</span></div>
     <div class="seg" style="margin:8px 0 4px">
       ${[['day','Day'],['week','Week'],['month','Month'],['ytd','YTD']].map(([kk,l])=>`<button class="${kk===k?'on':''}" onclick="setRepsWin('${kk}')">${l}</button>`).join('')}
     </div>
@@ -3363,8 +3384,9 @@ function cardReps(){
       ${repCap(r)}
       ${r.office?'':closeMini(r.id)}
       ${r.office?'':bankMini(r.id)}
+      ${r.office?'':hustleMini(r.id, k)}
     </div>`).join('')}
-    ${reps.length>CORE?`<button type="button" class="linkbtn" onclick="const x=[...this.parentElement.querySelectorAll('[data-extra]')];const open=x[0].style.display==='none';x.forEach(e=>e.style.display=open?'':'none');this.textContent=open?'Show fewer':'Show all ${reps.length} ›'">Show all ${reps.length} ›</button>`:''}
+    ${reps.length>CORE?`<button type="button" class="linkbtn" onclick="const x=[...this.parentElement.querySelectorAll('[data-extra]')];const open=x[0].style.display==='none';x.forEach(e=>e.style.display=open?'':'none');this.textContent=open?'Show fewer':'Show all ${reps.length}${nGone?` · ${nGone} departed`:''} ›'">Show all ${reps.length}${nGone?` · ${nGone} departed`:''} ›</button>`:''}
     ${reps.length?`<div class="note">Rep is read from the job's own <b>rep_id</b>. <b>${D.coverage.apptsWithRep.toLocaleString()} of ${D.coverage.appts.toLocaleString()}</b> appointments carry a rep, so close rates below that coverage are unknown rather than assumed. The <b>close %</b> beside the total is this window's own — union signings over appointments elapsed, blended across brands, so it moves with brand mix as well as with closing; it is stated against a trailing <b>8 weeks</b> ending today, and a move inside 3 points reads flat rather than as a direction.</div>`:''}
   </div>`;
 }
@@ -3467,6 +3489,38 @@ function bankMini(id){
   return `<div class="ct-line"><span class="none"><i>bank</i> ${short(b.banked)}</span><span class="none"><i>coming</i> ${short(b.coming)}</span><span class="none"><i>paid ytd</i> ${short(b.paidYtd)}</span></div>`;
 }
 
+/* ── THE HUSTLE STRIP (KD, 20 Aug: "box in all that cool effort data underneath
+   [each rep] … blend the hustle into the sales vitals") ─────────────────────
+   One compact line of effort under a seller's money line, in the close row's
+   own chip grammar: touches against goal for the board's window, the streak,
+   the 4-Touch book at a glance, estimates still owed, speed to first touch.
+   Every chip is the full card's own number shrunk, never a second computation
+   — the deep boards stay in the Hustle section for the working. Feeds that
+   have not answered simply contribute no chip: absent, never a fake zero. */
+function hustleMini(id, k){
+  const eff = (D.effort && D.effort.rows || []).find(x => String(x.id) === String(id));
+  const I = EFF_INTEL || {};
+  const ek = k === 'ytd' ? 'year' : k;
+  const span = (D.effort && D.effort.spans) ? (D.effort.spans[ek] || 1) : 1;
+  const t = eff && eff[ek] ? eff[ek].t : null;
+  const goal = eff ? ((eff.goal ?? D.effort.defaultGoal) || 0) * span : 0;
+  const pct = t != null && goal ? Math.round(100 * t / goal) : null;
+  const st = (I.streaks || []).find(x => String(x.rep_id) === String(id));
+  const lt = (I.light || []).find(x => String(x.rep_id) === String(id));
+  const es = (I.est || []).find(x => String(x.rep_id) === String(id));
+  const sp = (I.speed || []).find(x => String(x.rep_id) === String(id));
+  const chips = [];
+  if (t != null) chips.push(`<span class="${pct == null ? 'none' : pct >= 100 ? 'hot' : pct >= 50 ? 'warm' : 'cold'}" title="touches logged in the app vs their own goal, this window"><i>hustle</i> ${t}${goal ? `/${goal}` : ''}</span>`);
+  if (st && +st.streak >= 2) chips.push(`<span class="hot" title="consecutive working days on their touch standard"><i>streak</i> ${st.streak}d 🔥</span>`);
+  if (lt && +lt.book > 0) { const b = Math.max(1, +lt.green + +lt.yellow + +lt.red);
+    const g = Math.round(100 * +lt.green / b);
+    chips.push(`<span class="${g >= 50 ? 'hot' : g >= 30 ? 'warm' : 'cold'}" title="live customers with all four plays done or signed · red = plays overdue"><i>4-touch</i> ${g}% green${+lt.red ? ` · ${lt.red} red` : ''}</span>`); }
+  if (es && +es.missing > 0) chips.push(`<span class="cold" title="appointments that ran with no estimate on the customer file yet"><i>est</i> ${es.missing} owed</span>`);
+  if (sp && sp.avg_hours != null) chips.push(`<span class="${+sp.avg_hours <= 24 ? 'hot' : +sp.avg_hours <= 72 ? 'warm' : 'cold'}" title="average hours from a customer's first appointment to their first logged touch, 30 days"><i>1st touch</i> ${(+sp.avg_hours).toFixed(0)}h</span>`);
+  if (!chips.length) return '';
+  return `<div class="ct-line hustle">${chips.join('')}</div>`;
+}
+
 function closeMini(id){
   const ct = D.closeTrend && D.closeTrend.byId[String(id)];
   if (!ct) return '';
@@ -3478,7 +3532,10 @@ function closeMini(id){
 
 function cardCloseTrend(){
   const C = D.closeTrend; if (!C) return '';
-  const rows = C.rows.filter(r => r.d60.appts > 0 || r.d60.signed > 0);
+  /* Sellers only (KD, 20 Aug): a supervisor who hustles the odd referral is
+     not a desk to read a close rate on — his deals stay in every total, his
+     row leaves this board. Same `sells` flag the quota fleet carriers use. */
+  const rows = C.rows.filter(r => r.sells && (r.d60.appts > 0 || r.d60.signed > 0));
   const t = C.team;
   const cell = c => c.appts
     ? `<div class="ct-cell ${closeBand(c)}"><b>${c.close}%</b><span>${c.signed}/${c.appts}</span></div>`
@@ -8186,7 +8243,10 @@ const SECTIONS = [
      takeover the shelves performed is redundant on the desktop; the phone
      column below RAIL_MIN keeps the shelves and their stores untouched. */
   { key:'marketing', name:'Marketing', render: () => '<div class="stack bands">' + marketingRoom(true) + '</div>' },
-  { key:'people',    name:'People',    render: () => '<div class="stack bands">' + cardQuadrant() + effortRoom(true) + '</div>' },
+  /* "People" died in review (KD, 20 Aug: "I don't like the name… the people is
+     the effort… hustle"). HUSTLE is his word for the whole register — the
+     quadrant, the 4-Touch model, the effort instruments — so the rail says it. */
+  { key:'hustle',    name:'Hustle',    render: () => '<div class="stack bands">' + cardQuadrant() + effortRoom(true) + '</div>' },
   { key:'money',     name:'Money',     render: () => hdr() },
   /* The one counted section: the badge is the Attention board's own row list
      (attnRows), so the number on the rail and the rows behind the click are
@@ -8200,14 +8260,18 @@ let SECTION = (() => {
      recovery link, or a typo, and none of those earns an error. The dive and
      recovery hash grammars are untouched and never collide with these six
      words. */
-  const h = (location.hash || '').replace(/^#/, '');
+  /* 'people' was this section's launch name; bookmarks and stored choices
+     from that week still resolve rather than falling back to Vitals. */
+  const legacy = v => v === 'people' ? 'hustle' : v;
+  const h = legacy((location.hash || '').replace(/^#/, ''));
   if (SECTIONS.some(s => s.key === h)) return h;
   if (h) return 'vitals';
-  try { const s = localStorage.getItem(SECTION_STORE);
+  try { const s = legacy(localStorage.getItem(SECTION_STORE));
     if (SECTIONS.some(x => x.key === s)) return s; } catch(e){}
   return 'vitals';
 })();
 function setSection(k){
+  if (k === 'people') k = 'hustle';
   if (!SECTIONS.some(s => s.key === k)) k = 'vitals';
   SECTION = k;
   try { localStorage.setItem(SECTION_STORE, k); } catch(e){}
@@ -8802,7 +8866,7 @@ addEventListener('resize', () => {
    the last one, it is to tell a human which build is on the server and when it
    got there. A number nobody clocked cannot answer that, and the first time it
    is asked in anger will be the morning a stale build is being chased. */
-const BUILD = '2026-08-20T03:52Z-brand-lens';
+const BUILD = '2026-08-20T04:58Z-sales-vitals-hustle';
 const SB_URL = 'https://lzegjjbkfuecrhdvlvay.supabase.co';
 /* The one page that can finish a password reset. Hard-coded rather than derived,
    because every derivation of it so far has been a source of bugs: a bare origin
