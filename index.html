@@ -4872,6 +4872,18 @@ function mkCeilClass(actual, ceiling){
   return actual <= ceiling ? 'in' : actual <= ceiling * 1.15 ? 'wn' : 'rd';
 }
 
+/* Owner-typed lead count for a blind source-month (191) — null when none.
+   'ytd' sums whatever months are typed; the caller marks the coverage. */
+function mkManualLeads(src, monthKey){
+  if (!MKT || !Array.isArray(MKT.manualLeads)) return null;
+  if (monthKey === 'ytd') {
+    const vals = mkYtdMonths().map(k => mkManualLeads(src, k)).filter(v => v != null);
+    return vals.length ? vals.reduce((n, v) => n + v, 0) : null;
+  }
+  const row = MKT.manualLeads.find(m => m.source_name === src && String(m.month).slice(0, 10) === monthKey);
+  return row ? Number(row.leads) : null;
+}
+
 /* PostgREST returns a scalar-jsonb RPC as the body itself, not as a row array,
    so q() — which pages and spreads each page into a list — cannot read one.
    One request, no paging, the parsed body back. */
@@ -4912,7 +4924,7 @@ async function loadMarketing(){
   const monthKey = mkISO(start);
   /* Each feed fails on its own. A board where one dead feed blanks another
      section would hide a live number behind an unrelated outage. */
-  const [roi, roiBrand, spend, ads, signed, targets] = await Promise.all([
+  const [roi, roiBrand, spend, ads, signed, targets, manualLeads] = await Promise.all([
     qOne(`rpc/rpt_report_marketing_roi?win_start=${mkISO(start)}&win_end=${mkISO(end)}`).catch(e => ({ __err: e.status || 'x' })),
     /* The same signing rows grouped one dimension finer (source × brand, 169).
        Its own failure state: a missing 169 refuses the two brand-money
@@ -4931,6 +4943,8 @@ async function loadMarketing(){
        then grades against the dictated industry bands instead, and the
        targets fold says so. */
     q('marketing_targets?select=source_name,max_cpl,max_cpa').catch(() => null),
+    /* Owner-typed lead counts for the blind months (191). */
+    q('marketing_manual_leads?select=source_name,month,leads').catch(() => null),
   ]);
   /* ── THE BACKFILLED MONTHS READ THE BACKFILL ──────────────────────────────
      rpt_report_marketing_roi's by_source joins signed dollars onto a leads CTE
@@ -4966,7 +4980,7 @@ async function loadMarketing(){
   MKT = { roi: roiOk ? roi : null, roiErr: (roi && roi.__err) || null,
           roiBrand: (roiBrand && roiBrand.__err) ? null : roiBrand,
           roiBrandErr: (roiBrand && roiBrand.__err) || null,
-          spend, ads, signed, srcBackfill, targets, month: monthKey };
+          spend, ads, signed, srcBackfill, targets, manualLeads, month: monthKey };
   MKT_LOADING = false;
   render();
 }
@@ -6293,45 +6307,62 @@ function cardSourceRow(){
   const spendSub = r => {
     const share = (r.spend > 0 && book > 0) ? pc1(r.spend, book) : null;
     const sp = priceOf(r);
-    const cpl = (!leadsBlind && sp > 0 && Number(r.leads || 0)) ? sp / Number(r.leads) : null;
+    const cpl = (sp > 0 && Number(r.leads || 0)) ? sp / Number(r.leads) : null;
     if (share == null && cpl == null) return '';
+    /* The perspective read (KD, 21 Aug): the same spend as a % of what this
+       source itself signed — ROI turned upside down, riding the tooltip so
+       the caption stays one line. */
+    const persp = (r.spend > 0 && r.dollars > 0) ? (100 * r.spend / r.dollars).toFixed(1) : null;
     /* CPL grades against the typed per-lead ceiling when one exists (190) —
        "you put in how much you are willing to pay per lead." */
     const tgt = cpl != null ? mkTargetOf(r.src) : null;
     const cplCls = (tgt && tgt.max_cpl > 0) ? mkCeilClass(cpl, Number(tgt.max_cpl)) : null;
     const cplBit = cpl != null
       ? `<i class="${cplCls || ''}"${tgt && tgt.max_cpl > 0 ? ` title="cost per lead against YOUR typed ceiling of ${money(Number(tgt.max_cpl))} — set in the targets fold below"` : ''}>${money(cpl)}/lead${tgt && tgt.max_cpl > 0 ? ` <small>cap ${money(Number(tgt.max_cpl))}</small>` : ''}</i>` : '';
-    return `<span class="mk-pc">${share != null ? share + '% of book' : ''}${share != null && cpl != null ? ' · ' : ''}${cplBit}</span>${share != null ? `<div class="mk-bar spend"><i style="width:${Math.min(100, Math.round(Number(share)))}%"></i></div>` : ''}`;
+    return `<span class="mk-pc">${share != null ? `<i${persp != null ? ` title="${share}% of the whole ${ytd ? 'year' : 'month'} book — and ${persp}% of what ${esc(r.src)} itself signed (the source's own marketing rate; ROI reads the same two numbers the other way up)"` : ''}>${share}% of book</i>` : ''}${share != null && cpl != null ? ' · ' : ''}${cplBit}</span>${share != null ? `<div class="mk-bar spend"><i style="width:${Math.min(100, Math.round(Number(share)))}%"></i></div>` : ''}`;
   };
 
   const spendCell = r => {
     if (r.earned) return `<div class="col"><button type="button" class="mk-earn" onclick="mkTypeCost(this)"
       title="No cost has ever been keyed for ${esc(r.src)} in any month, so this is a channel that earns rather than a month somebody forgot — &quot;not entered&quot; is reserved for sources the book has proven cost money. Tap to type a cost anyway if that has changed."
-      aria-label="Earned — no cost ever entered for ${esc(r.src)}. Tap to enter one.">$0 · earned</button>
+      aria-label="Earned — no cost ever entered for ${esc(r.src)}. Tap to enter one.">earned</button>
       <div class="mk-spend" hidden><input type="number" min="0" step="1" inputmode="decimal" value=""
         placeholder="cost" aria-label="Spend for ${esc(r.src)}, ${esc(mkWinLabel())}"
-        onchange="saveSpend(${JSON.stringify(r.src).replace(/"/g, '&quot;')}, '${monthKey}', this)"></div></div>`;
+        onchange="saveSpend(${JSON.stringify(r.src).replace(/"/g, '&quot;')}, '${monthKey}', this)"></div>${spendSub(r)}</div>`;
     if (r.isG) {
-      if (r.g) return `<div class="col money" title="${esc(BRAND_ORDER.map(b => r.g.byBrand[b] != null ? `${BRANDS[b].s} ${money(r.g.byBrand[b])}` : null).filter(Boolean).join(' · '))} — card statements keyed by brand (170/171)${r.g.mgmt ? `, incl. ${money(r.g.mgmt)} Liam / Gate Digital mgmt per flag ✓2` : ''}">${money(r.spend)}<span class="mk-auto">card · by brand</span></div>`;
-      if (!spendBook) return `<div class="col absent">not entered<span class="mk-auto stale">spend book not applied</span></div>`;
-      return `<div class="col absent">not entered<span class="mk-auto stale">card month not keyed</span></div>`;
+      if (r.g) return `<div class="col money" title="${esc(BRAND_ORDER.map(b => r.g.byBrand[b] != null ? `${BRANDS[b].s} ${money(r.g.byBrand[b])}` : null).filter(Boolean).join(' · '))} — card statements keyed by brand (170/171)${r.g.mgmt ? `, incl. ${money(r.g.mgmt)} Liam / Gate Digital mgmt per flag ✓2` : ''}">${money(r.spend)}<span class="mk-auto">card · by brand</span>${spendSub(r)}</div>`;
+      if (!spendBook) return `<div class="col absent" title="the spend book (marketing_spend, 166) is not applied — no cost can be read or typed">—<span class="mk-auto stale">book</span></div>`;
+      return `<div class="col absent" title="Google's cost is the card statements, keyed by brand at month close (the ruling, 170/171) — this month's card is not keyed yet, so no figure prints and none is estimated">—<span class="mk-auto stale">card</span></div>`;
     }
-    if (!spendBook) return `<div class="col absent">not entered<span class="mk-auto stale">spend book not applied</span></div>`;
+    if (!spendBook) return `<div class="col absent" title="the spend book (marketing_spend, 166) is not applied — no cost can be read or typed">—<span class="mk-auto stale">book</span></div>`;
     /* A month typed per brand (167) shows its sum read-only: the database
        refuses a total over brand rows, so an input here would only error.
        The per-brand figures themselves read on the deep board. */
     const sp = mkSpendSplit(r.src, monthKey);
-    if (sp && sp.split) return `<div class="col money" title="${esc(BRAND_ORDER.map(b => sp.byBrand[b] != null ? `${BRANDS[b].s} ${money(sp.byBrand[b])}` : null).filter(Boolean).join(' · '))} — edit the brand rows, not a total">${money(sp.total)}<span class="mk-auto">split · by brand</span></div>`;
+    if (sp && sp.split) return `<div class="col money" title="${esc(BRAND_ORDER.map(b => sp.byBrand[b] != null ? `${BRANDS[b].s} ${money(sp.byBrand[b])}` : null).filter(Boolean).join(' · '))} — edit the brand rows, not a total">${money(sp.total)}<span class="mk-auto">split · by brand</span>${spendSub(r)}</div>`;
     const v = sp ? sp.total : null;
     return `<div class="col"><div class="mk-spend">
       <input type="number" min="0" step="1" inputmode="decimal" value="${v == null ? '' : v}"
-        placeholder="not entered" aria-label="Spend for ${esc(r.src)}, ${esc(mkWinLabel())}"
-        onchange="saveSpend(${JSON.stringify(r.src).replace(/"/g, '&quot;')}, '${monthKey}', this)"></div></div>`;
+        placeholder="—" title="the book proves this source costs money and this month has no figure yet — type it" aria-label="Spend for ${esc(r.src)}, ${esc(mkWinLabel())}"
+        onchange="saveSpend(${JSON.stringify(r.src).replace(/"/g, '&quot;')}, '${monthKey}', this)"></div>${spendSub(r)}</div>`;
   };
 
-  const leadsCell = r => leadsBlind
-    ? `<div class="col absent" title="rpt_report_marketing_roi windows leads on jobs.created_at, which is our row-insert time. The warehouse was backfilled in one shot on 20 Jul 2026, so this month's count is the backfill, not the month.">backfill-dated</div>`
-    : `<div class="col">${Number(r.leads || 0).toLocaleString()}${r.leads > 0 && pc(r.leads, totLeads) != null ? `<span class="mk-pc">${pc(r.leads, totLeads)}% of leads</span>` : ''}</div>`;
+  /* Three states, compact since the clean-up pass (KD, 21 Aug: "we're taking
+     up so much room with all these qualifications"): AUTO prints the number,
+     TYPED prints the owner's number with a small mark, and a blind month
+     nobody filled is a quiet dash that opens an input on tap — the paragraph
+     of why lives behind the rules tab, not on every row. */
+  const leadsCell = r => {
+    if (r.leads == null) return `<div class="col absent">${ytd
+      ? `<span title="typed on no month of the year — the RPC's counts are backfill-dated before Aug 2026; type a month's count from its own view and the year sums it">—</span>`
+      : `<button type="button" class="mk-earn dim" onclick="mkTypeCost(this)"
+          title="the RPC's count for this month is the 20 Jul backfill, not the month (rules tab) — auto fills from Aug 2026. Tap to type your own count for ${esc(r.src)}."
+          aria-label="Leads unavailable for ${esc(r.src)} — tap to type a count">—</button>
+        <div class="mk-spend" hidden><input type="number" min="0" step="1" inputmode="numeric" placeholder="leads"
+          aria-label="Typed lead count for ${esc(r.src)}, ${esc(mkWinLabel())}"
+          onchange="saveLeads(${JSON.stringify(r.src).replace(/"/g, '&quot;')}, '${monthKey}', this)"></div>`}</div>`;
+    return `<div class="col">${Number(r.leads).toLocaleString()}${r.leadsTyped ? `<span class="mk-auto stale" title="${ytd ? 'typed months only — blind months nobody filled add nothing' : 'your typed count (191) — the RPC is backfill-dated for this month; tap the number on the month view to change it'}">typed</span>` : ''}${r.leads > 0 && pc(r.leads, totLeads) != null ? `<span class="mk-pc">${pc(r.leads, totLeads)}% of leads</span>` : ''}</div>`;
+  };
 
   /* The ROI cell states WHICH kind of no-answer this is, and they are three
      different facts: `earned` (nothing was ever spent, so there is no ratio
@@ -6341,15 +6372,15 @@ function cardSourceRow(){
   const roiCell = r => r.roi != null
     ? `<div class="mk-roi ${mkRoiClass(r.roi)}">${Math.round(r.roi)}x</div>`
     : r.earned ? `<div class="mk-roi earned" title="no cost has ever been keyed for this source — there is no ratio to compute, and that is the finding, not a gap">earned</div>`
-    : r.spend === 0 ? `<div class="mk-roi none">no spend</div>`
-    : `<div class="mk-roi none">not entered</div>`;
+    : r.spend === 0 ? `<div class="mk-roi none" title="a typed zero — dividing by it is refused, never printed as infinity">—</div>`
+    : `<div class="mk-roi none" title="no ratio without a cost — the book proves this source costs money and the month is not keyed; type the spend and this lights">—</div>`;
 
   /* $/unit keeps the CPL rules' absences and rides the Closed caption. */
   const cpuOf = r => { const sp = priceOf(r);
     return (sp && sp > 0 && r.jobs) ? sp / r.jobs : null; };
 
   const apptsCell = r => {
-    const booked = (!leadsBlind && Number(r.leads || 0) > 0) ? pc(r.appts, Number(r.leads)) : null;
+    const booked = Number(r.leads || 0) > 0 ? pc(r.appts, Number(r.leads)) : null;
     /* THE BUY SIGNAL — cost per appointment against the industry break, and
        THE 48-HOUR LAW — median booking→appointment distance. Both live on
        this cell because both are facts about the appointment layer: what an
@@ -6370,13 +6401,13 @@ function cardSourceRow(){
         : `cost per appointment — the buy signal (KD, 21 Aug): at or under ${money(MK_APPT_COST_OK)} spend as much as the source allows; ${money(MK_APPT_COST_MAX)} is roofing's market ceiling; past it the source is not one to scale. Type this source's own ceiling in the targets fold and it grades against your number instead. Priced as ROI is — Google all-in from the card, Referral at its bonus row.`}">${money(perA)}/appt${tgt && tgt.max_cpa > 0 ? ` <small>cap ${money(Number(tgt.max_cpa))}</small>` : ''}</i>` : '',
       out ? `<i class="${outCls}" title="median booking→appointment distance for ${out.n} appointment${out.n === 1 ? '' : 's'} booked in the window (${out.overPct}% past ${MK_OUT_MAX_H}h) — the 48-hour law (KD, 21 Aug): past 48 hours out the customer starts shopping; 72 is the ceiling. This is the leading indicator for the cancel layer CC does not log.">${out.medH < 48 ? Math.round(out.medH) + 'h' : (out.medH / 24).toFixed(1) + 'd'} out</i>` : '',
     ].filter(Boolean).join(' · ');
-    return `<div class="col${r.appts ? '' : ' dim'}">${r.appts ? r.appts.toLocaleString() : '0'}${booked != null ? `<span class="mk-pc${booked >= 60 ? ' hot' : booked < 35 ? ' cold' : ''}" title="appointments booked in the window against its leads — a low rate is the lead→appointment gap: scheduling, speed to lead, or a setter problem, and it is the first place to look (KD, 21 Aug)">${booked}% booked</span>` : ''}${line2 ? `<span class="mk-pc">${line2}</span>` : ''}</div>`;
+    return `<div class="col${r.appts ? '' : ' dim'}">${r.appts ? r.appts.toLocaleString() : '0'}${booked != null ? `<span class="mk-pc${booked >= 60 ? ' hot' : booked < 35 ? ' cold' : ''}" title="appointments booked in the window against its leads${r.leadsTyped ? ' (your typed count)' : ''} — a low rate is the lead→appointment gap: scheduling, speed to lead, or a setter problem, and it is the first place to look (KD, 21 Aug)">${booked}% booked</span><div class="mk-bar"><i style="width:${Math.min(100, booked)}%;background:${booked >= 60 ? 'var(--green)' : booked < 35 ? 'var(--red)' : 'var(--gold)'}"></i></div>` : ''}${line2 ? `<span class="mk-pc">${line2}</span>` : ''}</div>`;
   };
   const closedCell = r => {
     const close = r.appts > 0 ? pc(r.jobs, r.appts) : null;
     const cpu = cpuOf(r);
     const sub = [close != null ? `${close}% close` : null, cpu != null ? `${money(cpu)}/unit` : null].filter(Boolean).join(' · ');
-    return `<div class="col${r.jobs ? '' : ' dim'}"${r.src === 'Referral' && cpu != null ? ` title="$/unit priced at the typed 'Referral bonuses' row (~${bonus ? money(bonus) : ''}) — the one earned source carrying a real dollar"` : ''}>${r.jobs ? Number(r.jobs).toLocaleString() : '0'}${sub ? `<span class="mk-pc${close != null && close >= 50 ? ' hot' : close != null && close < 25 ? ' warm' : ''}">${sub}</span>` : ''}</div>`;
+    return `<div class="col${r.jobs ? '' : ' dim'}"${r.src === 'Referral' && cpu != null ? ` title="$/unit priced at the typed 'Referral bonuses' row (~${bonus ? money(bonus) : ''}) — the one earned source carrying a real dollar"` : ''}>${r.jobs ? Number(r.jobs).toLocaleString() : '0'}${sub ? `<span class="mk-pc${close != null && close >= 50 ? ' hot' : close != null && close < 25 ? ' warm' : ''}">${sub}</span>` : ''}${close != null ? `<div class="mk-bar"><i style="width:${Math.min(100, close)}%;background:${close >= 50 ? 'var(--green)' : close < 25 ? 'var(--gold)' : 'rgba(143,213,168,0.55)'}"></i></div>` : ''}</div>`;
   };
   const signedCell = r => {
     const share = r.dollars > 0 ? pc1(r.dollars, totDollars) : null;
@@ -6420,7 +6451,7 @@ function cardSourceRow(){
   const blended = `<div class="mk-row" style="border-top:1px solid rgba(255,255,255,0.18);font-weight:600">
     <div class="nm">${ytd ? 'THE YEAR' : 'THE MONTH'}</div>
     <div class="col">${book > 0 ? money(book) : '<span class="dim">no spend book</span>'}${book > 0 ? `<span class="mk-pc">${ytd ? `${bookMonths.length} of ${mkYtdMonths().length} months typed` : 'the whole book'}</span>` : ''}</div>
-    <div class="col">${leadsBlind ? '<span class="dim">backfill</span>' : totLeads.toLocaleString()}</div>
+    <div class="col">${totLeads > 0 ? `${totLeads.toLocaleString()}${leadsBlind && all.some(r => r.leadsTyped) ? '<span class="mk-auto stale" title="sum of typed counts — blind months nobody filled add nothing">typed</span>' : ''}` : '<span class="dim" title="no honest lead count for this window — auto from Aug 2026, or type counts on the rows">—</span>'}</div>
     <div class="col">${totAppts ? totAppts.toLocaleString() : '<span class="dim">—</span>'}${!leadsBlind && totAppts && pc(totAppts, totLeads) != null ? `<span class="mk-pc">${pc(totAppts, totLeads)}% booked</span>` : ''}</div>
     <div class="col">${totUnits.toLocaleString()}${totUnits && totAppts > 0 ? `<span class="mk-pc">${pc(totUnits, totAppts)}% close</span>` : ''}</div>
     <div class="col money">${totDollars ? short(totDollars) : '—'}${totDollars ? '<span class="mk-pc">100%</span>' : ''}</div>
@@ -6508,9 +6539,9 @@ function cardSourceRow(){
       Every typed source reads <b>not entered</b> because <b>marketing_spend</b> (migration <b>166</b>) has not been applied — the table the office types into does not exist yet, so no ROI on this board can be computed. This is the honest state, not a zero: a source with no cost recorded is not a free source. Apply 166 and the inputs go live with no further deploy.</div></div>` : ''}
     ${ytd ? `<div class="withheld"><div class="wt">What the year view carries, and what it refuses</div><div class="wx">
       Signed dollars, units and appointments cover <b>every month of ${new Date().getFullYear()}</b> — Jan–Jun per source from <b>rpt_marketing_revenue_by_source_month</b> (migrations 172/189, validated against a live Contractors Cloud pull), Jul onward from the windowed RPC, the same instruments the trail draws. <b>Leads and CPL are refused for the year</b>: every lead before Aug 2026 carries the 20 Jul backfill timestamp, and a year column that is honest for one month of eight would read as a year. <b>ROI divides priced months only</b> — the spend book holds ${mkYtdBookMonths().length} typed month${mkYtdBookMonths().length === 1 ? '' : 's'} (${esc(mkYtdBookMonths().map(k => MNAMES[Number(k.slice(5, 7)) - 1]).join(', '))}) — so every multiple compares that set's dollars against that set's cost, never the year's revenue against two months of spend. Key more months into <b>marketing_spend</b> and the coverage widens with no deploy.</div></div>` : ''}
-    ${!ytd && leadsBlind ? `<div class="withheld"><div class="wt">The leads and CPL columns are withheld for ${esc(mkWinLabel())}</div><div class="wx">
+    ${!ytd && leadsBlind && live.some(r => r.leads == null) ? `<div class="withheld"><div class="wt">Some lead cells read a dash — auto counts start Aug 2026; tap a dash to type your own</div><div class="wx">
       <b>rpt_report_marketing_roi</b> dates a lead by <b>jobs.created_at</b> — when OUR row was written, not when the lead came in. The warehouse was loaded in one shot on <b>20 Jul 2026</b> (11,119 of 11,558 rows), so a July window returns the entire backfill: Google reads <b>4,282</b> against a true <b>253</b>. Months before July return zero, which is not the same as none. From <b>August 2026</b> both columns are real — measured 112 true against 113 reported — so they render there and are refused here. Closed jobs, closed dollars, <b>ROI and cost per unit are unaffected</b>: they are dated by <b>rpt_signings.signed_on</b>, which is correct in every window.</div></div>` : ''}
-    <div class="note">Closed jobs, closed dollars and the source list come from <b>rpt_report_marketing_roi</b> (160, corrected by <b>165</b>), grouped on <b>lead_sources.rollup_name</b> — migration 163's canonical rollup, never the raw CC name, which splits Angi three ways and Google five${backfilled ? ' — except this backfilled month, which reads migration 172’s table as stated above' : ''}. Appointments set are counted client-side by when the appointment was <b>booked</b>, off the same project→source join. ROI is closed dollars ÷ spend for the month shown, rounded to a whole multiple; within ±${MK_NEAR} of ${MK_LINE}x it reads neutral because one deal moves a small source across the line. <b>The small print is the percentage law</b> (the one-ledger pass, 21 Aug 2026): spend wears its share of the whole book, leads and signed dollars their share of the month — divided across every source, folded rows included, so shares sum whether or not a fold is open — appointments their booked rate against leads, closed jobs their close rate against appointments. <b>CPL and $/unit</b> ride the same captions and price exactly as ROI does — Google all-in from the card (170/171) — with one exception the approved board itself drew: <b>Referral</b> is priced at its typed bonus row (~) for those two figures while its ROI stays earned. Leads and units are deliberately different cohorts: CPL measures the faucet, $/unit measures what came out. <b>⚑3 vendor rows price no source anywhere on this row set</b> — unattributable spend is carried where totals belong: THE MONTH row, the reconciliation strip, and the headline, all of which read <b>mkBookTotal</b> and cannot disagree. <b>The trail</b> is the retired month-matrix riding each row — six months of signed dollars, oldest first, one shared scale so a bright cell means the same money on every line; exact figures are in each cell's tooltip, <b>†</b> months read migration 172's backfill table, and a dashed cell is a window that did not answer, which is a different fact from a zero. The MoM arrow retired with the matrix — the trail answers the same question with six months instead of one. Leads exclude the 12 reporting_excluded batch-entry anomalies, matching the RPC${leadsBlind ? ', and are withheld this month — see above' : ''}. <b>$0 · earned</b> means no cost has ever been keyed for that source in any month, so there is nothing to type; <b>not entered</b> is reserved for sources the book proves cost money and whose month has not been keyed, which makes that phrase a list worth chasing instead of wallpaper.${idle.length ? ` The <b>${idle.length}</b> folded source${idle.length === 1 ? '' : 's'} neither cost nor earned a dollar this month — folded, not dropped, and ${idle.length === 1 ? 'it opens' : 'they open'} on tap.` : ''} The <b>went quiet</b> fold keeps its own law: earned money in the walk's earlier months, nothing signed in the last two, anchored to today rather than the browsed month — dollars dated by <b>rpt_signings.signed_on</b>, unaffected by the lead backfill. <b>THE FUNNEL'S INDICATOR LAWS</b> (KD, dictated 21 Aug 2026), left to right: a low <b>booked %</b> is the lead→appointment gap — scheduling, speed to lead, or a setter problem, the first place to look; <b>$/appt</b> is the buy signal — at or under ${money(MK_APPT_COST_OK)} a source deserves every dollar it will take (fencing & landscapes settle $75–150; roofing runs to ${money(MK_APPT_COST_MAX)} in the market), red past the ceiling means stop scaling it; <b>days out</b> is the 48-hour law — the median booking→appointment distance, gold past ${MK_OUT_OK_H}h, red past ${MK_OUT_MAX_H}h, because past two days out the customer starts shopping and the bid we show up for is the bid we win; the <b>⚑ on a signed share</b> past ${MK_CONC_RED}% is concentration — any one source can bankrupt the company, so the flag's instruction is diversify at the allowable $/appt, never cut the source that works. Where the <b>targets fold</b> holds a typed ceiling for a source (marketing_targets, 190), that number outranks the dictated bands — the machine grades against what the owner is willing to pay, green at or under, gold within 15%, red past it.</div>
+    <div class="note">Closed jobs, closed dollars and the source list come from <b>rpt_report_marketing_roi</b> (160, corrected by <b>165</b>), grouped on <b>lead_sources.rollup_name</b> — migration 163's canonical rollup, never the raw CC name, which splits Angi three ways and Google five${backfilled ? ' — except this backfilled month, which reads migration 172’s table as stated above' : ''}. Appointments set are counted client-side by when the appointment was <b>booked</b>, off the same project→source join. ROI is closed dollars ÷ spend for the month shown, rounded to a whole multiple; within ±${MK_NEAR} of ${MK_LINE}x it reads neutral because one deal moves a small source across the line. <b>The small print is the percentage law</b> (the one-ledger pass, 21 Aug 2026): spend wears its share of the whole book, leads and signed dollars their share of the month — divided across every source, folded rows included, so shares sum whether or not a fold is open — appointments their booked rate against leads, closed jobs their close rate against appointments. <b>CPL and $/unit</b> ride the same captions and price exactly as ROI does — Google all-in from the card (170/171) — with one exception the approved board itself drew: <b>Referral</b> is priced at its typed bonus row (~) for those two figures while its ROI stays earned. Leads and units are deliberately different cohorts: CPL measures the faucet, $/unit measures what came out. <b>⚑3 vendor rows price no source anywhere on this row set</b> — unattributable spend is carried where totals belong: THE MONTH row, the reconciliation strip, and the headline, all of which read <b>mkBookTotal</b> and cannot disagree. <b>The trail</b> is the retired month-matrix riding each row — six months of signed dollars, oldest first, one shared scale so a bright cell means the same money on every line; exact figures are in each cell's tooltip, <b>†</b> months read migration 172's backfill table, and a dashed cell is a window that did not answer, which is a different fact from a zero. The MoM arrow retired with the matrix — the trail answers the same question with six months instead of one. Leads exclude the 12 reporting_excluded batch-entry anomalies, matching the RPC${leadsBlind ? ', and are withheld this month — see above' : ''}. A gold <b>earned</b> pill means no cost has ever been keyed for that source in any month, so there is nothing to type (tap it to type one anyway); a spend <b>dash or empty input</b> marks a source the book proves costs money and whose month has not been keyed — the compact spelling of "not entered" since the clean-up pass, and still the list worth chasing.${idle.length ? ` The <b>${idle.length}</b> folded source${idle.length === 1 ? '' : 's'} neither cost nor earned a dollar this month — folded, not dropped, and ${idle.length === 1 ? 'it opens' : 'they open'} on tap.` : ''} The <b>went quiet</b> fold keeps its own law: earned money in the walk's earlier months, nothing signed in the last two, anchored to today rather than the browsed month — dollars dated by <b>rpt_signings.signed_on</b>, unaffected by the lead backfill. <b>THE FUNNEL'S INDICATOR LAWS</b> (KD, dictated 21 Aug 2026), left to right: a low <b>booked %</b> is the lead→appointment gap — scheduling, speed to lead, or a setter problem, the first place to look; <b>$/appt</b> is the buy signal — at or under ${money(MK_APPT_COST_OK)} a source deserves every dollar it will take (fencing & landscapes settle $75–150; roofing runs to ${money(MK_APPT_COST_MAX)} in the market), red past the ceiling means stop scaling it; <b>days out</b> is the 48-hour law — the median booking→appointment distance, gold past ${MK_OUT_OK_H}h, red past ${MK_OUT_MAX_H}h, because past two days out the customer starts shopping and the bid we show up for is the bid we win; the <b>⚑ on a signed share</b> past ${MK_CONC_RED}% is concentration — any one source can bankrupt the company, so the flag's instruction is diversify at the allowable $/appt, never cut the source that works. Where the <b>targets fold</b> holds a typed ceiling for a source (marketing_targets, 190), that number outranks the dictated bands — the machine grades against what the owner is willing to pay, green at or under, gold within 15%, red past it.</div>
   </div>`;
 }
 
@@ -6587,6 +6618,34 @@ function mkTargetsFold(live){
       <div class="m2-note">A typed ceiling always outranks the dictated defaults ($${MK_APPT_COST_OK}/appt for fencing &amp; landscapes, to $${MK_APPT_COST_MAX} for roofing). Green at or under your number, gold within 15% over, red past that. Saving is manager-only — the same rule as the spend book.</div>
     </div>`}
   </div>`;
+}
+
+/* Typed lead counts for blind months (191) — the same save grammar as spend
+   and targets: upsert, then re-read, never patch what was typed at the page. */
+async function saveLeads(src, monthKey, el){
+  const raw = String(el.value).trim();
+  el.className = 'saving';
+  const s = sess.get();
+  try {
+    if (!s) throw new Error('not signed in');
+    if (raw === '') { el.className = ''; return; }
+    const leads = Number(raw);
+    if (!isFinite(leads) || leads < 0 || leads % 1) throw new Error('bad count');
+    const r = await fetch(`${SB_URL}/rest/v1/marketing_manual_leads?on_conflict=source_name,month`, {
+      method: 'POST',
+      headers: { apikey: SB_KEY, Authorization: 'Bearer ' + s.access_token,
+                 'Content-Type': 'application/json',
+                 Prefer: 'resolution=merge-duplicates,return=minimal' },
+      body: JSON.stringify({ source_name: src, month: monthKey, leads }),
+    });
+    if (!r.ok) throw new Error(`${r.status}`);
+    el.className = 'saved';
+    MKT.manualLeads = await q('marketing_manual_leads?select=source_name,month,leads').catch(() => MKT.manualLeads);
+    mktRedraw();
+  } catch (e) {
+    el.className = 'failed';
+    el.title = `Not saved (${e.message}). 404 means migration 191 is not applied; 401/403 means this login is not a manager.`;
+  }
 }
 
 async function saveTarget(src, field, el){
@@ -6997,7 +7056,7 @@ function ptMktReps(){
    inside the level whose question they hold open. */
 function mktPanelBrand(){
   return mkHeadline() + `<div class="m2-stack">`
-    + cardBrandReturn() + cardSrcByCo() + mkHeldUnitEcon() + `</div>`;
+    + cardBrandReturn() + cardSrcByCo() + `</div>`;
 }
 function mktPanelSource(){
   /* THE ONE-LEDGER PASS (KD approved the mock, 21 Aug 2026). Three cards
@@ -7006,11 +7065,30 @@ function mktPanelSource(){
      card became the quiet fold at the ledger's foot, and the month matrix
      became the trail column on every row. One surface, every number wearing
      its relative percentage. */
-  return `<div class="m2-stack">` + cardSourceRow() + mkEarnedStrip()
-    + mkHeldCancels() + mkHeldTrendCpu() + mkHeldSpeedToClose() + mkHeldStall() + `</div>`;
+  return `<div class="m2-stack">` + cardSourceRow() + mkEarnedStrip() + `</div>`;
 }
 function mktPanelReps(){
-  return `<div class="m2-stack">` + cardRepBoard() + cardRepGrid() + `</div>`;
+  /* GRID FIRST (KD, 21 Aug: "that one's badass — third most prominent, and
+     the report underneath, so it looks like we're using this intel to fill
+     in the other one"): the who-closes-what heat grid leads, the monthly
+     rep report reads beneath it. */
+  return `<div class="m2-stack">` + cardRepGrid() + cardRepBoard() + `</div>`;
+}
+
+/* ── PARKED · the not-yet sections, one fold at the room's foot ─────────────
+   KD, 21 Aug: "all the really fancy ones that aren't filled in yet, move
+   those to the bottom, and let's let those fill in — save them for later."
+   Every held section still renders — the board never quietly drops what was
+   asked for — but the resting face of the room is numbers, and the waiting
+   list is one closed fold. Each card inside still names its missing feed
+   and lights up in place the day it exists. */
+function mkParked(){
+  const cards = [mkHeldUnitEcon(), mkHeldCancels(), mkHeldTrendCpu(), mkHeldSpeedToClose(), mkHeldStall(), mkHeldAsk()];
+  return `<div class="m2-card">
+    <div class="m2-card-title">Parked · waiting on honest feeds</div>
+    <button type="button" class="mk-fold" style="min-width:0" onclick="mkBookFold(this)" aria-expanded="false"><span class="chev">›</span>${cards.length} sections parked<span class="why">each names the feed it waits on — they fill in here, nothing is dropped</span></button>
+    <div hidden><div class="m2-stack" style="margin-top:10px">${cards.join('')}</div></div>
+  </div>`;
 }
 
 const MKT_KIT = [
@@ -7050,7 +7128,7 @@ function marketingRoom(direct){
     loadMktWalk();   // the source level is on screen, so the walk is owed now
     const gate = mktGate();
     const inner = gate || MKT_KIT.map(i => i.panel()).join('');
-    const tail = gate ? '' : `<div class="m2-stack" style="margin-top:12px">${mkHeldAsk()}${cardMktFlags()}</div>` + mkFoot();
+    const tail = gate ? '' : `<div class="m2-stack" style="margin-top:12px">${mkParked()}${cardMktFlags()}</div>` + mkFoot();
     return `<div class="room" id="marketing-room">
       <div class="shelf-head">
         <div class="shelf-titles">
@@ -7084,7 +7162,7 @@ function marketingRoom(direct){
     const inner = gate || (all ? MKT_KIT.map(i => i.panel()).join('') : solo.panel());
     /* The flags and the footer are board-wide — typed annotations and the
        provenance — so they close the body whichever level is open, once. */
-    const tail = gate ? '' : `<div class="m2-stack" style="margin-top:12px">${mkHeldAsk()}${cardMktFlags()}</div>` + mkFoot();
+    const tail = gate ? '' : `<div class="m2-stack" style="margin-top:12px">${mkParked()}${cardMktFlags()}</div>` + mkFoot();
     body = `<div class="room-body">
       <div class="room-open-head"><div class="ttl">${all ? 'The whole board · brand → source → rep' : esc(solo.name)}</div>
         <button type="button" class="shelf-all" onclick="mktClose()">Close</button></div>
@@ -7267,8 +7345,14 @@ function mkSourceRows(monthKey){
        spend are the same set, and the numerator is that set's dollars, never
        the whole year's over two months of cost. */
     const roiDollars = ytd ? Number(r.priced_dollars || 0) : dollars;
+    /* Leads are three-state since 191: AUTO (the RPC, honest from Aug 2026),
+       TYPED (the owner's own count for a blind month), or null — a blind
+       month nobody has filled, which renders a quiet dash, not a paragraph. */
+    const blind = ytd || monthKey.slice(0, 7) < MK_LEADS_FROM;
+    const manual = blind ? mkManualLeads(name, monthKey) : null;
     return { src: name, free, isG, g, spend, dollars, jobs,
-             leads: ytd ? null : Number(r.leads || 0), category: r.category || null,
+             leads: blind ? manual : Number(r.leads || 0),
+             leadsTyped: blind && manual != null, category: r.category || null,
              appts: appts[name] || 0,
              pricedDollars: roiDollars,
              earned: !isG && (free || !mkEverPaid(name)),
@@ -7347,7 +7431,7 @@ function mkEarnedStrip(){
     ${ref && bonus > 0 ? `<div class="m2-free-row">
       <span class="nm">Referral, priced at its bonuses<small>${money(bonus)} typed (~5, occasional not programmatic)</small></span>
       <span class="amt">${money(ref.dollars / bonus)} per $1</span></div>` : ''}
-    <div class="m2-note"><b>$0 · earned</b> means the book has never carried a cost for that source in <i>any</i> month — a channel that earns, not a month somebody forgot.${unkeyed.length ? ` <b>not entered this month</b> is the other claim, and it applies to <b>${esc(unkeyed.map(r => r.src).join(', '))}</b>: the book has priced ${unkeyed.length === 1 ? 'it' : 'them'} before, so a missing month here is a data-entry state and worth chasing — and ${unkeyed.length === 1 ? 'its' : 'their'} dollars are counted in the earned share above, because no ad dollar stands against them this month.` : ''} Same test as the ledger (<b>mkEverPaid</b>), one enrichment (<b>mkSourceRows</b>), so the two surfaces cannot describe one source two ways.</div>
+    <div class="m2-note">A gold <b>earned</b> pill means the book has never carried a cost for that source in <i>any</i> month — a channel that earns, not a month somebody forgot.${unkeyed.length ? ` <b>not entered this month</b> is the other claim, and it applies to <b>${esc(unkeyed.map(r => r.src).join(', '))}</b>: the book has priced ${unkeyed.length === 1 ? 'it' : 'them'} before, so a missing month here is a data-entry state and worth chasing — and ${unkeyed.length === 1 ? 'its' : 'their'} dollars are counted in the earned share above, because no ad dollar stands against them this month.` : ''} Same test as the ledger (<b>mkEverPaid</b>), one enrichment (<b>mkSourceRows</b>), so the two surfaces cannot describe one source two ways.</div>
   </div>`;
 }
 
