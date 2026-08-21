@@ -466,6 +466,21 @@
   .rep-head .amt span { color: var(--text-dim); font-size: 10px; }
   .meter { height: 7px; background: rgba(255,255,255,0.05); border-radius: 100px; overflow: hidden; }
   .meter-fill { height: 100%; border-radius: 100px; }
+  /* the spread board's per-rep depth line (KD, 20 Aug: "touches per customer…
+     what percentage of their customers do they touch") */
+  .spread-sub { font-family: 'JetBrains Mono', monospace; font-size: 9px;
+    color: var(--text-dim); margin-top: 4px; letter-spacing: .02em; }
+  .spread-sub b { color: var(--text); font-weight: 600; }
+  .spread-sub b.g { color: var(--green); } .spread-sub b.y { color: var(--gold); } .spread-sub b.r { color: var(--red); }
+  /* the KPI wears a shade (KD, 20 Aug: "shade in that touches-per number on
+     each guy's thing — a super duper KPI… if we can move it, exponential
+     uplift"). Graded against the 4-Touch model's own bar of four plays per
+     customer: green from ×3, gold from ×2, red below. */
+  .tc-chip { display: inline-block; font-weight: 700; font-size: 10px;
+    padding: 1px 7px; border-radius: 7px; }
+  .tc-chip.g { background: rgba(108,194,139,0.16); color: var(--green); }
+  .tc-chip.y { background: rgba(212,177,90,0.16); color: var(--gold); }
+  .tc-chip.r { background: rgba(224,109,109,0.16); color: var(--red); }
   /* quota meter — a fill against the floor tick, so "at the floor" is a place on the bar */
   .qmeter { position: relative; height: 8px; background: rgba(255,255,255,0.05); border-radius: 100px; margin-top: 6px; }
   .qfill { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 100px; min-width: 2px; }
@@ -4590,7 +4605,7 @@ async function loadEffortIntel(){
      draws — one fetch, two reads, filtered client-side. */
   const d35 = new Date(Date.now() - 35 * 864e5).toISOString();
   const d30 = new Date(Date.now() - 30 * 864e5).toISOString();
-  const [mix, close, light, streaks, speed, est, pipe, gameRows, gameCats, weekly, hypeMsgs, hypeReacts, spread, spreadTot, appTime, textTime, talkTime] = await Promise.all([
+  const [mix, close, light, streaks, speed, est, pipe, gameRows, gameCats, weekly, hypeMsgs, hypeReacts, spread, spreadTot, appTime, textTime, talkTime, cover] = await Promise.all([
     q(`rpc/touch_board?p_win=${win}`).catch(() => null),
     q('rpc/touch_close_stats').catch(() => null),
     q('rpc/touch_light_board').catch(() => null),
@@ -4626,6 +4641,13 @@ async function loadEffortIntel(){
     q(`rpc/app_time_board?p_win=${win}`).catch(() => null),
     q(`rpc/text_time_board?p_win=${win}`).catch(() => null),
     q(`rpc/talk_time_board?p_win=${win}`).catch(() => null),
+    /* BOOK COVERAGE RETURNS (KD, 20 Aug: "what percentage of their customers
+       do they touch?"). The RPC never left the database when its card died —
+       same 120-day open book (unsigned, undispositioned), touched-in-7-days
+       against it. It re-enters as the spread board's depth line, not a card
+       of its own. Its window is FIXED at 7 days by the function, deliberately
+       not the board's seg — a day-scoped "% of book" would grade everyone 0. */
+    q('rpc/book_coverage').catch(() => null),
   ]);
   let game = null, gameWk = null;
   if (Array.isArray(gameRows)) {
@@ -4670,11 +4692,12 @@ async function loadEffortIntel(){
     for (const x of hypeReacts || []) { if (!x.rep_id) continue;
       const c = chat.byRep[String(x.rep_id)] ??= { p: 0, r: 0 }; c.r++; chat.total++; }
   }
-  /* touch_hit_rates and book_coverage are no longer pulled: the cards that read
-     them are gone — hit rates duplicated the channel mix, and the cooling book
-     belongs to TruOdds now. The RPCs are untouched in the database. */
+  /* touch_hit_rates is no longer pulled: the card that read it is gone — hit
+     rates duplicated the channel mix. book_coverage is BACK (20 Aug) as the
+     spread board's depth line; the cooling book itself still belongs to
+     TruOdds. */
   EFF_INTEL = { mix, close, light, streaks, speed, est, pipe, game, gameWk, chat, weekly, win,
-                spread, spreadTot, appTime, textTime, talkTime };
+                spread, spreadTot, appTime, textTime, talkTime, cover };
   render();
 }
 
@@ -5219,16 +5242,36 @@ function cardSpread(){
     ${logged.map((r,i) => {
       const pager = D.roster && D.roster[String(r.rep_id)];
       const n = +r.uniq_customers;
+      /* THE DEPTH LINE (KD, 20 Aug: "touches per customer — how many times do
+         they touch it? What percentage of their customers do they touch?").
+         Depth = the window's touches over its unique customers — the same two
+         feeds this board and the dials already read, one division, so it can
+         never disagree with either. Coverage = book_coverage(): touched in
+         the last 7 days over the open book (unsigned, undispositioned) — its
+         own stated window, deliberately not the seg's. Either feed absent
+         just drops its half of the line; nothing is invented. */
+      const bd = (EFF_INTEL.mix || []).find(x => String(x.rep_id) === String(r.rep_id));
+      const tc = bd && +bd.touches > 0 && n > 0 ? +bd.touches / n : null;
+      const cv = (EFF_INTEL.cover || []).find(x => String(x.rep_id) === String(r.rep_id));
+      const pct = cv && +cv.book > 0 ? Math.round(100 * +cv.touched_7d / +cv.book) : null;
+      /* The KPI wears a shade (KD: "super duper KPI"): graded against the
+         4-Touch model's own bar — four plays per customer — so the gap to
+         the model IS the color. Green from ×3, gold from ×2, red below. */
+      const sub = [
+        tc != null ? `<span class="tc-chip ${tc >= 3 ? 'g' : tc >= 2 ? 'y' : 'r'}">×${tc.toFixed(1)}</span> touches per customer ${esc(label)}` : '',
+        pct != null ? `<b class="${pct >= 50 ? 'g' : pct >= 25 ? 'y' : 'r'}">${pct}%</b> of open book touched · 7d (${+cv.touched_7d} of ${+cv.book})` : '',
+      ].filter(Boolean).join(' · ');
       return `<div class="rep-row${pager?' acc':''}"${pager?` onclick="openRep('${esc(String(r.rep_id))}')"`:''}>
         <div class="rep-head">
           <div class="nm"><span class="rk ${i===0?'top':''}">${i+1}</span>${esc(r.name)}</div>
           <div class="amt">${n} <span>· customers</span>${pager?'<span class="acc-chev">›</span>':''}</div>
         </div>
         <div class="meter"><div class="meter-fill" style="width:${Math.max(4,Math.round(100*n/mx))}%;background:${n>=goal?'#6cc28b':'#d4b15a'}"></div></div>
+        ${sub ? `<div class="spread-sub">${sub}</div>` : ''}
       </div>`; }).join('')}
     ${silent ? `<div class="withheld"><div class="wt">${logged.length?'Quiet so far':'Honest zero'}</div><div class="wx">
       ${silent} seller${silent===1?' has':'s have'} reached nobody ${esc(label)} yet. Zeros are real, never back-filled.</div></div>` : ''}
-    <div class="note">LIVE · from <b>touch_spread()</b> (185) — count of distinct customers with at least one logged touch in the window. Green bar = on the company standard of <b>10 different customers a day</b>, the same rule the streak already grades. Team tiles are distinct across the team, so they are deliberately not the sum of the bars — one customer worked by two reps counts once up top and once each below.</div>
+    <div class="note">LIVE · from <b>touch_spread()</b> (185) — count of distinct customers with at least one logged touch in the window. Green bar = on the company standard of <b>10 different customers a day</b>, the same rule the streak already grades. Team tiles are distinct across the team, so they are deliberately not the sum of the bars — one customer worked by two reps counts once up top and once each below. The depth line: <b>×N per customer</b> is the window's touches (touch_board) over its unique customers — depth against spread, one division — shaded against the <b>4-Touch model's own bar of four plays per customer</b>: green from ×3, gold from ×2, red below; <b>% of open book</b> is <b>book_coverage()</b> — customers touched in the last 7 days over the 120-day open book (signed, won and lost customers out), a window the function fixes at 7 days on purpose: a day-scoped book read would grade everyone zero.</div>
   </div>`;
 }
 
@@ -9981,7 +10024,7 @@ addEventListener('resize', () => {
    the last one, it is to tell a human which build is on the server and when it
    got there. A number nobody clocked cannot answer that, and the first time it
    is asked in anger will be the morning a stale build is being chased. */
-const BUILD = '2026-08-20T23:40Z-effort-scorecard';
+const BUILD = '2026-08-21T00:30Z-touch-depth';
 const SB_URL = 'https://lzegjjbkfuecrhdvlvay.supabase.co';
 /* The one page that can finish a password reset. Hard-coded rather than derived,
    because every derivation of it so far has been a source of bugs: a bare origin
