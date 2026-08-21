@@ -1057,6 +1057,18 @@
   .mk-row.free { opacity: 0.92; }
   .mk-sep { font-family: 'JetBrains Mono', monospace; font-size: 8px; letter-spacing: 0.12em;
     text-transform: uppercase; color: var(--text-dim); padding: 14px 0 6px; border-top: 1px solid rgba(255,255,255,0.08); margin-top: 4px; }
+  /* THE NAME COLUMN LOCKS (KD, 21 Aug: "lock those in, so when I go across
+     I can still see which company it is"). Sticky against .mk-scroll's
+     horizontal pan, solid card ground underneath, a soft right shadow so
+     the cells sliding beneath read as beneath. Same grammar the rep board's
+     name column already carried. */
+  .mk-row .nm, .mk-head div:first-child { position: sticky; left: -16px; z-index: 2;
+    background: var(--bg-card); box-shadow: 10px 0 10px -10px rgba(0,0,0,0.65); padding-right: 6px;
+    /* .mk-scroll carries 16px side padding; the sticky ground must cover
+       that gutter or the panned cells peek out on its left — and it must
+       stretch the row's full height or a tall cell's second line peeks
+       above and below the name's own box. */
+    margin-left: -16px; padding-left: 16px; align-self: stretch; }
   .mk-row .nm { display: flex; align-items: center; gap: 7px; font-size: 13.5px; font-weight: 500; min-width: 0; }
   .mk-row .nm .cat { font-family: 'JetBrains Mono', monospace; font-size: 7.5px; letter-spacing: .08em;
     text-transform: uppercase; color: var(--text-dim); border: 1px solid var(--line); border-radius: 100px; padding: 1px 6px; }
@@ -2179,6 +2191,11 @@
 
   /* the board's own scroller for wide tables at 390px */
   .m2-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  /* The same lock for every scrolling table's first column — vendor book,
+     source × company, the month matrix skins. */
+  .m2-co th:first-child, .m2-co td:first-child, .m2-mx th:first-child, .m2-mx td:first-child {
+    position: sticky; left: 0; z-index: 2; background: var(--bg-card);
+    box-shadow: 10px 0 10px -10px rgba(0,0,0,0.65); }
   .m2-scroll > table { min-width: 460px; }
 
   .m2-foot { margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--line);
