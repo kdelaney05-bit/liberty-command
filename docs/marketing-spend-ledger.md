@@ -48,6 +48,33 @@ not live reads.
 
 ---
 
+## January–May 2026 — ESTIMATES · $69,756/mo · migration 192
+
+**Not statements. Owner-ruled estimates (KD, dictated 21 Aug 2026):** "I
+know I've spent more than $137K — I spend sixty grand a month...
+guesstimate... throw everything in, it is what it is." QuickBooks holds no
+expense feed in this warehouse (qb_* is invoices only) and the Jan–May card
+statements were never keyed, so each of the five months carries the same
+per-brand seed built from the two keyed months:
+
+| Source | Basis | 1461 | 1560 | 1563 | Total |
+|---|---|---:|---:|---:|---:|
+| Google Ads ~ | Jun/Jul card mean | 24,457.50 | 14,357 | 8,339.50 | **47,154** |
+| Saving Safari ~ | June shape (all Safari in, per ruling) | 5,000 | — | 5,000 | **10,000** |
+| Angi ~ | Jun/Jul mean | 4,063 | — | 2,100 | **6,163** |
+| Liam / Gate Digital | contract flat | 1,000 | 1,000 | 1,000 | **3,000** |
+| Referral bonuses ~ | June shape | 500 | 500 | 500 | **1,500** |
+| Thumbtack ~ | June shape | 794 | — | 254 | **1,048** |
+| Next Level ⚑3 | contract flat | 297 | 297 | 297 | **891** |
+| **TOTAL / MO** | | | | | **69,756** |
+
+Jan–Jul book: **$486,244**. Correct any cell to a real statement figure
+with an UPDATE (or delete a month and key it fresh) — every estimate row's
+note carries `estimate ~ backfill 192`. Reversible whole:
+`delete from marketing_spend where note like '%backfill 192%'`.
+
+---
+
 ## Provenance notes
 
 **Google Ads** — card statement truth (ruling, migration 170): Chase Ink

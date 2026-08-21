@@ -1167,6 +1167,10 @@
   .mk-chip.on { color: var(--bg-deep, #0d1f17); background: var(--green); border-color: var(--green); font-weight: 600; }
   .mk-chip.ytd { border-color: rgba(240,131,74,0.5); color: var(--accent); }
   .mk-chip.ytd.on { background: var(--accent); border-color: var(--accent); color: #0d1f17; }
+  .mk-chip-div { width: 1px; height: 16px; background: rgba(255,255,255,0.14); margin: 0 3px; }
+  .mk-chip.co { border-color: rgba(107,168,201,0.45); color: var(--blue); }
+  .mk-chip.co.on { background: var(--blue); border-color: var(--blue); color: #0d1f17; font-weight: 600; }
+  .mk-chip:disabled { opacity: .35; cursor: default; }
   .mk-monthbar .mn-cur { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: .08em;
     text-transform: uppercase; color: var(--accent-soft); min-width: 108px; text-align: center; }
 
@@ -4837,7 +4841,26 @@ let MKTOFF = 1;
 let MKT_YTD = false;
 function setMktYtd(){
   if (MKT_YTD) return;
-  MKT_YTD = true; loadMktWalk(); mktRedraw();
+  MKT_YTD = true; MKT_BRAND = 'all';   // the year has no brand instrument yet
+  loadMktWalk(); mktRedraw();
+}
+
+/* THE BRAND LENS (KD, 21 Aug: "all companies, and then individual, just
+   like if I had multiple branches — a little thing right when you get into
+   that cool screen"). One global lens on the marketing clock: 'all' or a
+   company id. Spend filters exactly (the typed book is per-brand), revenue
+   filters through the instruments that carry company — roiBrand for months
+   the RPC can group, the 172/189/192-era table for backfilled months — and
+   anything with no brand grain (the walk's trail, the quiet fold, Windsor's
+   pacing, the RPC's leads) steps aside and says so rather than showing an
+   org number under a company label. The lens is disabled in YTD until the
+   year has a brand instrument (a 169-shaped companion to 189). */
+let MKT_BRAND = 'all';
+/* Row-level lens test shared by every spend computer. */
+const mkInLens = row => MKT_BRAND === 'all' || row.brand === MKT_BRAND;
+function setMktBrand(b){
+  if (MKT_YTD || MKT_BRAND === b) return;
+  MKT_BRAND = b; mktRedraw();
 }
 
 /* ═══ THE INTELLIGENCE THRESHOLDS (KD, dictated 21 Aug 2026) ═════════════════
@@ -4967,18 +4990,19 @@ async function loadMarketing(){
   let srcBackfill = null;
   const roiOk = roi && !roi.__err;
   if (roiOk && !(((roi.sections || {}).by_source || []).length) && monthKey.slice(0, 7) < MK_SRC_RPC_FROM) {
-    const bf = await q(`rpt_marketing_revenue_by_source_month?select=source_name,signed_jobs,signed_dollars&month=eq.${monthKey}`)
+    const bf = await q(`rpt_marketing_revenue_by_source_month?select=cc_company_id,source_name,signed_jobs,signed_dollars&month=eq.${monthKey}`)
       .catch(() => null);
     if (bf && bf.length) {
-      /* Company rows fold together — the ledger reads company-blind, same as
-         the RPC's own by_source and the month walk's read of this table. */
+      /* Company rows fold together for the org read — but the RAW rows ride
+         along since the brand lens (21 Aug): the table carries company, so a
+         backfilled month can answer the lens without another fetch. */
       const bySrc = Object.create(null);
       for (const row of bf) {
         const cur = bySrc[row.source_name] || (bySrc[row.source_name] = { d: 0, j: 0 });
         cur.d += Number(row.signed_dollars || 0);
         cur.j += Number(row.signed_jobs || 0);
       }
-      srcBackfill = { month: monthKey,
+      srcBackfill = { month: monthKey, raw: bf,
         rows: Object.entries(bySrc).map(([source_name, v]) =>
           ({ source_name, signed_dollars: v.d, signed_jobs: v.j })) };
     }
@@ -5964,7 +5988,7 @@ function mkSpendOf(src, monthKey){
     return vals.length ? vals.reduce((n, v) => n + v, 0) : null;
   }
   const rows = MKT.spend.filter(s => s.source_name === src && String(s.month).slice(0, 10) === monthKey
-    && !String(s.note || '').includes('⚑3'));
+    && mkInLens(s) && !String(s.note || '').includes('⚑3'));
   return rows.length ? rows.reduce((n, r) => n + Number(r.amount), 0) : null;
 }
 
@@ -6003,7 +6027,7 @@ function mkSpendSplit(src, monthKey){
     for (const p of parts) for (const [b, v] of Object.entries(p.byBrand)) byBrand[b] = (byBrand[b] || 0) + v;
     return { total: parts.reduce((n, p) => n + p.total, 0), split: parts.some(p => p.split), byBrand };
   }
-  const rows = MKT.spend.filter(s => s.source_name === src && String(s.month).slice(0, 10) === monthKey);
+  const rows = MKT.spend.filter(s => s.source_name === src && String(s.month).slice(0, 10) === monthKey && mkInLens(s));
   if (!rows.length) return null;
   const byBrand = Object.create(null);
   let split = false;
@@ -6130,7 +6154,7 @@ function mkBookTotal(monthKey){
     const vals = mkYtdMonths().map(k => mkBookTotal(k)).filter(v => v != null);
     return vals.length ? vals.reduce((n, v) => n + v, 0) : null;
   }
-  const rows = MKT.spend.filter(s => String(s.month).slice(0, 10) === monthKey);
+  const rows = MKT.spend.filter(s => String(s.month).slice(0, 10) === monthKey && mkInLens(s));
   return rows.length ? rows.reduce((n, r) => n + Number(r.amount), 0) : null;
 }
 /* Which of the year's months carry a typed book at all — the YTD ROI's
@@ -6142,8 +6166,13 @@ function mkYtdBookMonths(){
 
 /* project → rolled-up source, off the slim projection built in buildData. */
 function mkSrcByProject(){
+  /* Lens-aware since 21 Aug: a project outside the selected company maps to
+     nothing, so appointments and days-out follow the brand automatically. */
   const rollup = D.mktRollup || {}, out = Object.create(null);
-  for (const j of (D.mktJobs || [])) { const s = rollup[j.l]; if (s) out[j.p] = s; }
+  for (const j of (D.mktJobs || [])) {
+    if (MKT_BRAND !== 'all' && j.b !== MKT_BRAND) continue;
+    const s = rollup[j.l]; if (s) out[j.p] = s;
+  }
   return out;
 }
 
@@ -6209,7 +6238,7 @@ function cardSourceRow(){
   /* THE YEAR reads the walk, so the walk's own three states gate it here the
      way the RPC gates a month below — walking, dead, or data. */
   if (ytd && !MKTWALK) { loadMktWalk(); return `<div class="card full">
-    <div class="card-title">The marketing ledger · ${esc(mkWinLabel())}<span class="feed-tag cc">live · cc</span></div>
+    <div class="card-title">The marketing ledger · ${esc(mkWinLabel())}${MKT_BRAND !== 'all' ? ' · ' + esc(BRANDS[MKT_BRAND].s) : ''}<span class="feed-tag cc">live · cc</span></div>
     <div class="card-sub" style="margin:0">Walking the year, month by month…</div></div>`; }
   if (ytd && MKTWALK.err) return `<div class="card full">
     <div class="card-title">The marketing ledger · ${esc(mkWinLabel())}<span class="feed-tag none">no feed</span></div>
@@ -6241,6 +6270,12 @@ function cardSourceRow(){
      comes with them. Nothing on this board disappears to make it shorter. */
   const all = mkSourceRows(monthKey);
   const backfilled = all.some(r => r.backfilled);
+  /* The lens with no instrument for this month says so — never the org
+     number under a company label. */
+  if (MKT_BRAND !== 'all' && !all.length) return `<div class="card full">
+    <div class="card-title">The marketing ledger · ${esc(mkWinLabel())} · ${esc(BRANDS[MKT_BRAND].s)}<span class="feed-tag none">no brand instrument</span></div>
+    <div class="withheld"><div class="wt">This month cannot be split by company${MKT.roiBrandErr ? ' — the brand RPC did not answer' : ' yet'}</div><div class="wx">
+      The lens reads <b>rpt_report_marketing_roi_brand</b> (169) for months the RPC can group and the backfill table (172/189) for the rest${MKT.roiBrandErr ? ` — the brand RPC answered ${esc(String(MKT.roiBrandErr))}` : ', and neither carries this month by company'}. Tap <b>All</b> to read it org-wide.</div></div></div>`;
   const isActive = r => r.spend != null || r.dollars > 0;
   const live = all.filter(isActive);
   const idle = all.filter(r => !isActive(r)).sort((a, b) => Number(b.leads || 0) - Number(a.leads || 0));
@@ -6290,6 +6325,7 @@ function cardSourceRow(){
   const walkPeak = walk ? Math.max(1, ...walk.filter(m => !m.err)
     .flatMap(m => Object.values(m.bySrc).map(v => v.dollars || 0))) : 1;
   const trailCell = src => {
+    if (MKT_BRAND !== 'all') return `<div class="col absent" title="the six-month walk has no brand grain yet — the trail reads org-wide; clear the lens (All) to see it">—</div>`;
     if (!MKTWALK) return `<div class="col absent" title="the six-month walk loads with this board and fills this column when it answers">walking…</div>`;
     if (MKTWALK.err) return `<div class="col absent" title="the month walk did not answer (${esc(String(MKTWALK.err))})">—</div>`;
     return `<div class="mk-trail">${walk.map(m => {
@@ -6359,7 +6395,9 @@ function cardSourceRow(){
      nobody filled is a quiet dash that opens an input on tap — the paragraph
      of why lives behind the rules tab, not on every row. */
   const leadsCell = r => {
-    if (r.leads == null) return `<div class="col absent">${ytd
+    if (r.leads == null) return `<div class="col absent">${MKT_BRAND !== 'all'
+      ? `<span title="no instrument carries leads by company — clear the lens (All) for the org count">—</span>`
+      : ytd
       ? `<span title="typed on no month of the year — the RPC's counts are backfill-dated before Aug 2026; type a month's count from its own view and the year sums it">—</span>`
       : `<button type="button" class="mk-earn dim" onclick="mkTypeCost(this)"
           title="the RPC's count for this month is the 20 Jul backfill, not the month (rules tab) — auto fills from Aug 2026. Tap to type your own count for ${esc(r.src)}."
@@ -6456,7 +6494,7 @@ function cardSourceRow(){
   const bookMonths = ytd ? mkYtdBookMonths() : null;
   const blended = `<div class="mk-row" style="border-top:1px solid rgba(255,255,255,0.18);font-weight:600">
     <div class="nm">${ytd ? 'THE YEAR' : 'THE MONTH'}</div>
-    <div class="col">${book > 0 ? money(book) : '<span class="dim">no spend book</span>'}${book > 0 ? `<span class="mk-pc">${ytd ? `${bookMonths.length} of ${mkYtdMonths().length} months typed` : 'the whole book'}</span>` : ''}</div>
+    <div class="col">${book > 0 ? money(book) : '<span class="dim">no spend book</span>'}${book > 0 ? `<span class="mk-pc">${ytd ? `${bookMonths.length} of ${mkYtdMonths().length} months typed` : MKT_BRAND === 'all' ? 'the whole book' : esc(BRANDS[MKT_BRAND].s) + "'s book"}</span>` : ''}</div>
     <div class="col">${totLeads > 0 ? `${totLeads.toLocaleString()}${leadsBlind && all.some(r => r.leadsTyped) ? '<span class="mk-auto stale" title="sum of typed counts — blind months nobody filled add nothing">typed</span>' : ''}` : '<span class="dim" title="no honest lead count for this window — auto from Aug 2026, or type counts on the rows">—</span>'}</div>
     <div class="col">${totAppts ? totAppts.toLocaleString() : '<span class="dim">—</span>'}${!leadsBlind && totAppts && pc(totAppts, totLeads) != null ? `<span class="mk-pc">${pc(totAppts, totLeads)}% booked</span>` : ''}</div>
     <div class="col">${totUnits.toLocaleString()}${totUnits && totAppts > 0 ? `<span class="mk-pc">${pc(totUnits, totAppts)}% close</span>` : ''}</div>
@@ -6494,7 +6532,7 @@ function cardSourceRow(){
      wearing its own fading trail; fewer than three answered windows and the
      fold refuses to call anything quiet, in its own words. */
   let quietFold = '';
-  if (walk) {
+  if (walk && MKT_BRAND === 'all') {
     const wl = walk.filter(m => !m.err);
     if (wl.length >= 3) {
       const tailM = wl.slice(-2), headM = wl.slice(0, -2);
@@ -6521,7 +6559,7 @@ function cardSourceRow(){
   /* Windsor's whole remaining job on this board: the pacing chip on the title
      row. Never a number in the math below — the ruling (170) demoted it after
      the card showed it undercounting July by half. */
-  const paceTag = ytd ? '' : mkPaceChip(mkWindsorPacing(monthKey), mkGoogleCard(monthKey));
+  const paceTag = (ytd || MKT_BRAND !== 'all') ? '' : mkPaceChip(mkWindsorPacing(monthKey), mkGoogleCard(monthKey));
 
   return `<div class="card full">
     <div class="card-title">The marketing ledger · ${esc(mkWinLabel())}<span class="feed-tag cc">live · cc</span>${paceTag}</div>
@@ -6578,7 +6616,7 @@ function mkHeldCancels(){
    prints itself instead of being absorbed. */
 function mkReconStrip(monthKey, live, bonus, book){
   if (!Array.isArray(MKT.spend)) return '';   // the ledger's withheld block below states why
-  const monthRows = MKT.spend.filter(s => String(s.month).slice(0, 10).startsWith(mkWinPre(monthKey)));
+  const monthRows = MKT.spend.filter(s => String(s.month).slice(0, 10).startsWith(mkWinPre(monthKey)) && mkInLens(s));
   if (!monthRows.length) return '';           // an empty month is the nag's job, not a strip of zeros
   const attr = live.reduce((n, r) => n + (r.spend || 0), 0);
   const f3 = [...new Set(monthRows.filter(r => String(r.note || '').includes('⚑3')).map(r => r.source_name))];
@@ -6909,7 +6947,9 @@ async function saveSpend(src, monthKey, el){
       headers: { apikey: SB_KEY, Authorization: 'Bearer ' + s.access_token,
                  'Content-Type': 'application/json',
                  Prefer: 'resolution=merge-duplicates,return=minimal' },
-      body: JSON.stringify({ source_name: src, month: monthKey, amount, brand: 'all' }),
+      /* Under the brand lens a typed cost belongs to that company's row —
+         the one-grain trigger refuses an 'all' total over brand rows anyway. */
+      body: JSON.stringify({ source_name: src, month: monthKey, amount, brand: MKT_BRAND }),
     });
     if (!r.ok) throw new Error(`${r.status}`);
     el.className = 'saved';
@@ -6998,6 +7038,10 @@ function mkMonthBar(){
     ${chips.join('')}
     <button class="mk-chip ytd${MKT_YTD ? ' on' : ''}" onclick="setMktYtd()" aria-pressed="${MKT_YTD}"
       title="the whole year in one ledger — per-source months from 172/189 + the RPC, spend from the typed book, ROI over priced months only">YTD</button>
+    <span class="mk-chip-div"></span>
+    ${[['all', 'All'], ...BRAND_ORDER.map(b => [b, BRANDS[b].s])].map(([id, label]) => `<button class="mk-chip co${MKT_BRAND === id ? ' on' : ''}"
+      ${MKT_YTD ? 'disabled title="the year has no brand instrument yet — the lens works on months"' : `title="${id === 'all' ? 'every company together' : `only ${esc(BRANDS[id].n)} — spend from its book rows, revenue through the brand instruments; anything with no company grain steps aside and says so`}"`}
+      onclick="setMktBrand('${id}')" aria-pressed="${MKT_BRAND === id}">${esc(label)}</button>`).join('')}
     ${!MKT_YTD && MKTOFF !== 1 ? `<button class="linkbtn" onclick="setMktOff(1)">last full month</button>` : ''}
   </div>`;
 }
@@ -7336,6 +7380,30 @@ function mkBySource(monthKey){
     }
     return { rows: Object.values(bySrc), backfilled: months.some(m => m.backfilled), ytdMonths: months.length };
   }
+  /* THE BRAND LENS: revenue must come from an instrument that carries
+     company. roiBrand (169) answers months the RPC can group; the backfill
+     table's raw rows answer the rest. A month neither can split is refused
+     under the lens — never the org number under a company label. Leads
+     never survive the lens (no instrument carries them by company). */
+  if (MKT_BRAND !== 'all') {
+    const fold = list => {
+      const bySrc = Object.create(null);
+      for (const r of list) {
+        const cur = bySrc[r.source_name] || (bySrc[r.source_name] = { source_name: r.source_name, signed_dollars: 0, signed_jobs: 0, leads: 0 });
+        cur.signed_dollars += Number(r.signed_dollars || 0);
+        cur.signed_jobs += Number(r.signed_jobs || 0);
+      }
+      return Object.values(bySrc);
+    };
+    const br = mkBrandRows().filter(r => r.brand === MKT_BRAND);
+    if (br.length) return { rows: fold(br), backfilled: false, lens: true };
+    const raw = (MKT.srcBackfill && MKT.srcBackfill.month === MKT.month && MKT.srcBackfill.raw) || null;
+    if (raw) {
+      const mine = raw.filter(r => (r.cc_company_id === '1537' ? '1563' : r.cc_company_id) === MKT_BRAND);
+      if (mine.length) return { rows: fold(mine), backfilled: true, lens: true };
+    }
+    return { rows: [], lens: true, lensRefused: MKT.roiBrandErr ? 'feed' : 'none' };
+  }
   const rows = ((MKT.roi && MKT.roi.sections) || {}).by_source || [];
   if (rows.length) return { rows, backfilled: false };
   const bf = MKT.srcBackfill && MKT.srcBackfill.month === MKT.month ? MKT.srcBackfill.rows : null;
@@ -7370,10 +7438,14 @@ function mkSourceRows(monthKey){
        TYPED (the owner's own count for a blind month), or null — a blind
        month nobody has filled, which renders a quiet dash, not a paragraph. */
     const blind = ytd || monthKey.slice(0, 7) < MK_LEADS_FROM;
-    const manual = blind ? mkManualLeads(name, monthKey) : null;
+    const lensOn = MKT_BRAND !== 'all';
+    /* No instrument carries leads by company — under the lens the column
+       reads a dash for every source rather than an org count wearing a
+       company label. Typed counts are org-wide too, so they step aside. */
+    const manual = blind && !lensOn ? mkManualLeads(name, monthKey) : null;
     return { src: name, free, isG, g, spend, dollars, jobs,
-             leads: blind ? manual : Number(r.leads || 0),
-             leadsTyped: blind && manual != null, category: r.category || null,
+             leads: lensOn ? null : blind ? manual : Number(r.leads || 0),
+             leadsTyped: !lensOn && blind && manual != null, category: r.category || null,
              appts: appts[name] || 0,
              pricedDollars: roiDollars,
              earned: !isG && (free || !mkEverPaid(name)),
@@ -7407,7 +7479,7 @@ function mkHeadline(){
     <h1>The spend, the juice,<br/><em>and the squeeze.</em></h1>
     <div class="m2-nw-block">
       <div>
-        <div class="m2-nw-label">${esc(mkWinLabel())} signed ÷ ${esc(mkWinLabel())} spend book${ytd ? ' · priced months' : ''}</div>
+        <div class="m2-nw-label">${esc(mkWinLabel())}${MKT_BRAND !== 'all' ? ' · ' + esc(BRANDS[MKT_BRAND].s) : ''} signed ÷ spend book${ytd ? ' · priced months' : ''}</div>
         <div class="m2-nw">${net != null ? '$' + net.toFixed(2) : '<span style="font-size:19px;color:var(--text-dim);font-family:\'JetBrains Mono\',monospace">no spend entered</span>'}</div>
         <div class="m2-nw-sub">${net != null
           ? `back per $1 · ${money(ratioRev)} on ${money(spend)}${ytd ? ` · ${money(rev)} signed all year, ratio covers the ${mkYtdBookMonths().length} typed month${mkYtdBookMonths().length === 1 ? '' : 's'}` : ''}`
