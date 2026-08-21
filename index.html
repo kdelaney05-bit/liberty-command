@@ -6531,7 +6531,6 @@ function cardSourceRow(){
     </div>
     ${split}
     ${mkReconStrip(monthKey, live, bonus, book)}
-    ${mkTargetsFold(live)}
     ${!all.length ? `<div class="card-sub" style="margin:12px 0 0">No lead carried a source in ${esc(mkWinLabel())}.</div>` : ''}
     ${backfilled ? `<div class="withheld"><div class="wt">This month reads from the backfill, and says so</div><div class="wx">
       <b>rpt_report_marketing_roi</b> cannot group months before ${esc(MK_SRC_RPC_FROM)} by source (its leads CTE keys on <b>jobs.created_at</b>, one-shot-backfilled on 20 Jul 2026), so these rows come from <b>rpt_marketing_revenue_by_source_month</b> (migration <b>172</b>) — pulled straight from <code>jobs.contract_signed_at</code> / <code>cc_lead_source_id</code> and validated against a live Contractors Cloud pull. The trail column reads the same table for the same months (its <b>†</b> tooltip mark), so the two can no longer answer this month differently. Cancelled contracts excluded; see <a href="docs/roi-board/handoff-source-backfill.md">the backfill handoff</a>.</div></div>` : ''}
@@ -6941,7 +6940,10 @@ let MKT_VIEW = (() => {
        owns it now. A stale key that maps to nothing falls through to the
        shelf rather than erroring — migrated or ignored, never thrown. */
     if (j && j.mode === 'solo' && j.key)
-      return { mode:'solo', key: j.key === 'grid' ? 'rep' : j.key };
+      /* Two generations of legacy keys: 'grid' was the drawer's rep grid,
+         and 'brand'/'src' were the pre-reorder levels the ledger absorbed. */
+      return { mode:'solo', key: j.key === 'grid' ? 'rep'
+        : (j.key === 'brand' || j.key === 'src') ? 'led' : j.key };
     if (legacyOpen) return { mode:'all' };
   } catch (e) {}
   return { mode:'none' };
@@ -7054,25 +7056,38 @@ function ptMktReps(){
    which channel fed it, which desk closed it. A tile opens its level alone;
    the shelf control opens all three in that order. The refusal cards ride
    inside the level whose question they hold open. */
-function mktPanelBrand(){
-  return mkHeadline() + `<div class="m2-stack">`
-    + cardBrandReturn() + cardSrcByCo() + `</div>`;
-}
-function mktPanelSource(){
-  /* THE ONE-LEDGER PASS (KD approved the mock, 21 Aug 2026). Three cards
-     folded INTO the ledger rather than stacking beneath it: the spend-ledger
-     card became the reconciliation strip + vendor-book fold, the went-quiet
-     card became the quiet fold at the ledger's foot, and the month matrix
-     became the trail column on every row. One surface, every number wearing
-     its relative percentage. */
-  return `<div class="m2-stack">` + cardSourceRow() + mkEarnedStrip() + `</div>`;
+/* ═══ THE READING ORDER (KD, 21 Aug 2026, third pass) ════════════════════════
+   "The spend, the juice, and the squeeze — then immediately the marketing
+   ledger — then the who-closes-what heat map, then the report — everything
+   else under that, source × company at the very bottom." The verdict, the
+   instrument, the people, the appendix. The ONE-LEDGER laws still hold
+   inside the ledger itself (split boxes, recon strip and vendor book ride
+   with it); the targets fold moved to the appendix by the same instruction. */
+function mktPanelLedger(){
+  return mkHeadline() + `<div class="m2-stack">` + cardSourceRow() + `</div>`;
 }
 function mktPanelReps(){
-  /* GRID FIRST (KD, 21 Aug: "that one's badass — third most prominent, and
-     the report underneath, so it looks like we're using this intel to fill
-     in the other one"): the who-closes-what heat grid leads, the monthly
-     rep report reads beneath it. */
+  /* GRID FIRST (KD, 21 Aug: "that one's badass"): the who-closes-what heat
+     grid leads, the monthly rep report reads beneath it. */
   return `<div class="m2-stack">` + cardRepGrid() + cardRepBoard() + `</div>`;
+}
+function mktPanelRest(){
+  /* The appendix, in fading order of pull: earned money, the brand tiles,
+     the owner's ceilings, and source × company dead last by name. */
+  return `<div class="m2-stack">` + mkEarnedStrip() + cardBrandReturn()
+    + mkTargetsCard() + cardSrcByCo() + `</div>`;
+}
+
+/* The targets fold's own card since the reorder — same fold, same saves,
+   just living in the appendix instead of riding the ledger's foot. */
+function mkTargetsCard(){
+  const rows = mkSourceRows(mkWinKey()).filter(r => r.spend != null || r.dollars > 0);
+  if (!rows.length) return '';
+  return `<div class="m2-card">
+    <div class="m2-card-title">The targets · your ceiling per source<span class="m2-tag manual">typed · kd</span></div>
+    <div class="m2-card-sub">The most you will pay per lead and per appointment, per source — the ledger grades its $/lead and $/appt against these, green at or under, gold within 15%, red past. Where none is typed the dictated industry bands stand in.</div>
+    ${mkTargetsFold(rows)}
+  </div>`;
 }
 
 /* ── PARKED · the not-yet sections, one fold at the room's foot ─────────────
@@ -7092,9 +7107,9 @@ function mkParked(){
 }
 
 const MKT_KIT = [
-  { key:'brand', name:'The month · by brand',          panel: mktPanelBrand,  tile: ptMktMonth },
-  { key:'src',   name:'The ledger · source vs 10x',    panel: mktPanelSource, tile: ptMktSources },
-  { key:'rep',   name:'Who closes what · by rep',      panel: mktPanelReps,   tile: ptMktReps },
+  { key:'led',  name:'The ledger · spend → signed',    panel: mktPanelLedger, tile: ptMktMonth },
+  { key:'rep',  name:'Who closes what · by rep',       panel: mktPanelReps,   tile: ptMktReps },
+  { key:'rest', name:'The rest · brand & appendix',    panel: mktPanelRest,   tile: ptMktSources },
 ];
 
 /* The board-level gate. Every section reads rpt_report_marketing_roi one way
@@ -7133,7 +7148,7 @@ function marketingRoom(direct){
       <div class="shelf-head">
         <div class="shelf-titles">
           <div class="card-title">Marketing · what it cost and what it gave back</div>
-          <div class="card-sub">One board, three levels, reading brand → source → rep — the month against the whole spend book by brand, every source against the ten-times line, and which rep closes which kind of lead. Sections with no honest feed say so where they sit.</div>
+          <div class="card-sub">The verdict, the instrument, the people, the appendix — the spend, the juice and the squeeze up top, the ledger immediately under it, who closes what with the report beneath, and everything else at the bottom. Sections with no honest feed say so where they sit.</div>
         </div>
       </div>
       <div class="room-body">${mkMonthBar()}${gate ? '' : mkNag()}${inner}${tail}</div>
@@ -7146,7 +7161,7 @@ function marketingRoom(direct){
      source-level — so it is paid for when that level is opened. loadMktWalk
      self-guards, so calling it from every render costs nothing after the
      first. */
-  if (open && (all || solo.key === 'src')) loadMktWalk();
+  if (open && (all || solo.key === 'led' || solo.key === 'rest')) loadMktWalk();
   const tiles = MKT_KIT.map(i => {
     const on = !!solo && solo.key === i.key;
     return `<button type="button" class="ptile${on ? ' on' : ''}" onclick="mktSolo('${i.key}')"
@@ -7174,7 +7189,7 @@ function marketingRoom(direct){
     <div class="shelf-head">
       <div class="shelf-titles">
         <div class="card-title">Marketing · what it cost and what it gave back</div>
-        <div class="card-sub">One board, three levels — the month against the whole spend book by brand, every source against the ten-times line, and which rep closes which kind of lead. Tap a level to open it alone, or open the whole board; it reads brand → source → rep, org-wide by default. Sections with no honest feed say so where they sit.</div>
+        <div class="card-sub">The verdict and the ledger first, who closes what with the report beneath, everything else at the bottom. Tap a level to open it alone, or open the whole board. Sections with no honest feed say so where they sit.</div>
       </div>
       <button type="button" class="shelf-all" onclick="mktAll()">${all ? 'Close the board' : 'Open the board'}</button>
     </div>
