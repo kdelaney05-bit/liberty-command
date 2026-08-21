@@ -235,3 +235,23 @@ own row in the matrix, not folded into any named source and not dropped.
   likely close it, at the cost of another ~150-project validation pass;
   left for a follow-up PR rather than folded into a backfill scoped to
   March–June.
+
+---
+
+## Appendix — January–February 2026, migration 189 (21 Aug 2026)
+
+The one-ledger clock grew a YTD mode and the year starts in January, so the
+same instrument was run for two more windows — **method unchanged from 172**
+(non-Oasis by `contract_signed_at` at `fin_sold_amount`; Oasis by Billdu
+dated by the linked project's `contract_signed_at`, else `sold_on`;
+cancelled `cc_status_id = 8` excluded; 1537 → 1563; "no source logged"
+kept):
+
+| Month | Signed $ | Units | vs rpt_signings |
+|---|---:|---:|---|
+| Jan 2026 | $1,506,521.35 | 154 | $1,564,795 / 168 — under, same shape as Mar–Jun |
+| Feb 2026 | $968,343.66 | 151 | $1,112,254 / 169 — under, same shape |
+
+The residuals are the same signed-vs-recognized timing plus non-CC bells the
+four accepted months carry, printed as computed per this document's own law.
+The migration's guard pins both months to the validated dry run.
