@@ -4944,14 +4944,32 @@ function mkManualLeads(src, monthKey){
 /* PostgREST returns a scalar-jsonb RPC as the body itself, not as a row array,
    so q() — which pages and spreads each page into a list — cannot read one.
    One request, no paging, the parsed body back. */
-async function qOne(path){
+async function qOne(path, _retried){
   const s = sess.get();
   if (!s) throw new Error('not signed in');
   const go = async tok => fetch(`${SB_URL}/rest/v1/${path}`, {
     headers: { apikey: SB_KEY, Authorization: 'Bearer ' + tok } });
-  let r = await go(s.access_token);
+  let r;
+  try { r = await go(s.access_token); }
+  catch (netErr) {
+    /* A dropped connection (two bars in a truck) is not a fact about the
+       feed — one quiet retry before the board is told anything. */
+    if (_retried) throw netErr;
+    await new Promise(res => setTimeout(res, 1200));
+    return qOne(path, true);
+  }
   if (r.status === 401 && await refresh()) r = await go(sess.get().access_token);
-  if (!r.ok) { const e = new Error(`${path.split('?')[0]} → ${r.status}`); e.status = r.status; throw e; }
+  if (!r.ok) {
+    /* A 5xx is usually the 8s statement ceiling losing a race under
+       parallel load (the ROI RPC runs ~1.4s/window — see the timeout
+       ceiling note). One retry after a beat clears the pileup; a second
+       failure is a real state and reports as one. */
+    if (r.status >= 500 && !_retried) {
+      await new Promise(res => setTimeout(res, 1200));
+      return qOne(path, true);
+    }
+    const e = new Error(`${path.split('?')[0]} → ${r.status}`); e.status = r.status; throw e;
+  }
   return r.json();
 }
 
@@ -4981,8 +4999,16 @@ async function loadMarketing(){
   const monthKey = mkISO(start);
   /* Each feed fails on its own. A board where one dead feed blanks another
      section would hide a live number behind an unrelated outage. */
-  const [roi, roiBrand, spend, ads, signed, targets, manualLeads] = await Promise.all([
-    qOne(`rpc/rpt_report_marketing_roi?win_start=${mkISO(start)}&win_end=${mkISO(end)}`).catch(e => ({ __err: e.status || 'x' })),
+  /* THE HEAVY RPCs GO SINGLE FILE (21 Aug, the mobile 500): the ROI RPC
+     runs ~1.4s a window against the authenticated role's 8s statement
+     ceiling, and this loader used to fire it IN PARALLEL with its brand
+     twin while the month walk fired two more — four heavyweight queries
+     racing one pool, and the loser crossed 8s and 500ed the whole board on
+     a phone. The main ROI read now goes first and alone; the brand twin
+     and the cheap table reads follow. The walk serializes its own windows
+     for the same reason. */
+  const roi = await qOne(`rpc/rpt_report_marketing_roi?win_start=${mkISO(start)}&win_end=${mkISO(end)}`).catch(e => ({ __err: e.status || 'x' }));
+  const [roiBrand, spend, ads, signed, targets, manualLeads] = await Promise.all([
     /* The same signing rows grouped one dimension finer (source × brand, 169).
        Its own failure state: a missing 169 refuses the two brand-money
        sections, never the whole board. */
@@ -5115,11 +5141,18 @@ async function loadMktWalk(){
      without the caller having to reverse them. */
   const offs = [];
   for (let i = MKW_MONTHS - 1; i >= 0; i--) offs.push(i);
-  const got = await Promise.all(offs.map(async off => {
+  /* SERIAL, NOT PARALLEL (21 Aug, the mobile 500): the backfilled months
+     answer from the one table pull above and cost nothing; the months that
+     need the RPC walk one at a time so they never race loadMarketing's own
+     ROI call into the 8s statement ceiling. The walk is background
+     enrichment — a second of extra wall-clock beats a withheld board. */
+  const got = [];
+  for (const off of offs) {
     const s = mkMonthStart(off), e = new Date(s.getFullYear(), s.getMonth() + 1, 0);
     const key = mkISO(s).slice(0, 7);
     if (backfillByMonth[key]) {
-      return { key, label: MNAMES[s.getMonth()], off, bySrc: backfillByMonth[key], backfilled: true };
+      got.push({ key, label: MNAMES[s.getMonth()], off, bySrc: backfillByMonth[key], backfilled: true });
+      continue;
     }
     try {
       const r = await qOne(`rpc/rpt_report_marketing_roi?win_start=${mkISO(s)}&win_end=${mkISO(e)}`);
@@ -5128,9 +5161,9 @@ async function loadMktWalk(){
         bySrc[row.source_name] = { dollars: Number(row.signed_dollars || 0),
                                    jobs: Number(row.signed_jobs || 0) };
       }
-      return { key, label: MNAMES[s.getMonth()], off, bySrc };
-    } catch (err) { return { key, label: MNAMES[s.getMonth()], off, err: err.status || 'x' }; }
-  }));
+      got.push({ key, label: MNAMES[s.getMonth()], off, bySrc });
+    } catch (err) { got.push({ key, label: MNAMES[s.getMonth()], off, err: err.status || 'x' }); }
+  }
   /* One dead window does not kill the section — it renders as a gap in the
      row with the month named, which is a different fact from a zero. */
   MKTWALK = { series: got, err: got.every(g => g.err) ? (got[0] || {}).err || 'x' : null };
