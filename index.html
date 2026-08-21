@@ -569,31 +569,31 @@
      bars + dates. The svg's CSS height equals its viewBox height so the
      value labels' px mapping stays 1:1. */
   .rg-beat { margin: 2px 15px 12px; background: rgba(0,0,0,0.18);
-    border: 1px solid var(--line); border-radius: 12px; padding: 11px 13px 9px; }
+    border: 1px solid var(--line); border-radius: 12px; padding: 13px 14px 10px; }
   .rg-beat .cap { font-family: 'JetBrains Mono', monospace; font-size: 9px;
     letter-spacing: .18em; color: var(--text-dim); text-transform: uppercase;
     display: flex; justify-content: space-between; gap: 8px; }
   .rg-beat .cap b { color: var(--c, var(--green)); font-weight: 500; }
   .rg-beat.good { --c: var(--green); } .rg-beat.fall { --c: var(--red); }
   .rg-beat.off { padding-bottom: 9px; }
-  .rg-beat .plot { position: relative; height: 126px; margin-top: 6px; }
-  .rg-beat svg { position: absolute; top: 0; left: 0; width: 100%; height: 110px; display: block; }
+  .rg-beat .plot { position: relative; height: 150px; margin-top: 7px; }
+  .rg-beat svg { position: absolute; top: 0; left: 0; width: 100%; height: 148px; display: block; }
   .rg-beat .grid line { stroke: rgba(255,255,255,0.05); stroke-width: 1; }
   .rg-beat .money { fill: rgba(240,234,216,0.09); }
   .rg-beat .fillA { fill: var(--c, var(--green)); opacity: .10; }
   .rg-beat .plot span { position: absolute; font-family: 'JetBrains Mono', monospace;
     line-height: 1; white-space: nowrap; pointer-events: none; }
-  .rg-beat .bv { font-size: 9px; color: var(--text-dim); }
-  .rg-beat .bv.now { color: var(--c, var(--green)); font-weight: 600; }
-  .rg-beat .bm { top: 80px; font-size: 9px; color: #f0ead8; opacity: .78; }
+  .rg-beat .bv { font-size: 12px; color: var(--text-dim); }
+  .rg-beat .bv.now { color: var(--c, var(--green)); font-weight: 700; font-size: 13px; }
+  .rg-beat .bm { top: 113px; font-size: 10.5px; color: #f0ead8; opacity: .8; }
   .rg-beat .bm.now { opacity: 1; font-weight: 600; }
-  .rg-beat .bd { top: 96px; font-size: 8px; letter-spacing: .04em; color: var(--text-dim); opacity: .75; }
+  .rg-beat .bd { top: 130px; font-size: 9px; letter-spacing: .04em; color: var(--text-dim); opacity: .75; }
   .rg-beat .bd.now { opacity: 1; color: var(--c, var(--green)); }
   .rg-beat .stdline { stroke: #f0ead8; stroke-width: 1; stroke-dasharray: 3 5; opacity: .4; }
   /* (The touches layer and appts row died 21 Aug with the pulse cleanup —
      their rules went with them.) */
-  .rg-beat .trace { fill: none; stroke: var(--c, var(--green)); stroke-width: 1.8;
-    stroke-linejoin: round; stroke-linecap: round; opacity: .9; }
+  .rg-beat .trace { fill: none; stroke: var(--c, var(--green)); stroke-width: 2.6;
+    stroke-linejoin: round; stroke-linecap: round; opacity: .92; }
   .rg-beat .wk { fill: var(--c, var(--green)); }
 
   /* the fine instrument — tank gauges */
@@ -3762,7 +3762,10 @@ function rgBeat(rp, std, meta){
   const n = arr.length, W2 = 400, x = i => 8 + i * (W2 - 16) / (n - 1);
   const vals = arr.filter(v => v != null);
   const max = Math.max(...vals, std || 0, 10) * 1.3;
-  const y = v => 76 - (v / max) * 58;
+  /* STAR OF THE SHOW sizing (KD, 21 Aug: "so much more room for the vitals —
+     they are the star… fill it in more in that frame"): the plot grew to a
+     148-tall viewBox with an 84px value span, and every label stepped up. */
+  const y = v => 108 - (v / max) * 84;
   const w = rp.w || [];
   const labels = (meta && meta.labels) || [];
   const mmax = Math.max(...w.map(wv => wv.v || 0), 1);
@@ -3785,19 +3788,19 @@ function rgBeat(rp, std, meta){
   return `<div class="rg-beat ${word[1]}">
     <div class="cap"><span>${esc(capLabel)}</span><b>${word[0]}</b></div>
     <div class="plot">
-    <svg viewBox="0 0 400 110" preserveAspectRatio="none">
-      <g class="grid"><line x1="0" y1="22" x2="400" y2="22"/><line x1="0" y1="44" x2="400" y2="44"/><line x1="0" y1="66" x2="400" y2="66"/></g>
+    <svg viewBox="0 0 400 148" preserveAspectRatio="none">
+      <g class="grid"><line x1="0" y1="30" x2="400" y2="30"/><line x1="0" y1="56" x2="400" y2="56"/><line x1="0" y1="82" x2="400" y2="82"/></g>
       ${w.map((wv, i) => { if (!wv.v) return '';
-        const h = Math.max(2, (wv.v / mmax) * 52);
-        return `<rect class="money" x="${(x(i) - 11).toFixed(1)}" y="${(76 - h).toFixed(1)}" width="22" height="${h.toFixed(1)}" rx="1.5"/>`; }).join('')}
-      ${segs.map(s => s.length === 1 ? '' : `<polygon class="fillA" points="${s[0].split(',')[0]},76 ${s.join(' ')} ${s[s.length-1].split(',')[0]},76"/>`).join('')}
+        const h = Math.max(2, (wv.v / mmax) * 76);
+        return `<rect class="money" x="${(x(i) - 11).toFixed(1)}" y="${(108 - h).toFixed(1)}" width="22" height="${h.toFixed(1)}" rx="1.5"/>`; }).join('')}
+      ${segs.map(s => s.length === 1 ? '' : `<polygon class="fillA" points="${s[0].split(',')[0]},108 ${s.join(' ')} ${s[s.length-1].split(',')[0]},108"/>`).join('')}
       ${std != null ? `<line class="stdline" x1="0" y1="${y(std).toFixed(1)}" x2="400" y2="${y(std).toFixed(1)}"/>` : ''}
       ${segs.map(s => s.length === 1 ? '' : `<polyline class="trace" points="${s.join(' ')}"/>`).join('')}
       ${arr.map((v, i) => v == null ? '' :
-        `<circle class="wk${i === lastIdx ? ' now' : ''}" cx="${x(i).toFixed(1)}" cy="${y(v).toFixed(1)}" r="${i === lastIdx ? 3.4 : 2.4}"/>`).join('')}
+        `<circle class="wk${i === lastIdx ? ' now' : ''}" cx="${x(i).toFixed(1)}" cy="${y(v).toFixed(1)}" r="${i === lastIdx ? 4.2 : 3}"/>`).join('')}
     </svg>
     ${arr.map((v, i) => v == null ? '' :
-      `<span class="bv${i === lastIdx ? ' now' : ''}" style="${pos(i)};top:${Math.max(0, y(v) - 14).toFixed(0)}px">${v}</span>`).join('')}
+      `<span class="bv${i === lastIdx ? ' now' : ''}" style="${pos(i)};top:${Math.max(0, y(v) - 17).toFixed(0)}px">${v}</span>`).join('')}
     ${w.map((wv, i) => `<span class="bm${i === lastIdx ? ' now' : ''}" style="${pos(i)}">${m$(wv.v)}</span>`).join('')}
     ${labels.map((L, i) => `<span class="bd${i === lastIdx ? ' now' : ''}" style="${pos(i)}">${esc(L)}</span>`).join('')}
     </div>
@@ -4017,7 +4020,8 @@ function rgCard(r, k, sellers, mx){
     <div class="rg-closestrip">${D.closeTrend.spans.map(sp2 => { const c = ct[sp2.key];
       return `<div class="rg-cw ${cwCls[closeBand(c)]}"><div class="k">${esc(sp2.label)}</div>
         <div class="n">${c.appts ? c.close + '<small>%</small>' : '—'}</div>
-        <div class="meta">${c.appts ? `${c.signed}/${c.appts}` : 'no appts'}</div></div>`; }).join('')}</div></div>` : '';
+        <div class="meta">${c.appts ? `${c.signed}/${c.appts}` : 'no appts'}</div></div>`; }).join('')}</div>
+    <div class="note" style="margin-top:8px">These four and the heartbeat count the SAME signings and appointments — no second algorithm. The heartbeat cuts them into separate buckets (each point is its own week, day or month); these boxes POOL them over a trailing 7 / 14 / 30 / 60 days ending today. On the week view the newest heartbeat point and the 1 WK box are the same division and always agree. A pooled box can sit below most of the points when a heavy-appointment cold stretch carries more weight in the pool than the eye gives it on the trace — that is appointment-weighting, not disagreement.</div></div>` : '';
   const b = D.bank && D.bank[id];
   const es = byRep(I.est);
   /* Participation's old days-active read lives on here — demoted from a dial
@@ -10079,7 +10083,7 @@ addEventListener('resize', () => {
    the last one, it is to tell a human which build is on the server and when it
    got there. A number nobody clocked cannot answer that, and the first time it
    is asked in anger will be the morning a stale build is being chased. */
-const BUILD = '2026-08-21T01:41Z-rules-fold';
+const BUILD = '2026-08-21T02:03Z-pulse-star';
 const SB_URL = 'https://lzegjjbkfuecrhdvlvay.supabase.co';
 /* The one page that can finish a password reset. Hard-coded rather than derived,
    because every derivation of it so far has been a source of bugs: a bare origin
