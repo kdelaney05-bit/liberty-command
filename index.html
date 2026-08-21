@@ -1626,6 +1626,23 @@
     line-height: 1.7; margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--line); }
   .note b { color: var(--text); font-weight: 600; }
 
+  /* ── THE RULES FOLD (KD, 21 Aug: "hide the rules man. This is a retail
+     dashboard… leave the cool number out, the training manual in the drawer
+     people can see"). Every methodology note, explainer sub and refusal body
+     across the WHOLE console collapses behind one tiny tab — a post-render
+     pass (foldRules) wraps them, so no card author has to remember the
+     pattern and a new card gets folded for free. The prose is all still
+     there, one tap away; nothing was deleted, only holstered. */
+  .rules-tab { display: inline-flex; align-items: center; gap: 4px; background: none;
+    border: 1px dashed var(--line); border-radius: 100px; color: var(--text-dim);
+    font-family: 'JetBrains Mono', monospace; font-size: 8px; letter-spacing: .12em;
+    text-transform: uppercase; padding: 2px 9px; cursor: pointer; margin: 0 0 9px; }
+  .rules-tab::before { content: '▸'; font-size: 7px; }
+  .rules-tab.on::before { content: '▾'; }
+  @media (hover: hover) { .rules-tab:hover { color: var(--gold); border-color: var(--gold); } }
+  .rules-body { display: none; }
+  .rules-body.open { display: block; }
+
   /* ── the touch suite (5 Aug — "touch data no different than sales data") ── */
   /* The branded band above the effort cards. This page gets filmed for the
      owner film, so the effort section carries the product lockup — gold
@@ -9452,18 +9469,44 @@ function pageFoot(){
       <br/><button class="signout" style="margin-top:12px" onclick="signOut()">Sign out</button></div>`;
 }
 
+/* ── THE RULES FOLD · the pass ───────────────────────────────────────────────
+   One sweep after every render: each explainer becomes a tiny closed tab.
+   Subs and hints ("what it is") say WHAT IS THIS; method notes say RULES;
+   a withheld card's body says WHY. The fold state lives in the DOM, so a
+   re-render closes everything — the resting face of a retail dashboard is
+   numbers, not manuals. Runs on the whole #app including drawers already
+   in the DOM; a card added tomorrow is folded for free by its class. */
+function foldRules(){
+  document.querySelectorAll('.card-sub, .m2-card-sub, .snaphint, .note, .m2-note, .wx').forEach(el => {
+    if (el.dataset.folded) return;
+    el.dataset.folded = '1';
+    el.classList.add('rules-body');
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'rules-tab';
+    b.textContent = el.matches('.note, .m2-note') ? 'rules'
+                  : el.matches('.wx') ? 'why'
+                  : 'what is this';
+    b.onclick = e => { e.stopPropagation();
+      el.classList.toggle('open'); b.classList.toggle('on', el.classList.contains('open')); };
+    el.parentNode.insertBefore(b, el);
+  });
+}
+
 /* ── render ───────────────────────────────────────────────────────────────── */
 function render(){
   if (RDIVE) {
     document.body.classList.remove('railed', 'mnav');
     document.getElementById('app').innerHTML = repView(RDIVE) +
       `<div class="foot">Trust the instrument, not the retelling</div>`;
+    foldRules();
     return;
   }
   if (DIVE) {
     document.body.classList.remove('railed', 'mnav');
     document.getElementById('app').innerHTML = diveView(DIVE) +
       `<div class="foot">Trust the instrument, not the retelling</div>`;
+    foldRules();
     drawCharts();
     return;
   }
@@ -9481,6 +9524,7 @@ function render(){
       try { history.replaceState(history.state, '', location.pathname + '#' + sec.key); } catch(e){}
     document.getElementById('app').innerHTML =
       railHtml() + hdrTitle() + askBar() + sec.render() + pageFoot();
+    foldRules();
     drawCharts();
     return;
   }
@@ -9493,6 +9537,7 @@ function render(){
       try { history.replaceState(history.state, '', location.pathname + '#' + sec.key); } catch(e){}
     document.getElementById('app').innerHTML =
       hdrTitle() + askBar() + sec.render() + pageFoot() + mrailHtml();
+    foldRules();
     drawCharts();
     return;
   }
@@ -9589,6 +9634,7 @@ function render(){
       cardTextTime(),
       cardTalkTime(),
     ].join('') + '</div>' + pageFoot() + mrailHtml();
+  foldRules();
   drawCharts();
 }
 
@@ -10033,7 +10079,7 @@ addEventListener('resize', () => {
    the last one, it is to tell a human which build is on the server and when it
    got there. A number nobody clocked cannot answer that, and the first time it
    is asked in anger will be the morning a stale build is being chased. */
-const BUILD = '2026-08-21T01:28Z-rep-pulse-clean';
+const BUILD = '2026-08-21T01:41Z-rules-fold';
 const SB_URL = 'https://lzegjjbkfuecrhdvlvay.supabase.co';
 /* The one page that can finish a password reset. Hard-coded rather than derived,
    because every derivation of it so far has been a source of bugs: a bare origin
