@@ -1036,8 +1036,8 @@
      table on the deep board, printing the same leads and units twice). Wider
      min-width, same scroller — a marketing number that has to be guessed at
      is not a number. */
-  .mk-row, .mk-head { display: grid; gap: 10px; align-items: baseline; min-width: 1000px;
-    grid-template-columns: minmax(128px, 1.5fr) minmax(100px, 1.15fr) repeat(7, minmax(60px, 1fr)) minmax(84px, 1.1fr); }
+  .mk-row, .mk-head { display: grid; gap: 10px; align-items: baseline; min-width: 940px;
+    grid-template-columns: minmax(128px, 1.4fr) minmax(116px, 1.3fr) repeat(3, minmax(62px, 1fr)) minmax(98px, 1.2fr) minmax(52px, 0.7fr) minmax(92px, 1fr); }
   .mk-head { padding-bottom: 8px; border-bottom: 1px solid rgba(255,255,255,0.08); }
   .mk-head div { font-family: 'JetBrains Mono', monospace; font-size: 8px; letter-spacing: 0.1em;
     text-transform: uppercase; color: var(--text-dim); text-align: right; }
@@ -1104,7 +1104,7 @@
      behind one row. It is a summary line, never a deletion — the count is
      stated, the sources are named the moment it is opened, and their lead
      volume travels with them. */
-  .mk-fold { width: 100%; min-width: 1000px; display: flex; align-items: center; gap: 8px;
+  .mk-fold { width: 100%; min-width: 940px; display: flex; align-items: center; gap: 8px;
     padding: 9px 0 8px; background: none; border: 0;
     border-top: 1px solid rgba(255,255,255,0.08); cursor: pointer;
     font-family: 'JetBrains Mono', monospace; font-size: 8.5px; letter-spacing: .11em;
@@ -1113,6 +1113,29 @@
   .mk-fold .chev { display: inline-block; transition: transform .15s; font-size: 10px; }
   .mk-fold.open .chev { transform: rotate(90deg); color: var(--accent); }
   .mk-fold .why { margin-left: auto; text-transform: none; letter-spacing: .02em; opacity: .8; }
+  /* The percentage captions — the one-ledger law (KD, 21 Aug 2026): every
+     number on this ledger wears its relative share in small print. */
+  .mk-pc { display: block; font-family: 'JetBrains Mono', monospace; font-size: 7.5px; font-weight: 400;
+    letter-spacing: .04em; color: var(--text-dim); margin-top: 2px; }
+  .mk-pc.hot { color: var(--green); } .mk-pc.warm { color: var(--gold); } .mk-pc.cold { color: var(--red); }
+  .mk-bar { position: relative; height: 3px; border-radius: 2px; background: rgba(255,255,255,0.07); margin-top: 4px; }
+  .mk-bar i { position: absolute; top: 0; bottom: 0; left: 0; border-radius: 2px; background: var(--green); }
+  .mk-bar.spend i { background: var(--accent); }
+  /* The trail — the six-month matrix riding each row as heat cells. */
+  .mk-trail { display: flex; gap: 2px; justify-content: flex-end; align-items: center; align-self: center; }
+  .mk-trail i { width: 11px; height: 15px; border-radius: 2px; background: rgba(255,255,255,0.05); }
+  .mk-trail i.x { background: none; border: 1px dashed rgba(255,255,255,0.14); }
+  .mk-quiet-dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%;
+    background: var(--red); box-shadow: 0 0 0 2px rgba(217,106,94,0.18); flex-shrink: 0; }
+  /* The reconciliation strip — the spend-ledger card folded to four boxes
+     that crossfoot the book; the vendor × brand table keeps behind the fold. */
+  .mk-recon { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+  .mk-recon .rc { flex: 1; min-width: 150px; background: var(--bg-card-hi); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; }
+  .mk-recon .rc.f3 { border-color: rgba(212,177,90,0.35); }
+  .mk-recon .rc .k { font-family: 'JetBrains Mono', monospace; font-size: 8px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-dim); }
+  .mk-recon .rc .v { font-family: 'Fraunces', serif; font-size: 19px; font-weight: 500; margin-top: 5px; }
+  .mk-recon .rc.f3 .v { color: var(--gold); }
+  .mk-recon .rc .u2 { font-family: 'JetBrains Mono', monospace; font-size: 8px; color: var(--text-dim); margin-top: 4px; line-height: 1.4; }
   .mk-monthbar { display: flex; align-items: center; gap: 10px; margin: 2px 0 14px; }
   .mk-monthbar .mn-cur { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: .08em;
     text-transform: uppercase; color: var(--accent-soft); min-width: 108px; text-align: center; }
@@ -6028,40 +6051,69 @@ function cardSourceRow(){
   const rest = live.filter(r => r.spend == null).sort((a, b) => b.dollars - a.dollars);
   const idleLeads = idle.reduce((n, r) => n + Number(r.leads || 0), 0);
 
-  /* ── COST PER LEAD, COST PER UNIT, AND THE MoM MOVE — merged in ──────────
-     These three columns came off the deep board's own table, which printed the
-     same leads and units this ledger already carries — the duplicate the
-     consolidation exists to kill. PRICING follows the approved board: Google
-     is the card all-in, and Referral is priced at its bonus row ('Referral
-     bonuses', ~) — the one earned source that carries a real dollar. The MoM
-     column compares each source's cost-per-unit against last month, priced
-     the same way on both ends — spend from the book, units from the month
-     walk (MKTWALK). An arrow needs both ends: a month with no typed spend or
-     no answered window reads an em-dash, never a guess. */
+  /* ── COST PER LEAD & COST PER UNIT — the small print now ─────────────────
+     The CPL and $/unit COLUMNS folded into the ledger's captions with the
+     one-ledger pass (KD approved the mock, 21 Aug 2026): CPL rides under
+     Spend, $/unit under Closed, priced by the approved rules — Google is the
+     card all-in, and Referral is priced at its bonus row ('Referral
+     bonuses', ~), the one earned source carrying a real dollar. The MoM
+     column died with them: the trail below carries each source's six-month
+     story, which is the question the arrow existed to answer. */
   const bonus = mkSpendOf('Referral bonuses', monthKey);
   const priceOf = r => r.src === 'Referral' ? (bonus > 0 ? bonus : null) : r.spend;
-  const prevKey = mkISO(mkMonthStart(MKTOFF + 1));
-  const prevWin = (MKTWALK && !MKTWALK.err) ? MKTWALK.series.find(m => !m.err && m.key === prevKey.slice(0, 7)) : null;
-  /* An arrow needs BOTH ends, and there are two different ways to be missing
-     one: the window can fail to answer, or it can answer perfectly against a
-     month nobody ever typed a spend book for. The note below says which. */
-  const prevBookTyped = !!mkBrandSpend(prevKey);
-  const prevCpuOf = src => {
-    if (!prevWin) return null;
-    const sp = src === 'Google' ? (mkGoogleCard(prevKey) || {}).total
-      : src === 'Referral' ? mkSpendOf('Referral bonuses', prevKey)
-      : MK_FREE.has(src) ? null : mkSpendOf(src, prevKey);
-    const units = ((prevWin.bySrc || {})[src] || {}).jobs || 0;
-    return (sp > 0 && units) ? sp / units : null;
+
+  /* ── EVERY NUMBER WEARS ITS SHARE — the percentage law ───────────────────
+     KD, 21 Aug 2026: "everything has to have a relative percentage." Spend
+     prints its share of the whole book, leads and signed dollars their share
+     of the month, appointments their booked rate against leads, closed jobs
+     their close rate against appointments. Shares divide by the month across
+     ALL sources — folded rows included, their leads are real — so a column's
+     shares sum to the month whether or not the fold is open. */
+  const book = mkBookTotal(monthKey);
+  const totLeads = all.reduce((n, r) => n + Number(r.leads || 0), 0);
+  const totAppts = all.reduce((n, r) => n + r.appts, 0);
+  const totUnits = all.reduce((n, r) => n + r.jobs, 0);
+  const totDollars = all.reduce((n, r) => n + r.dollars, 0);
+  const pc = (num, den) => den > 0 ? Math.round(100 * num / den) : null;
+  const pc1 = (num, den) => den > 0 ? (100 * num / den).toFixed(1) : null;
+
+  /* ── THE TRAIL — the month matrix riding each row ────────────────────────
+     The signed-by-month matrix card is gone with the one-ledger pass; its
+     cells ride here instead: six months of heat per row, oldest first, every
+     row on ONE scale (the walk's peak source-month) so a bright cell means
+     the same dollars on every line. Cells carry the exact figure in their
+     tooltip; a window that did not answer reads as a dashed gap, which is a
+     different fact from a zero. Same MKTWALK the matrix read —
+     rpt_report_marketing_roi windowed, migration 172's table for backfilled
+     months (†). */
+  const walk = (MKTWALK && !MKTWALK.err) ? MKTWALK.series : null;
+  const walkPeak = walk ? Math.max(1, ...walk.filter(m => !m.err)
+    .flatMap(m => Object.values(m.bySrc).map(v => v.dollars || 0))) : 1;
+  const trailCell = src => {
+    if (!MKTWALK) return `<div class="col absent" title="the six-month walk loads with this board and fills this column when it answers">walking…</div>`;
+    if (MKTWALK.err) return `<div class="col absent" title="the month walk did not answer (${esc(String(MKTWALK.err))})">—</div>`;
+    return `<div class="mk-trail">${walk.map(m => {
+      if (m.err) return `<i class="x" title="${esc(m.label)} — this window did not answer"></i>`;
+      const v = ((m.bySrc || {})[src] || {}).dollars || 0;
+      const a = v > 0 ? Math.max(0.08, Math.min(0.9, 0.9 * v / walkPeak)) : 0;
+      return `<i${a ? ` style="background:rgba(108,194,139,${a.toFixed(2)})"` : ''} title="${esc(m.label)}${m.backfilled ? ' †' : ''}${m.off === 0 ? ' · in progress' : ''} — ${v > 0 ? money(v) : 'nothing signed'}"></i>`;
+    }).join('')}</div>`;
   };
-  const momCell = (src, cpu) => {
-    if (cpu == null) return '<div class="col absent">—</div>';
-    const prev = prevCpuOf(src);
-    if (prev == null) return `<div class="col absent" title="no priced ${esc(mkMonthLabel(MKTOFF + 1))} to compare against — an arrow needs both ends">—</div>`;
-    const d = 100 * (cpu - prev) / prev;
-    if (Math.abs(d) < 1) return '<div class="col">≈ flat</div>';
-    return d < 0 ? `<div class="col" style="color:var(--green-soft)">▼ ${Math.abs(d).toFixed(0)}% cheaper</div>`
-                 : `<div class="col" style="color:var(--red)">▲ ${d.toFixed(0)}% pricier</div>`;
+  const trailHead = walk ? `${walk[0].label} – ${walk[walk.length - 1].label}` : 'Trend';
+
+  /* Contaminated months show the refusal, not the figure — see MK_LEADS_FROM.
+     Defined ahead of the cells: the CPL caption under Spend divides by it. */
+  const leadsBlind = monthKey.slice(0, 7) < MK_LEADS_FROM;
+
+  /* The caption under a priced spend: share of the whole book, and CPL when
+     the month's leads are honest. Referral's bonus prices its CPL (approved
+     board's own exception) but never a share — a thank-you is not a buy. */
+  const spendSub = r => {
+    const share = (r.spend > 0 && book > 0) ? pc1(r.spend, book) : null;
+    const sp = priceOf(r);
+    const cpl = (!leadsBlind && sp > 0 && Number(r.leads || 0)) ? sp / Number(r.leads) : null;
+    if (share == null && cpl == null) return '';
+    return `<span class="mk-pc">${share != null ? share + '% of book' : ''}${share != null && cpl != null ? ' · ' : ''}${cpl != null ? money(cpl) + '/lead' : ''}</span>${share != null ? `<div class="mk-bar spend"><i style="width:${Math.min(100, Math.round(Number(share)))}%"></i></div>` : ''}`;
   };
 
   const spendCell = r => {
@@ -6089,11 +6141,9 @@ function cardSourceRow(){
         onchange="saveSpend(${JSON.stringify(r.src).replace(/"/g, '&quot;')}, '${monthKey}', this)"></div></div>`;
   };
 
-  /* Contaminated months show the refusal, not the figure — see MK_LEADS_FROM. */
-  const leadsBlind = monthKey.slice(0, 7) < MK_LEADS_FROM;
   const leadsCell = r => leadsBlind
     ? `<div class="col absent" title="rpt_report_marketing_roi windows leads on jobs.created_at, which is our row-insert time. The warehouse was backfilled in one shot on 20 Jul 2026, so this month's count is the backfill, not the month.">backfill-dated</div>`
-    : `<div class="col">${Number(r.leads || 0).toLocaleString()}</div>`;
+    : `<div class="col">${Number(r.leads || 0).toLocaleString()}${r.leads > 0 && pc(r.leads, totLeads) != null ? `<span class="mk-pc">${pc(r.leads, totLeads)}% of leads</span>` : ''}</div>`;
 
   /* The ROI cell states WHICH kind of no-answer this is, and they are three
      different facts: `earned` (nothing was ever spent, so there is no ratio
@@ -6106,60 +6156,56 @@ function cardSourceRow(){
     : r.spend === 0 ? `<div class="mk-roi none">no spend</div>`
     : `<div class="mk-roi none">not entered</div>`;
 
-  /* The CPL/CPU absent word states WHICH absence: free (a ruling), no spend
-     (a typed zero, division refused), not entered (a chase). Referral is the
-     exception — priced at its bonus row for these two columns only, the
-     approved board's own arithmetic, and the ROI column still reads earned. */
-  const cplCell = r => {
-    if (leadsBlind) return `<div class="col absent" title="backfill-dated — see below">backfill</div>`;
-    const sp = priceOf(r);
-    const cpl = (sp && sp > 0 && Number(r.leads || 0)) ? sp / Number(r.leads) : null;
-    return cpl != null ? `<div class="col${cpl < 100 ? ' money' : ''}">${money(cpl)}</div>`
-      : `<div class="col absent">${r.free && r.src !== 'Referral' ? 'free' : sp === 0 ? 'no spend' : sp == null ? (r.earned ? 'free' : 'not entered') : '—'}</div>`;
-  };
+  /* $/unit keeps the CPL rules' absences and rides the Closed caption. */
   const cpuOf = r => { const sp = priceOf(r);
     return (sp && sp > 0 && r.jobs) ? sp / r.jobs : null; };
-  const cpuCell = r => {
+
+  const apptsCell = r => {
+    const booked = (!leadsBlind && Number(r.leads || 0) > 0) ? pc(r.appts, Number(r.leads)) : null;
+    return `<div class="col${r.appts ? '' : ' dim'}">${r.appts ? r.appts.toLocaleString() : '0'}${booked != null ? `<span class="mk-pc${booked >= 60 ? ' hot' : booked < 35 ? ' cold' : ''}">${booked}% booked</span>` : ''}</div>`;
+  };
+  const closedCell = r => {
+    const close = r.appts > 0 ? pc(r.jobs, r.appts) : null;
     const cpu = cpuOf(r);
-    if (cpu != null) return `<div class="col" style="color:${cpu > 1000 ? 'var(--red)' : cpu < 100 ? 'var(--green-soft)' : 'var(--text)'}"${r.src === 'Referral' ? ` title="priced at the typed 'Referral bonuses' row (~${bonus ? money(bonus) : ''}) — the one earned source carrying a real dollar"` : ''}>${money(cpu)}</div>`;
-    return `<div class="col absent">${r.free && r.src !== 'Referral' ? 'free' : priceOf(r) === 0 ? 'no spend' : r.earned ? 'free' : 'not entered'}</div>`;
+    const sub = [close != null ? `${close}% close` : null, cpu != null ? `${money(cpu)}/unit` : null].filter(Boolean).join(' · ');
+    return `<div class="col${r.jobs ? '' : ' dim'}"${r.src === 'Referral' && cpu != null ? ` title="$/unit priced at the typed 'Referral bonuses' row (~${bonus ? money(bonus) : ''}) — the one earned source carrying a real dollar"` : ''}>${r.jobs ? Number(r.jobs).toLocaleString() : '0'}${sub ? `<span class="mk-pc${close != null && close >= 50 ? ' hot' : close != null && close < 25 ? ' warm' : ''}">${sub}</span>` : ''}</div>`;
+  };
+  const signedCell = r => {
+    const share = r.dollars > 0 ? pc1(r.dollars, totDollars) : null;
+    return `<div class="col money">${r.dollars ? short(r.dollars) : '<span class="dim">—</span>'}${share != null ? `<span class="mk-pc">${share}% of month</span><div class="mk-bar"><i style="width:${Math.min(100, Math.round(Number(share)))}%"></i></div>` : ''}</div>`;
   };
 
   const line = r => `<div class="mk-row${r.earned ? ' free' : ''}"${r.idle ? ' data-idle="1" hidden' : ''}>
     <div class="nm">${esc(r.src)}${r.category && r.category !== '—' ? `<span class="cat">${esc(r.category)}</span>` : ''}</div>
     ${spendCell(r)}
     ${leadsCell(r)}
-    <div class="col${r.appts ? '' : ' dim'}">${r.appts ? r.appts.toLocaleString() : '0'}</div>
-    <div class="col${r.jobs ? '' : ' dim'}">${r.jobs ? Number(r.jobs).toLocaleString() : '0'}</div>
-    <div class="col money">${r.dollars ? short(r.dollars) : '<span class="dim">—</span>'}</div>
+    ${apptsCell(r)}
+    ${closedCell(r)}
+    ${signedCell(r)}
     ${roiCell(r)}
-    ${cplCell(r)}
-    ${cpuCell(r)}
-    ${momCell(r.src, cpuOf(r))}
+    ${trailCell(r.src)}
   </div>`;
 
   const head = `<div class="mk-head">
     <div>Source</div><div>Spend</div><div>Leads</div><div>Appts set</div>
-    <div>Closed</div><div>Closed $</div><div>ROI</div><div>CPL</div><div>$ / unit</div><div>MoM $/unit</div></div>`;
+    <div>Closed</div><div>Signed $</div><div>ROI</div><div>${esc(trailHead)}</div></div>`;
 
-  /* The blended footer — totals a reader can cross-foot the headline against.
-     ⚑3 vendor rows price no source, so the blended $/unit divides only the
-     spend that CAN be attributed (per-source book + referral bonuses); the
-     whole-book figure is the headline's job. */
-  const totUnits = live.reduce((n, r) => n + r.jobs, 0);
-  const totDollars = live.reduce((n, r) => n + r.dollars, 0);
-  const blendSpend = live.reduce((n, r) => n + (priceOf(r) || 0), 0);
+  /* THE MONTH row — the ledger's own crossfoot, and since the one-ledger
+     pass it reads the WHOLE book via mkBookTotal — the same computation the
+     headline divides by, so the two surfaces cannot disagree — with the
+     month's verdict (the headline multiple and marketing as % of signed) on
+     the ledger's last line, exactly as the approved mock draws it. The
+     attributable-only blend survives in the Paid-only box below, which is
+     where that distinction was always explained. */
   const blended = `<div class="mk-row" style="border-top:1px solid rgba(255,255,255,0.18);font-weight:600">
-    <div class="nm">BLENDED</div>
-    <div class="col">${blendSpend > 0 ? money(blendSpend) : '<span class="dim">no priced spend</span>'}</div>
-    <div class="col">${leadsBlind ? '—' : all.reduce((n, r) => n + Number(r.leads || 0), 0).toLocaleString()}</div>
-    <div class="col dim">—</div>
-    <div class="col">${totUnits.toLocaleString()}</div>
-    <div class="col money">${totDollars ? short(totDollars) : '—'}</div>
-    <div class="col dim">—</div>
-    <div class="col dim">${leadsBlind ? 'backfill' : '—'}</div>
-    <div class="col">${blendSpend > 0 && totUnits ? money(blendSpend / totUnits) : '—'}</div>
-    <div class="col dim">—</div>
+    <div class="nm">THE MONTH</div>
+    <div class="col">${book > 0 ? money(book) : '<span class="dim">no spend book</span>'}${book > 0 ? '<span class="mk-pc">the whole book</span>' : ''}</div>
+    <div class="col">${leadsBlind ? '<span class="dim">backfill</span>' : totLeads.toLocaleString()}</div>
+    <div class="col">${totAppts ? totAppts.toLocaleString() : '<span class="dim">—</span>'}${!leadsBlind && totAppts && pc(totAppts, totLeads) != null ? `<span class="mk-pc">${pc(totAppts, totLeads)}% booked</span>` : ''}</div>
+    <div class="col">${totUnits.toLocaleString()}${totUnits && totAppts > 0 ? `<span class="mk-pc">${pc(totUnits, totAppts)}% close</span>` : ''}</div>
+    <div class="col money">${totDollars ? short(totDollars) : '—'}${totDollars ? '<span class="mk-pc">100%</span>' : ''}</div>
+    ${book > 0 && totDollars > 0 ? `<div class="mk-roi ${mkRoiClass(totDollars / book)}">${Math.round(totDollars / book)}x</div>` : '<div class="col dim">—</div>'}
+    <div class="col dim">${book > 0 && totDollars > 0 ? `${(100 * book / totDollars).toFixed(1)}% of signed` : '—'}</div>
   </div>`;
 
   /* The paid-vs-earned split the approved board draws. Paid = sources carrying
@@ -6181,14 +6227,48 @@ function cardSourceRow(){
         <div class="u2">${totUnits ? Math.round(100 * earnUnits / totUnits) : 0}% of ${esc(mkMonthLabel(MKTOFF))} units${earnLeads != null && (earnLeads + (paidLeads || 0)) > 0 ? `<br/>${Math.round(100 * earnLeads / (earnLeads + paidLeads))}% of all leads` : ''} · ~$0${bonus > 0 ? ` beyond ${money(bonus)} referral bonuses` : ''}</div></div>
     </div>`;
 
+  /* ── WENT QUIET — its card folded into the ledger's foot ─────────────────
+     Same law cardQuiet carried before the one-ledger pass: quiet = earned
+     money in the walk's earlier months, nothing signed in the last two —
+     two, not one, because a source that simply has not signed yet this month
+     is not a source that stopped, and the current month is partial by
+     definition. The walk anchors to today, not the browsed month — a stopped
+     faucet is a fact about now. Rows fold rather than render a card, each
+     wearing its own fading trail; fewer than three answered windows and the
+     fold refuses to call anything quiet, in its own words. */
+  let quietFold = '';
+  if (walk) {
+    const wl = walk.filter(m => !m.err);
+    if (wl.length >= 3) {
+      const tailM = wl.slice(-2), headM = wl.slice(0, -2);
+      const quiet = [...new Set(wl.flatMap(m => Object.keys(m.bySrc)))].map(n => {
+        const earned = headM.reduce((s, m) => s + ((m.bySrc[n] || {}).dollars || 0), 0);
+        const recent = tailM.reduce((s, m) => s + ((m.bySrc[n] || {}).dollars || 0), 0);
+        const lastLive = wl.filter(m => ((m.bySrc[n] || {}).dollars || 0) > 0).pop();
+        return { n, earned, recent, last: lastLive ? lastLive.label : '—' };
+      }).filter(x => x.earned > 0 && x.recent === 0).sort((a, b) => b.earned - a.earned);
+      if (quiet.length) quietFold = `
+        <button type="button" class="mk-fold" onclick="mkFold(this,'data-quiet')" aria-expanded="false"><span class="chev">›</span>${quiet.length} source${quiet.length === 1 ? '' : 's'} went quiet<span class="why">${short(quiet.reduce((n, x) => n + x.earned, 0))} of proven revenue, nothing signed in ${esc(tailM.map(t => t.label).join(' or '))}</span></button>
+        ${quiet.map(x => `<div class="mk-row" data-quiet="1" hidden>
+          <div class="nm" style="color:var(--text-dim)"><span class="mk-quiet-dot"></span>${esc(x.n)}</div>
+          <div class="col dim">—</div><div class="col dim">—</div><div class="col dim">—</div><div class="col dim">—</div>
+          <div class="col dim" style="font-size:9px;line-height:1.35">last $ ${esc(x.last)}<span class="mk-pc">${short(x.earned)} across the walk</span></div>
+          <div class="col dim">—</div>
+          ${trailCell(x.n)}
+        </div>`).join('')}`;
+    } else if (wl.length) {
+      quietFold = `<div class="mk-fold" style="cursor:default"><span class="chev" style="opacity:.4">·</span>went quiet — withheld<span class="why">${wl.length} of ${walk.length} windows answered; silence needs a run of months behind it</span></div>`;
+    }
+  }
+
   /* Windsor's whole remaining job on this board: the pacing chip on the title
      row. Never a number in the math below — the ruling (170) demoted it after
      the card showed it undercounting July by half. */
   const paceTag = mkPaceChip(mkWindsorPacing(monthKey), mkGoogleCard(monthKey));
 
   return `<div class="card full">
-    <div class="card-title">Return by source<span class="feed-tag cc">live · cc</span>${paceTag}</div>
-    <div class="card-sub">What each source cost and what it gave back, for one month at a time. <b>Ten is the line</b> — at or above it the source earns its money, below it does not. Spend is typed at month close; Google's is the card statements, keyed by brand (the ruling, 170), priced all-in with Liam / Gate Digital management (flag ✓2). Only sources that <b>cost or earned something in ${esc(mkMonthLabel(MKTOFF))}</b> are listed; the rest fold below.</div>
+    <div class="card-title">The marketing ledger · ${esc(mkMonthLabel(MKTOFF))}<span class="feed-tag cc">live · cc</span>${paceTag}</div>
+    <div class="card-sub">One row per source — what it cost, what it produced at every stage, what share of the month it carried, and its last six months at a glance. <b>Ten is the line</b> — at or above it the source earns its money, below it does not. Spend is typed at month close; Google's is the card statements, keyed by brand (the ruling, 170), priced all-in with Liam / Gate Digital management (flag ✓2). Only sources that <b>cost or earned something in ${esc(mkMonthLabel(MKTOFF))}</b> are listed; the rest fold below, and sources that stopped producing fold beneath them.</div>
     <div class="mk-scroll">
       ${head}
       ${paid.map(line).join('')}
@@ -6196,28 +6276,70 @@ function cardSourceRow(){
       ${blended}
       ${idle.length ? `<button type="button" class="mk-fold" onclick="mkFold(this)" aria-expanded="false"><span class="chev">›</span>${idle.length} inactive source${idle.length === 1 ? '' : 's'}<span class="why">no spend and no signed dollar in ${esc(mkMonthLabel(MKTOFF))}${idleLeads && !leadsBlind ? ` · ${idleLeads.toLocaleString()} leads` : ''}</span></button>
       ${idle.map(r => line({ ...r, idle: true })).join('')}` : ''}
+      ${quietFold}
     </div>
     ${split}
+    ${mkReconStrip(monthKey, live, bonus, book)}
     ${!all.length ? `<div class="card-sub" style="margin:12px 0 0">No lead carried a source in ${esc(mkMonthLabel(MKTOFF))}.</div>` : ''}
     ${backfilled ? `<div class="withheld"><div class="wt">This month reads from the backfill, and says so</div><div class="wx">
-      <b>rpt_report_marketing_roi</b> cannot group months before ${esc(MK_SRC_RPC_FROM)} by source (its leads CTE keys on <b>jobs.created_at</b>, one-shot-backfilled on 20 Jul 2026), so these rows come from <b>rpt_marketing_revenue_by_source_month</b> (migration <b>172</b>) — pulled straight from <code>jobs.contract_signed_at</code> / <code>cc_lead_source_id</code> and validated against a live Contractors Cloud pull. The month matrix below reads the same table for the same months (its <b>†</b> mark), so the two can no longer answer this month differently. Cancelled contracts excluded; see <a href="docs/roi-board/handoff-source-backfill.md">the backfill handoff</a>.</div></div>` : ''}
+      <b>rpt_report_marketing_roi</b> cannot group months before ${esc(MK_SRC_RPC_FROM)} by source (its leads CTE keys on <b>jobs.created_at</b>, one-shot-backfilled on 20 Jul 2026), so these rows come from <b>rpt_marketing_revenue_by_source_month</b> (migration <b>172</b>) — pulled straight from <code>jobs.contract_signed_at</code> / <code>cc_lead_source_id</code> and validated against a live Contractors Cloud pull. The trail column reads the same table for the same months (its <b>†</b> tooltip mark), so the two can no longer answer this month differently. Cancelled contracts excluded; see <a href="docs/roi-board/handoff-source-backfill.md">the backfill handoff</a>.</div></div>` : ''}
     ${!spendBook ? `<div class="withheld"><div class="wt">The spend book is not on live yet</div><div class="wx">
       Every typed source reads <b>not entered</b> because <b>marketing_spend</b> (migration <b>166</b>) has not been applied — the table the office types into does not exist yet, so no ROI on this board can be computed. This is the honest state, not a zero: a source with no cost recorded is not a free source. Apply 166 and the inputs go live with no further deploy.</div></div>` : ''}
     ${leadsBlind ? `<div class="withheld"><div class="wt">The leads and CPL columns are withheld for ${esc(mkMonthLabel(MKTOFF))}</div><div class="wx">
       <b>rpt_report_marketing_roi</b> dates a lead by <b>jobs.created_at</b> — when OUR row was written, not when the lead came in. The warehouse was loaded in one shot on <b>20 Jul 2026</b> (11,119 of 11,558 rows), so a July window returns the entire backfill: Google reads <b>4,282</b> against a true <b>253</b>. Months before July return zero, which is not the same as none. From <b>August 2026</b> both columns are real — measured 112 true against 113 reported — so they render there and are refused here. Closed jobs, closed dollars, <b>ROI and cost per unit are unaffected</b>: they are dated by <b>rpt_signings.signed_on</b>, which is correct in every window.</div></div>` : ''}
-    <div class="note">Closed jobs, closed dollars and the source list come from <b>rpt_report_marketing_roi</b> (160, corrected by <b>165</b>), grouped on <b>lead_sources.rollup_name</b> — migration 163's canonical rollup, never the raw CC name, which splits Angi three ways and Google five${backfilled ? ' — except this backfilled month, which reads migration 172’s table as stated above' : ''}. Appointments set are counted client-side by when the appointment was <b>booked</b>, off the same project→source join. ROI is closed dollars ÷ spend for the month shown, rounded to a whole multiple; within ±${MK_NEAR} of ${MK_LINE}x it reads neutral because one deal moves a small source across the line. <b>CPL and $/unit</b> price exactly as ROI does — Google all-in from the card (170/171) — with one exception the approved board itself drew: <b>Referral</b> is priced at its typed bonus row (~) for those two columns while its ROI stays earned. Leads and units are deliberately different cohorts: CPL measures the faucet, $/unit measures what came out. <b>⚑3 vendor rows price no source anywhere on this row set</b>, blended included — unattributable spend is carried where totals belong, the ledger and the headline. The MoM arrow compares $/unit against ${esc(mkMonthLabel(MKTOFF + 1))}, priced the same way on both ends, and lights only when both months carry a priced spend and signed units${!prevWin ? ` — ${MKTWALK ? esc(mkMonthLabel(MKTOFF + 1)) + '’s window has not answered' : 'the month walk loads with this board'}, so it reads an em-dash for now` : !prevBookTyped ? ` — <b>${esc(mkMonthLabel(MKTOFF + 1))} has no spend book</b>: the window answered and its units are known, but nobody has typed a cost against them, so every arrow reads an em-dash. Key that month into <b>marketing_spend</b> and the column lights with no further deploy` : ''}. Leads exclude the 12 reporting_excluded batch-entry anomalies, matching the RPC${leadsBlind ? ', and are withheld this month — see above' : ''}. <b>$0 · earned</b> means no cost has ever been keyed for that source in any month, so there is nothing to type; <b>not entered</b> is reserved for sources the book proves cost money and whose month has not been keyed, which makes that phrase a list worth chasing instead of wallpaper.${idle.length ? ` The <b>${idle.length}</b> folded source${idle.length === 1 ? '' : 's'} neither cost nor earned a dollar this month — folded, not dropped, and ${idle.length === 1 ? 'it opens' : 'they open'} on tap.` : ''}</div>
+    <div class="note">Closed jobs, closed dollars and the source list come from <b>rpt_report_marketing_roi</b> (160, corrected by <b>165</b>), grouped on <b>lead_sources.rollup_name</b> — migration 163's canonical rollup, never the raw CC name, which splits Angi three ways and Google five${backfilled ? ' — except this backfilled month, which reads migration 172’s table as stated above' : ''}. Appointments set are counted client-side by when the appointment was <b>booked</b>, off the same project→source join. ROI is closed dollars ÷ spend for the month shown, rounded to a whole multiple; within ±${MK_NEAR} of ${MK_LINE}x it reads neutral because one deal moves a small source across the line. <b>The small print is the percentage law</b> (the one-ledger pass, 21 Aug 2026): spend wears its share of the whole book, leads and signed dollars their share of the month — divided across every source, folded rows included, so shares sum whether or not a fold is open — appointments their booked rate against leads, closed jobs their close rate against appointments. <b>CPL and $/unit</b> ride the same captions and price exactly as ROI does — Google all-in from the card (170/171) — with one exception the approved board itself drew: <b>Referral</b> is priced at its typed bonus row (~) for those two figures while its ROI stays earned. Leads and units are deliberately different cohorts: CPL measures the faucet, $/unit measures what came out. <b>⚑3 vendor rows price no source anywhere on this row set</b> — unattributable spend is carried where totals belong: THE MONTH row, the reconciliation strip, and the headline, all of which read <b>mkBookTotal</b> and cannot disagree. <b>The trail</b> is the retired month-matrix riding each row — six months of signed dollars, oldest first, one shared scale so a bright cell means the same money on every line; exact figures are in each cell's tooltip, <b>†</b> months read migration 172's backfill table, and a dashed cell is a window that did not answer, which is a different fact from a zero. The MoM arrow retired with the matrix — the trail answers the same question with six months instead of one. Leads exclude the 12 reporting_excluded batch-entry anomalies, matching the RPC${leadsBlind ? ', and are withheld this month — see above' : ''}. <b>$0 · earned</b> means no cost has ever been keyed for that source in any month, so there is nothing to type; <b>not entered</b> is reserved for sources the book proves cost money and whose month has not been keyed, which makes that phrase a list worth chasing instead of wallpaper.${idle.length ? ` The <b>${idle.length}</b> folded source${idle.length === 1 ? '' : 's'} neither cost nor earned a dollar this month — folded, not dropped, and ${idle.length === 1 ? 'it opens' : 'they open'} on tap.` : ''} The <b>went quiet</b> fold keeps its own law: earned money in the walk's earlier months, nothing signed in the last two, anchored to today rather than the browsed month — dollars dated by <b>rpt_signings.signed_on</b>, unaffected by the lead backfill.</div>
   </div>`;
+}
+
+/* ── THE RECONCILIATION STRIP — the spend-ledger card, folded in ────────────
+   The vendor card died into the ledger with the one-ledger pass. What
+   survives on the face is the crossfoot: spend attributed to sources (Google
+   all-in from the card, every typed source row), the ⚑3 vendors that price
+   nothing, the referral bonuses, and the book they sum to — mkBookTotal, the
+   headline's own denominator, so the strip and the headline cannot disagree.
+   The full vendor × brand table lives behind the fold, unchanged — typed
+   rows, flags and all (mkVendorTable). A remainder that does not crossfoot
+   prints itself instead of being absorbed. */
+function mkReconStrip(monthKey, live, bonus, book){
+  if (!Array.isArray(MKT.spend)) return '';   // the ledger's withheld block below states why
+  const monthRows = MKT.spend.filter(s => String(s.month).slice(0, 10) === monthKey);
+  if (!monthRows.length) return '';           // an empty month is the nag's job, not a strip of zeros
+  const attr = live.reduce((n, r) => n + (r.spend || 0), 0);
+  const f3 = [...new Set(monthRows.filter(r => String(r.note || '').includes('⚑3')).map(r => r.source_name))];
+  const f3Tot = f3.reduce((n, s) => n + ((mkSpendSplit(s, monthKey) || {}).total || 0), 0);
+  const rem = book - attr - f3Tot - (bonus || 0);
+  return `<div class="mk-recon">
+    <div class="rc"><div class="k">Attributed to sources</div><div class="v">${money(attr)}</div>
+      <div class="u2">${book > 0 ? (100 * attr / book).toFixed(1) : '—'}% of the book — Google all-in from the card (incl. Liam / Gate mgmt ✓2) plus every typed source row</div></div>
+    <div class="rc f3"><div class="k">Prices no source · ⚑3</div><div class="v">${f3Tot > 0 ? money(f3Tot) : '—'}</div>
+      <div class="u2">${f3.length ? esc(f3.join(', ')) : 'none this month'} — held in the book, on no row above</div></div>
+    <div class="rc"><div class="k">Referral bonuses</div><div class="v">${bonus > 0 ? money(bonus) : '—'}</div>
+      <div class="u2">thank-yous, not buys (~) — price Referral's CPL and $/unit only, never its ROI</div></div>
+    <div class="rc"><div class="k">= The book</div><div class="v">${money(book)}</div>
+      <div class="u2">mkBookTotal — the headline divides by this same total${Math.abs(rem) > 1 ? ` · <b>${money(Math.abs(rem))} ${rem > 0 ? 'matches no set here — check the fold' : 'double-counted — check the fold'}</b>` : ' · crossfoots to the dollar'}</div></div>
+  </div>
+  <button type="button" class="mk-fold" style="min-width:0" onclick="mkBookFold(this)" aria-expanded="false"><span class="chev">›</span>the vendor book · ${monthRows.length} typed row${monthRows.length === 1 ? '' : 's'}<span class="why">vendors × companies, flags riding in from each row's note</span></button>
+  <div hidden>${mkVendorTable(monthKey, monthRows)}</div>`;
 }
 
 /* The fold, and the earned row's hidden input. Both are pure DOM: re-rendering
    the drawer to open a disclosure would throw away the month the reader has
    stepped to and their scroll position with it. */
-function mkFold(btn){
+function mkFold(btn, attr){
+  attr = attr || 'data-idle';
   const open = btn.getAttribute('aria-expanded') !== 'true';
   btn.setAttribute('aria-expanded', open ? 'true' : 'false');
   btn.classList.toggle('open', open);
   let el = btn.nextElementSibling;
-  while (el && el.hasAttribute && el.hasAttribute('data-idle')) { el.hidden = !open; el = el.nextElementSibling; }
+  while (el && el.hasAttribute && el.hasAttribute(attr)) { el.hidden = !open; el = el.nextElementSibling; }
+}
+/* The vendor-book disclosure under the reconciliation strip — one hidden
+   element, not a row run, so it gets its own toggle. */
+function mkBookFold(btn){
+  const el = btn.nextElementSibling, open = el.hidden;
+  el.hidden = !open;
+  btn.classList.toggle('open', open);
+  btn.setAttribute('aria-expanded', open ? 'true' : 'false');
 }
 function mkTypeCost(btn){
   const box = btn.nextElementSibling;
@@ -6562,8 +6684,14 @@ function mktPanelBrand(){
     + cardBrandReturn() + cardSrcByCo() + mkHeldUnitEcon() + `</div>`;
 }
 function mktPanelSource(){
-  return `<div class="m2-stack">` + cardSourceRow() + mkEarnedStrip() + cardSpendLedger()
-    + cardQuiet() + cardSrcMatrix() + mkHeldTrendCpu() + mkHeldSpeedToClose() + mkHeldStall() + `</div>`;
+  /* THE ONE-LEDGER PASS (KD approved the mock, 21 Aug 2026). Three cards
+     folded INTO the ledger rather than stacking beneath it: the spend-ledger
+     card became the reconciliation strip + vendor-book fold, the went-quiet
+     card became the quiet fold at the ledger's foot, and the month matrix
+     became the trail column on every row. One surface, every number wearing
+     its relative percentage. */
+  return `<div class="m2-stack">` + cardSourceRow() + mkEarnedStrip()
+    + mkHeldTrendCpu() + mkHeldSpeedToClose() + mkHeldStall() + `</div>`;
 }
 function mktPanelReps(){
   return `<div class="m2-stack">` + cardRepBoard() + cardRepGrid() + `</div>`;
@@ -6571,7 +6699,7 @@ function mktPanelReps(){
 
 const MKT_KIT = [
   { key:'brand', name:'The month · by brand',          panel: mktPanelBrand,  tile: ptMktMonth },
-  { key:'src',   name:'Return by source · vs 10x',     panel: mktPanelSource, tile: ptMktSources },
+  { key:'src',   name:'The ledger · source vs 10x',    panel: mktPanelSource, tile: ptMktSources },
   { key:'rep',   name:'Who closes what · by rep',      panel: mktPanelReps,   tile: ptMktReps },
 ];
 
@@ -6620,7 +6748,7 @@ function marketingRoom(direct){
   const all = MKT_VIEW.mode === 'all';
   const solo = MKT_VIEW.mode === 'solo' ? MKT_KIT.find(i => i.key === MKT_VIEW.key) : null;
   const open = all || !!solo;
-  /* The six-month walk feeds the MoM column, Went quiet and the matrix — all
+  /* The six-month walk feeds the trail column and the quiet fold — both
      source-level — so it is paid for when that level is opened. loadMktWalk
      self-guards, so calling it from every render costs nothing after the
      first. */
@@ -6942,24 +7070,18 @@ function cardBrandReturn(){
    number is a retelling. The ranked read survives on the ledger itself —
    priced sources by return, earned money beneath, largest first. */
 
-/* ── VENDOR LEDGER · the whole book ───────────────────────────────────────── */
-/* FULL SINCE 171. One book holds it all now: lead sources (Saving Safari,
-   Angi), the card's Google Ads, the agency line, referral bonuses, and the
-   ⚑3 vendor tooling — vendors as rows, companies as columns, exactly the
-   approved ledger's shape. Rows sort by total, biggest first, matching the
-   approved board. Each row's flags ride in from its own note: ⚑3 means
+/* ── VENDOR TABLE · the whole book, behind the ledger's fold ──────────────── */
+/* FULL SINCE 171, FOLDED SINCE THE ONE-LEDGER PASS. One book holds it all:
+   lead sources (Saving Safari, Angi), the card's Google Ads, the agency
+   line, referral bonuses, and the ⚑3 vendor tooling — vendors as rows,
+   companies as columns, exactly the approved ledger's shape. Rows sort by
+   total, biggest first. Each row's flags ride in from its own note: ⚑3 means
    unattributable (held in totals, priced nowhere), ~ means estimate.
    Heymarket is deliberately NOT here — reclassified to company ops with
-   EagleView and Pictometry. Windsor prices nothing on this ledger. */
-function cardSpendLedger(){
-  const monthKey = mkISO(mkMonthStart(MKTOFF));
-  if (!Array.isArray(MKT.spend)) return mkWithheld('Spend ledger · monthly', 'no feed',
-    'The spend book is not on live yet',
-    `<b>marketing_spend</b> (166/167) has not been applied — there is no table to read. Apply it and this ledger goes live with no further deploy.`);
-  const monthRows = MKT.spend.filter(s => String(s.month).slice(0, 10) === monthKey);
-  if (!monthRows.length) return mkWithheld('Spend ledger · monthly', 'nothing typed',
-    `No spend row for ${esc(mkMonthLabel(MKTOFF))}`,
-    `The book is live but holds nothing for this month. A ledger of zeros would be an estimate; the empty month is the fact — and if it is last month, the nag at the top of the board is already asking for it.`);
+   EagleView and Pictometry. Windsor prices nothing on this ledger. The card
+   wrapper and the empty-month withholds died with the fold: mkReconStrip
+   guards both and renders nothing to disclose when there is nothing typed. */
+function mkVendorTable(monthKey, monthRows){
   const info = [...new Set(monthRows.map(s => s.source_name))].map(src => {
     const sp = mkSpendSplit(src, monthKey);
     const notes = monthRows.filter(r => r.source_name === src).map(r => String(r.note || ''));
@@ -6980,9 +7102,7 @@ function cardSpendLedger(){
         : `<td class="z" title="entered as one unsplit total">·</td>`;
     }).join('')}<td>${sp.total.toLocaleString()}</td></tr>`;
   }).join('');
-  return `<div class="m2-card">
-    <div class="m2-card-title">Spend ledger · ${esc(mkMonthLabel(MKTOFF))}<span class="m2-tag manual">typed · kd</span><span class="m2-tag chase" title="Google Ads rows are the card statements — Chase Ink 1552/1571 + Amex Gold, keyed by brand (170/171)">card</span></div>
-    <div class="m2-card-sub">The whole book by company — vendors as rows, one grain per month (167/170/171). Google Ads is the card statements, keyed by brand; Windsor prices nothing here. Heymarket ($866) reclassified to company ops — with EagleView, Pictometry.</div>
+  return `<div class="m2-card-sub" style="margin-top:10px">The whole book by company — vendors as rows, one grain per month (167/170/171), typed · kd. Google Ads rows are the card statements — Chase Ink 1552/1571 + Amex Gold, keyed by brand; Windsor prices nothing here. Heymarket ($866) reclassified to company ops — with EagleView, Pictometry.</div>
     <div class="m2-scroll"><table class="m2-co">
       <tr><th>Vendor</th>${BRAND_ORDER.map(b => `<th>${esc(BRANDS[b].s)}</th>`).join('')}<th>Total</th></tr>
       ${rows}
@@ -6990,8 +7110,7 @@ function cardSpendLedger(){
         `<td style="font-weight:600" class="${cells[b] ? '' : 'z'}">${cells[b] ? cells[b].toLocaleString() : '—'}</td>`).join('')}
       <td style="font-weight:600">${Math.round(tot).toLocaleString()}</td></tr>
     </table></div>
-    <div class="m2-note">Flags ride in from each row's own note in <b>marketing_spend</b>: <b>⚑3</b> = unattributable — no CC source tag, held in these totals, excluded from every per-source ROI, CPL and CPU above; <b>~</b> = estimate (referral bonuses — occasional, not programmatic); the Oasis Saving Safari $2,000 is imputed barter (⚑6) and will not reconcile against QB. This table IS the month's spend truth — the headline and the brand tiles divide against these same totals, so the three surfaces cannot disagree.</div>
-  </div>`;
+    <div class="m2-note">Flags ride in from each row's own note in <b>marketing_spend</b>: <b>⚑3</b> = unattributable — no CC source tag, held in these totals, excluded from every per-source ROI, CPL and CPU above; <b>~</b> = estimate (referral bonuses — occasional, not programmatic); the Oasis Saving Safari $2,000 is imputed barter (⚑6) and will not reconcile against QB. This table IS the month's spend truth — the headline, the strip above and the brand tiles divide against these same totals, so no two surfaces can disagree.</div>`;
 }
 
 /* The COST PER LEAD & PER UNIT table merged into the source ledger. It
@@ -7198,85 +7317,16 @@ function cardSrcByCo(){
         return `<td class="${v ? '' : 'z'}" style="font-weight:600">${v ? short(v) : '—'}</td>`;
       }).join('')}${anyOther ? `<td style="font-weight:600">${short(srcs.reduce((n, s) => n + (other[s] || 0), 0))}</td>` : ''}<td style="font-weight:600">${short(srcs.reduce((n, s) => n + tot[s], 0))}</td></tr>
     </table></div>
-    <div class="m2-note">Signed <b>dollars</b>, the approved board's own unit — <b>rpt_report_marketing_roi_brand</b> (169), the same confirmed signing rows as every other dollar on this board, grouped source × brand server-side. Brand is <b>rpt_signings.brand_rollup_cc_id</b>: legacy Liberty Roofing (1537) folds into Pro-Tec upstream, and a signing with no company lands in <b>Other</b>, never dropped. Money counts rows (migration 150), so this table cross-foots with the source ledger and the matrix, not with a distinct-job count.</div>
+    <div class="m2-note">Signed <b>dollars</b>, the approved board's own unit — <b>rpt_report_marketing_roi_brand</b> (169), the same confirmed signing rows as every other dollar on this board, grouped source × brand server-side. Brand is <b>rpt_signings.brand_rollup_cc_id</b>: legacy Liberty Roofing (1537) folds into Pro-Tec upstream, and a signing with no company lands in <b>Other</b>, never dropped. Money counts rows (migration 150), so this table cross-foots with the source ledger and its trail column, not with a distinct-job count.</div>
   </div>`;
 }
 
-/* ── 13 · WENT QUIET ──────────────────────────────────────────────────────── */
-function cardQuiet(){
-  if (!MKTWALK) return `<div class="m2-card"><div class="m2-card-title">Went quiet · sources that stopped<span class="m2-tag cc">live · cc</span></div>
-    <div class="m2-card-sub" style="margin:0">Walking the last ${MKW_MONTHS} months…</div></div>`;
-  if (MKTWALK.err) return mkWithheld('Went quiet · sources that stopped', 'no feed',
-    'The month walk did not answer',
-    `Every one of the ${MKW_MONTHS} windowed calls to <b>rpt_report_marketing_roi</b> failed (${esc(String(MKTWALK.err))}), and <b>rpt_marketing_revenue_by_source_month</b> (172, the Mar–Jun backfill) did not answer either. That RPC is migration 160 as corrected by 165.`);
-  const live = MKTWALK.series.filter(m => !m.err);
-  if (live.length < 3) return mkWithheld('Went quiet · sources that stopped', 'too few months',
-    'Not enough months came back to call anything quiet',
-    `${live.length} of ${MKW_MONTHS} windows answered. A source needs a run of months behind it before silence means anything.`);
-  const names = [...new Set(live.flatMap(m => Object.keys(m.bySrc)))];
-  /* Quiet = earned money in the earlier months, nothing in the last two. Two,
-     not one: a source that simply has not signed yet this month is not a
-     source that stopped, and the current month is partial by definition. */
-  const tail = live.slice(-2), head = live.slice(0, -2);
-  const quiet = names.map(n => {
-    const earned = head.reduce((s, m) => s + ((m.bySrc[n] || {}).dollars || 0), 0);
-    const recent = tail.reduce((s, m) => s + ((m.bySrc[n] || {}).dollars || 0), 0);
-    return { n, earned, recent, series: live.map(m => (m.bySrc[n] || {}).dollars || 0) };
-  }).filter(x => x.earned > 0 && x.recent === 0).sort((a, b) => b.earned - a.earned);
-  if (!quiet.length) return `<div class="m2-card">
-    <div class="m2-card-title">Went quiet · sources that stopped<span class="m2-tag cc">live · cc</span></div>
-    <div class="m2-card-sub">Sources that earned in the earlier months and signed nothing in the last two.</div>
-    <div class="withheld"><div class="wt">Nothing has gone quiet</div><div class="wx">Every source that signed money in the first ${head.length} month${head.length === 1 ? '' : 's'} of the walk has signed again since. This is a real all-clear, not an empty feed — ${live.length} windows answered.</div></div>
-  </div>`;
-  const peak = Math.max(1, ...quiet.flatMap(x => x.series));
-  return `<div class="m2-card">
-    <div class="m2-card-title">Went quiet · sources that stopped<span class="m2-tag cc">live · cc</span></div>
-    <div class="m2-card-sub">Earned money ${esc(live[0].label)}–${esc(head[head.length - 1].label)}, nothing signed in ${esc(tail.map(t => t.label).join(' or '))}. Bars are ${esc(live[0].label)}→${esc(live[live.length - 1].label)}; red stubs are zero months.</div>
-    ${quiet.map(x => `<div class="m2-quiet-row">
-      <div class="m2-q-pulse dead"></div>
-      <div class="m2-q-body"><div class="m2-q-name">${esc(x.n)}</div>
-        <div class="m2-q-meta">last signed ${esc((live.filter((m, i) => x.series[i] > 0).pop() || {}).label || '—')} · ${x.series.filter(v => v > 0).length} of ${live.length} months live</div></div>
-      <div class="m2-q-spark">${x.series.map(v => v > 0
-        ? `<i style="height:${Math.max(3, Math.round(22 * v / peak))}px"></i>` : `<i class="z"></i>`).join('')}</div>
-      <div class="m2-q-lost">${short(x.earned)}</div>
-    </div>`).join('')}
-    <div class="m2-note"><b>${money(quiet.reduce((n, x) => n + x.earned, 0))}</b> of proven signed revenue now producing nothing. Dollars are dated by <b>rpt_signings.signed_on</b>, correct in every window — this section does not read the leads column and is unaffected by the backfill.</div>
-  </div>`;
-}
-
-/* ── 14 · THE TREND MATRIX ────────────────────────────────────────────────── */
-function cardSrcMatrix(){
-  if (!MKTWALK) return `<div class="m2-card"><div class="m2-card-title">Signed revenue by source · by month<span class="m2-tag cc">live · cc</span></div>
-    <div class="m2-card-sub" style="margin:0">Walking the last ${MKW_MONTHS} months…</div></div>`;
-  if (MKTWALK.err) return mkWithheld('Signed revenue by source · by month', 'no feed',
-    'The month walk did not answer',
-    `Every one of the ${MKW_MONTHS} windowed calls to <b>rpt_report_marketing_roi</b> failed (${esc(String(MKTWALK.err))}), and <b>rpt_marketing_revenue_by_source_month</b> (172, the Mar–Jun backfill) did not answer either.`);
-  const live = MKTWALK.series;
-  const names = [...new Set(live.filter(m => !m.err).flatMap(m => Object.keys(m.bySrc)))];
-  if (!names.length) return mkWithheld('Signed revenue by source · by month', 'no rows',
-    'No source signed money in the window', 'Nothing is inferred in its place.');
-  const totOf = n => live.reduce((s, m) => s + ((m.bySrc || {})[n] || {}).dollars || 0, 0);
-  names.sort((a, b) => totOf(b) - totOf(a));
-  const thisMonth = live[live.length - 1];
-  return `<div class="m2-card">
-    <div class="m2-card-title">Signed revenue by source · by month<span class="m2-tag cc">live · cc</span></div>
-    <div class="m2-card-sub">Every source, every month of the walk. <b>${esc(thisMonth.label)}</b> is partial — it is the month in progress.</div>
-    <div class="m2-scroll"><table class="m2-mx">
-      <tr><th>Source</th>${live.map(m => `<th>${esc(m.label)}${m.off === 0 ? '*' : ''}${m.backfilled ? '†' : ''}</th>`).join('')}</tr>
-      ${names.map(n => {
-        const vals = live.map(m => m.err ? null : ((m.bySrc[n] || {}).dollars || 0));
-        const peak = Math.max(...vals.map(v => v || 0));
-        const dead = vals.slice(-2).every(v => v === 0);
-        return `<tr class="${dead ? 'dim' : ''}"><td>${esc(n)}</td>${vals.map(v =>
-          v === null ? `<td class="z" title="this window did not answer">·</td>`
-          : v === 0 ? `<td class="z">—</td>`
-          : `<td class="${v === peak ? 'pk' : ''}">${short(v)}</td>`).join('')}</tr>`;
-      }).join('')}
-    </table></div>
-    <div class="m2-note">Signed dollars per source per month, one windowed call to <b>rpt_report_marketing_roi</b> each, grouped on <b>lead_sources.rollup_name</b>. ${live.some(m => m.err) ? `<b>${live.filter(m => m.err).length}</b> window${live.filter(m => m.err).length === 1 ? '' : 's'} did not answer and read as a dot, not a zero. ` : ''}A source with no revenue in the month reads an em-dash. Dimmed rows have signed nothing in the last two months — see Went quiet above.${live.some(m => m.backfilled) ? ` <b>†</b> — the RPC can't group these months by source (its <code>led</code> CTE keys on <code>jobs.created_at</code>, one-shot-backfilled to 20 Jul); read instead from <b>rpt_marketing_revenue_by_source_month</b> (migration 172), pulled straight from <code>jobs.contract_signed_at</code>/<code>cc_lead_source_id</code> and validated against a live Contractors Cloud pull. Cancelled contracts excluded; see <a href="docs/roi-board/handoff-source-backfill.md">the backfill handoff</a> for the June cross-foot against QB.` : ''}</div>
-  </div>`;
-}
-
+/* ── 13 & 14 · WENT QUIET, THE TREND MATRIX — folded into the ledger ────────
+   Both cards died into cardSourceRow with the one-ledger pass (KD approved
+   the mock, 21 Aug 2026): the quiet law renders as the data-quiet fold at
+   the ledger's foot, and the matrix rides every row as the trail column —
+   same MKTWALK, same 172 backfill substitution (†), same refusal states,
+   told once instead of twice. */
 /* ── 15 · ASK ANYTHING · not yet ──────────────────────────────────────────── */
 function mkHeldAsk(){
   return mkWithheld('Ask anything', 'not wired',
