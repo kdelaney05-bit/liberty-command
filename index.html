@@ -1216,6 +1216,17 @@
     text-transform: uppercase; color: var(--gold); margin-left: 6px; font-weight: 400; }
   .mkg tbody tr td { border-top: 1px solid var(--line); }
   .mkg tbody tr th { border-top: 1px solid var(--line); }
+  /* The month rail — the old rep board riding the right of every heat row
+     (the merge, 21 Aug). A double border walls it off from the all-time
+     cells, and the money column stays sticky so it never scrolls away. */
+  .mkg th.mo, .mkg td.mo { text-align: right; }
+  .mkg td.mo.first, .mkg thead th.mo.first { border-left: 3px double rgba(255,255,255,0.18); }
+  .mkg td.mo .mo-c { padding: 6px 10px; font-family: 'JetBrains Mono', monospace; font-size: 11.5px; white-space: nowrap; }
+  .mkg td.mo .mo-c small { display: block; font-size: 7.5px; color: var(--text-dim); letter-spacing: .04em; margin-top: 2px; }
+  .mkg td.mo.amt .mo-c { font-family: 'Fraunces', serif; font-size: 15.5px; font-weight: 600; color: var(--green-soft); }
+  .mkg td.mo.amt, .mkg thead th.mo.amt { position: sticky; right: 0; background: var(--bg-card); }
+  .mo-bar { position: relative; height: 3px; border-radius: 2px; background: rgba(255,255,255,0.07); margin-top: 4px; min-width: 64px; }
+  .mo-bar i { position: absolute; top: 0; bottom: 0; left: 0; border-radius: 2px; }
   .mkc { margin: 4px 3px; border-radius: 8px; padding: 7px 4px 6px; text-align: center;
     background: rgba(255,255,255,0.025); }
   .mkc .p { font-family: 'Fraunces', serif; font-size: 15.5px; font-weight: 600; line-height: 1; letter-spacing: -0.01em; }
@@ -6845,24 +6856,39 @@ function mkPeriodSrc(monthKey){
    browsed month; the rest open on one counted tap, never dropped. */
 const MK_GRID_TOP = 8;
 
-function cardRepGrid(){
+/* ── WHO CLOSES WHAT · THE REP BOARD — one board since the merge ────────────
+   KD, 21 Aug (fourth pass): "these two need to be merged, big time — put
+   the heat map into each score, and on the far right you keep the same
+   thing." The all-time heat cells ARE each rep's row now, and the month's
+   report — leads → units, close, signed dollars — rides a sticky rail on
+   the right, so one line reads WHERE a rep closes and WHAT it paid this
+   month. Every law both cards carried survives here:
+   - CELLS ALL-TIME, thin floor MK_THIN, median banding (a month-sliced
+     cell is n=2 — noise wearing a percentage sign).
+   - ROWS are the REP BOARD's roster — carried a lead or signed a job in
+     the browsed window, ranked by signed dollars. A wider door than the
+     old grid's signed-only rule, deliberately: a rep feeding on leads who
+     has not signed is exactly a row the owner wants against their
+     all-time cells. Departed reps keep their tag and their evidence; the
+     top MK_GRID_TOP show, the rest fold.
+   - The rail keeps the report's clocks (lead stamp cc_raw
+     project_created_at; money on contract_signed_at; different cohorts,
+     so close can pass 100 and means signed-this-month against
+     fed-this-month). Inherited files carry raw AND adjusted, never the
+     flattering one alone. */
+function cardRepIntel(){
   if (!MKT || !MKT.signed) return `<div class="card full">
-    <div class="card-title">Who closes what<span class="feed-tag cc">live · cc</span></div>
+    <div class="card-title">Who closes what · the rep board<span class="feed-tag cc">live · cc</span></div>
     <div class="card-sub" style="margin:0">Reading…</div></div>`;
 
   const monthKey = mkWinKey();
   const G = mkGridData(monthKey);
-  if (!G.sellers.length) return `<div class="card full">
-    <div class="card-title">Who closes what<span class="feed-tag cc">live · cc</span></div>
-    <div class="withheld"><div class="wt">No seller signed a job in ${esc(mkWinLabel())}</div><div class="wx">
-      A row on this grid is earned by signing at least one job in the browsed month — not by being on
-      today's payroll, and not by having ever sold here. ${esc(mkWinLabel())} has no signer yet,
-      so the grid has no rows, and nothing is inferred in their place.</div></div></div>`;
-  if (!G.cols.length) return `<div class="card full">
-    <div class="card-title">Who closes what<span class="feed-tag cc">live · cc</span></div>
-    <div class="withheld"><div class="wt">Nothing to rank yet</div><div class="wx">
-      No seller carries ${MK_THIN} leads on any single source, so no cell on this grid can be read.</div></div></div>`;
+  const B = mkRepBoardData(monthKey);
+  if (!B.rows.length) return mkWithheld('Who closes what · the rep board · ' + esc(mkWinLabel()), 'no rows',
+    `No seller carried a lead or a signing in ${esc(mkWinLabel())}`,
+    'A row here is earned by feeding on a lead or signing a job in the browsed window — nothing is inferred in its place.');
 
+  /* Heat cells — the grid's own renderer, verbatim laws. */
   const cellOf = (rep, src) => {
     const c = (G.cells[rep.id] || {})[src];
     if (!c || !c.leads) return `<div class="mkc none"><div class="p">·</div></div>`;
@@ -6873,41 +6899,52 @@ function cardRepGrid(){
     return `<div class="mkc ${k}"><div class="p">${Math.round(p)}%</div>
       <div class="n">${c.signed}/${c.leads}</div>${mkRanCell()}</div>`;
   };
-
-  /* The phone narrows to the month's active columns (.off-p hides below
-     700px). If the ROI feed has not answered, or the active rule would blank
-     every column, nothing is hidden — a phone with no columns is not compact,
-     it is blind. */
   const act = mkPeriodSrc(monthKey);
-  const offSet = new Set(act ? G.cols.filter(s => !act.has(s)) : []);
+  const offSet = new Set(act ? G.cols.filter(src => !act.has(src)) : []);
   if (offSet.size === G.cols.length) offSet.clear();
-  const colCls = s => offSet.has(s) ? ' class="off-p"' : '';
+  const colCls = src => offSet.has(src) ? ' class="off-p"' : '';
 
-  const row = (r, fold) => `<tr${fold ? ' data-foldrep hidden' : ''}><th>${esc(r.name)}${r.gone ? '<span class="gone">departed</span>' : ''}</th>
-      ${G.cols.map(s => `<td${colCls(s)}>${cellOf(r, s)}</td>`).join('')}</tr>`;
-  const shown = G.sellers.slice(0, MK_GRID_TOP), folded = G.sellers.slice(MK_GRID_TOP);
+  /* The month rail — the report's own cells, on the right of every row. */
+  const mx = Math.max(1, ...B.rows.map(r => r.close || 0));
+  const band = c => B.blended == null || c == null ? 'var(--text-dim)'
+    : c >= B.blended + MK_BAND ? 'var(--green-soft)'
+    : c <= B.blended - MK_BAND ? 'var(--red)' : 'var(--blue)';
+  const anyInh = B.rows.some(r => r.inCohort > 0);
+  const rail = r => `
+    <td class="mo first"><div class="mo-c">${r.leads.toLocaleString()}→${r.units.toLocaleString()}${r.units ? `<small>${money(Math.round(r.rev / r.units))} ticket</small>` : '<small>&nbsp;</small>'}</div></td>
+    <td class="mo"><div class="mo-c" style="color:${band(r.close)}">${r.close != null ? Math.round(r.close) + '%' : '—'}${r.adjClose != null
+      ? `<small title="${r.inCohort} of this month's ${r.leads} leads were inherited from ${esc(r.donors.join(', '))} — run by someone who has since left, still unsigned when the book changed hands. Raw counts them; adjusted is ${r.units} over the remaining ${r.adjLeads}.">${Math.round(r.adjClose)}% adj</small>`
+      : '<small>close</small>'}<div class="mo-bar">${r.close != null ? `<i style="width:${Math.round(100 * Math.min(r.close, mx) / mx)}%;background:${band(r.close)}"></i>` : ''}</div></div></td>
+    <td class="mo amt"><div class="mo-c">${short(r.rev)}</div></td>`;
+
+  const row = (r, fold) => `<tr${fold ? ' data-foldrep hidden' : ''}><th>${esc(r.name)}${r.gone ? '<span class="gone">departed</span>' : ''}${r.inCohort ? '<span class="gone" style="color:var(--gold)">*</span>' : ''}</th>
+      ${G.cols.map(src => `<td${colCls(src)}>${cellOf(r, src)}</td>`).join('')}${rail(r)}</tr>`;
+  const shown = B.rows.slice(0, MK_GRID_TOP), folded = B.rows.slice(MK_GRID_TOP);
+  const railHead = `<th class="mo first">Leads → units</th><th class="mo">Close</th><th class="mo amt">Signed $</th>`;
   const table = `<div class="mkg-wrap"><table class="mkg">
-    <thead><tr><th class="rep-h">Rep</th>${G.cols.map(s => `<th${colCls(s)}>${esc(s)}</th>`).join('')}</tr></thead>
+    <thead><tr><th class="rep-h">Rep</th>${G.cols.map(src => `<th${colCls(src)}>${esc(src)}</th>`).join('')}${railHead}</tr></thead>
     <tbody>${shown.map(r => row(r, false)).join('')}
     ${folded.length ? `<tr><th><button type="button" class="mkg-more" onclick="mkGridMore(this)" aria-expanded="false"
-        title="Reps ranked ${MK_GRID_TOP + 1}+ by signed $ in ${esc(mkWinLabel())} — folded, not dropped"><span class="chev">›</span>${folded.length} more rep${folded.length === 1 ? '' : 's'}</button></th>
-      <td colspan="${G.cols.length}"></td></tr>
+        title="Ranked ${MK_GRID_TOP + 1}+ by signed $ in ${esc(mkWinLabel())} — folded, not dropped"><span class="chev">›</span>${folded.length} more rep${folded.length === 1 ? '' : 's'}</button></th>
+      <td colspan="${G.cols.length + 3}"></td></tr>
     ${folded.map(r => row(r, true)).join('')}` : ''}</tbody>
   </table></div>`;
 
   return `<div class="card full">
-    <div class="card-title">Who closes what<span class="feed-tag cc">live · cc</span></div>
-    <div class="card-sub">Every seller who <b>signed a job in ${esc(mkWinLabel())}</b>, ranked by what they signed, against every source they carry real volume on — so an appointment can go to the person who closes that kind of lead. The cells stay all-time evidence; the month picks who is in the room. Each cell shows two denominators: signed against <b>leads assigned</b>, and signed against <b>appointments ran</b>.</div>
+    <div class="card-title">Who closes what · the rep board · ${esc(mkWinLabel())}<span class="feed-tag cc">live · cc</span></div>
+    <div class="card-sub">One line per seller: <b>where</b> they close — every source they carry real volume on, all-time evidence — and <b>what it paid in ${esc(mkWinLabel())}</b> on the rail: leads fed → units signed, the close rate against the ${B.blended == null ? 'board' : Math.round(B.blended) + '%'} blend, and the dollars. Ranked by the month's signed dollars, so the heat under the best desks reads first.</div>
     ${table}
     <div class="mk-legend">
       <span><i style="background:rgba(108,194,139,0.4)"></i>${MK_BAND}+ pts above the grid median</span>
       <span><i style="background:rgba(217,106,94,0.4)"></i>${MK_BAND}+ pts below</span>
       <span><i style="background:rgba(255,255,255,0.06)"></i>fewer than ${MK_THIN} leads · thin, not good or bad</span>
-      <span>median ${G.median == null ? 'n/a' : Math.round(G.median) + '%'} of ${G.readable} readable cells</span>
+      <span>median ${G.median == null ? 'n/a' : Math.round(G.median) + '%'} of ${G.readable} readable cells · rail close vs ${B.blended == null ? '—' : Math.round(B.blended) + '%'} blend</span>
     </div>
-    <div class="withheld"><div class="wt">Appointments ran is empty, and that is the finding</div><div class="wx">
-      The second denominator has <b>no feed anywhere</b>. Contractors Cloud does not log appointment outcomes — there is no ran field in the payload — so every cell says so in words rather than showing a number. <b>cc_appointments.cc_result_id</b> exists and looks like an outcome log; it is populated on <b>83 of 9,627</b> appointments and trails off after July, so it is not a denominator and this board deliberately does not read it. Appointments <i>set</i> is not substituted either: a rep who books ten and runs six is not the rep who books ten and runs ten, and that gap is the reason the column was asked for.</div></div>
-    <div class="note">Signed is <b>rpt_signings</b> where confirmed, matched to the job by <b>cc_project_id</b> — the same basis board 1 reads, so the two boards cannot disagree about who closed what. It is counted <b>distinct by project</b>: migration 150 splits an amended invoice into a signing row per late bell, which is right for money and would push a closing rate past 100%. Not <b>jobs.contract_signed_at</b>, which would understate Oasis — 227 of Google's confirmed signings arrive through Billdu and 32 of those sit on jobs with no contract date at all. Cells are all-time, not monthly: a month-sliced cell is n=2 and reads as noise. The <b>rows</b> are monthly: a seller is here iff they signed at least one job in ${esc(mkWinLabel())} — not "active user", not "ever sold here". Zero signings in the window is no row, departed or not; the roster asked of today's payroll deleted Jared's July book, and the swing past it — every seller in company history — seated desks cold for months on a board that routes the next lead. Sellers only (098), and a departed rep's book is still some of the strongest evidence here about which desk closes which lead.${G.sellers.some(r => r.gone) ? ` <b>${G.sellers.filter(r => r.gone).map(r => esc(r.name)).join(', ')}</b> ${G.sellers.filter(r => r.gone).length === 1 ? 'has' : 'have'} left; ${G.sellers.filter(r => r.gone).length === 1 ? 'that row is' : 'those rows are'} tagged <b>departed</b> and ${G.sellers.filter(r => r.gone).length === 1 ? 'is' : 'are'} here for what the book proves, not as a desk to route to.` : ''} ${G.dropped.length ? `<b>${G.dropped.length}</b> source${G.dropped.length === 1 ? '' : 's'} ${G.dropped.length === 1 ? 'is' : 'are'} not a column here — no seller carries ${MK_THIN} leads on ${G.dropped.length === 1 ? 'it' : 'any of them'} (${G.droppedLeads.toLocaleString()} leads between them): ${esc(G.dropped.join(', '))}.` : ''}${folded.length ? ` The grid shows the top <b>${MK_GRID_TOP}</b> by signed $ in ${esc(mkWinLabel())}; <b>${folded.length}</b> more open${folded.length === 1 ? 's' : ''} on the fold — folded, never dropped.` : ''}${offSet.size ? ` On a phone the columns narrow to sources that cost or earned money in ${esc(mkWinLabel())} — the source ledger's own active rule — and <b>${offSet.size}</b> read${offSet.size === 1 ? 's' : ''} at desk width only: ${esc([...offSet].join(', '))}.` : ''}</div>
+    <div class="withheld annot"><div class="wt">Appointments ran is empty, and that is the finding</div><div class="wx">
+      The heat cells' second denominator has <b>no feed anywhere</b>. Contractors Cloud does not log appointment outcomes — there is no ran field in the payload. <b>cc_appointments.cc_result_id</b> exists and looks like an outcome log; it is populated on <b>83 of 9,627</b> appointments, so it is not a denominator and this board deliberately does not read it. Appointments <i>set</i> is not substituted either: a rep who books ten and runs six is not the rep who books ten and runs ten.</div></div>
+    ${anyInh ? `<div class="withheld annot"><div class="wt">Inherited files — raw and adjusted both print</div><div class="wx">${B.rows.filter(r => r.inCohort).map(r =>
+      `<b>* ${esc(r.name)}</b> — <b>${r.held}</b> inherited lead${r.held === 1 ? '' : 's'} from ${esc(r.donors.join(', '))}${r.held !== r.inCohort ? `, <b>${r.inCohort}</b> in ${esc(mkWinLabel())}'s cohort` : ''}: appointments run by a rep who has since left, still unsigned when the book changed hands. Raw <b>${Math.round(r.close)}%</b> (${r.units}/${r.leads}) counts them; adjusted <b>${Math.round(r.adjClose)}%</b> (${r.units}/${r.adjLeads}) does not. <b>Both print and neither replaces the other</b> — the adjusted figure is drawn from an unsigned pile, exactly the pile a flattering rule could be built out of.${r.adjLeads < MK_THIN ? ` At <b>${r.adjLeads}</b> leads the adjusted denominator is under the thin floor of ${MK_THIN} — read it as a direction, not a rate.` : ''}`).join('<br/><br/>')}</div></div>` : ''}
+    <div class="note"><b>THE CELLS</b> are all-time on purpose: signed is <b>rpt_signings</b> where confirmed, matched by <b>cc_project_id</b>, counted <b>distinct by project</b> (migration 150 splits amended invoices — right for money, wrong for a rate); a month-sliced rep × source cell is n=2, so the cells keep every month they have ever seen. <b>THE ROWS</b> are the month: every seller who carried a lead or signed a job in ${esc(mkWinLabel())}, ranked by signed dollars — a wider door than the old grid's signed-only rule, deliberately, because a rep feeding on leads without signing is exactly a row worth reading against their all-time cells. <b>THE RAIL</b> keeps the report's clocks: leads date on <b>cc_raw→project_created_at</b> (the honest lead stamp, not the 20 Jul backfill), units and dollars on <b>contract_signed_at</b> — different cohorts, so a close rate can pass 100 and means signed-this-month against fed-this-month. Sellers only (098)${B.rows.some(r => r.gone) ? ` — <b>${esc(B.rows.filter(r => r.gone).map(r => r.name).join(', '))}</b> ${B.rows.filter(r => r.gone).length === 1 ? 'has' : 'have'} left, tagged and kept for what the book proves` : ''}.${B.otherUnits ? ` <b>${money(B.otherRev)}</b> across <b>${B.otherUnits}</b> unit${B.otherUnits === 1 ? '' : 's'} was signed on desks that are not seller rows — office-booked and managerial work — stated rather than folded into somebody's rate.` : ''}${G.dropped.length ? ` <b>${G.dropped.length}</b> source${G.dropped.length === 1 ? '' : 's'} ${G.dropped.length === 1 ? 'is' : 'are'} not a column — no seller carries ${MK_THIN} leads on ${G.dropped.length === 1 ? 'it' : 'any'} (${G.droppedLeads.toLocaleString()} leads between them): ${esc(G.dropped.join(', '))}.` : ''}${folded.length ? ` Top <b>${MK_GRID_TOP}</b> shown; <b>${folded.length}</b> more on the fold.` : ''}${offSet.size ? ` On a phone the columns narrow to ${esc(mkWinLabel())}'s active sources; <b>${offSet.size}</b> read at desk width only: ${esc([...offSet].join(', '))}.` : ''}</div>
   </div>`;
 }
 
@@ -7119,7 +7156,7 @@ function mktPanelLedger(){
 function mktPanelReps(){
   /* GRID FIRST (KD, 21 Aug: "that one's badass"): the who-closes-what heat
      grid leads, the monthly rep report reads beneath it. */
-  return `<div class="m2-stack">` + cardRepGrid() + cardRepBoard() + `</div>`;
+  return `<div class="m2-stack">` + cardRepIntel() + `</div>`;
 }
 function mktPanelRest(){
   /* The appendix, in fading order of pull: earned money, the brand tiles,
@@ -7764,34 +7801,9 @@ function mkRepBoardData(monthKey){
   return { rows, otherUnits, otherRev, blended: tl ? 100 * tu / tl : null };
 }
 
-function cardRepBoard(){
-  const monthKey = mkWinKey();
-  const B = mkRepBoardData(monthKey);
-  if (!B.rows.length) return mkWithheld('Rep board · ' + esc(mkWinLabel()), 'no rows',
-    `No seller carried a lead or a signing in ${esc(mkWinLabel())}`,
-    'Nothing is inferred in its place.');
-  const mx = Math.max(1, ...B.rows.map(r => r.close || 0));
-  const band = c => B.blended == null || c == null ? 'var(--text-dim)'
-    : c >= B.blended + MK_BAND ? 'var(--green-soft)'
-    : c <= B.blended - MK_BAND ? 'var(--red)' : 'var(--blue)';
-  const anyInh = B.rows.some(r => r.inCohort > 0);
-  return `<div class="m2-card">
-    <div class="m2-card-title">Rep board · ${esc(mkWinLabel())}<span class="m2-tag cc">live · cc</span></div>
-    <div class="m2-card-sub">Every seller who carried a lead or signed a job in ${esc(mkWinLabel())}, ranked by what they signed. Close is that month's units over that month's leads — <b>green</b> is ${MK_BAND}+ points above the ${B.blended == null ? 'board' : Math.round(B.blended) + '%'} blend, <b>red</b> ${MK_BAND}+ below.</div>
-    ${B.rows.map(r => `<div class="m2-rp">
-      <div class="m2-rp-nm">${esc(r.name)}${r.gone ? '<span class="gone">departed</span>' : ''}${r.inCohort ? '<span class="gone" style="color:var(--gold)">*</span>' : ''}
-        <small>${r.leads.toLocaleString()} lead${r.leads === 1 ? '' : 's'} → ${r.units.toLocaleString()} unit${r.units === 1 ? '' : 's'}${r.units ? ` · ${money(Math.round(r.rev / r.units))} ticket` : ''}</small></div>
-      <div class="m2-rp-bar">${r.close != null ? `<i style="width:${Math.round(100 * r.close / mx)}%;background:${band(r.close)}"></i>` : ''}</div>
-      <div class="m2-rp-pct" style="color:${band(r.close)}">${r.close != null ? Math.round(r.close) + '%' : '—'}${
-        r.adjClose != null ? `<span class="adj" title="${r.inCohort} of this month's ${r.leads} leads were inherited from ${esc(r.donors.join(', '))} — appointments run by someone who has since left, still unsigned when the book changed hands. Raw ${Math.round(r.close)}% counts them; adjusted ${Math.round(r.adjClose)}% is ${r.units} over the remaining ${r.adjLeads}.">${Math.round(r.adjClose)}% adj</span>`
-        : `<small>close</small>`}</div>
-      <div class="m2-rp-amt">${short(r.rev)}</div>
-    </div>`).join('')}
-    ${anyInh ? `<div class="m2-note">${B.rows.filter(r => r.inCohort).map(r =>
-      `<b>* ${esc(r.name)}</b> — <b>${r.held}</b> inherited lead${r.held === 1 ? '' : 's'} from ${esc(r.donors.join(', '))}${r.held !== r.inCohort ? `, <b>${r.inCohort}</b> of them in ${esc(mkWinLabel())}'s cohort` : ''} excluded in adjusted: files whose appointment was run by a rep who has since left and which were still unsigned when the book changed hands. Raw <b>${Math.round(r.close)}%</b> (${r.units}/${r.leads}) counts them; adjusted <b>${Math.round(r.adjClose)}%</b> (${r.units}/${r.adjLeads}) does not. <b>Both are printed and neither replaces the other</b> — the raw figure is what the database says, and the adjusted figure is drawn from an unsigned pile, which is exactly the pile a flattering rule could be built out of. ${r.adjLeads < MK_THIN ? `At <b>${r.adjLeads}</b> leads the adjusted denominator is under this board's own thin floor of ${MK_THIN}, so read it as a direction, not a rate.` : ''}`).join('<br/><br/>')}</div>` : ''}
-    <div class="m2-note"><b>Leads</b> date on <b>cc_raw-&gt;&gt;'project_created_at'</b> — Contractors Cloud's own lead stamp, not <b>jobs.created_at</b>, which is our row-insert time and puts the whole warehouse on 20 Jul 2026 (the backfill that withholds the leads column two sections up). <b>Units and dollars</b> date on <b>contract_signed_at</b>, correct in every window. Leads and units are deliberately different cohorts — a lead that arrived in ${esc(mkWinLabel())} and a job signed in ${esc(mkWinLabel())} are not the same set, so a close rate here can exceed 100% and means "signed this month against fed this month", the approved board's own arithmetic. Sellers only (098), every seller the roster has ever carried${B.rows.some(r => r.gone) ? ` — <b>${esc(B.rows.filter(r => r.gone).map(r => r.name).join(', '))}</b> ${B.rows.filter(r => r.gone).length === 1 ? 'has' : 'have'} left and ${B.rows.filter(r => r.gone).length === 1 ? 'is' : 'are'} shown for the month ${B.rows.filter(r => r.gone).length === 1 ? 'they' : 'they'} worked` : ''}.${B.otherUnits ? ` <b>${money(B.otherRev)}</b> across <b>${B.otherUnits}</b> unit${B.otherUnits === 1 ? '' : 's'} was signed on desks that are not seller rows — office-booked and managerial work — and is stated here rather than dropped or folded into somebody's rate.` : ''} The rep × <b>source</b> question lives on <b>Who closes what</b>, one section down, all-time, because a month-sliced cell is n=2 — that refusal was about cells, never about these totals.</div>
-  </div>`;
-}
+/* cardRepBoard died into cardRepIntel with the merge (KD, 21 Aug) — the
+   month rail carries its every number and clock; the inherited-file note
+   and the office-desk remainder ride the merged card's own notes. */
 
 /* The "Who closes Google leads" refusal card is retired, not carried: it was
    a signpost pointing at Who closes what in a different room, and since the
