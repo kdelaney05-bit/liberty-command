@@ -1695,6 +1695,12 @@
   @media (hover: hover) { .rules-tab:hover { color: var(--gold); border-color: var(--gold); } }
   .rules-body { display: none; }
   .rules-body.open { display: block; }
+  /* The asterisk grade — an annotation block on a data card folds to one
+     gold mark; its title rides the hover, the block opens on tap. */
+  .rules-tab.ast { padding: 2px 7px; color: var(--gold); border-color: rgba(212,177,90,0.4); font-size: 9px; }
+  .rules-tab.ast::before { content: none; }
+  .withheld.annot { display: none; }
+  .withheld.annot.open { display: block; }
 
   /* ── the touch suite (5 Aug — "touch data no different than sales data") ── */
   /* The branded band above the effort cards. This page gets filmed for the
@@ -6532,13 +6538,13 @@ function cardSourceRow(){
     ${split}
     ${mkReconStrip(monthKey, live, bonus, book)}
     ${!all.length ? `<div class="card-sub" style="margin:12px 0 0">No lead carried a source in ${esc(mkWinLabel())}.</div>` : ''}
-    ${backfilled ? `<div class="withheld"><div class="wt">This month reads from the backfill, and says so</div><div class="wx">
+    ${backfilled ? `<div class="withheld annot"><div class="wt">This month reads from the backfill, and says so</div><div class="wx">
       <b>rpt_report_marketing_roi</b> cannot group months before ${esc(MK_SRC_RPC_FROM)} by source (its leads CTE keys on <b>jobs.created_at</b>, one-shot-backfilled on 20 Jul 2026), so these rows come from <b>rpt_marketing_revenue_by_source_month</b> (migration <b>172</b>) — pulled straight from <code>jobs.contract_signed_at</code> / <code>cc_lead_source_id</code> and validated against a live Contractors Cloud pull. The trail column reads the same table for the same months (its <b>†</b> tooltip mark), so the two can no longer answer this month differently. Cancelled contracts excluded; see <a href="docs/roi-board/handoff-source-backfill.md">the backfill handoff</a>.</div></div>` : ''}
-    ${!spendBook ? `<div class="withheld"><div class="wt">The spend book is not on live yet</div><div class="wx">
+    ${!spendBook ? `<div class="withheld annot"><div class="wt">The spend book is not on live yet</div><div class="wx">
       Every typed source reads <b>not entered</b> because <b>marketing_spend</b> (migration <b>166</b>) has not been applied — the table the office types into does not exist yet, so no ROI on this board can be computed. This is the honest state, not a zero: a source with no cost recorded is not a free source. Apply 166 and the inputs go live with no further deploy.</div></div>` : ''}
-    ${ytd ? `<div class="withheld"><div class="wt">What the year view carries, and what it refuses</div><div class="wx">
+    ${ytd ? `<div class="withheld annot"><div class="wt">What the year view carries, and what it refuses</div><div class="wx">
       Signed dollars, units and appointments cover <b>every month of ${new Date().getFullYear()}</b> — Jan–Jun per source from <b>rpt_marketing_revenue_by_source_month</b> (migrations 172/189, validated against a live Contractors Cloud pull), Jul onward from the windowed RPC, the same instruments the trail draws. <b>Leads and CPL are refused for the year</b>: every lead before Aug 2026 carries the 20 Jul backfill timestamp, and a year column that is honest for one month of eight would read as a year. <b>ROI divides priced months only</b> — the spend book holds ${mkYtdBookMonths().length} typed month${mkYtdBookMonths().length === 1 ? '' : 's'} (${esc(mkYtdBookMonths().map(k => MNAMES[Number(k.slice(5, 7)) - 1]).join(', '))}) — so every multiple compares that set's dollars against that set's cost, never the year's revenue against two months of spend. Key more months into <b>marketing_spend</b> and the coverage widens with no deploy.</div></div>` : ''}
-    ${!ytd && leadsBlind && live.some(r => r.leads == null) ? `<div class="withheld"><div class="wt">Some lead cells read a dash — auto counts start Aug 2026; tap a dash to type your own</div><div class="wx">
+    ${!ytd && leadsBlind && live.some(r => r.leads == null) ? `<div class="withheld annot"><div class="wt">Some lead cells read a dash — auto counts start Aug 2026; tap a dash to type your own</div><div class="wx">
       <b>rpt_report_marketing_roi</b> dates a lead by <b>jobs.created_at</b> — when OUR row was written, not when the lead came in. The warehouse was loaded in one shot on <b>20 Jul 2026</b> (11,119 of 11,558 rows), so a July window returns the entire backfill: Google reads <b>4,282</b> against a true <b>253</b>. Months before July return zero, which is not the same as none. From <b>August 2026</b> both columns are real — measured 112 true against 113 reported — so they render there and are refused here. Closed jobs, closed dollars, <b>ROI and cost per unit are unaffected</b>: they are dated by <b>rpt_signings.signed_on</b>, which is correct in every window.</div></div>` : ''}
     <div class="note">Closed jobs, closed dollars and the source list come from <b>rpt_report_marketing_roi</b> (160, corrected by <b>165</b>), grouped on <b>lead_sources.rollup_name</b> — migration 163's canonical rollup, never the raw CC name, which splits Angi three ways and Google five${backfilled ? ' — except this backfilled month, which reads migration 172’s table as stated above' : ''}. Appointments set are counted client-side by when the appointment was <b>booked</b>, off the same project→source join. ROI is closed dollars ÷ spend for the month shown, rounded to a whole multiple; within ±${MK_NEAR} of ${MK_LINE}x it reads neutral because one deal moves a small source across the line. <b>The small print is the percentage law</b> (the one-ledger pass, 21 Aug 2026): spend wears its share of the whole book, leads and signed dollars their share of the month — divided across every source, folded rows included, so shares sum whether or not a fold is open — appointments their booked rate against leads, closed jobs their close rate against appointments. <b>CPL and $/unit</b> ride the same captions and price exactly as ROI does — Google all-in from the card (170/171) — with one exception the approved board itself drew: <b>Referral</b> is priced at its typed bonus row (~) for those two figures while its ROI stays earned. Leads and units are deliberately different cohorts: CPL measures the faucet, $/unit measures what came out. <b>⚑3 vendor rows price no source anywhere on this row set</b> — unattributable spend is carried where totals belong: THE MONTH row, the reconciliation strip, and the headline, all of which read <b>mkBookTotal</b> and cannot disagree. <b>The trail</b> is the retired month-matrix riding each row — six months of signed dollars, oldest first, one shared scale so a bright cell means the same money on every line; exact figures are in each cell's tooltip, <b>†</b> months read migration 172's backfill table, and a dashed cell is a window that did not answer, which is a different fact from a zero. The MoM arrow retired with the matrix — the trail answers the same question with six months instead of one. Leads exclude the 12 reporting_excluded batch-entry anomalies, matching the RPC${leadsBlind ? ', and are withheld this month — see above' : ''}. A gold <b>earned</b> pill means no cost has ever been keyed for that source in any month, so there is nothing to type (tap it to type one anyway); a spend <b>dash or empty input</b> marks a source the book proves costs money and whose month has not been keyed — the compact spelling of "not entered" since the clean-up pass, and still the list worth chasing.${idle.length ? ` The <b>${idle.length}</b> folded source${idle.length === 1 ? '' : 's'} neither cost nor earned a dollar this month — folded, not dropped, and ${idle.length === 1 ? 'it opens' : 'they open'} on tap.` : ''} The <b>went quiet</b> fold keeps its own law: earned money in the walk's earlier months, nothing signed in the last two, anchored to today rather than the browsed month — dollars dated by <b>rpt_signings.signed_on</b>, unaffected by the lead backfill. <b>THE FUNNEL'S INDICATOR LAWS</b> (KD, dictated 21 Aug 2026), left to right: a low <b>booked %</b> is the lead→appointment gap — scheduling, speed to lead, or a setter problem, the first place to look; <b>$/appt</b> is the buy signal — at or under ${money(MK_APPT_COST_OK)} a source deserves every dollar it will take (fencing & landscapes settle $75–150; roofing runs to ${money(MK_APPT_COST_MAX)} in the market), red past the ceiling means stop scaling it; <b>days out</b> is the 48-hour law — the median booking→appointment distance, gold past ${MK_OUT_OK_H}h, red past ${MK_OUT_MAX_H}h, because past two days out the customer starts shopping and the bid we show up for is the bid we win; the <b>⚑ on a signed share</b> past ${MK_CONC_RED}% is concentration — any one source can bankrupt the company, so the flag's instruction is diversify at the allowable $/appt, never cut the source that works. Where the <b>targets fold</b> holds a typed ceiling for a source (marketing_targets, 190), that number outranks the dictated bands — the machine grades against what the owner is willing to pay, green at or under, gold within 15%, red past it.</div>
   </div>`;
@@ -9991,8 +9997,30 @@ function pageFoot(){
    numbers, not manuals. Runs on the whole #app including drawers already
    in the DOM; a card added tomorrow is folded for free by its class. */
 function foldRules(){
+  /* ANNOTATION BLOCKS collapse whole (KD, 21 Aug: "click like a little
+     asterisk, and I'll click on it") — a .withheld tagged `annot` sits on a
+     card that already shows numbers, so the entire block hides behind an
+     asterisk tab whose hover carries its own title. State withhelds — a
+     section that IS its refusal, waiting on a feed — keep their one-line
+     face; only their body folds to `why` below. */
+  document.querySelectorAll('.withheld.annot').forEach(el => {
+    if (el.dataset.folded) return;
+    el.dataset.folded = '1';
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'rules-tab ast';
+    b.textContent = '✳';
+    b.title = ((el.querySelector('.wt') || {}).textContent || 'note') + ' — tap to read';
+    b.setAttribute('aria-label', b.title);
+    b.onclick = e => { e.stopPropagation();
+      el.classList.toggle('open'); b.classList.toggle('on', el.classList.contains('open')); };
+    el.parentNode.insertBefore(b, el);
+  });
   document.querySelectorAll('.card-sub, .m2-card-sub, .snaphint, .note, .m2-note, .wx').forEach(el => {
     if (el.dataset.folded) return;
+    /* An annot block's inner .wx must not grow a second tab — the asterisk
+       already governs the whole block. */
+    if (el.matches('.wx') && el.closest('.withheld.annot')) { el.dataset.folded = '1'; el.classList.add('open'); return; }
     el.dataset.folded = '1';
     el.classList.add('rules-body');
     const b = document.createElement('button');
