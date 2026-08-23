@@ -472,6 +472,10 @@
     color: var(--text-dim); margin-top: 4px; letter-spacing: .02em; }
   .spread-sub b { color: var(--text); font-weight: 600; }
   .spread-sub b.g { color: var(--green); } .spread-sub b.y { color: var(--gold); } .spread-sub b.r { color: var(--red); }
+  /* the pipeline share co-headlining the spread row (KD, 23 Aug) */
+  .rep-head .amt b.cov { font-weight: 700; }
+  .rep-head .amt b.cov.g { color: var(--green); } .rep-head .amt b.cov.y { color: var(--gold); }
+  .rep-head .amt b.cov.r { color: var(--red); }
   /* the KPI wears a shade (KD, 20 Aug: "shade in that touches-per number on
      each guy's thing — a super duper KPI… if we can move it, exponential
      uplift"). Graded against the 4-Touch model's own bar of four plays per
@@ -1057,18 +1061,6 @@
   .mk-row.free { opacity: 0.92; }
   .mk-sep { font-family: 'JetBrains Mono', monospace; font-size: 8px; letter-spacing: 0.12em;
     text-transform: uppercase; color: var(--text-dim); padding: 14px 0 6px; border-top: 1px solid rgba(255,255,255,0.08); margin-top: 4px; }
-  /* THE NAME COLUMN LOCKS (KD, 21 Aug: "lock those in, so when I go across
-     I can still see which company it is"). Sticky against .mk-scroll's
-     horizontal pan, solid card ground underneath, a soft right shadow so
-     the cells sliding beneath read as beneath. Same grammar the rep board's
-     name column already carried. */
-  .mk-row .nm, .mk-head div:first-child { position: sticky; left: -16px; z-index: 2;
-    background: var(--bg-card); box-shadow: 10px 0 10px -10px rgba(0,0,0,0.65); padding-right: 6px;
-    /* .mk-scroll carries 16px side padding; the sticky ground must cover
-       that gutter or the panned cells peek out on its left — and it must
-       stretch the row's full height or a tall cell's second line peeks
-       above and below the name's own box. */
-    margin-left: -16px; padding-left: 16px; align-self: stretch; }
   .mk-row .nm { display: flex; align-items: center; gap: 7px; font-size: 13.5px; font-weight: 500; min-width: 0; }
   .mk-row .nm .cat { font-family: 'JetBrains Mono', monospace; font-size: 7.5px; letter-spacing: .08em;
     text-transform: uppercase; color: var(--text-dim); border: 1px solid var(--line); border-radius: 100px; padding: 1px 6px; }
@@ -1212,14 +1204,14 @@
     text-transform: uppercase; color: var(--text-dim); font-weight: 400; text-align: center;
     padding: 0 4px 8px; vertical-align: bottom; width: 78px; min-width: 78px; line-height: 1.35; }
   .mkg tbody td { min-width: 78px; }
-  /* The pinned name column. It needs a hard edge as well as a fill: scrolled
-     under, a sticky cell carrying only a background reads as a rendering
-     fault rather than as a column deliberately standing still. */
-  .mkg thead th.rep-h { text-align: left; width: 118px; min-width: 118px; position: sticky; left: 0;
-    background: var(--bg-card); z-index: 3; padding-left: 0; box-shadow: 1px 0 0 var(--line); }
+  /* The name column scrolls WITH its row (Kevin, 23 Aug: "Don't lock the
+     names" — his screenshots showed the pinned column's ground failing on
+     the phone, panned cells peeking out in a sliver beside the names). The
+     lock was born with the 21 Aug rep-intel merge, so unpinned IS "the way
+     it was". Do not reinstate position:sticky here without a new ruling. */
+  .mkg thead th.rep-h { text-align: left; width: 118px; min-width: 118px; padding-left: 0; }
   .mkg tbody th { text-align: left; font-size: 12.5px; font-weight: 500; color: var(--text);
-    padding: 0 10px 0 0; position: sticky; left: 0; background: var(--bg-card); z-index: 2;
-    white-space: nowrap; min-width: 118px; box-shadow: 1px 0 0 var(--line); }
+    padding: 0 10px 0 0; white-space: nowrap; min-width: 118px; }
   /* A seller who has left the roster still holds the book they closed, and
      every surface that names them says so — otherwise a departed rep's row
      reads as a live desk to route the next appointment to. */
@@ -1230,13 +1222,14 @@
   .mkg tbody tr th { border-top: 1px solid var(--line); }
   /* The month rail — the old rep board riding the right of every heat row
      (the merge, 21 Aug). A double border walls it off from the all-time
-     cells, and the money column stays sticky so it never scrolls away. */
+     cells. The money column scrolls with the row like everything else —
+     its right-pin was the same 23 Aug-revoked lock grammar as the names,
+     and it produced the same edge glitch (next-column slivers behind it). */
   .mkg th.mo, .mkg td.mo { text-align: right; }
   .mkg td.mo.first, .mkg thead th.mo.first { border-left: 3px double rgba(255,255,255,0.18); }
   .mkg td.mo .mo-c { padding: 6px 10px; font-family: 'JetBrains Mono', monospace; font-size: 11.5px; white-space: nowrap; }
   .mkg td.mo .mo-c small { display: block; font-size: 7.5px; color: var(--text-dim); letter-spacing: .04em; margin-top: 2px; }
   .mkg td.mo.amt .mo-c { font-family: 'Fraunces', serif; font-size: 15.5px; font-weight: 600; color: var(--green-soft); }
-  .mkg td.mo.amt, .mkg thead th.mo.amt { position: sticky; right: 0; background: var(--bg-card); }
   .mo-bar { position: relative; height: 3px; border-radius: 2px; background: rgba(255,255,255,0.07); margin-top: 4px; min-width: 64px; }
   .mo-bar i { position: absolute; top: 0; bottom: 0; left: 0; border-radius: 2px; }
   .mkc { margin: 4px 3px; border-radius: 8px; padding: 7px 4px 6px; text-align: center;
@@ -1269,6 +1262,22 @@
     letter-spacing: .08em; text-transform: uppercase; color: var(--text-dim); white-space: nowrap; }
   .mkg-more .chev { display: inline-block; transition: transform .15s; }
   .mkg-more.open .chev { transform: rotate(90deg); color: var(--accent); }
+  /* THE STEER (Kevin, 23 Aug: "how we are using this intel to sort reps with
+     the appropriate lead source") — the board's verdict without the pan: one
+     chip per source naming the LIVE desk with the strongest readable all-time
+     close on it. A rack of tickets that scrolls sideways on a phone. */
+  .mk-steer { display: flex; gap: 8px; align-items: stretch; overflow-x: auto;
+    -webkit-overflow-scrolling: touch; margin: 2px -16px 12px; padding: 2px 16px 6px; }
+  .mk-steer-k { font-family: 'JetBrains Mono', monospace; font-size: 8px; letter-spacing: .14em;
+    color: var(--gold); white-space: nowrap; flex: none; align-self: center; }
+  .mk-steer-chip { flex: none; display: flex; flex-direction: column; gap: 1px;
+    border: 1px solid rgba(108,194,139,0.35); background: rgba(108,194,139,0.07);
+    border-radius: 9px; padding: 6px 10px; }
+  .mk-steer-chip .src { font-family: 'JetBrains Mono', monospace; font-size: 7.5px;
+    letter-spacing: .08em; text-transform: uppercase; color: var(--text-dim); white-space: nowrap; }
+  .mk-steer-chip .who { font-size: 12.5px; font-weight: 600; color: var(--text); white-space: nowrap; }
+  .mk-steer-chip .who b { font-family: 'Fraunces', serif; font-size: 14px; color: var(--green-soft);
+    font-weight: 600; margin-left: 6px; }
   @media (max-width: 700px) {
     .mk-row, .mk-head, .mk-fold { min-width: 860px; }
     .mk-monthbar .mn-cur { min-width: 88px; font-size: 10px; }
@@ -2191,11 +2200,6 @@
 
   /* the board's own scroller for wide tables at 390px */
   .m2-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
-  /* The same lock for every scrolling table's first column — vendor book,
-     source × company, the month matrix skins. */
-  .m2-co th:first-child, .m2-co td:first-child, .m2-mx th:first-child, .m2-mx td:first-child {
-    position: sticky; left: 0; z-index: 2; background: var(--bg-card);
-    box-shadow: 10px 0 10px -10px rgba(0,0,0,0.65); }
   .m2-scroll > table { min-width: 460px; }
 
   .m2-foot { margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--line);
@@ -5469,9 +5473,15 @@ function cardSpeed(){
   </div>`;
 }
 
-/* ── THE SPREAD · UNIQUE CUSTOMERS TOUCHED (Kevin, 20 Aug: "different
+/* ── THE SPREAD · DIFFERENT CUSTOMERS TOUCHED (Kevin, 20 Aug: "different
    customers… that means you're hitting everybody, not just calling the people
-   you think are interested. Make it very prominent… toward the top.")
+   you think are interested. Make it very prominent… toward the top." RENAMED
+   AND RE-HEADLINED 23 Aug: "we need to make unique touches the headliner…
+   rename unique, they don't know what that means… we can represent it two
+   ways. Actual unique touches and then as a percentage of their active
+   pipeline." So the word 'unique' is gone from every rep-facing label, and
+   the pipeline share rides the ROW HEADLINE beside the count, not a footnote
+   — the two reads are the card.)
    The Hustle section's hero. Counting is NOT new policy: touch_streaks/183
    already define a day on standard as 10 distinct customers — this surfaces
    the standard the streak was already grading. Feed is migration 185's
@@ -5481,7 +5491,7 @@ function cardSpread(){
   if (!EFF_INTEL) return '';
   const sp = EFF_INTEL.spread;
   const tot = Array.isArray(EFF_INTEL.spreadTot) ? EFF_INTEL.spreadTot[0] : null;
-  if (!Array.isArray(sp)) return effAwait('Unique customers touched',
+  if (!Array.isArray(sp)) return effAwait('Different customers touched',
     'The spread feed (migration 185, <b>touch_spread</b>) did not answer.');
   const K = EFF_INTEL.win;
   const label = { day:'today', week:'this week', month:'this month' }[K] || 'this week';
@@ -5493,8 +5503,8 @@ function cardSpread(){
   const span = (D.effort && D.effort.spans && D.effort.spans[K]) || 1;
   const goal = 10 * span;
   return `<div class="card full">
-    <div class="card-title">Unique customers touched<span class="feed-tag">live · app</span></div>
-    <div class="card-sub">Different customers reached — the spread, not the dials. Hitting everybody beats re-dialing the list you like. Tap a name for the one-pager.</div>
+    <div class="card-title">Different customers touched<span class="feed-tag">live · app</span></div>
+    <div class="card-sub">Are they stirring the entire pot? Two reads per seller: <b>how many different customers</b> they touched, and <b>how much of their active pipeline</b> that reached. Hitting everybody beats re-dialing the list you like. Tap a name for the one-pager.</div>
     <div class="seg">
       ${[['day','Day'],['week','Week'],['month','Month']]
         .map(([k,l])=>`<button class="${k===K?'on':''}" onclick="setEff('${k}')">${l}</button>`).join('')}
@@ -5526,19 +5536,24 @@ function cardSpread(){
          the model IS the color. Green from ×3, gold from ×2, red below. */
       const sub = [
         tc != null ? `<span class="tc-chip ${tc >= 3 ? 'g' : tc >= 2 ? 'y' : 'r'}">×${tc.toFixed(1)}</span> touches per customer ${esc(label)}` : '',
-        pct != null ? `<b class="${pct >= 50 ? 'g' : pct >= 25 ? 'y' : 'r'}">${pct}%</b> of open book touched · 7d (${+cv.touched_7d} of ${+cv.book})` : '',
+        pct != null ? `pipeline read: ${+cv.touched_7d} of ${+cv.book} active customers touched · last 7 days` : '',
       ].filter(Boolean).join(' · ');
+      /* THE TWO READS RIDE THE HEADLINE (KD, 23 Aug): the count AND the share
+         of the rep's own active pipeline, side by side — the percentage is
+         the pot-stirring read and it is done hiding in the footnote. Its
+         window is book_coverage()'s fixed 7 days, deliberately not the seg's;
+         the sub states the working so the two clocks cannot be confused. */
       return `<div class="rep-row${pager?' acc':''}"${pager?` onclick="openRep('${esc(String(r.rep_id))}')"`:''}>
         <div class="rep-head">
           <div class="nm"><span class="rk ${i===0?'top':''}">${i+1}</span>${esc(r.name)}</div>
-          <div class="amt">${n} <span>· customers</span>${pager?'<span class="acc-chev">›</span>':''}</div>
+          <div class="amt">${n} <span>· customers</span>${pct != null ? ` <b class="cov ${pct >= 50 ? 'g' : pct >= 25 ? 'y' : 'r'}">${pct}%</b> <span>· of pipeline</span>` : ''}${pager?'<span class="acc-chev">›</span>':''}</div>
         </div>
         <div class="meter"><div class="meter-fill" style="width:${Math.max(4,Math.round(100*n/mx))}%;background:${n>=goal?'#6cc28b':'#d4b15a'}"></div></div>
         ${sub ? `<div class="spread-sub">${sub}</div>` : ''}
       </div>`; }).join('')}
     ${silent ? `<div class="withheld"><div class="wt">${logged.length?'Quiet so far':'Honest zero'}</div><div class="wx">
       ${silent} seller${silent===1?' has':'s have'} reached nobody ${esc(label)} yet. Zeros are real, never back-filled.</div></div>` : ''}
-    <div class="note">LIVE · from <b>touch_spread()</b> (185) — count of distinct customers with at least one logged touch in the window. Green bar = on the company standard of <b>10 different customers a day</b>, the same rule the streak already grades. Team tiles are distinct across the team, so they are deliberately not the sum of the bars — one customer worked by two reps counts once up top and once each below. The depth line: <b>×N per customer</b> is the window's touches (touch_board) over its unique customers — depth against spread, one division — shaded against the <b>4-Touch model's own bar of four plays per customer</b>: green from ×3, gold from ×2, red below; <b>% of open book</b> is <b>book_coverage()</b> — customers touched in the last 7 days over the 120-day open book (signed, won and lost customers out), a window the function fixes at 7 days on purpose: a day-scoped book read would grade everyone zero.</div>
+    <div class="note">LIVE · from <b>touch_spread()</b> (185) — count of distinct customers with at least one logged touch in the window. Green bar = on the company standard of <b>10 different customers a day</b>, the same rule the streak already grades. Team tiles are distinct across the team, so they are deliberately not the sum of the bars — one customer worked by two reps counts once up top and once each below. The depth line: <b>×N per customer</b> is the window's touches (touch_board) over its unique customers — depth against spread, one division — shaded against the <b>4-Touch model's own bar of four plays per customer</b>: green from ×3, gold from ×2, red below; <b>% of pipeline</b> is <b>book_coverage()</b> — customers touched in the last 7 days over the ACTIVE PIPELINE, the 120-day open book (signed, won and lost customers out), a window the function fixes at 7 days on purpose: a day-scoped read would grade everyone zero. It rides the row headline beside the count (KD, 23 Aug: the two reads ARE the card) with its own clock stated in the sub.</div>
   </div>`;
 }
 
@@ -6906,7 +6921,10 @@ function mkPeriodSrc(monthKey){
    browsed month; the rest open on one counted tap, never dropped. */
 const MK_GRID_TOP = 8;
 
-/* ── WHO CLOSES WHAT · THE REP BOARD — one board since the merge ────────────
+/* ── MONEYBALL · WHO CLOSES WHAT — one board since the merge ───────────────
+   NAMED BY KEVIN, 23 Aug ("I want to label that entire screen Moneyball.
+   Like the movie. That's the gold gravy") — the name IS the pitch: which
+   desk closes which source, so leads route where the evidence says.
    KD, 21 Aug (fourth pass): "these two need to be merged, big time — put
    the heat map into each score, and on the far right you keep the same
    thing." The all-time heat cells ARE each rep's row now, and the month's
@@ -6928,13 +6946,13 @@ const MK_GRID_TOP = 8;
      flattering one alone. */
 function cardRepIntel(){
   if (!MKT || !MKT.signed) return `<div class="card full">
-    <div class="card-title">Who closes what · the rep board<span class="feed-tag cc">live · cc</span></div>
+    <div class="card-title">Moneyball · who closes what<span class="feed-tag cc">live · cc</span></div>
     <div class="card-sub" style="margin:0">Reading…</div></div>`;
 
   const monthKey = mkWinKey();
   const G = mkGridData(monthKey);
   const B = mkRepBoardData(monthKey);
-  if (!B.rows.length) return mkWithheld('Who closes what · the rep board · ' + esc(mkWinLabel()), 'no rows',
+  if (!B.rows.length) return mkWithheld('Moneyball · who closes what · ' + esc(mkWinLabel()), 'no rows',
     `No seller carried a lead or a signing in ${esc(mkWinLabel())}`,
     'A row here is earned by feeding on a lead or signing a job in the browsed window — nothing is inferred in its place.');
 
@@ -6967,6 +6985,33 @@ function cardRepIntel(){
       : '<small>close</small>'}<div class="mo-bar">${r.close != null ? `<i style="width:${Math.round(100 * Math.min(r.close, mx) / mx)}%;background:${band(r.close)}"></i>` : ''}</div></div></td>
     <td class="mo amt"><div class="mo-c">${short(r.rev)}</div></td>`;
 
+  /* THE STEER (Kevin, 23 Aug: "people will lose their minds when we show
+     them how we are using this intel to sort reps with the appropriate lead
+     source"). One chip per source: the desk with the strongest readable
+     all-time close on it — the board's whole point, stated without panning.
+     Three fences, each a lie if dropped: evidence must clear MK_THIN (a 2/2
+     cell is noise wearing 100%), ties break to the LARGER n (more proof
+     outranks equal percentage), and a DEPARTED desk cannot be named — their
+     cells stay on the board as evidence, but the steer routes tomorrow's
+     lead and a departed rep is not a destination. */
+  const steer = G.cols.map(src => {
+    let best = null;
+    for (const r of B.rows) {
+      if (r.gone) continue;
+      const c = (G.cells[r.id] || {})[src];
+      if (!c || !c.leads || c.leads < MK_THIN) continue;
+      const p = 100 * c.signed / c.leads;
+      if (!best || p > best.p || (p === best.p && c.leads > best.leads))
+        best = { name: r.name.split(' ')[0], p, signed: c.signed, leads: c.leads };
+    }
+    return { src, best };
+  }).filter(s => s.best);
+  const steerStrip = steer.length ? `<div class="mk-steer">
+    <span class="mk-steer-k">THE STEER ›</span>
+    ${steer.map(s => `<span class="mk-steer-chip" title="${esc(s.src)} — ${esc(s.best.name)} has the strongest readable desk: ${s.best.signed} signed of ${s.best.leads} all-time. Live desks only; evidence under ${MK_THIN} leads cannot be named.">
+      <span class="src">${esc(s.src)}</span><span class="who">${esc(s.best.name)}<b>${Math.round(s.best.p)}%</b></span></span>`).join('')}
+  </div>` : '';
+
   const row = (r, fold) => `<tr${fold ? ' data-foldrep hidden' : ''}><th>${esc(r.name)}${r.gone ? '<span class="gone">departed</span>' : ''}${r.inCohort ? '<span class="gone" style="color:var(--gold)">*</span>' : ''}</th>
       ${G.cols.map(src => `<td${colCls(src)}>${cellOf(r, src)}</td>`).join('')}${rail(r)}</tr>`;
   const shown = B.rows.slice(0, MK_GRID_TOP), folded = B.rows.slice(MK_GRID_TOP);
@@ -6981,9 +7026,9 @@ function cardRepIntel(){
   </table></div>`;
 
   return `<div class="card full">
-    <div class="card-title">Who closes what · the rep board · ${esc(mkWinLabel())}<span class="feed-tag cc">live · cc</span></div>
-    <div class="card-sub">One line per seller: <b>where</b> they close — every source they carry real volume on, all-time evidence — and <b>what it paid in ${esc(mkWinLabel())}</b> on the rail: leads fed → units signed, the close rate against the ${B.blended == null ? 'board' : Math.round(B.blended) + '%'} blend, and the dollars. Ranked by the month's signed dollars, so the heat under the best desks reads first.</div>
-    ${table}
+    <div class="card-title">Moneyball · who closes what · ${esc(mkWinLabel())}<span class="feed-tag cc">live · cc</span></div>
+    <div class="card-sub">One line per seller: <b>where</b> they close — every source they carry real volume on, all-time evidence — and <b>what it paid in ${esc(mkWinLabel())}</b> on the rail: leads fed → units signed, the close rate against the ${B.blended == null ? 'board' : Math.round(B.blended) + '%'} blend, and the dollars. Ranked by the month's signed dollars, so the heat under the best desks reads first. <b>The steer</b> above the board names each source's strongest live desk — the routing read, no panning required.</div>
+    ${steerStrip}${table}
     <div class="mk-legend">
       <span><i style="background:rgba(108,194,139,0.4)"></i>${MK_BAND}+ pts above the grid median</span>
       <span><i style="background:rgba(217,106,94,0.4)"></i>${MK_BAND}+ pts below</span>
@@ -6994,7 +7039,7 @@ function cardRepIntel(){
       The heat cells' second denominator has <b>no feed anywhere</b>. Contractors Cloud does not log appointment outcomes — there is no ran field in the payload. <b>cc_appointments.cc_result_id</b> exists and looks like an outcome log; it is populated on <b>83 of 9,627</b> appointments, so it is not a denominator and this board deliberately does not read it. Appointments <i>set</i> is not substituted either: a rep who books ten and runs six is not the rep who books ten and runs ten.</div></div>
     ${anyInh ? `<div class="withheld annot"><div class="wt">Inherited files — raw and adjusted both print</div><div class="wx">${B.rows.filter(r => r.inCohort).map(r =>
       `<b>* ${esc(r.name)}</b> — <b>${r.held}</b> inherited lead${r.held === 1 ? '' : 's'} from ${esc(r.donors.join(', '))}${r.held !== r.inCohort ? `, <b>${r.inCohort}</b> in ${esc(mkWinLabel())}'s cohort` : ''}: appointments run by a rep who has since left, still unsigned when the book changed hands. Raw <b>${Math.round(r.close)}%</b> (${r.units}/${r.leads}) counts them; adjusted <b>${Math.round(r.adjClose)}%</b> (${r.units}/${r.adjLeads}) does not. <b>Both print and neither replaces the other</b> — the adjusted figure is drawn from an unsigned pile, exactly the pile a flattering rule could be built out of.${r.adjLeads < MK_THIN ? ` At <b>${r.adjLeads}</b> leads the adjusted denominator is under the thin floor of ${MK_THIN} — read it as a direction, not a rate.` : ''}`).join('<br/><br/>')}</div></div>` : ''}
-    <div class="note"><b>THE CELLS</b> are all-time on purpose: signed is <b>rpt_signings</b> where confirmed, matched by <b>cc_project_id</b>, counted <b>distinct by project</b> (migration 150 splits amended invoices — right for money, wrong for a rate); a month-sliced rep × source cell is n=2, so the cells keep every month they have ever seen. <b>THE ROWS</b> are the month: every seller who carried a lead or signed a job in ${esc(mkWinLabel())}, ranked by signed dollars — a wider door than the old grid's signed-only rule, deliberately, because a rep feeding on leads without signing is exactly a row worth reading against their all-time cells. <b>THE RAIL</b> keeps the report's clocks: leads date on <b>cc_raw→project_created_at</b> (the honest lead stamp, not the 20 Jul backfill), units and dollars on <b>contract_signed_at</b> — different cohorts, so a close rate can pass 100 and means signed-this-month against fed-this-month. Sellers only (098)${B.rows.some(r => r.gone) ? ` — <b>${esc(B.rows.filter(r => r.gone).map(r => r.name).join(', '))}</b> ${B.rows.filter(r => r.gone).length === 1 ? 'has' : 'have'} left, tagged and kept for what the book proves` : ''}.${B.otherUnits ? ` <b>${money(B.otherRev)}</b> across <b>${B.otherUnits}</b> unit${B.otherUnits === 1 ? '' : 's'} was signed on desks that are not seller rows — office-booked and managerial work — stated rather than folded into somebody's rate.` : ''}${G.dropped.length ? ` <b>${G.dropped.length}</b> source${G.dropped.length === 1 ? '' : 's'} ${G.dropped.length === 1 ? 'is' : 'are'} not a column — no seller carries ${MK_THIN} leads on ${G.dropped.length === 1 ? 'it' : 'any'} (${G.droppedLeads.toLocaleString()} leads between them): ${esc(G.dropped.join(', '))}.` : ''}${folded.length ? ` Top <b>${MK_GRID_TOP}</b> shown; <b>${folded.length}</b> more on the fold.` : ''}${offSet.size ? ` On a phone the columns narrow to ${esc(mkWinLabel())}'s active sources; <b>${offSet.size}</b> read at desk width only: ${esc([...offSet].join(', '))}.` : ''}</div>
+    <div class="note"><b>THE CELLS</b> are all-time on purpose: signed is <b>rpt_signings</b> where confirmed, matched by <b>cc_project_id</b>, counted <b>distinct by project</b> (migration 150 splits amended invoices — right for money, wrong for a rate); a month-sliced rep × source cell is n=2, so the cells keep every month they have ever seen. <b>THE ROWS</b> are the month: every seller who carried a lead or signed a job in ${esc(mkWinLabel())}, ranked by signed dollars — a wider door than the old grid's signed-only rule, deliberately, because a rep feeding on leads without signing is exactly a row worth reading against their all-time cells. <b>THE RAIL</b> keeps the report's clocks: leads date on <b>cc_raw→project_created_at</b> (the honest lead stamp, not the 20 Jul backfill), units and dollars on <b>contract_signed_at</b> — different cohorts, so a close rate can pass 100 and means signed-this-month against fed-this-month. Sellers only (098)${B.rows.some(r => r.gone) ? ` — <b>${esc(B.rows.filter(r => r.gone).map(r => r.name).join(', '))}</b> ${B.rows.filter(r => r.gone).length === 1 ? 'has' : 'have'} left, tagged and kept for what the book proves` : ''}.${B.otherUnits ? ` <b>${money(B.otherRev)}</b> across <b>${B.otherUnits}</b> unit${B.otherUnits === 1 ? '' : 's'} was signed on desks that are not seller rows — office-booked and managerial work — stated rather than folded into somebody's rate.` : ''}${G.dropped.length ? ` <b>${G.dropped.length}</b> source${G.dropped.length === 1 ? '' : 's'} ${G.dropped.length === 1 ? 'is' : 'are'} not a column — no seller carries ${MK_THIN} leads on ${G.dropped.length === 1 ? 'it' : 'any'} (${G.droppedLeads.toLocaleString()} leads between them): ${esc(G.dropped.join(', '))}.` : ''}${folded.length ? ` Top <b>${MK_GRID_TOP}</b> shown; <b>${folded.length}</b> more on the fold.` : ''}${offSet.size ? ` On a phone the columns narrow to ${esc(mkWinLabel())}'s active sources; <b>${offSet.size}</b> read at desk width only: ${esc([...offSet].join(', '))}.` : ''}${steer.length ? ` <b>THE STEER</b> restates the cells, never a second derivation: per source, the live desk with the strongest readable all-time close — thin cells and departed desks cannot be named, a tie breaks to the larger n.` : ''}</div>
   </div>`;
 }
 
@@ -7245,7 +7290,7 @@ function mkParked(){
 
 const MKT_KIT = [
   { key:'led',  name:'The ledger · spend → signed',    panel: mktPanelLedger, tile: ptMktMonth },
-  { key:'rep',  name:'Who closes what · by rep',       panel: mktPanelReps,   tile: ptMktReps },
+  { key:'rep',  name:'Moneyball · who closes what',    panel: mktPanelReps,   tile: ptMktReps },
   { key:'rest', name:'The rest · brand & appendix',    panel: mktPanelRest,   tile: ptMktSources },
 ];
 
@@ -10755,7 +10800,7 @@ addEventListener('resize', () => {
    the last one, it is to tell a human which build is on the server and when it
    got there. A number nobody clocked cannot answer that, and the first time it
    is asked in anger will be the morning a stale build is being chased. */
-const BUILD = '2026-08-21T23:10Z-rpc-calm';
+const BUILD = '2026-08-23T02:04Z-stir-the-pot';
 const SB_URL = 'https://lzegjjbkfuecrhdvlvay.supabase.co';
 /* The one page that can finish a password reset. Hard-coded rather than derived,
    because every derivation of it so far has been a source of bugs: a bare origin
