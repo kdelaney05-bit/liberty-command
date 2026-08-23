@@ -472,6 +472,10 @@
     color: var(--text-dim); margin-top: 4px; letter-spacing: .02em; }
   .spread-sub b { color: var(--text); font-weight: 600; }
   .spread-sub b.g { color: var(--green); } .spread-sub b.y { color: var(--gold); } .spread-sub b.r { color: var(--red); }
+  /* the pipeline share co-headlining the spread row (KD, 23 Aug) */
+  .rep-head .amt b.cov { font-weight: 700; }
+  .rep-head .amt b.cov.g { color: var(--green); } .rep-head .amt b.cov.y { color: var(--gold); }
+  .rep-head .amt b.cov.r { color: var(--red); }
   /* the KPI wears a shade (KD, 20 Aug: "shade in that touches-per number on
      each guy's thing — a super duper KPI… if we can move it, exponential
      uplift"). Graded against the 4-Touch model's own bar of four plays per
@@ -5469,9 +5473,15 @@ function cardSpeed(){
   </div>`;
 }
 
-/* ── THE SPREAD · UNIQUE CUSTOMERS TOUCHED (Kevin, 20 Aug: "different
+/* ── THE SPREAD · DIFFERENT CUSTOMERS TOUCHED (Kevin, 20 Aug: "different
    customers… that means you're hitting everybody, not just calling the people
-   you think are interested. Make it very prominent… toward the top.")
+   you think are interested. Make it very prominent… toward the top." RENAMED
+   AND RE-HEADLINED 23 Aug: "we need to make unique touches the headliner…
+   rename unique, they don't know what that means… we can represent it two
+   ways. Actual unique touches and then as a percentage of their active
+   pipeline." So the word 'unique' is gone from every rep-facing label, and
+   the pipeline share rides the ROW HEADLINE beside the count, not a footnote
+   — the two reads are the card.)
    The Hustle section's hero. Counting is NOT new policy: touch_streaks/183
    already define a day on standard as 10 distinct customers — this surfaces
    the standard the streak was already grading. Feed is migration 185's
@@ -5481,7 +5491,7 @@ function cardSpread(){
   if (!EFF_INTEL) return '';
   const sp = EFF_INTEL.spread;
   const tot = Array.isArray(EFF_INTEL.spreadTot) ? EFF_INTEL.spreadTot[0] : null;
-  if (!Array.isArray(sp)) return effAwait('Unique customers touched',
+  if (!Array.isArray(sp)) return effAwait('Different customers touched',
     'The spread feed (migration 185, <b>touch_spread</b>) did not answer.');
   const K = EFF_INTEL.win;
   const label = { day:'today', week:'this week', month:'this month' }[K] || 'this week';
@@ -5493,8 +5503,8 @@ function cardSpread(){
   const span = (D.effort && D.effort.spans && D.effort.spans[K]) || 1;
   const goal = 10 * span;
   return `<div class="card full">
-    <div class="card-title">Unique customers touched<span class="feed-tag">live · app</span></div>
-    <div class="card-sub">Different customers reached — the spread, not the dials. Hitting everybody beats re-dialing the list you like. Tap a name for the one-pager.</div>
+    <div class="card-title">Different customers touched<span class="feed-tag">live · app</span></div>
+    <div class="card-sub">Are they stirring the entire pot? Two reads per seller: <b>how many different customers</b> they touched, and <b>how much of their active pipeline</b> that reached. Hitting everybody beats re-dialing the list you like. Tap a name for the one-pager.</div>
     <div class="seg">
       ${[['day','Day'],['week','Week'],['month','Month']]
         .map(([k,l])=>`<button class="${k===K?'on':''}" onclick="setEff('${k}')">${l}</button>`).join('')}
@@ -5526,19 +5536,24 @@ function cardSpread(){
          the model IS the color. Green from ×3, gold from ×2, red below. */
       const sub = [
         tc != null ? `<span class="tc-chip ${tc >= 3 ? 'g' : tc >= 2 ? 'y' : 'r'}">×${tc.toFixed(1)}</span> touches per customer ${esc(label)}` : '',
-        pct != null ? `<b class="${pct >= 50 ? 'g' : pct >= 25 ? 'y' : 'r'}">${pct}%</b> of open book touched · 7d (${+cv.touched_7d} of ${+cv.book})` : '',
+        pct != null ? `pipeline read: ${+cv.touched_7d} of ${+cv.book} active customers touched · last 7 days` : '',
       ].filter(Boolean).join(' · ');
+      /* THE TWO READS RIDE THE HEADLINE (KD, 23 Aug): the count AND the share
+         of the rep's own active pipeline, side by side — the percentage is
+         the pot-stirring read and it is done hiding in the footnote. Its
+         window is book_coverage()'s fixed 7 days, deliberately not the seg's;
+         the sub states the working so the two clocks cannot be confused. */
       return `<div class="rep-row${pager?' acc':''}"${pager?` onclick="openRep('${esc(String(r.rep_id))}')"`:''}>
         <div class="rep-head">
           <div class="nm"><span class="rk ${i===0?'top':''}">${i+1}</span>${esc(r.name)}</div>
-          <div class="amt">${n} <span>· customers</span>${pager?'<span class="acc-chev">›</span>':''}</div>
+          <div class="amt">${n} <span>· customers</span>${pct != null ? ` <b class="cov ${pct >= 50 ? 'g' : pct >= 25 ? 'y' : 'r'}">${pct}%</b> <span>· of pipeline</span>` : ''}${pager?'<span class="acc-chev">›</span>':''}</div>
         </div>
         <div class="meter"><div class="meter-fill" style="width:${Math.max(4,Math.round(100*n/mx))}%;background:${n>=goal?'#6cc28b':'#d4b15a'}"></div></div>
         ${sub ? `<div class="spread-sub">${sub}</div>` : ''}
       </div>`; }).join('')}
     ${silent ? `<div class="withheld"><div class="wt">${logged.length?'Quiet so far':'Honest zero'}</div><div class="wx">
       ${silent} seller${silent===1?' has':'s have'} reached nobody ${esc(label)} yet. Zeros are real, never back-filled.</div></div>` : ''}
-    <div class="note">LIVE · from <b>touch_spread()</b> (185) — count of distinct customers with at least one logged touch in the window. Green bar = on the company standard of <b>10 different customers a day</b>, the same rule the streak already grades. Team tiles are distinct across the team, so they are deliberately not the sum of the bars — one customer worked by two reps counts once up top and once each below. The depth line: <b>×N per customer</b> is the window's touches (touch_board) over its unique customers — depth against spread, one division — shaded against the <b>4-Touch model's own bar of four plays per customer</b>: green from ×3, gold from ×2, red below; <b>% of open book</b> is <b>book_coverage()</b> — customers touched in the last 7 days over the 120-day open book (signed, won and lost customers out), a window the function fixes at 7 days on purpose: a day-scoped book read would grade everyone zero.</div>
+    <div class="note">LIVE · from <b>touch_spread()</b> (185) — count of distinct customers with at least one logged touch in the window. Green bar = on the company standard of <b>10 different customers a day</b>, the same rule the streak already grades. Team tiles are distinct across the team, so they are deliberately not the sum of the bars — one customer worked by two reps counts once up top and once each below. The depth line: <b>×N per customer</b> is the window's touches (touch_board) over its unique customers — depth against spread, one division — shaded against the <b>4-Touch model's own bar of four plays per customer</b>: green from ×3, gold from ×2, red below; <b>% of pipeline</b> is <b>book_coverage()</b> — customers touched in the last 7 days over the ACTIVE PIPELINE, the 120-day open book (signed, won and lost customers out), a window the function fixes at 7 days on purpose: a day-scoped read would grade everyone zero. It rides the row headline beside the count (KD, 23 Aug: the two reads ARE the card) with its own clock stated in the sub.</div>
   </div>`;
 }
 
@@ -10785,7 +10800,7 @@ addEventListener('resize', () => {
    the last one, it is to tell a human which build is on the server and when it
    got there. A number nobody clocked cannot answer that, and the first time it
    is asked in anger will be the morning a stale build is being chased. */
-const BUILD = '2026-08-23T01:56Z-moneyball';
+const BUILD = '2026-08-23T02:04Z-stir-the-pot';
 const SB_URL = 'https://lzegjjbkfuecrhdvlvay.supabase.co';
 /* The one page that can finish a password reset. Hard-coded rather than derived,
    because every derivation of it so far has been a source of bugs: a bare origin
