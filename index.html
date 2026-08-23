@@ -1200,14 +1200,14 @@
     text-transform: uppercase; color: var(--text-dim); font-weight: 400; text-align: center;
     padding: 0 4px 8px; vertical-align: bottom; width: 78px; min-width: 78px; line-height: 1.35; }
   .mkg tbody td { min-width: 78px; }
-  /* The pinned name column. It needs a hard edge as well as a fill: scrolled
-     under, a sticky cell carrying only a background reads as a rendering
-     fault rather than as a column deliberately standing still. */
-  .mkg thead th.rep-h { text-align: left; width: 118px; min-width: 118px; position: sticky; left: 0;
-    background: var(--bg-card); z-index: 3; padding-left: 0; box-shadow: 1px 0 0 var(--line); }
+  /* The name column scrolls WITH its row (Kevin, 23 Aug: "Don't lock the
+     names" — his screenshots showed the pinned column's ground failing on
+     the phone, panned cells peeking out in a sliver beside the names). The
+     lock was born with the 21 Aug rep-intel merge, so unpinned IS "the way
+     it was". Do not reinstate position:sticky here without a new ruling. */
+  .mkg thead th.rep-h { text-align: left; width: 118px; min-width: 118px; padding-left: 0; }
   .mkg tbody th { text-align: left; font-size: 12.5px; font-weight: 500; color: var(--text);
-    padding: 0 10px 0 0; position: sticky; left: 0; background: var(--bg-card); z-index: 2;
-    white-space: nowrap; min-width: 118px; box-shadow: 1px 0 0 var(--line); }
+    padding: 0 10px 0 0; white-space: nowrap; min-width: 118px; }
   /* A seller who has left the roster still holds the book they closed, and
      every surface that names them says so — otherwise a departed rep's row
      reads as a live desk to route the next appointment to. */
@@ -1218,13 +1218,14 @@
   .mkg tbody tr th { border-top: 1px solid var(--line); }
   /* The month rail — the old rep board riding the right of every heat row
      (the merge, 21 Aug). A double border walls it off from the all-time
-     cells, and the money column stays sticky so it never scrolls away. */
+     cells. The money column scrolls with the row like everything else —
+     its right-pin was the same 23 Aug-revoked lock grammar as the names,
+     and it produced the same edge glitch (next-column slivers behind it). */
   .mkg th.mo, .mkg td.mo { text-align: right; }
   .mkg td.mo.first, .mkg thead th.mo.first { border-left: 3px double rgba(255,255,255,0.18); }
   .mkg td.mo .mo-c { padding: 6px 10px; font-family: 'JetBrains Mono', monospace; font-size: 11.5px; white-space: nowrap; }
   .mkg td.mo .mo-c small { display: block; font-size: 7.5px; color: var(--text-dim); letter-spacing: .04em; margin-top: 2px; }
   .mkg td.mo.amt .mo-c { font-family: 'Fraunces', serif; font-size: 15.5px; font-weight: 600; color: var(--green-soft); }
-  .mkg td.mo.amt, .mkg thead th.mo.amt { position: sticky; right: 0; background: var(--bg-card); }
   .mo-bar { position: relative; height: 3px; border-radius: 2px; background: rgba(255,255,255,0.07); margin-top: 4px; min-width: 64px; }
   .mo-bar i { position: absolute; top: 0; bottom: 0; left: 0; border-radius: 2px; }
   .mkc { margin: 4px 3px; border-radius: 8px; padding: 7px 4px 6px; text-align: center;
@@ -10738,7 +10739,7 @@ addEventListener('resize', () => {
    the last one, it is to tell a human which build is on the server and when it
    got there. A number nobody clocked cannot answer that, and the first time it
    is asked in anger will be the morning a stale build is being chased. */
-const BUILD = '2026-08-23T01:39Z-names-unlocked';
+const BUILD = '2026-08-23T01:43Z-names-unlocked';
 const SB_URL = 'https://lzegjjbkfuecrhdvlvay.supabase.co';
 /* The one page that can finish a password reset. Hard-coded rather than derived,
    because every derivation of it so far has been a source of bugs: a bare origin
