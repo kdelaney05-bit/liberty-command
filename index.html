@@ -1258,6 +1258,22 @@
     letter-spacing: .08em; text-transform: uppercase; color: var(--text-dim); white-space: nowrap; }
   .mkg-more .chev { display: inline-block; transition: transform .15s; }
   .mkg-more.open .chev { transform: rotate(90deg); color: var(--accent); }
+  /* THE STEER (Kevin, 23 Aug: "how we are using this intel to sort reps with
+     the appropriate lead source") — the board's verdict without the pan: one
+     chip per source naming the LIVE desk with the strongest readable all-time
+     close on it. A rack of tickets that scrolls sideways on a phone. */
+  .mk-steer { display: flex; gap: 8px; align-items: stretch; overflow-x: auto;
+    -webkit-overflow-scrolling: touch; margin: 2px -16px 12px; padding: 2px 16px 6px; }
+  .mk-steer-k { font-family: 'JetBrains Mono', monospace; font-size: 8px; letter-spacing: .14em;
+    color: var(--gold); white-space: nowrap; flex: none; align-self: center; }
+  .mk-steer-chip { flex: none; display: flex; flex-direction: column; gap: 1px;
+    border: 1px solid rgba(108,194,139,0.35); background: rgba(108,194,139,0.07);
+    border-radius: 9px; padding: 6px 10px; }
+  .mk-steer-chip .src { font-family: 'JetBrains Mono', monospace; font-size: 7.5px;
+    letter-spacing: .08em; text-transform: uppercase; color: var(--text-dim); white-space: nowrap; }
+  .mk-steer-chip .who { font-size: 12.5px; font-weight: 600; color: var(--text); white-space: nowrap; }
+  .mk-steer-chip .who b { font-family: 'Fraunces', serif; font-size: 14px; color: var(--green-soft);
+    font-weight: 600; margin-left: 6px; }
   @media (max-width: 700px) {
     .mk-row, .mk-head, .mk-fold { min-width: 860px; }
     .mk-monthbar .mn-cur { min-width: 88px; font-size: 10px; }
@@ -6951,6 +6967,33 @@ function cardRepIntel(){
       : '<small>close</small>'}<div class="mo-bar">${r.close != null ? `<i style="width:${Math.round(100 * Math.min(r.close, mx) / mx)}%;background:${band(r.close)}"></i>` : ''}</div></div></td>
     <td class="mo amt"><div class="mo-c">${short(r.rev)}</div></td>`;
 
+  /* THE STEER (Kevin, 23 Aug: "people will lose their minds when we show
+     them how we are using this intel to sort reps with the appropriate lead
+     source"). One chip per source: the desk with the strongest readable
+     all-time close on it — the board's whole point, stated without panning.
+     Three fences, each a lie if dropped: evidence must clear MK_THIN (a 2/2
+     cell is noise wearing 100%), ties break to the LARGER n (more proof
+     outranks equal percentage), and a DEPARTED desk cannot be named — their
+     cells stay on the board as evidence, but the steer routes tomorrow's
+     lead and a departed rep is not a destination. */
+  const steer = G.cols.map(src => {
+    let best = null;
+    for (const r of B.rows) {
+      if (r.gone) continue;
+      const c = (G.cells[r.id] || {})[src];
+      if (!c || !c.leads || c.leads < MK_THIN) continue;
+      const p = 100 * c.signed / c.leads;
+      if (!best || p > best.p || (p === best.p && c.leads > best.leads))
+        best = { name: r.name.split(' ')[0], p, signed: c.signed, leads: c.leads };
+    }
+    return { src, best };
+  }).filter(s => s.best);
+  const steerStrip = steer.length ? `<div class="mk-steer">
+    <span class="mk-steer-k">THE STEER ›</span>
+    ${steer.map(s => `<span class="mk-steer-chip" title="${esc(s.src)} — ${esc(s.best.name)} has the strongest readable desk: ${s.best.signed} signed of ${s.best.leads} all-time. Live desks only; evidence under ${MK_THIN} leads cannot be named.">
+      <span class="src">${esc(s.src)}</span><span class="who">${esc(s.best.name)}<b>${Math.round(s.best.p)}%</b></span></span>`).join('')}
+  </div>` : '';
+
   const row = (r, fold) => `<tr${fold ? ' data-foldrep hidden' : ''}><th>${esc(r.name)}${r.gone ? '<span class="gone">departed</span>' : ''}${r.inCohort ? '<span class="gone" style="color:var(--gold)">*</span>' : ''}</th>
       ${G.cols.map(src => `<td${colCls(src)}>${cellOf(r, src)}</td>`).join('')}${rail(r)}</tr>`;
   const shown = B.rows.slice(0, MK_GRID_TOP), folded = B.rows.slice(MK_GRID_TOP);
@@ -6966,8 +7009,8 @@ function cardRepIntel(){
 
   return `<div class="card full">
     <div class="card-title">Who closes what · the rep board · ${esc(mkWinLabel())}<span class="feed-tag cc">live · cc</span></div>
-    <div class="card-sub">One line per seller: <b>where</b> they close — every source they carry real volume on, all-time evidence — and <b>what it paid in ${esc(mkWinLabel())}</b> on the rail: leads fed → units signed, the close rate against the ${B.blended == null ? 'board' : Math.round(B.blended) + '%'} blend, and the dollars. Ranked by the month's signed dollars, so the heat under the best desks reads first.</div>
-    ${table}
+    <div class="card-sub">One line per seller: <b>where</b> they close — every source they carry real volume on, all-time evidence — and <b>what it paid in ${esc(mkWinLabel())}</b> on the rail: leads fed → units signed, the close rate against the ${B.blended == null ? 'board' : Math.round(B.blended) + '%'} blend, and the dollars. Ranked by the month's signed dollars, so the heat under the best desks reads first. <b>The steer</b> above the board names each source's strongest live desk — the routing read, no panning required.</div>
+    ${steerStrip}${table}
     <div class="mk-legend">
       <span><i style="background:rgba(108,194,139,0.4)"></i>${MK_BAND}+ pts above the grid median</span>
       <span><i style="background:rgba(217,106,94,0.4)"></i>${MK_BAND}+ pts below</span>
@@ -6978,7 +7021,7 @@ function cardRepIntel(){
       The heat cells' second denominator has <b>no feed anywhere</b>. Contractors Cloud does not log appointment outcomes — there is no ran field in the payload. <b>cc_appointments.cc_result_id</b> exists and looks like an outcome log; it is populated on <b>83 of 9,627</b> appointments, so it is not a denominator and this board deliberately does not read it. Appointments <i>set</i> is not substituted either: a rep who books ten and runs six is not the rep who books ten and runs ten.</div></div>
     ${anyInh ? `<div class="withheld annot"><div class="wt">Inherited files — raw and adjusted both print</div><div class="wx">${B.rows.filter(r => r.inCohort).map(r =>
       `<b>* ${esc(r.name)}</b> — <b>${r.held}</b> inherited lead${r.held === 1 ? '' : 's'} from ${esc(r.donors.join(', '))}${r.held !== r.inCohort ? `, <b>${r.inCohort}</b> in ${esc(mkWinLabel())}'s cohort` : ''}: appointments run by a rep who has since left, still unsigned when the book changed hands. Raw <b>${Math.round(r.close)}%</b> (${r.units}/${r.leads}) counts them; adjusted <b>${Math.round(r.adjClose)}%</b> (${r.units}/${r.adjLeads}) does not. <b>Both print and neither replaces the other</b> — the adjusted figure is drawn from an unsigned pile, exactly the pile a flattering rule could be built out of.${r.adjLeads < MK_THIN ? ` At <b>${r.adjLeads}</b> leads the adjusted denominator is under the thin floor of ${MK_THIN} — read it as a direction, not a rate.` : ''}`).join('<br/><br/>')}</div></div>` : ''}
-    <div class="note"><b>THE CELLS</b> are all-time on purpose: signed is <b>rpt_signings</b> where confirmed, matched by <b>cc_project_id</b>, counted <b>distinct by project</b> (migration 150 splits amended invoices — right for money, wrong for a rate); a month-sliced rep × source cell is n=2, so the cells keep every month they have ever seen. <b>THE ROWS</b> are the month: every seller who carried a lead or signed a job in ${esc(mkWinLabel())}, ranked by signed dollars — a wider door than the old grid's signed-only rule, deliberately, because a rep feeding on leads without signing is exactly a row worth reading against their all-time cells. <b>THE RAIL</b> keeps the report's clocks: leads date on <b>cc_raw→project_created_at</b> (the honest lead stamp, not the 20 Jul backfill), units and dollars on <b>contract_signed_at</b> — different cohorts, so a close rate can pass 100 and means signed-this-month against fed-this-month. Sellers only (098)${B.rows.some(r => r.gone) ? ` — <b>${esc(B.rows.filter(r => r.gone).map(r => r.name).join(', '))}</b> ${B.rows.filter(r => r.gone).length === 1 ? 'has' : 'have'} left, tagged and kept for what the book proves` : ''}.${B.otherUnits ? ` <b>${money(B.otherRev)}</b> across <b>${B.otherUnits}</b> unit${B.otherUnits === 1 ? '' : 's'} was signed on desks that are not seller rows — office-booked and managerial work — stated rather than folded into somebody's rate.` : ''}${G.dropped.length ? ` <b>${G.dropped.length}</b> source${G.dropped.length === 1 ? '' : 's'} ${G.dropped.length === 1 ? 'is' : 'are'} not a column — no seller carries ${MK_THIN} leads on ${G.dropped.length === 1 ? 'it' : 'any'} (${G.droppedLeads.toLocaleString()} leads between them): ${esc(G.dropped.join(', '))}.` : ''}${folded.length ? ` Top <b>${MK_GRID_TOP}</b> shown; <b>${folded.length}</b> more on the fold.` : ''}${offSet.size ? ` On a phone the columns narrow to ${esc(mkWinLabel())}'s active sources; <b>${offSet.size}</b> read at desk width only: ${esc([...offSet].join(', '))}.` : ''}</div>
+    <div class="note"><b>THE CELLS</b> are all-time on purpose: signed is <b>rpt_signings</b> where confirmed, matched by <b>cc_project_id</b>, counted <b>distinct by project</b> (migration 150 splits amended invoices — right for money, wrong for a rate); a month-sliced rep × source cell is n=2, so the cells keep every month they have ever seen. <b>THE ROWS</b> are the month: every seller who carried a lead or signed a job in ${esc(mkWinLabel())}, ranked by signed dollars — a wider door than the old grid's signed-only rule, deliberately, because a rep feeding on leads without signing is exactly a row worth reading against their all-time cells. <b>THE RAIL</b> keeps the report's clocks: leads date on <b>cc_raw→project_created_at</b> (the honest lead stamp, not the 20 Jul backfill), units and dollars on <b>contract_signed_at</b> — different cohorts, so a close rate can pass 100 and means signed-this-month against fed-this-month. Sellers only (098)${B.rows.some(r => r.gone) ? ` — <b>${esc(B.rows.filter(r => r.gone).map(r => r.name).join(', '))}</b> ${B.rows.filter(r => r.gone).length === 1 ? 'has' : 'have'} left, tagged and kept for what the book proves` : ''}.${B.otherUnits ? ` <b>${money(B.otherRev)}</b> across <b>${B.otherUnits}</b> unit${B.otherUnits === 1 ? '' : 's'} was signed on desks that are not seller rows — office-booked and managerial work — stated rather than folded into somebody's rate.` : ''}${G.dropped.length ? ` <b>${G.dropped.length}</b> source${G.dropped.length === 1 ? '' : 's'} ${G.dropped.length === 1 ? 'is' : 'are'} not a column — no seller carries ${MK_THIN} leads on ${G.dropped.length === 1 ? 'it' : 'any'} (${G.droppedLeads.toLocaleString()} leads between them): ${esc(G.dropped.join(', '))}.` : ''}${folded.length ? ` Top <b>${MK_GRID_TOP}</b> shown; <b>${folded.length}</b> more on the fold.` : ''}${offSet.size ? ` On a phone the columns narrow to ${esc(mkWinLabel())}'s active sources; <b>${offSet.size}</b> read at desk width only: ${esc([...offSet].join(', '))}.` : ''}${steer.length ? ` <b>THE STEER</b> restates the cells, never a second derivation: per source, the live desk with the strongest readable all-time close — thin cells and departed desks cannot be named, a tie breaks to the larger n.` : ''}</div>
   </div>`;
 }
 
@@ -10739,7 +10782,7 @@ addEventListener('resize', () => {
    the last one, it is to tell a human which build is on the server and when it
    got there. A number nobody clocked cannot answer that, and the first time it
    is asked in anger will be the morning a stale build is being chased. */
-const BUILD = '2026-08-23T01:43Z-names-unlocked';
+const BUILD = '2026-08-23T01:52Z-the-steer';
 const SB_URL = 'https://lzegjjbkfuecrhdvlvay.supabase.co';
 /* The one page that can finish a password reset. Hard-coded rather than derived,
    because every derivation of it so far has been a source of bugs: a bare origin
