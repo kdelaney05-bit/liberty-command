@@ -6906,7 +6906,10 @@ function mkPeriodSrc(monthKey){
    browsed month; the rest open on one counted tap, never dropped. */
 const MK_GRID_TOP = 8;
 
-/* ── WHO CLOSES WHAT · THE REP BOARD — one board since the merge ────────────
+/* ── MONEYBALL · WHO CLOSES WHAT — one board since the merge ───────────────
+   NAMED BY KEVIN, 23 Aug ("I want to label that entire screen Moneyball.
+   Like the movie. That's the gold gravy") — the name IS the pitch: which
+   desk closes which source, so leads route where the evidence says.
    KD, 21 Aug (fourth pass): "these two need to be merged, big time — put
    the heat map into each score, and on the far right you keep the same
    thing." The all-time heat cells ARE each rep's row now, and the month's
@@ -6928,13 +6931,13 @@ const MK_GRID_TOP = 8;
      flattering one alone. */
 function cardRepIntel(){
   if (!MKT || !MKT.signed) return `<div class="card full">
-    <div class="card-title">Who closes what · the rep board<span class="feed-tag cc">live · cc</span></div>
+    <div class="card-title">Moneyball · who closes what<span class="feed-tag cc">live · cc</span></div>
     <div class="card-sub" style="margin:0">Reading…</div></div>`;
 
   const monthKey = mkWinKey();
   const G = mkGridData(monthKey);
   const B = mkRepBoardData(monthKey);
-  if (!B.rows.length) return mkWithheld('Who closes what · the rep board · ' + esc(mkWinLabel()), 'no rows',
+  if (!B.rows.length) return mkWithheld('Moneyball · who closes what · ' + esc(mkWinLabel()), 'no rows',
     `No seller carried a lead or a signing in ${esc(mkWinLabel())}`,
     'A row here is earned by feeding on a lead or signing a job in the browsed window — nothing is inferred in its place.');
 
@@ -7008,7 +7011,7 @@ function cardRepIntel(){
   </table></div>`;
 
   return `<div class="card full">
-    <div class="card-title">Who closes what · the rep board · ${esc(mkWinLabel())}<span class="feed-tag cc">live · cc</span></div>
+    <div class="card-title">Moneyball · who closes what · ${esc(mkWinLabel())}<span class="feed-tag cc">live · cc</span></div>
     <div class="card-sub">One line per seller: <b>where</b> they close — every source they carry real volume on, all-time evidence — and <b>what it paid in ${esc(mkWinLabel())}</b> on the rail: leads fed → units signed, the close rate against the ${B.blended == null ? 'board' : Math.round(B.blended) + '%'} blend, and the dollars. Ranked by the month's signed dollars, so the heat under the best desks reads first. <b>The steer</b> above the board names each source's strongest live desk — the routing read, no panning required.</div>
     ${steerStrip}${table}
     <div class="mk-legend">
@@ -7272,7 +7275,7 @@ function mkParked(){
 
 const MKT_KIT = [
   { key:'led',  name:'The ledger · spend → signed',    panel: mktPanelLedger, tile: ptMktMonth },
-  { key:'rep',  name:'Who closes what · by rep',       panel: mktPanelReps,   tile: ptMktReps },
+  { key:'rep',  name:'Moneyball · who closes what',    panel: mktPanelReps,   tile: ptMktReps },
   { key:'rest', name:'The rest · brand & appendix',    panel: mktPanelRest,   tile: ptMktSources },
 ];
 
@@ -10782,7 +10785,7 @@ addEventListener('resize', () => {
    the last one, it is to tell a human which build is on the server and when it
    got there. A number nobody clocked cannot answer that, and the first time it
    is asked in anger will be the morning a stale build is being chased. */
-const BUILD = '2026-08-23T01:52Z-the-steer';
+const BUILD = '2026-08-23T01:56Z-moneyball';
 const SB_URL = 'https://lzegjjbkfuecrhdvlvay.supabase.co';
 /* The one page that can finish a password reset. Hard-coded rather than derived,
    because every derivation of it so far has been a source of bugs: a bare origin
