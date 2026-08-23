@@ -472,6 +472,17 @@
     color: var(--text-dim); margin-top: 4px; letter-spacing: .02em; }
   .spread-sub b { color: var(--text); font-weight: 600; }
   .spread-sub b.g { color: var(--green); } .spread-sub b.y { color: var(--gold); } .spread-sub b.r { color: var(--red); }
+  /* the odometer card (KD, 23 Aug: "the number" on the phone) */
+  .odo-num { font-family: 'Fraunces', serif; font-size: 46px; font-weight: 700;
+    color: var(--green-soft); letter-spacing: 1px; font-variant-numeric: tabular-nums;
+    margin: 8px 0 2px; }
+  .odo-details summary { cursor: pointer; font-family: 'JetBrains Mono', monospace;
+    font-size: 9px; letter-spacing: .12em; text-transform: uppercase;
+    color: var(--text-dim); padding: 8px 0 4px; }
+  .odo-line { display: flex; justify-content: space-between; gap: 12px; padding: 5px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.06); font-size: 12.5px; color: var(--text); }
+  .odo-line b { font-variant-numeric: tabular-nums; }
+  .odo-line.odo-total { border-bottom: 0; padding-top: 9px; font-weight: 700; color: var(--green-soft); }
   /* the pipeline share co-headlining the spread row (KD, 23 Aug) */
   .rep-head .amt b.cov { font-weight: 700; }
   .rep-head .amt b.cov.g { color: var(--green); } .rep-head .amt b.cov.y { color: var(--gold); }
@@ -5473,6 +5484,47 @@ function cardSpeed(){
   </div>`;
 }
 
+/* ── THE ODOMETER ON THE DASH (Kevin, 23 Aug, minutes after 198 went live:
+   "How do I see it on my cell phone. The number") — the app's Flux screen
+   needs the next build, but the dash deploys on a tap, so the scoreboard
+   rides here too. Same laws as the app half: the number is
+   data_points_total() (198), re-read on a 4s clock while the card is on
+   screen, and it NEVER moves between real reads — dashes until the first
+   answer, never an invented figure. POSTed directly (not q()): the function
+   is volatile, and PostgREST serves volatile RPCs on POST only. */
+let ODO = null;
+async function odoTick(){
+  const el = document.getElementById('odo-num'); if (!el) return;
+  const s = sess.get(); if (!s) return;
+  try {
+    const r = await fetch(`${SB_URL}/rest/v1/rpc/data_points_total`, { method: 'POST',
+      headers: { apikey: SB_KEY, Authorization: 'Bearer ' + s.access_token, 'Content-Type': 'application/json' },
+      body: '{}' });
+    if (!r.ok) return;   // 198 missing on a clone → the card stays dashes
+    const j = await r.json();
+    if (!j || typeof j.total !== 'number') return;
+    ODO = j;
+    el.textContent = j.total.toLocaleString('en-US');
+    const rec = document.getElementById('odo-rec');
+    if (rec) rec.innerHTML = odoReceipt(j);
+  } catch {}
+}
+setInterval(odoTick, 4000);
+const odoReceipt = (j) => (j.sources || []).map(x =>
+  `<div class="odo-line"><span>${esc(x.label)}</span><b>${(+x.n).toLocaleString('en-US')}</b></div>`).join('')
+  + `<div class="odo-line odo-total"><span>Total</span><b>${(+j.total).toLocaleString('en-US')}</b></div>`;
+function cardOdometer(){
+  return `<div class="card full">
+    <div class="card-title">Total certified data points<span class="feed-tag">live · db</span></div>
+    <div class="card-sub">Every measurement the platform has ever recorded — counted live by the database, one count per capture table, on a 4-second clock. Open the receipt for the line-by-line proof; derived numbers are excluded so nothing counts twice.</div>
+    <div class="odo-num" id="odo-num">${ODO ? (+ODO.total).toLocaleString('en-US') : '———'}</div>
+    <details class="odo-details"><summary>The receipt</summary>
+      <div id="odo-rec">${ODO ? odoReceipt(ODO) : ''}</div>
+      <div class="note">LIVE · <b>data_points_total()</b> (migration 198). Every line re-runs as one <b>count(*)</b> on its table; the total is their sum and nothing else.</div>
+    </details>
+  </div>`;
+}
+
 /* ── THE SPREAD · DIFFERENT CUSTOMERS TOUCHED (Kevin, 20 Aug: "different
    customers… that means you're hitting everybody, not just calling the people
    you think are interested. Make it very prominent… toward the top." RENAMED
@@ -10095,7 +10147,7 @@ const SECTIONS = [
   /* HUSTLE's order is a ruling (Kevin, 20 Aug): the spread hero first, speed
      to first touch ranked right under it (promoted out of the room), then the
      quadrant and the room, then the owner-only time clocks. */
-  { key:'hustle',    name:'Hustle',    render: () => '<div class="stack bands">' + cardSpread() + cardSpeed() + cardQuadrant() + effortRoom(true,'speed') + cardAppTime() + cardTextTime() + cardTalkTime() + '</div>' },
+  { key:'hustle',    name:'Hustle',    render: () => '<div class="stack bands">' + cardOdometer() + cardSpread() + cardSpeed() + cardQuadrant() + effortRoom(true,'speed') + cardAppTime() + cardTextTime() + cardTalkTime() + '</div>' },
   /* The label says REVENUE (KD, 20 Aug: "what do we wanna call revenue? …
      Revenue"); the key stays 'money' so every #money bookmark and remembered
      choice from the Money weeks still lands here instead of on the default. */
@@ -10800,7 +10852,7 @@ addEventListener('resize', () => {
    the last one, it is to tell a human which build is on the server and when it
    got there. A number nobody clocked cannot answer that, and the first time it
    is asked in anger will be the morning a stale build is being chased. */
-const BUILD = '2026-08-23T02:04Z-stir-the-pot';
+const BUILD = '2026-08-23T02:52Z-the-number';
 const SB_URL = 'https://lzegjjbkfuecrhdvlvay.supabase.co';
 /* The one page that can finish a password reset. Hard-coded rather than derived,
    because every derivation of it so far has been a source of bugs: a bare origin
