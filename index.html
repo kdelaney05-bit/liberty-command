@@ -4738,7 +4738,7 @@ async function loadEffortIntel(){
      draws — one fetch, two reads, filtered client-side. */
   const d35 = new Date(Date.now() - 35 * 864e5).toISOString();
   const d30 = new Date(Date.now() - 30 * 864e5).toISOString();
-  const [mix, close, light, streaks, speed, est, pipe, gameRows, gameCats, weekly, hypeMsgs, hypeReacts, spread, spreadTot, appTime, textTime, talkTime, cover, spreadM] = await Promise.all([
+  const [mix, close, light, streaks, speed, est, pipe, gameRows, gameCats, weekly, hypeMsgs, hypeReacts, spread, spreadTot, appTime, textTime, talkTime, cover, spreadM, bni] = await Promise.all([
     q(`rpc/touch_board?p_win=${win}`).catch(() => null),
     q('rpc/touch_close_stats').catch(() => null),
     q('rpc/touch_light_board').catch(() => null),
@@ -4785,6 +4785,12 @@ async function loadEffortIntel(){
        21 Aug) — its own call so the Hustle seg cannot swing that dial's
        denominator out from under its MTD numerator. */
     q('rpc/touch_spread?p_win=month').catch(() => null),
+    /* BNI CONFIRM QUEUE (migration 207, Kevin 24 Aug round 4): a rep's
+       "I attended" tap files a PENDING claim; confirming here posts the
+       automatic 25,000 pts (bni_confirm — the witness the honesty law
+       demands). Absent until 207 answers; is_manager-gated server-side,
+       so a non-manager reads an empty queue, never an error. */
+    q('rpc/bni_pending').catch(() => null),
   ]);
   let game = null, gameWk = null;
   if (Array.isArray(gameRows)) {
@@ -4834,7 +4840,7 @@ async function loadEffortIntel(){
      spread board's depth line; the cooling book itself still belongs to
      TruOdds. */
   EFF_INTEL = { mix, close, light, streaks, speed, est, pipe, game, gameWk, chat, weekly, win,
-                spread, spreadTot, appTime, textTime, talkTime, cover, spreadM };
+                spread, spreadTot, appTime, textTime, talkTime, cover, spreadM, bni };
   render();
 }
 
@@ -5539,6 +5545,47 @@ function cardOdometer(){
    the standard the streak was already grading. Feed is migration 185's
    touch_spread/touch_spread_totals: sellers-only, real-only, zeros included,
    windowed exactly like touch_board so the two boards agree on "today". */
+/* BNI CONFIRM QUEUE (migration 207, Kevin 24 Aug round 4: "that's just
+   automatic twenty five bucks"). The proof rail's office half: a rep's
+   "I attended" tap files a PENDING claim in the app; CONFIRM here calls
+   bni_confirm — which posts the automatic 25,000 pts VESTED to the ledger
+   (idempotent by the lb_ledger_once index) and lights the rep's SuperScore
+   networking component. Automatic money still needs a witness — that
+   witness is this card. */
+async function bniAct(id, act){
+  const s = sess.get(); if (!s) return;
+  const box = document.querySelector(`[data-bni="${Number(id)}"]`);
+  if (box) box.querySelectorAll('button').forEach(b => b.disabled = true);
+  try {
+    const r = await fetch(`${SB_URL}/rest/v1/rpc/${act === 'confirm' ? 'bni_confirm' : 'bni_reject'}`, {
+      method: 'POST',
+      headers: { apikey: SB_KEY, Authorization: 'Bearer ' + s.access_token, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ p_id: Number(id) }) });
+    if (!r.ok) { let m = 'HTTP ' + r.status; try { const j = await r.json(); if (j && j.message) m = j.message; } catch(e){} throw new Error(m); }
+    if (EFF_INTEL && Array.isArray(EFF_INTEL.bni))
+      EFF_INTEL.bni = EFF_INTEL.bni.filter(x => Number(x.id) !== Number(id));
+    render();
+  } catch (e) {
+    if (box) box.querySelectorAll('button').forEach(b => b.disabled = false);
+    alert('Could not ' + act + ' claim ' + id + ' — ' + (e && e.message || e));
+  }
+}
+function cardBni(){
+  if (!EFF_INTEL) return '';
+  const rows = EFF_INTEL.bni;
+  const head = `<div class="card full"><div class="card-title">Networking / BNI — confirm queue<span class="feed-tag">live · db</span></div>`;
+  if (!Array.isArray(rows)) return head +
+    `<div class="card-sub">The BNI rail is connecting — reps' "I attended" taps land here for your confirm the moment the feed (migration 207, <b>bni_pending</b>) answers.</div></div>`;
+  if (!rows.length) return head +
+    `<div class="card-sub">Queue clear. A rep taps "I attended a meeting" in the app, the claim lands here, and your confirm pays the automatic 25,000 pts · $25 — automatic money still needs a witness.</div></div>`;
+  return head +
+    `<div class="card-sub">CONFIRM pays 25,000 pts · $25 — automatic, outside the pot — and lifts the rep's SuperScore networking component. DECLINE closes the claim; a wrong tap costs nothing.</div>` +
+    rows.map(r => `<div data-bni="${Number(r.id)}" style="display:flex;align-items:center;gap:10px;padding:8px 2px;border-top:1px solid rgba(255,255,255,.06)">
+      <div style="flex:1;min-width:0"><b>${esc(r.rep_name || '')}</b> · ${esc(String(r.meeting_on || ''))}${r.group_name ? ' · ' + esc(r.group_name) : ' · group not named'}</div>
+      <button onclick="bniAct(${Number(r.id)},'confirm')" style="border:1px solid #c9a94f;background:rgba(227,184,79,.14);color:#ffe08a;border-radius:8px;padding:5px 10px;font-weight:800;font-size:11px;cursor:pointer">CONFIRM · $25</button>
+      <button onclick="bniAct(${Number(r.id)},'reject')" style="border:1px solid rgba(255,255,255,.18);background:transparent;color:#8aa094;border-radius:8px;padding:5px 10px;font-size:11px;cursor:pointer">DECLINE</button>
+    </div>`).join('') + `</div>`;
+}
 function cardSpread(){
   if (!EFF_INTEL) return '';
   const sp = EFF_INTEL.spread;
@@ -10147,7 +10194,7 @@ const SECTIONS = [
   /* HUSTLE's order is a ruling (Kevin, 20 Aug): the spread hero first, speed
      to first touch ranked right under it (promoted out of the room), then the
      quadrant and the room, then the owner-only time clocks. */
-  { key:'hustle',    name:'Hustle',    render: () => '<div class="stack bands">' + cardOdometer() + cardSpread() + cardSpeed() + cardQuadrant() + effortRoom(true,'speed') + cardAppTime() + cardTextTime() + cardTalkTime() + '</div>' },
+  { key:'hustle',    name:'Hustle',    render: () => '<div class="stack bands">' + cardOdometer() + cardBni() + cardSpread() + cardSpeed() + cardQuadrant() + effortRoom(true,'speed') + cardAppTime() + cardTextTime() + cardTalkTime() + '</div>' },
   /* The label says REVENUE (KD, 20 Aug: "what do we wanna call revenue? …
      Revenue"); the key stays 'money' so every #money bookmark and remembered
      choice from the Money weeks still lands here instead of on the default. */
@@ -10852,7 +10899,7 @@ addEventListener('resize', () => {
    the last one, it is to tell a human which build is on the server and when it
    got there. A number nobody clocked cannot answer that, and the first time it
    is asked in anger will be the morning a stale build is being chased. */
-const BUILD = '2026-08-23T02:52Z-the-number';
+const BUILD = '2026-08-24T20:43Z-bni-witness';
 const SB_URL = 'https://lzegjjbkfuecrhdvlvay.supabase.co';
 /* The one page that can finish a password reset. Hard-coded rather than derived,
    because every derivation of it so far has been a source of bugs: a bare origin
