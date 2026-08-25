@@ -991,6 +991,24 @@
   .apco-cap { font-family: 'JetBrains Mono', monospace; font-size: 9px; color: var(--text-dim); margin-top: 9px; letter-spacing: .03em; line-height: 1.5; }
   .apco-cap b { color: var(--text); font-weight: 600; }
   .apco-cap .s { display: block; margin-top: 3px; opacity: .8; }
+  /* The source strip under the company tiles — same track-and-tick language,
+     one size down, so it reads as the same instrument at a finer grain rather
+     than a second chart bolted on. Rows open on tap for the granular read. */
+  .apsrc { margin-top: 20px; }
+  .apsrc-bar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 4px; }
+  .apsrc-bar .card-title { margin: 0; font-size: 12px; }
+  .apsrc-lens { margin-left: auto; display: flex; gap: 5px; }
+  .apsrc-row { padding: 8px 9px 9px; border-radius: 9px; cursor: pointer; }
+  @media (hover: hover) { .apsrc-row:hover { background: rgba(255,255,255,0.035); } }
+  .apsrc-top { display: flex; align-items: baseline; gap: 8px; font-family: 'JetBrains Mono', monospace; font-size: 11px; min-width: 0; }
+  .apsrc-top .acc-chev { align-self: center; }
+  .apsrc-nm { color: var(--text); font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .apsrc-n { font-weight: 700; font-size: 13px; color: var(--text); margin-left: auto; }
+  .apsrc-row .apco-track { height: 6px; margin-top: 8px; }
+  .apsrc-body { display: none; font-family: 'JetBrains Mono', monospace; font-size: 9.5px; color: var(--text-dim); margin-top: 8px; line-height: 1.7; letter-spacing: .03em; }
+  .apsrc-body b { color: var(--text); font-weight: 600; }
+  .apsrc-row.open .apsrc-body { display: block; }
+  .apsrc-row.open .acc-chev { transform: rotate(90deg); color: var(--accent); }
   .apco-pending { font-family: 'JetBrains Mono', monospace; font-size: 10.5px; font-style: italic; color: var(--text-dim); margin-top: 14px; padding-top: 13px; border-top: 1px solid var(--line); display: flex; align-items: baseline; gap: 7px; line-height: 1.5; }
   .apco-pending .d { width: 6px; height: 6px; border-radius: 50%; background: #8aa094; flex-shrink: 0; position: relative; top: 3px; }
   .brand-tile { background: var(--bg-card-hi); border: 1px solid var(--line); border-radius: 12px; padding: 14px; margin-bottom: 10px; }
@@ -2438,6 +2456,10 @@ let EFFWIN = 'month';
    doesn't break down per company") and the most stable of the three — a single
    day of bookings is noisy and half-filled, a month-to-date is not. */
 let APPTCOWIN = 'month';
+/* The source strip's company lens — 'all' or a brand id. Kevin's question is
+   "fencing is down 16%, WHERE?", so the strip can be pointed at one company
+   and re-read every source at that grain. Tapping the same chip clears it. */
+let APPTSRCCO = 'all';
 let QUOTAWIN = 'month';
 // null = the snapshot home; 'day'|'week'|'month'|'ytd' = that window, full screen
 let DIVE = null;
@@ -3231,6 +3253,107 @@ function cardAppointments(){
    legacy 1537 via the DBA rollup); the toggle picks the window; each row reads
    its count against a measured typical, with the tick on the bar marking where
    typical sits. Down is amber and states the deficit; up is green. ──────────── */
+/* ── THE SOURCE STRIP · total → company → source ─────────────────────────────
+   KD, 25 Aug: "we have our total and then by company and then by source, and
+   a source up or down… I need to be able to click on a source and get
+   granular — and don't muddy it up." So it rides INSIDE the by-company band,
+   under the tiles, on the same window toggle: every source that booked (or
+   normally books) in the window, against the same elapsed-span median the
+   tiles above use, with a tick marking typical. The verdict line names the
+   biggest drag outright so a bad morning answers "where?" without scrolling.
+   Tap a row for the granular read — the per-company split and the raw prior
+   samples. The company chips re-read the whole strip at one brand's grain.
+
+   THE THIN FLOOR: a typical under 3 cannot support a percent — at t=2, one
+   booking swings the figure 50 points — so thin rows keep their counts and
+   decline the verdict, the same refusal the marketing grid makes at MK_THIN. */
+const APPTSRC_SHOW = 7;      // rows on the board; the rest fold, never drop
+const APPTSRC_THIN = 3;      // median floor before a percent may be printed
+function apptSrcStrip(){
+  const A = D.appointments; if (!A || !A.bySource) return '';
+  const K = APPTCOWIN, S = A.bySource[K], W = A.byCompany[K];
+  if (!S || !S.counts) return '';
+  const lens = APPTSRCCO, ytd = !S.typ;
+  const spanLabel = { day:'today', week:'this week', month:mSpan(), ytd:'year to date' }[K];
+  const keys = new Set([...Object.keys(S.counts.rows), ...(S.typ ? Object.keys(S.typ) : [])]);
+  const rows = [...keys].map(src => {
+    const c = S.counts.rows[src] || { n: 0, by: {} };
+    const tp = S.typ ? S.typ[src] : null;
+    const n = lens === 'all' ? c.n : (c.by[lens] || 0);
+    const grain = tp ? (lens === 'all' ? tp : tp.byBrand[lens]) : null;
+    const t = grain ? grain.typical : 0;
+    const vals = grain ? grain.vals : null;
+    const rd = Math.round(t);
+    const pct = t ? Math.round((n - t)/t*100) : null;
+    const dir = !t ? (n ? 'up' : 'flat') : n > t ? 'up' : n < t ? 'down' : 'flat';
+    return { src, n, t, rd, gap: n - rd, pct, dir, vals, by: c.by, tp };
+  }).filter(r => r.n > 0 || r.t > 0)
+    .sort((a,b) => Math.max(b.n, b.t) - Math.max(a.n, a.t) || a.src.localeCompare(b.src));
+  if (!rows.length) return '';
+  const scale = Math.max(1, ...rows.map(r => Math.max(r.n, r.t)));
+  const lead = rows.slice(0, APPTSRC_SHOW), quiet = rows.slice(APPTSRC_SHOW);
+
+  /* The verdict: the biggest deficit among sources thick enough to speak, and
+     the biggest riser beside it so a drag is never read without its offset. */
+  let verdict = '';
+  if (!ytd) {
+    const speaks = rows.filter(r => r.t >= APPTSRC_THIN);
+    const worst = speaks.filter(r => r.pct !== null && r.pct <= -15)
+      .sort((a,b) => (a.n - a.t) - (b.n - b.t))[0];
+    const best = speaks.filter(r => r.pct !== null && r.pct >= 15 && r !== worst)
+      .sort((a,b) => (b.n - b.t) - (a.n - a.t))[0];
+    verdict = worst
+      ? `<div class="verdict warn" style="margin-top:8px">▼ <b>${esc(worst.src)}</b> is the drag ${spanLabel} — ${worst.n} booked against ${worst.rd} typical, down ${Math.abs(worst.pct)}%${
+          best ? `. ▲ ${esc(best.src)} is carrying: ${best.n} vs ${best.rd} (+${best.pct}%).` : '.'}</div>`
+      : speaks.length
+        ? `<div class="verdict good" style="margin-top:8px">No source is meaningfully off its typical ${spanLabel}${best ? ` — and ▲ <b>${esc(best.src)}</b> is ahead: ${best.n} vs ${best.rd} (+${best.pct}%)` : ''}.</div>`
+        : '';
+  }
+
+  const rowHtml = (r, folded) => {
+    const pill = ytd ? ''
+      : r.t >= APPTSRC_THIN ? `<span class="apco-delta ${r.dir}">${r.dir==='up'?'▲':r.dir==='down'?'▼':'▬'} ${Math.abs(r.pct)}%</span>`
+      : r.t > 0 ? `<span class="apco-delta flat" title="typical here is under ${APPTSRC_THIN} for this span — too thin for a percent verdict">${r.n} vs ${r.rd}</span>`
+      : `<span class="apco-delta flat" title="no prior ${spanLabel === 'today' ? 'weekday' : 'period'} booked from this source — nothing to compare against">new</span>`;
+    const split = (lens === 'all' && r.tp) ? BRAND_ORDER.map(b => {
+      const m = brandOf(b), bn = r.by[b] || 0, bg = r.tp.byBrand[b], bt = bg ? bg.typical : 0;
+      if (!bn && !bt) return '';
+      const bp = bt ? Math.round((bn - bt)/bt*100) : null;
+      const glyph = bt >= APPTSRC_THIN
+        ? `<span class="${bn >= bt ? 'up' : 'dn'}">${bn >= bt ? '▲' : '▼'}${Math.abs(bp)}%</span>`
+        : `<span style="opacity:.7">vs ${Math.round(bt)}</span>`;
+      return `<span style="margin-right:12px"><span class="apco-dot" style="background:${m.c};display:inline-block;width:7px;height:7px;margin-right:4px"></span>${esc(m.s)} <b>${bn}</b> ${glyph}</span>`;
+    }).join('') : '';
+    return `<div class="apsrc-row" onclick="this.classList.toggle('open')"${folded ? ' data-qsrc hidden' : ''}>
+      <div class="apsrc-top"><span class="acc-chev">›</span>
+        <span class="apsrc-nm">${esc(r.src)}</span>
+        <span class="apsrc-n">${r.n}</span>${pill}
+      </div>
+      <div class="apco-track">
+        <div class="apco-fill" style="width:${Math.round(r.n/scale*100)}%;background:${r.dir==='up'?'var(--green)':r.dir==='down'?'#d8997f':'var(--text-dim)'}"></div>
+        ${r.t ? `<div class="apco-tick" style="left:${Math.round(Math.min(r.t,scale)/scale*100)}%" title="typical ${r.rd}"></div>` : ''}
+      </div>
+      <div class="apsrc-body">
+        ${r.n} booked · <b>${r.t ? r.rd : '—'}</b> typical${r.t && r.gap ? ` · <b style="color:${r.gap<0?'#d8997f':'var(--green-soft)'}">${Math.abs(r.gap)} ${r.gap<0?'behind':'ahead'}</b>` : ''}${
+          r.vals ? `<br/>${esc(W.sampleLabel)}: ${r.vals.join(' · ')}` : ytd ? '<br/>counts only — a year has no prior year here to be typical against' : ''}
+        ${split ? `<br/>${split}` : ''}
+      </div>
+    </div>`;
+  };
+
+  return `<div class="apsrc">
+    <div class="apsrc-bar">
+      <div class="card-title">By source · ${esc(spanLabel)}</div>
+      <div class="apsrc-lens">${[['all','All'], ...BRAND_ORDER.map(b => [b, brandOf(b).s])].map(([id, label]) =>
+        `<button class="mk-chip co${lens === id ? ' on' : ''}" onclick="setApptSrcCo('${id}')" aria-pressed="${lens === id}">${esc(label)}</button>`).join('')}
+    </div></div>
+    ${verdict}
+    ${lead.map(r => rowHtml(r, false)).join('')}
+    ${quiet.length ? `<button type="button" class="mk-fold" onclick="mkFold(this,'data-qsrc')" aria-expanded="false"><span class="chev">›</span>${quiet.length} quieter source${quiet.length === 1 ? '' : 's'}<span class="why">smaller channels, same arithmetic — folded, not dropped</span></button>${quiet.map(r => rowHtml(r, true)).join('')}` : ''}
+    ${S.counts.unsourced ? `<div class="apco-cap" style="margin-top:8px">${S.counts.unsourced} of the ${S.counts.total} booked ${esc(spanLabel)} carry no lead source on their project — counted in every number above, not guessed into a channel here.</div>` : ''}
+  </div>`;
+}
+
 function cardApptByCompany(){
   const A = D.appointments; if (!A || !A.byCompany) return '';
   const K = APPTCOWIN, W = A.byCompany[K];
@@ -3307,6 +3430,8 @@ function cardApptByCompany(){
       </div>`;
     }).join('')}
     </div>
+
+    ${apptSrcStrip()}
 
     <div class="mini4">
       <div><div class="mini-cap" style="color:var(--green)">Set · by week</div><div class="chart-wrap" style="height:104px"><canvas id="cBookedWeek"></canvas></div></div>
@@ -10467,6 +10592,7 @@ function keepScroll(fn){
 }
 function setEff(k){ keepScroll(() => { EFFWIN = k; }); loadEffortIntel(); }
 function setApptCo(k){ keepScroll(() => { APPTCOWIN = k; }); }
+function setApptSrcCo(b){ keepScroll(() => { APPTSRCCO = APPTSRCCO === b ? 'all' : b; }); }
 function setQuota(k){ keepScroll(() => { QUOTAWIN = k; }); }
 
 /* ── charts. Kevin's Chart.js idiom: mono ticks, #1c3528 tooltips. ─────────
@@ -10899,7 +11025,7 @@ addEventListener('resize', () => {
    the last one, it is to tell a human which build is on the server and when it
    got there. A number nobody clocked cannot answer that, and the first time it
    is asked in anger will be the morning a stale build is being chased. */
-const BUILD = '2026-08-24T20:43Z-bni-witness';
+const BUILD = '2026-08-25T20:54Z-source-strip';
 const SB_URL = 'https://lzegjjbkfuecrhdvlvay.supabase.co';
 /* The one page that can finish a password reset. Hard-coded rather than derived,
    because every derivation of it so far has been a source of bugs: a bare origin
@@ -12585,6 +12711,99 @@ function buildData(raw){
       },
     };
 
+    /* ── APPOINTMENTS BY SOURCE · the same windows, one grain finer ──────────
+       KD, 25 Aug: "I know I'm down sixteen percent in fencing, but I don't
+       know WHERE… I should be able to see which sources are down, inside the
+       main graph chart — total, then by company, then by source — and get
+       granular." The company tiles say WHICH BRAND is off; this layer says
+       which CHANNEL is doing it. Same booking basis (cc_created_at), same
+       elapsed-span windows, same median law as byCompany above — a source
+       measured by a different arithmetic than its company could disagree
+       with the tile it sits under about the same morning.
+
+       Source is the project's job: cc_lead_source_id → lead_sources
+       .rollup_name — migration 163's canonical key, the one the marketing
+       board prices on. Never the raw CC name, which splits Google five ways
+       and Angi three. An appointment whose project carries no source stays
+       in every total above and is surfaced here as unattributed — never
+       guessed into a channel. */
+    const srcRollup = Object.fromEntries(leadNames.map(e =>
+      [String(e.cc_lead_id), e.rollup_name || e.name || null]));
+    const projSrc = {};
+    for (const j of jobs) if (j.cc_project_id && j.cc_lead_source_id) {
+      const s = srcRollup[String(j.cc_lead_source_id)];
+      if (s) projSrc[String(j.cc_project_id)] = s;
+    }
+    /* One list of booking rows → { src: { n, by: {brand: n} } }, with the
+       unattributed remainder counted rather than dropped. */
+    const srcTally = list => {
+      const rows2 = Object.create(null); let unsourced = 0, total = 0;
+      for (const r of list) {
+        total++;
+        const s = projSrc[String(r.cc_project_id)];
+        if (!s) { unsourced++; continue; }
+        const o = rows2[s] || (rows2[s] = { n: 0, by: {} });
+        o.n++;
+        const b = projBrand[String(r.cc_project_id)] || 'unknown';
+        o.by[b] = (o.by[b] || 0) + 1;
+      }
+      return { rows: rows2, unsourced, total };
+    };
+    const srcRange = (x, y) => { const acc = [];
+      for (let d = new Date(x); d < y; d = addD(d, 1)) acc.push(...createdOn(ymdL(d)));
+      return srcTally(acc); };
+    /* Typicals from prior sample tallies: a median per source — total and per
+       brand — with the raw samples kept, because a typical nobody can
+       interrogate is exactly what this page refuses to print. */
+    const srcTypFrom = samples => {
+      const keys = new Set(samples.flatMap(s => Object.keys(s.rows)));
+      const typ = Object.create(null);
+      for (const k of keys) {
+        const vals = samples.map(s => (s.rows[k] || { n: 0 }).n);
+        const byBrand = Object.fromEntries(BRAND_ORDER.map(b => {
+          const bv = samples.map(s => ((s.rows[k] || {}).by || {})[b] || 0);
+          return [b, { vals: bv, typical: med(bv) }];
+        }));
+        typ[k] = { vals, typical: med(vals), byBrand };
+      }
+      return typ;
+    };
+    const bySource = {
+      day: (() => {
+        /* Same weekday, by this hour — the one daily comparison the weekday
+           shape cannot flatter (see the weekday-shape note above). Nine
+           samples, the same depth every dow norm on this page carries. */
+        const starts = [];
+        for (let i = 1; starts.length < 9 && i <= 70; i++) {
+          const d = addD(T, -i); if (d.getDay() === TDOW) starts.push(d);
+        }
+        return { counts: srcTally(createdOnBy(todayStr, NOWH)),
+                 typ: srcTypFrom(starts.map(s => srcTally(createdOnBy(ymdL(s), NOWH)))) };
+      })(),
+      week: (() => {
+        const starts = [1,2,3,4].map(w => addD(sow(T), -7*w));
+        return { counts: srcRange(sow(T), winEnd),
+                 typ: srcTypFrom(starts.map(s => srcRange(s, addD(s, elapsedWk)))) };
+      })(),
+      month: (() => {
+        /* Rides the time machine exactly as byCompany does: a browsed month is
+           CLOSED and reads whole against the prior 3 whole months; the live
+           month reads first-N-days against first-N-days. */
+        if (MONTHOFF) {
+          const mFrom = addM(som(T), -MONTHOFF), mTo = addM(mFrom, 1);
+          const starts = [1,2,3].map(m => addM(mFrom, -m));
+          return { counts: srcRange(mFrom, mTo),
+                   typ: srcTypFrom(starts.map(s => srcRange(s, addM(s, 1)))) };
+        }
+        const starts = [1,2,3].map(m => new Date(T.getFullYear(), T.getMonth()-m, 1));
+        return { counts: srcRange(som(T), winEnd),
+                 typ: srcTypFrom(starts.map(s => srcRange(s, addD(s, elapsedMo)))) };
+      })(),
+      /* YTD keeps byCompany's refusal: there is no prior-YTDs baseline, so
+         these are counts, and the strip says so instead of inventing one. */
+      ytd: { counts: srcRange(soy(T), winEnd), typ: null },
+    };
+
     // creation-basis series, alongside the calendar-load series
     // two-letter weekday, so a bar can be read as "that was a Monday" at a glance
     const DOW2 = ['Su','Mo','Tu','We','Th','Fr','Sa'];
@@ -12883,7 +13102,7 @@ function buildData(raw){
       series, weekly, monthly: monthlyA,
       brandsAhead: byBrandWin(T, addD(T,7)),
       brandsMonth: byBrandWin(som(NOW), addD(T,1)),
-      byCompany,
+      byCompany, bySource,
       windows: Object.fromEntries(Object.entries(WINS).map(([k,wv]) => [k, count(wv.from, wv.to)])),
 
       /* Per-window appointment detail for the drill-ins. Kevin: "When I click on
