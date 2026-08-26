@@ -1994,21 +1994,28 @@
      seven used to split. */
   .mrail { display: none; }
   @media (max-width: 899.98px) {
-    body.mnav { padding-bottom: calc(66px + env(safe-area-inset-bottom)); }
+    body.mnav { padding-bottom: calc(72px + env(safe-area-inset-bottom)); }
+    /* Kevin, 26 Aug, from the home screen: the tabs were "too small… shade the
+       one we're on". The picked mock: an icon over every label (all six fit,
+       no more sideways scroll) and the active cell shaded with an orange tick
+       across its top — the pill and the segment dock lost. */
     .mrail { position: fixed; left: 0; right: 0; bottom: 0; z-index: 60;
-      display: flex; gap: 2px; padding: 6px 6px calc(6px + env(safe-area-inset-bottom));
-      background: rgba(13,31,23,0.96); border-top: 1px solid var(--line);
-      overflow-x: auto; -webkit-overflow-scrolling: touch; }
-    .mrail-btn { flex: 1 0 auto; min-width: 52px; background: none;
-      border: 1px solid transparent; border-radius: 9px; padding: 11px 8px;
+      display: flex; gap: 3px; padding: 6px 6px calc(6px + env(safe-area-inset-bottom));
+      background: rgba(13,31,23,0.96); border-top: 1px solid var(--line); }
+    .mrail-btn { flex: 1 1 0; min-width: 0; background: none;
+      border: none; border-radius: 10px; padding: 9px 2px 8px; position: relative;
       color: var(--text-dim); font-family: 'JetBrains Mono', monospace;
-      font-size: 10px; letter-spacing: .06em; text-transform: uppercase;
-      cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 4px; }
-    .mrail-btn.on { color: var(--accent-soft); border-color: rgba(240,131,74,0.4);
-      background: rgba(240,131,74,0.07); }
-    .mrail-badge { font-family: 'JetBrains Mono', monospace; font-size: 9px;
+      font-size: 8.5px; letter-spacing: .05em; text-transform: uppercase; white-space: nowrap;
+      cursor: pointer; display: flex; flex-direction: column; align-items: center;
+      justify-content: center; gap: 5px; }
+    .mrail-btn svg { flex: none; }
+    .mrail-btn.on { color: var(--accent-soft); font-weight: 600; background: var(--bg-card-hi); }
+    .mrail-btn.on::before { content: ''; position: absolute; top: 0; left: 10px; right: 10px;
+      height: 3px; border-radius: 0 0 3px 3px; background: var(--accent); }
+    .mrail-badge { position: absolute; top: 4px; right: 5px;
+      font-family: 'JetBrains Mono', monospace; font-size: 8.5px;
       font-weight: 700; color: var(--gold); border: 1px solid rgba(212,177,90,0.45);
-      border-radius: 100px; padding: 0 5px; }
+      border-radius: 100px; padding: 0 4px; background: rgba(13,31,23,0.9); }
   }
 
   /* ── THE MARKETING BOARD · ROI EDITION ────────────────────────────────────
@@ -10429,12 +10436,30 @@ function railHtml(){
    same stored choice, same hashes — a bottom tab bar because that is where a
    thumb lives — plus the one tab the desktop doesn't need: ALL, the classic
    single-column reading, kept one tap away rather than retired. */
+/* One stroke icon per tab, 21px on a 24 grid — pen for the signed book,
+   megaphone for the setting side, the bolt for Hustle, the dollar for Revenue,
+   the flag for the attention count, the grid for the classic ALL column. */
+const MRAIL_ICONS = {
+  sales: '<path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>',
+  marketing: '<path d="m3 11 18-5v12L3 14v-3z"></path><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"></path>',
+  hustle: '<path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"></path>',
+  money: '<path d="M12 2v20"></path><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>',
+  flags: '<path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"></path><line x1="4" y1="22" x2="4" y2="15"></line>',
+  all: '<rect x="3" y="3" width="7" height="7" rx="1"></rect><rect x="14" y="3" width="7" height="7" rx="1"></rect><rect x="3" y="14" width="7" height="7" rx="1"></rect><rect x="14" y="14" width="7" height="7" rx="1"></rect>',
+};
+function mrailIcon(key){
+  return `<svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+    stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${MRAIL_ICONS[key] || ''}</svg>`;
+}
 function mrailHtml(){
   const tabs = [...SECTIONS, { key:'all', name:'All' }];
+  /* Marketing alone shortens to MKTG — six cells share a 320px phone, and the
+     one nine-letter word is what breaks the even split. */
   return `<nav class="mrail" aria-label="Sections">${tabs.map(s => {
     const n = s.badge ? s.badge() : 0;
     return `<button type="button" class="mrail-btn${SECTION === s.key ? ' on' : ''}"
-      aria-current="${SECTION === s.key ? 'true' : 'false'}" onclick="setSection('${s.key}')">${esc(s.name)}${
+      aria-current="${SECTION === s.key ? 'true' : 'false'}" aria-label="${esc(s.name)}"
+      onclick="setSection('${s.key}')">${mrailIcon(s.key)}${s.key === 'marketing' ? 'Mktg' : esc(s.name)}${
       n ? `<span class="mrail-badge">${n}</span>` : ''}</button>`;
   }).join('')}</nav>`;
 }
