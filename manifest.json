@@ -1,6 +1,6 @@
 {
-  "name": "TruReview Autopilot",
-  "short_name": "TruReview",
+  "name": "The 4-Touch Central Command",
+  "short_name": "Central Command",
   "description": "Three companies, one instrument. Sales, pace, lead sources and team effort — read live, sign-in required.",
   "start_url": "./index.html",
   "scope": "./",
