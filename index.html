@@ -10390,8 +10390,173 @@ const SECTIONS = [
   /* The one counted section: the badge is the Attention board's own row list
      (attnRows), so the number on the rail and the rows behind the click are
      one computation and cannot drift apart. */
+  /* COMMERCIAL — Kevin, 7 Sep 2026: 'a separate [room] in my owner console
+     that's tracking these commercial bids… complete transparency.' One
+     manager-gated call (commercial_console, 226) + the bid list; nothing
+     here is blended into any residential board. */
+  { key:'commercial', name:'Commercial', render: () => commercialRoom() },
   { key:'flags',     name:'Flags',     render: () => cardAttention(), badge: () => attnRows().length },
 ];
+
+/* ═══ THE COMMERCIAL ROOM ═══════════════════════════════════════════════════
+   Kevin, 7 Sep 2026: "I wanna make sure that we have a separate [room] in my
+   owner console that's tracking these commercial bids… complete transparency…
+   I'm paying Jeremy $3,000 a week to start bidding these."
+
+   One rep today (Jeremy Gerber, track='commercial'), built for any number.
+   Everything here is one manager-gated call — commercial_console(days),
+   migration 226 — plus the bid list read under the same RLS. Nothing is
+   blended into any residential board (count-once-per-surface): a $14M
+   commercial book beside $20–70K residential books would flatten every bar.
+
+   THE COST LINE is the owner's own input (stored in this browser only,
+   default $3,000/week — his number, 7 Sep). The room divides it against the
+   denominators the call returns; it never stores or invents a cost. */
+let COMM = null;            // { rows, bids, days, err }
+let COMM_DAYS = 30;
+const COMM_COST_KEY = 'lcc.commercial.weekly_cost';
+const commCost = () => { try { const v = Number(localStorage.getItem(COMM_COST_KEY)); return v > 0 ? v : 3000; } catch { return 3000; } };
+function setCommCost(v){ try { localStorage.setItem(COMM_COST_KEY, String(Math.max(0, Number(v) || 0))); } catch {} render(); }
+function setCommDays(d){ COMM_DAYS = d; loadCommercial(); }
+
+async function loadCommercial(){
+  const s = sess.get(); if (!s) return;
+  const post = async (fn, body) => {
+    const r = await fetch(`${SB_URL}/rest/v1/rpc/${fn}`, { method: 'POST',
+      headers: { apikey: SB_KEY, Authorization: 'Bearer ' + s.access_token, 'Content-Type': 'application/json' },
+      body: JSON.stringify(body || {}) });
+    if (!r.ok) { const e = new Error(`${fn} → ${r.status}`); e.status = r.status; throw e; }
+    return r.json();
+  };
+  try {
+    const rows = await post('commercial_console', { p_days: COMM_DAYS });
+    const repIds = (rows || []).map(r => r.rep_id);
+    let bids = [];
+    if (repIds.length) {
+      const inList = `in.(${repIds.join(',')})`;
+      const [jobs, cbids, links, contacts, pulse, est] = await Promise.all([
+        q(`jobs?select=customer_id,rep_id,appt_starts_at,created_at,contract_signed_at,customers(name,disposition,email,contact_name)&rep_id=${inList}&source=in.(cc,app_live)`),
+        q('commercial_bids?select=customer_id,stage,stage_at,bid_due_on,owner_bid_on,award_expected_on,start_expected_on,gcs_bidding,source_kind,sector').catch(() => []),
+        q('bid_people?select=customer_id,contact_id,is_primary').catch(() => []),
+        q('nurture_contacts?select=id,name,company,email').catch(() => []),
+        post('commercial_pulse').catch(() => []),
+        q('estimates?select=customer_id,amount,occurred_at&order=occurred_at.desc').catch(() => []),
+      ]);
+      const cb = new Map(cbids.map(b => [b.customer_id, b]));
+      const ct = new Map(contacts.map(c => [c.id, c]));
+      const ppl = new Map(); for (const l of links) { const c = ct.get(l.contact_id); if (c) (ppl.get(l.customer_id) || ppl.set(l.customer_id, []).get(l.customer_id)).push({ ...c, is_primary: l.is_primary }); }
+      const pu = new Map(pulse.map(p => [p.customer_id, p]));
+      const amt = new Map(); for (const e of est) if (!amt.has(e.customer_id)) amt.set(e.customer_id, Number(e.amount));
+      const seen = new Set();
+      for (const j of jobs) {
+        if (seen.has(j.customer_id)) continue; seen.add(j.customer_id);
+        const c = j.customers || {}; const b = cb.get(j.customer_id) || {}; const people = (ppl.get(j.customer_id) || []).sort((a, z) => (z.is_primary - a.is_primary));
+        bids.push({ id: j.customer_id, rep_id: j.rep_id, name: c.name || '', disposition: c.disposition || null, signed: !!j.contract_signed_at,
+          sentAt: j.appt_starts_at || j.created_at, amount: amt.get(j.customer_id) ?? null, stage: b.stage || 'sent', bidDue: b.bid_due_on || null,
+          gcs: b.gcs_bidding || null, source: b.source_kind || null, person: people[0] || null, contactText: c.contact_name || '', email: c.email || null,
+          pulse: pu.get(j.customer_id) || null });
+      }
+      bids.sort((a, z) => (z.amount || 0) - (a.amount || 0));
+    }
+    COMM = { rows: rows || [], bids, days: COMM_DAYS, err: null };
+  } catch (e) {
+    COMM = { rows: [], bids: [], days: COMM_DAYS, err: e.status === 42501 || /42501|managers only|403/.test(String(e.message)) ? 'managers only' : e.message };
+  }
+  render();
+}
+
+const commMoney = n => n == null ? '—' : n >= 1e6 ? '$' + (n / 1e6).toFixed(n >= 1e7 ? 0 : 1) + 'M' : n >= 1e3 ? '$' + Math.round(n / 1e3) + 'K' : '$' + Math.round(n);
+const commPct = x => x == null ? '—' : Number(x).toFixed(1) + '%';
+const COMM_TEMP = { committed: ['#cda54e', 'committed'], working: ['#6fc48a', 'working'], cooling: ['#d6c05a', 'cooling'], cold: ['#cf6a5f', 'cold'] };
+const COMM_STAGE = { sent: 'sent', gc_won: 'GC won', gc_lost: 'GC lost', awarded: 'awarded', buyout: 'buyout' };
+
+function commercialRoom(){
+  const head = `<div class="card full"><div class="card-title">Commercial — the bid book<span class="feed-tag">live · db · 226</span></div>`;
+  if (!COMM) return head + `<div class="card-sub">Reading the commercial book (commercial_console, migration 226)…</div></div>`;
+  if (COMM.err) return head + `<div class="card-sub">${COMM.err === 'managers only' ? 'This room is the owner\'s. The login on this browser is not a manager.' : 'The commercial feed did not answer: ' + esc(COMM.err) + '. Migration 226 must be live for this room.'}</div></div>`;
+  if (!COMM.rows.length) return head + `<div class="card-sub">No commercial-track reps on the roster yet. A rep with <b>track='commercial'</b> lands here with every bid, person, and send.</div></div>`;
+  const days = COMM.days;
+  const weekly = commCost();
+  const seg = `<div class="seg">${[[7,'7d'],[30,'30d'],[90,'90d']].map(([k,l]) => `<button class="${k===days?'on':''}" onclick="setCommDays(${k})">${l}</button>`).join('')}</div>`;
+  return head + `<div class="card-sub">One room, nothing blended into the residential boards. Per commercial rep: the book, the GC stages, the two rates a sub's close rate is made of, what the machine did, what came back, and what the money is buying. The heartbeat is <b>an authored prior</b> until decided bids exist — every surface says so.</div>${seg}` +
+    COMM.rows.map(r => commercialRep(r, days, weekly)).join('') + `</div>` + commercialBids();
+}
+
+function commercialRep(r, days, weekly){
+  const period = weekly * days / 7;
+  const openBids = +r.bids_open || 0;
+  const sentWin = +r.bids_new_window || 0;
+  const expected = r.dollar_close_rate != null ? (+r.open_amount) * (+r.dollar_close_rate) / 100 : null;
+  const priorLo = (+r.open_amount) * 0.03, priorHi = (+r.open_amount) * 0.05;
+  const gaps = [];
+  if (+r.bids_no_person) gaps.push(`<b>${r.bids_no_person}</b> bids with nobody to nurture`);
+  if (+r.bids_no_email) gaps.push(`<b>${r.bids_no_email}</b> with no email`);
+  if (+r.bids_no_dates) gaps.push(`<b>${r.bids_no_dates}</b> with no ITB dates`);
+  if (+r.bids_unenrolled) gaps.push(`<b>${r.bids_unenrolled}</b> not on the Long Game`);
+  const since = r.rep_since ? new Date(r.rep_since) : null;
+  const weeks = since ? Math.max(1, Math.round((Date.now() - since.getTime()) / (7 * 864e5))) : null;
+  return `
+  <div style="margin-top:14px;padding-top:12px;border-top:1px solid rgba(255,255,255,.08)">
+    <div style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin-bottom:10px">
+      <div style="font-family:'Fraunces',serif;font-size:20px">${esc(r.rep_name)}</div>
+      <div style="font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--text-dim)">commercial · ${since ? 'since ' + since.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + ' · week ' + weeks : ''}${r.last_touch_at ? ' · last touch ' + new Date(r.last_touch_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : ' · no touches logged yet'}</div>
+    </div>
+    <div class="stat-grid" style="grid-template-columns:repeat(4,1fr)">
+      <div class="stat-tile"><div class="lbl">Open book</div><div class="val" style="color:var(--gold)">${commMoney(+r.open_amount)}</div><div class="sub">${openBids} bids · ${r.bids_priced} priced</div></div>
+      <div class="stat-tile"><div class="lbl">Sent · ${days}d</div><div class="val">${commMoney(+r.new_amount_window)}</div><div class="sub">${sentWin} bids went out</div></div>
+      <div class="stat-tile"><div class="lbl">Won</div><div class="val" style="color:var(--green)">${commMoney(+r.won_amount)}</div><div class="sub">${r.won} signed · ${r.lost} lost · ${r.stage_gc_lost} GC lost</div></div>
+      <div class="stat-tile"><div class="lbl">Dollar close rate</div><div class="val">${r.dollar_close_rate != null ? commPct(r.dollar_close_rate) : '3–5%'}</div><div class="sub">${r.dollar_close_rate != null ? 'measured · ' + commMoney(+r.decided_amount) + ' decided' : "KEVIN'S PRIOR · nothing decided yet"}</div></div>
+    </div>
+    <div class="stat-grid" style="grid-template-columns:repeat(4,1fr);margin-top:10px">
+      <div class="stat-tile"><div class="lbl">Stages</div><div class="val" style="font-size:16px">${r.stage_sent} · ${r.stage_gc_won} · ${r.stage_awarded} · ${r.stage_buyout}</div><div class="sub">sent · GC won · awarded · buyout</div></div>
+      <div class="stat-tile"><div class="lbl">GC award rate</div><div class="val">${commPct(r.gc_award_rate)}</div><div class="sub">GC won ÷ (GC won + GC lost)</div></div>
+      <div class="stat-tile"><div class="lbl">Pick rate</div><div class="val">${commPct(r.pick_rate)}</div><div class="sub">signed ÷ GC won</div></div>
+      <div class="stat-tile"><div class="lbl">Expected from the open book</div><div class="val" style="font-size:18px">${expected != null ? commMoney(expected) : commMoney(priorLo) + '–' + commMoney(priorHi)}</div><div class="sub">open $ × the rate · an estimate</div></div>
+    </div>
+    <div class="stat-grid" style="grid-template-columns:repeat(4,1fr);margin-top:10px">
+      <div class="stat-tile"><div class="lbl">Heartbeat · open bids</div><div class="val" style="font-size:16px"><span style="color:#cda54e">${r.pulse_committed}</span> · <span style="color:#6fc48a">${r.pulse_working}</span> · <span style="color:#d6c05a">${r.pulse_cooling}</span> · <span style="color:#cf6a5f">${r.pulse_cold}</span></div><div class="sub">committed · working · cooling · cold — authored prior v1</div></div>
+      <div class="stat-tile"><div class="lbl">The machine · ${days}d</div><div class="val" style="font-size:18px">${r.sends_window} sent${+r.held_sends ? ` <span style="color:#cf6a5f;font-size:12px">· ${r.held_sends} held</span>` : ''}</div><div class="sub">${r.enrolled_active} riding · ${+r.held_sends ? 'held = no Gmail key on the box yet' : 'emails as the rep'}</div></div>
+      <div class="stat-tile"><div class="lbl">The rep · ${days}d</div><div class="val" style="font-size:18px">${r.touches_window} touches</div><div class="sub">${r.prompts_done_window} prompts acted on · ${r.prompts_open} open this week</div></div>
+      <div class="stat-tile"><div class="lbl">Heard back · ${days}d</div><div class="val" style="font-size:18px">👀 ${r.opens_window} · 🔗 ${r.clicks_window} · 💬 ${r.replies_window}</div><div class="sub">${+r.replied_open ? r.replied_open + ' replied — the ball is his' : 'opens are a hint; clicks and replies are truth'}</div></div>
+    </div>
+    <div class="stat-grid" style="grid-template-columns:1.4fr 1fr;margin-top:10px">
+      <div class="stat-tile"><div class="lbl">What the money is buying</div>
+        <div style="display:flex;gap:10px;align-items:baseline;flex-wrap:wrap">
+          <div class="val" style="font-size:18px">${commMoney(period)} <span style="font-size:11px;color:var(--text-dim)">this ${days}d at</span> $<input type="number" value="${weekly}" min="0" step="100" onchange="setCommCost(this.value)" style="width:84px;background:transparent;border:0;border-bottom:1px solid var(--line);color:var(--text);font:inherit;font-size:14px"/> <span style="font-size:11px;color:var(--text-dim)">/ week (your number)</span></div>
+        </div>
+        <div class="sub">${sentWin ? commMoney(period / sentWin) + ' per bid sent · ' : ''}${+r.new_amount_window ? (period / (+r.new_amount_window) * 100).toFixed(2) + '¢ per $ quoted' : 'nothing sent in the window'}${expected != null ? ' · ' + commMoney(expected) + ' expected vs ' + commMoney(period) + ' spent' : ''}</div>
+        <div class="sub" style="margin-top:4px">The honest line until bids decide: ${commMoney(period)} against ${commMoney(priorLo)}–${commMoney(priorHi)} of expected signings on the open book at your 3–5¢ prior.</div>
+      </div>
+      <div class="stat-tile"><div class="lbl">Coverage gaps</div>
+        <div class="sub" style="margin-top:0;font-size:12px;color:var(--text)">${gaps.length ? gaps.join('<br/>') : 'Every open bid has a person, an email, a date and a ride.'}</div>
+        <div class="sub">${r.people} people on file. The desk's Today queue hands him each gap as a card.</div>
+      </div>
+    </div>
+  </div>`;
+}
+
+function commercialBids(){
+  const bids = COMM.bids.filter(b => !b.disposition && !b.signed);
+  if (!bids.length) return '';
+  const fmtDay = d => d ? new Date(d + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '—';
+  const ago = iso => { if (!iso) return ''; const d = Math.floor((Date.now() - new Date(iso).getTime()) / 864e5); return d < 1 ? 'today' : d + 'd'; };
+  const rows = bids.slice(0, 60).map(b => {
+    const t = b.pulse ? (COMM_TEMP[b.pulse.temp] || COMM_TEMP.working) : null;
+    return `<div style="display:grid;grid-template-columns:2fr 1.4fr .8fr .8fr .7fr .9fr;gap:8px;padding:7px 2px;border-top:1px solid rgba(255,255,255,.06);font-size:12px;align-items:center">
+      <div style="min-width:0"><b>${esc(b.name)}</b></div>
+      <div style="min-width:0;color:var(--text-dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${b.person ? esc(b.person.name) + (b.person.company ? ' · ' + esc(b.person.company) : '') + (b.person.email ? '' : ' · <span style="color:#cf6a5f">no email</span>') : '<span style="color:#cf6a5f">no person</span>' + (b.contactText ? ' · ' + esc(b.contactText.slice(0, 28)) : '')}</div>
+      <div style="font-family:'JetBrains Mono',monospace;color:var(--gold);text-align:right">${b.amount != null ? commMoney(b.amount) : '—'}</div>
+      <div style="font-family:'JetBrains Mono',monospace;color:var(--text-dim)">${fmtDay(b.bidDue)}</div>
+      <div style="font-family:'JetBrains Mono',monospace;color:${b.stage === 'gc_lost' ? '#cf6a5f' : b.stage === 'sent' ? 'var(--text-dim)' : '#6fc48a'}">${COMM_STAGE[b.stage] || b.stage}</div>
+      <div style="font-family:'JetBrains Mono',monospace;color:${t ? t[0] : 'var(--text-dim)'}">${b.pulse ? b.pulse.pct + '% ' + t[1] : '—'}</div>
+    </div>`;
+  }).join('');
+  return `<div class="card full"><div class="card-title">Open bids — biggest money first<span class="feed-tag">live · db</span></div>
+    <div class="card-sub">${bids.length} open. Person, our number, bid day, the GC stage, the heartbeat. A bid with no person or no email cannot be nurtured — those are the desk's first job.</div>
+    <div style="display:grid;grid-template-columns:2fr 1.4fr .8fr .8fr .7fr .9fr;gap:8px;padding:0 2px 4px;font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:var(--text-dim)"><div>Bid</div><div>Person</div><div style="text-align:right">Our number</div><div>Bid day</div><div>Stage</div><div>Heartbeat</div></div>
+    ${rows}${bids.length > 60 ? `<div class="card-sub" style="margin-top:8px">and ${bids.length - 60} more — the desk lists them all.</div>` : ''}</div>`;
+}
+
 const SECTION_STORE = 'lcc.section';   // its own key — lcc.room belongs to the Effort Room
 let SECTION = (() => {
   /* A deep link wins, then the remembered choice, then Sales. An UNKNOWN hash
@@ -11106,7 +11271,7 @@ addEventListener('resize', () => {
    the last one, it is to tell a human which build is on the server and when it
    got there. A number nobody clocked cannot answer that, and the first time it
    is asked in anger will be the morning a stale build is being chased. */
-const BUILD = '2026-08-25T20:54Z-source-strip';
+const BUILD = '2026-09-07T1605Z-commercial-room';
 const SB_URL = 'https://lzegjjbkfuecrhdvlvay.supabase.co';
 /* The one page that can finish a password reset. Hard-coded rather than derived,
    because every derivation of it so far has been a source of bugs: a bare origin
@@ -14806,6 +14971,7 @@ async function loadAll(){
   D = buildData(RAW);
   render();
   loadEffortIntel();   // after first paint — a missing 108/119 can never block the page
+  loadCommercial();    // the Commercial room (226) — same rule: never blocks the page
   loadMarketing();     // likewise: an unapplied 166 leaves the board honest, never blank
 }
 
