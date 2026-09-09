@@ -1,0 +1,43 @@
+<!doctype html><html lang="en"><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Commercial Roof Systems — Pro-Tech Roofing</title>
+<style>
+  :root{--accent:#24409A;--ink:#22281f;--dim:#5a614f}
+  html,body{margin:0;background:#faf8f2;color:var(--ink);font:16px/1.55 -apple-system,system-ui,"Segoe UI",sans-serif}
+  header{background:var(--accent);color:#fff;text-align:center;padding:18px 16px 14px}
+  header h1{margin:0;font-size:15px;letter-spacing:.18em;font-weight:800}
+  header p{margin:4px 0 0;opacity:.92;font-size:13px;letter-spacing:.04em}
+  main{max-width:760px;margin:0 auto;padding:14px 12px 8px}
+  .card{background:#fff;border-radius:12px;box-shadow:0 2px 14px rgba(20,30,70,.14);padding:22px 20px;margin:0 0 12px}
+  .card h2{margin:0 0 4px;font-size:20px;color:var(--accent)}
+  .card .best{margin:0 0 8px;font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:#8b917f}
+  .card p{margin:0 0 6px;font-size:14.5px;color:#3c4234}
+  .ask{background:#f4f6f0;border-radius:8px;padding:8px 12px;font-size:13.5px;color:#3c4234;margin-top:8px}
+  .ask b{color:var(--accent)}
+  .cta{background:#fff;border-radius:12px;box-shadow:0 2px 14px rgba(20,30,70,.14);padding:16px 18px;margin:16px 0 0;font-size:14.5px;color:#4a5040;text-align:center}
+  footer{text-align:center;color:#8b917f;font-size:13px;padding:14px 16px 40px}
+</style>
+<header><h1>PRO-TECH ROOFING</h1><p>Commercial Roof Systems — which one, and why</p></header>
+<main>
+  <div class="card"><h2>TPO (single-ply, heat-welded)</h2><p class="best">Best for: new low-slope construction, big-box retail, warehouses, most tenant improvements</p><p>White reflective membrane, welded seams, mechanically fastened or fully adhered over insulation. The workhorse of Florida commercial roofing: fast to install, energy-code friendly, and the easiest system to price alternates on (thickness, attachment, insulation R-value).</p><div class="ask"><b>Ask us:</b> 60 vs 80 mil, adhered vs fastened, and the tapered insulation package — those three lines are where a TPO number moves.</div></div>
+  <div class="card"><h2>PVC (single-ply, heat-welded)</h2><p class="best">Best for: restaurants, kitchens, anything with grease or chemical exposure, owners who want the longer warranty</p><p>Same installation family as TPO with a membrane that shrugs off grease, oils and standing water. Costs more per square; earns it back on restaurant roofs and where a 25- or 30-year NDL warranty is specified.</p><div class="ask"><b>Ask us:</b> whether the spec's warranty term forces PVC — if it does, we'll say so before you carry TPO by mistake.</div></div>
+  <div class="card"><h2>Modified bitumen (2-ply, torch or self-adhered)</h2><p class="best">Best for: re-roofs over existing built-up roofs, small flat roofs, high-traffic roofs with equipment</p><p>Two asphalt plies with a granulated cap sheet. Tough underfoot, forgiving of rooftop traffic and mechanical work, and the natural choice when you're recovering an old built-up roof rather than tearing down to the deck.</p><div class="ask"><b>Ask us:</b> torch vs self-adhered — on an occupied building, self-adhered keeps the open flame off the roof.</div></div>
+  <div class="card"><h2>Standing seam metal</h2><p class="best">Best for: sloped roofs, storefront and canopy work, anything the owner wants to look at for 40 years</p><p>Concealed-fastener panels, roll-formed to length. The premium option: highest wind ratings, longest life, the cleanest look. Priced by panel profile, gauge and finish, so the alternates are real.</p><div class="ask"><b>Ask us:</b> profile and gauge — a 24-gauge Kynar panel and a 26-gauge SMP panel are two different numbers and two different roofs.</div></div>
+  <div class="card"><h2>Restoration coatings (silicone / acrylic)</h2><p class="best">Best for: an owner who needs another 10–15 years without a tear-off, budget-driven re-roofs, phasing</p><p>A fluid-applied membrane over a sound existing roof. No tear-off, no dumpsters, no disruption below. It is not a new roof and we won't call it one, but on the right substrate it is the cheapest decade of dry building an owner can buy.</p><div class="ask"><b>Ask us:</b> for a core cut and moisture survey first — a coating over a wet roof is money thrown away, and we'll tell you if that's what we find.</div></div>
+  <div class="cta">Not sure which system the spec is really asking for? Reply to the email that brought you here and we'll read it with you.</div>
+</main>
+<footer>Pro-Tech Roofing, Inc &middot; Cocoa, FL &middot; CCC057650 &middot; O: 321-783-1694</footer>
+<script>
+  var q=new URLSearchParams(location.search), viewId=q.get('v')||null;
+  var seconds=0, timer=null;
+  function beat(){ if(!viewId) return;
+    fetch('https://lzegjjbkfuecrhdvlvay.supabase.co/functions/v1/folder/protech/beat',{method:'POST',headers:{'content-type':'application/json'},
+      body:JSON.stringify({viewId:viewId,seconds:seconds})}).catch(function(){}); }
+  function start(){ if(timer) return; timer=setInterval(function(){ seconds+=15; beat(); },15000); }
+  function stop(){ if(timer){ clearInterval(timer); timer=null; beat(); } }
+  document.addEventListener('visibilitychange',function(){ document.hidden?stop():start(); });
+  window.addEventListener('pagehide',stop);
+  start();
+</script>
+</html>

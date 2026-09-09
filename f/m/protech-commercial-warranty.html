@@ -1,0 +1,55 @@
+<!doctype html><html lang="en"><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Commercial Warranties — Pro-Tech Roofing</title>
+<style>
+  :root{--accent:#24409A;--ink:#22281f;--dim:#5a614f}
+  html,body{margin:0;background:#faf8f2;color:var(--ink);font:16px/1.55 -apple-system,system-ui,"Segoe UI",sans-serif}
+  header{background:var(--accent);color:#fff;text-align:center;padding:18px 16px 14px}
+  header h1{margin:0;font-size:15px;letter-spacing:.18em;font-weight:800}
+  header p{margin:4px 0 0;opacity:.92;font-size:13px;letter-spacing:.04em}
+  main{max-width:760px;margin:0 auto;padding:14px 12px 8px}
+  .card{background:#fff;border-radius:12px;box-shadow:0 2px 14px rgba(20,30,70,.14);padding:24px 20px;margin:0 0 14px}
+  .card h2{margin:0 0 6px;font-size:22px;color:var(--accent)}
+  .lead{margin:0 0 14px;color:var(--dim);font-size:15px}
+  .plan{border:1.5px solid #e4e1d4;border-radius:10px;padding:14px 16px;margin:0 0 10px}
+  .plan.hot{border-color:var(--accent);background:#f4f6f0}
+  .plan h3{margin:0 0 4px;font-size:16px} .plan p{margin:0;font-size:14px;color:#4a5040}
+  ul{margin:8px 0 0;padding-left:20px;color:#3c4234;font-size:14.5px} li{margin:4px 0}
+  .cta{background:#fff;border-radius:12px;box-shadow:0 2px 14px rgba(20,30,70,.14);padding:16px 18px;margin:16px 0 0;font-size:14.5px;color:#4a5040;text-align:center}
+  footer{text-align:center;color:#8b917f;font-size:13px;padding:14px 16px 40px}
+</style>
+<header><h1>PRO-TECH ROOFING</h1><p>Commercial Warranties — what the owner actually gets</p></header>
+<main>
+  <div class="card">
+    <h2>Three warranties, one closeout.</h2>
+    <p class="lead">Every commercial roof we install leaves with the manufacturer's warranty, our workmanship warranty, and the paperwork that makes both real. Here is what each one covers, in plain words, so you can answer the owner without calling us.</p>
+    <div class="plan hot"><h3>Manufacturer NDL — "no dollar limit"</h3><p>The one specs ask for. The manufacturer inspects the finished roof, then warrants the whole system — membrane, insulation, flashings — for 10, 15, 20, 25 or 30 years depending on system and term, with no cap on the repair cost. Only certified installers can offer it. We are one.</p></div>
+    <div class="plan"><h3>Manufacturer material warranty</h3><p>Covers the membrane itself against manufacturing defects. Standard on every system, no inspection required. It's the floor, not the ceiling — if a spec says "manufacturer warranty" with no term, ask whether they mean this or the NDL. We'll help you read it.</p></div>
+    <div class="plan"><h3>Pro-Tech workmanship warranty</h3><p>Our own, on our labor: flashings, seams, penetrations, tie-ins. Term stated on the proposal. If it leaks because of how it was installed, that's ours, and we come back.</p></div>
+  </div>
+  <div class="card">
+    <h2>What a GC should check before buyout</h2>
+    <ul>
+      <li>The warranty <b>term</b> in the spec, and whether it requires an NDL (most 20-year-and-up terms do).</li>
+      <li>That the installer is <b>certified</b> for the specified manufacturer — the NDL is void otherwise.</li>
+      <li>Whether the <b>insulation and cover board</b> are the manufacturer's approved components — a mixed system can break the warranty.</li>
+      <li>That the <b>inspection</b> is in the schedule before turnover, not after.</li>
+    </ul>
+  </div>
+  <div class="cta">Send us the spec section and we'll mark what it requires and what it costs to meet. Reply to the email that brought you here.</div>
+</main>
+<footer>Pro-Tech Roofing, Inc &middot; Cocoa, FL &middot; CCC057650 &middot; O: 321-783-1694</footer>
+<script>
+  var q=new URLSearchParams(location.search), viewId=q.get('v')||null;
+  var seconds=0, timer=null;
+  function beat(){ if(!viewId) return;
+    fetch('https://lzegjjbkfuecrhdvlvay.supabase.co/functions/v1/folder/protech/beat',{method:'POST',headers:{'content-type':'application/json'},
+      body:JSON.stringify({viewId:viewId,seconds:seconds})}).catch(function(){}); }
+  function start(){ if(timer) return; timer=setInterval(function(){ seconds+=15; beat(); },15000); }
+  function stop(){ if(timer){ clearInterval(timer); timer=null; beat(); } }
+  document.addEventListener('visibilitychange',function(){ document.hidden?stop():start(); });
+  window.addEventListener('pagehide',stop);
+  start();
+</script>
+</html>

@@ -1,0 +1,49 @@
+<!doctype html><html lang="en"><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex">
+<title>How We Run a Commercial Roof — Pro-Tech Roofing</title>
+<style>
+  :root{--accent:#24409A;--ink:#22281f;--dim:#5a614f}
+  html,body{margin:0;background:#faf8f2;color:var(--ink);font:16px/1.55 -apple-system,system-ui,"Segoe UI",sans-serif}
+  header{background:var(--accent);color:#fff;text-align:center;padding:18px 16px 14px}
+  header h1{margin:0;font-size:15px;letter-spacing:.18em;font-weight:800}
+  header p{margin:4px 0 0;opacity:.92;font-size:13px;letter-spacing:.04em}
+  main{max-width:760px;margin:0 auto;padding:14px 12px 8px}
+  .card{background:#fff;border-radius:12px;box-shadow:0 2px 14px rgba(20,30,70,.14);padding:24px 20px;margin:0 0 14px}
+  .card h2{margin:0 0 6px;font-size:22px;color:var(--accent)}
+  .lead{margin:0 0 14px;color:var(--dim);font-size:15px}
+  .step{display:grid;grid-template-columns:44px 1fr;gap:12px;padding:12px 0;border-top:1px solid #ece9df}
+  .step:first-of-type{border-top:0}
+  .n{width:36px;height:36px;border-radius:18px;background:var(--accent);color:#fff;font-weight:800;display:flex;align-items:center;justify-content:center}
+  .step h3{margin:0 0 3px;font-size:16px} .step p{margin:0;font-size:14.5px;color:#3c4234}
+  .cta{background:#fff;border-radius:12px;box-shadow:0 2px 14px rgba(20,30,70,.14);padding:16px 18px;margin:16px 0 0;font-size:14.5px;color:#4a5040;text-align:center}
+  footer{text-align:center;color:#8b917f;font-size:13px;padding:14px 16px 40px}
+</style>
+<header><h1>PRO-TECH ROOFING</h1><p>How We Run a Commercial Roof</p></header>
+<main>
+  <div class="card">
+    <h2>Two minutes, start to closeout.</h2>
+    <p class="lead">This is what happens after you award us roofing. Written for the builder, not the owner, because you're the one who lives with the schedule.</p>
+    <div class="step"><div class="n">1</div><div><h3>Scope review, line by line</h3><p>Before mobilization we sit with your PM and walk the roof scope against the drawings and our proposal: deck, insulation, tapered, flashing details, tie-ins, warranty term. Gaps get found here, not in a change order.</p></div></div>
+    <div class="step"><div class="n">2</div><div><h3>Submittals and schedule, in one packet</h3><p>Product data, shop drawings where required, the safety program, our COI, and a crew schedule against your milestones. One packet, one contact, the same week we're awarded.</p></div></div>
+    <div class="step"><div class="n">3</div><div><h3>Site planning before the first truck</h3><p>Staging, crane or hoist location, tenant and traffic hours, dry-in sequencing with your framers or trades. On an occupied building we plan around the people in it.</p></div></div>
+    <div class="step"><div class="n">4</div><div><h3>A named superintendent and a dedicated crew</h3><p>The same crew from start to finish, run by a superintendent you can call. No rotating labor. A daily photo log you can forward to the owner without editing a word.</p></div></div>
+    <div class="step"><div class="n">5</div><div><h3>Weather and tie-ins handled like grown-ups</h3><p>Nothing opened that can't be dried in the same day. Tie-ins documented. If the forecast moves, you hear it from us before you see it on the roof.</p></div></div>
+    <div class="step"><div class="n">6</div><div><h3>Manufacturer inspection and closeout</h3><p>The manufacturer inspects before we call it done. Warranty, as-builts and the photo log go to you in one closeout package, so the owner has it the day the building turns over.</p></div></div>
+  </div>
+  <div class="cta">Want the references from the last three roofs we ran this way? Reply to the email that brought you here.</div>
+</main>
+<footer>Pro-Tech Roofing, Inc &middot; Cocoa, FL &middot; CCC057650 &middot; O: 321-783-1694</footer>
+<script>
+  var q=new URLSearchParams(location.search), viewId=q.get('v')||null;
+  var seconds=0, timer=null;
+  function beat(){ if(!viewId) return;
+    fetch('https://lzegjjbkfuecrhdvlvay.supabase.co/functions/v1/folder/protech/beat',{method:'POST',headers:{'content-type':'application/json'},
+      body:JSON.stringify({viewId:viewId,seconds:seconds})}).catch(function(){}); }
+  function start(){ if(timer) return; timer=setInterval(function(){ seconds+=15; beat(); },15000); }
+  function stop(){ if(timer){ clearInterval(timer); timer=null; beat(); } }
+  document.addEventListener('visibilitychange',function(){ document.hidden?stop():start(); });
+  window.addEventListener('pagehide',stop);
+  start();
+</script>
+</html>
