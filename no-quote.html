@@ -1,0 +1,198 @@
+<!doctype html><html lang="en"><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Verify — Never Got To Quote It</title>
+<!--
+  The office's verification page for a rep's "I never got to quote this"
+  request (migration 258). Reached from the email Jess/Sam/Kevin receive:
+     no-quote.html?t=<token>&who=<their email>
+
+  This page decides nothing on load. It GETs a read-only summary — mail
+  scanners prefetch links, and a link that approved on GET would be
+  auto-approved by Gmail before a human ever saw it. Only a button press POSTs.
+
+  The token in the URL is the whole credential, which is why this page never
+  renders it, never logs it, and why the repo it lives in being public does not
+  matter: without the token there is nothing to see.
+-->
+<style>
+  html,body{margin:0;min-height:100%;background:#f4f2ec;color:#22281f;
+    font:16px/1.5 -apple-system,system-ui,sans-serif}
+  header{background:#1c3055;color:#fff;padding:14px 16px}
+  h1{font-size:15px;margin:0;font-weight:700;letter-spacing:.06em}
+  .wrap{padding:14px;max-width:720px;margin:0 auto}
+  .card{background:#fff;border-radius:12px;box-shadow:0 2px 14px rgba(20,30,50,.14);
+    padding:18px;margin:0 0 16px}
+  .kick{font-size:11px;letter-spacing:.11em;text-transform:uppercase;color:#8a8f98;
+    font-weight:700;margin:0 0 6px}
+  .big{font-size:21px;font-weight:700;margin:0 0 2px;letter-spacing:.01em}
+  .sub{font-size:14px;color:#5f6672;margin:0}
+  dl{margin:14px 0 0;display:grid;grid-template-columns:auto 1fr;gap:7px 14px;font-size:14px}
+  dt{color:#8a8f98;font-weight:600;white-space:nowrap}
+  dd{margin:0;font-weight:600}
+  .note{margin:14px 0 0;padding:12px 14px;background:#f7f6f1;border-radius:9px;
+    font-size:14.5px;font-style:italic;color:#3d4450}
+
+  /* the machine's verdict */
+  .v{border-radius:12px;padding:16px 18px;margin:0 0 16px}
+  .v h2{margin:0 0 6px;font-size:16px;letter-spacing:.03em}
+  .v p{margin:0;font-size:14.5px}
+  .v.clean{background:#eef6ef;border:1.5px solid #1e6b3a} .v.clean h2{color:#1e6b3a}
+  .v.flag {background:#fdeeea;border:1.5px solid #a3341f} .v.flag  h2{color:#a3341f}
+  .v.thin {background:#fdf6e6;border:1.5px solid #9a6b12} .v.thin  h2{color:#9a6b12}
+
+  /* the rule */
+  .rule{background:#1c3055;color:#e8ecf4;border-radius:12px;padding:16px 18px;margin:0 0 16px}
+  .rule h2{margin:0 0 8px;font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:#ffd58a}
+  .rule li{margin:0 0 7px;font-size:14.5px}
+  .rule ul{margin:0;padding-left:19px}
+
+  /* timeline */
+  .t{list-style:none;margin:12px 0 0;padding:0}
+  .t li{display:flex;gap:10px;padding:9px 0;border-top:1px solid #eceadf;font-size:14px}
+  .t li:first-child{border-top:0}
+  .t .when{color:#8a8f98;white-space:nowrap;font-variant-numeric:tabular-nums;min-width:112px}
+  .t .what{font-weight:700;white-space:nowrap}
+  .t .det{color:#5f6672;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1}
+  .t li.flagged{background:#fdeeea;margin:0 -10px;padding:9px 10px;border-radius:7px}
+  .t li.flagged .what{color:#a3341f}
+  .empty{color:#8a8f98;font-size:14px;margin:12px 0 0}
+
+  label{display:block;font-size:11px;letter-spacing:.09em;text-transform:uppercase;
+    color:#8a8f98;font-weight:700;margin:0 0 6px}
+  textarea{width:100%;box-sizing:border-box;font:15px/1.45 inherit;padding:11px;
+    border:1.5px solid #d8d5ca;border-radius:9px;background:#fcfbf7;color:#22281f;resize:vertical}
+  textarea:focus{outline:0;border-color:#1c3055}
+  .btns{display:flex;gap:10px;margin:16px 0 0}
+  button{flex:1;border:0;border-radius:12px;padding:16px 10px;font:700 15px/1 inherit;
+    letter-spacing:.05em;cursor:pointer;color:#fff}
+  .yes{background:#1e6b3a} .no{background:#a3341f}
+  button[disabled]{background:#c3c8bf;cursor:default}
+  .err{margin:12px 0 0;font-size:14px;color:#a3341f;min-height:1px}
+  .done{text-align:center;padding:26px 18px}
+  .done .mark{font-size:38px;line-height:1;margin:0 0 8px}
+</style>
+<header><h1>NEVER GOT TO QUOTE IT — VERIFY</h1></header>
+<div class="wrap" id="app"><p class="sub" style="padding:18px 4px">Loading…</p></div>
+<script>
+const FN = 'https://lzegjjbkfuecrhdvlvay.supabase.co/functions/v1/no-quote-decide';
+const q  = new URLSearchParams(location.search);
+const T  = q.get('t') || '';
+const WHO= q.get('who') || '';
+const app= document.getElementById('app');
+
+const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const dt  = s => s ? new Date(s).toLocaleString('en-US',
+  {month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}) : '—';
+
+const VERDICT = {
+  contacted_first: {cls:'flag', h:'HE REACHED OUT BEFORE THE VISIT',
+    p:'The app has him contacting this customer after the appointment was booked and before it was due to run. That is the one thing that disqualifies a removal — he had a line to them. Read the red rows below. Deny unless he can show you those contacts were about something else.'},
+  clean: {cls:'clean', h:'NO CONTACT BEFORE THE VISIT',
+    p:'The app has no record of him reaching out to this customer between the booking and the appointment time. Nothing here contradicts his claim.'},
+  thin: {cls:'thin', h:'WE CANNOT SEE THIS REP’S PHONE',
+    p:'This rep has no tracked number, so an empty list proves nothing either way. Check with him directly — do not read this as an all-clear.'},
+};
+
+function render(r){
+  const e = r.evidence || {};
+  const v = VERDICT[r.verdict] || VERDICT.thin;
+  const tl = (e.timeline || []);
+
+  if (r.status !== 'pending'){
+    app.innerHTML = `<div class="card done">
+      <p class="mark">${r.status==='approved'?'✓':'✗'}</p>
+      <p class="big">Already ${esc(r.status)}</p>
+      <p class="sub">${esc(r.decided_by_email||'Someone in the office')} handled this on ${esc(dt(r.decided_at))}.
+      ${r.decision_note?'<br>“'+esc(r.decision_note)+'”':''}</p></div>`;
+    return;
+  }
+
+  app.innerHTML = `
+    <div class="card">
+      <p class="kick">${esc(e.rep_name||'A rep')} is asking to have this taken off his numbers</p>
+      <p class="big">${esc(e.customer_name||'(customer)')}</p>
+      <p class="sub">${esc(e.title||'')}</p>
+      <dl>
+        <dt>Visit was set for</dt><dd>${esc(dt(e.starts_at))}</dd>
+        <dt>He asked</dt><dd>${esc(dt(r.requested_at))}</dd>
+      </dl>
+      ${r.rep_note ? `<p class="note">“${esc(r.rep_note)}”</p>` : ''}
+    </div>
+
+    <div class="v ${v.cls}"><h2>${v.h}</h2><p>${v.p}</p></div>
+
+    <div class="rule">
+      <h2>How to verify this</h2>
+      <ul>
+        <li><b>Do not call the customer to ask.</b> If the customer tells you
+            &ldquo;we were going to cancel anyway&rdquo; or &ldquo;you couldn&rsquo;t have
+            done it&rdquo;, that does not count and never has.</li>
+        <li>The only question is whether he had <b>an opportunity to quote it</b> &mdash;
+            not whether the job was winnable.</li>
+        <li>If he called or texted them ahead of the appointment and they cancelled
+            on him then, <b>he had the opportunity</b>. That is a deny.</li>
+        <li>Approving takes the visit off his closing percentage and off his
+            pipeline for good. Denying changes nothing.</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <p class="kick">Every contact we can see &mdash; ${tl.length} in total</p>
+      ${tl.length ? `<ul class="t">${tl.map(x=>`
+        <li class="${x.flags?'flagged':''}">
+          <span class="when">${esc(dt(x.at))}</span>
+          <span class="what">${esc(x.label)}</span>
+          <span class="det">${esc(x.detail||'')}</span>
+        </li>`).join('')}</ul>`
+      : `<p class="empty">Nothing on any rail — no touches, no texts, no emails.</p>`}
+    </div>
+
+    <div class="card">
+      <label for="n">Anything to add? (optional)</label>
+      <textarea id="n" rows="2" placeholder="e.g. checked with Travis — office cancelled it Friday"></textarea>
+      <div class="btns">
+        <button class="yes" id="yes">TAKE IT OFF HIS NUMBERS</button>
+        <button class="no"  id="no">IT STAYS</button>
+      </div>
+      <p class="err" id="err"></p>
+    </div>`;
+
+  const yes = document.getElementById('yes'), no = document.getElementById('no');
+  const err = document.getElementById('err');
+  const go = async (approve) => {
+    yes.disabled = no.disabled = true; err.textContent = '';
+    try{
+      const res = await fetch(`${FN}/${encodeURIComponent(T)}/decide`, {
+        method:'POST', headers:{'content-type':'application/json'},
+        body: JSON.stringify({approve, by: WHO || 'office', note: document.getElementById('n').value})});
+      const j = await res.json();
+      if(!res.ok) throw new Error(j.error || 'that did not go through');
+      app.innerHTML = `<div class="card done">
+        <p class="mark">${approve?'✓':'✗'}</p>
+        <p class="big">${approve?'Taken off his numbers':'It stays on his numbers'}</p>
+        <p class="sub">${approve
+          ? esc(e.customer_name||'That file')+' is off '+esc(e.rep_name||'his')+'’s closing percentage and out of his pipeline. Nothing else moved.'
+          : esc(e.rep_name||'The rep')+' has been told. Nothing changed.'}</p></div>`;
+    }catch(ex){
+      err.textContent = ex.message;
+      yes.disabled = no.disabled = false;
+    }
+  };
+  yes.onclick = () => go(true);
+  no.onclick  = () => go(false);
+}
+
+(async () => {
+  if(!T){ app.innerHTML = '<div class="card"><p class="big">Bad link</p><p class="sub">Open this from the email so it carries its code.</p></div>'; return; }
+  try{
+    const res = await fetch(`${FN}/${encodeURIComponent(T)}`);
+    const j = await res.json();
+    if(!res.ok) throw new Error(j.error || 'could not load that request');
+    render(j);
+  }catch(ex){
+    app.innerHTML = `<div class="card"><p class="big">Could not load it</p><p class="sub">${esc(ex.message)}</p></div>`;
+  }
+})();
+</script>
+</html>
