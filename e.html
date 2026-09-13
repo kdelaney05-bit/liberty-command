@@ -43,6 +43,7 @@
   .pbody .pwhy{font-size:12px;color:#5f6672}
   .pperson{margin:8px 0 4px;font-size:12.5px;color:#3d4450}
   .terms{margin:18px 0 6px;font-size:13.5px;color:#3d4450}
+  .legal{margin:0 0 8px;font-size:12px;color:#5f6672;letter-spacing:.02em}
   .terms a{color:#1c3055;font-weight:700;text-decoration:underline}
   .padwrap{position:relative;border:1.5px dashed #c9c5b8;border-radius:10px;background:#fcfbf7;
     height:190px;overflow:hidden;touch-action:none}
@@ -72,6 +73,7 @@
   var t=q.get('t'), m=q.get('m')||'i', f=q.get('f');
   var termsUrl=q.get('tu')||'./terms/liberty.html';   // server picks the brand document
   var signedAt=q.get('sg');                            // present = already signed
+  var legalLine=q.get('lg')||'';                       // the entity, dba and license (321)
   var src=FN+t+'/pdf';
   document.getElementById('dl').href=src;
   var w=document.getElementById('wrap');
@@ -112,6 +114,8 @@
       +'<p class="terms">By signing, you agree to the '
       +'<a href="'+esc(termsUrl)+'" target="_blank" rel="noopener">Terms &amp; Conditions</a>'
       +'<span id="packetclause"></span>.</p>'
+      /* WHO WE ARE (321) — the legal entity, the dba and the license, from the server. */
+      +(legalLine?'<p class="legal">Contractor: '+esc(legalLine)+'</p>':'')
       +'<div class="padwrap"><canvas id="pad"></canvas><div class="padline"></div>'
       +'<div class="padhint" id="hint">Sign here with your finger</div></div>'
       +'<div class="padrow"><span class="stamp" id="stamp"></span>'
