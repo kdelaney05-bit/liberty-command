@@ -66,7 +66,20 @@
   .doctotal b{font-size:22px;color:#1c3055}
   .docnote{font-size:13px;color:#3d4450;margin-top:10px;padding-top:8px;border-top:1px solid #e3ddd0}
   .docfoot{font-size:11px;color:#8a8f85;margin-top:12px}
-  @media print{ header,.sign,.folder,.packet{display:none!important} .doc{box-shadow:none;border:0} }
+  /* the summary card (Billdu's customer page shape) */
+  .dsum{background:#fff;border-radius:12px;box-shadow:0 2px 14px rgba(20,30,50,.14);margin:0 0 14px;overflow:hidden}
+  .dbrand{font-size:16px;font-weight:800;padding:14px 16px;border-bottom:4px solid #1c3055}
+  .dsumin{padding:14px 16px}
+  .dno{font-size:12px;letter-spacing:.06em;color:#5f6672;margin-bottom:4px}
+  .damt{font-size:26px;font-weight:800;color:#1c3055;display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px}
+  .pill{font-size:12px;font-weight:600;padding:3px 9px;border-radius:999px;border:1px solid}
+  .pill.ok{color:#1d6b3a;background:#e9f6ee;border-color:#b7dfc5}
+  .pill.open{color:#8a5a00;background:#fff5e0;border-color:#f0d49a}
+  .drow{display:block;color:#1c3055;font-weight:600;text-decoration:none;padding:7px 0;font-size:15px}
+  .dkv{display:flex;justify-content:space-between;gap:12px;padding:6px 0;border-top:1px solid #eee8dc;font-size:14px}
+  .dkv span{color:#5f6672} .dkv b{text-align:right}
+  .doc.dhide{display:none}
+  @media print{ header,.sign,.folder,.packet,.dsum{display:none!important} .doc,.doc.dhide{display:block;box-shadow:none;border:0} }
   .terms{margin:18px 0 6px;font-size:13.5px;color:#3d4450}
   .legal{margin:0 0 8px;font-size:12px;color:#5f6672;letter-spacing:.02em}
   .terms a{color:#1c3055;font-weight:700;text-decoration:underline}
@@ -142,6 +155,24 @@
         +(d.note?'<div class="docnote">'+esc(d.note).replace(/\n/g,'<br>')+'</div>':'')
         +'<div class="docfoot">'+esc(b.legal||'')+(d.rep&&d.rep.name?' · Prepared by '+esc(d.rep.name):'')+'</div>';
       if(d.status==='accepted'&&!signedAt){ signedAt=d.accepted_at||new Date().toISOString(); var host2=document.querySelector('.sign'); if(host2) host2.outerHTML=signBlock(); }
+      /* Billdu's customer page, in order: the summary card (number, the amount, the status,
+         download, client + dates), the accept action right under it, the document behind
+         "Show more". Same order here, so Mike's customers see what they always see. */
+      var accepted=!!signedAt;
+      var sum=document.createElement('div'); sum.className='dsum';
+      sum.innerHTML='<div class="dbrand">'+esc(b.name||'')+'</div>'
+        +'<div class="dsumin"><div class="dno">ESTIMATE #'+esc(String(d.serial))+'</div>'
+        +'<div class="damt">'+money(d.total)+' <span class="pill '+(accepted?'ok':'open')+'">'+(accepted?'Accepted':'Awaiting your approval')+'</span></div>'
+        +'<a class="drow" href="#" id="dprint">&#8681;&nbsp; Download estimate PDF</a>'
+        +'<a class="drow" href="#" id="dmore">&#9776;&nbsp; View estimate</a>'
+        +'<div class="dkv"><span>Client</span><b>'+esc(c.name||'')+'</b></div>'
+        +'<div class="dkv"><span>Issue date</span><b>'+dateOf(d.issue_date)+'</b></div>'
+        +'<div class="dkv"><span>Valid until</span><b>'+dateOf(d.valid_until)+'</b></div></div>';
+      host.parentNode.insertBefore(sum, host);
+      var signEl=document.querySelector('.sign'); if(signEl) host.parentNode.insertBefore(signEl, host);
+      host.classList.add('dhide');
+      sum.querySelector('#dprint').onclick=function(e){ e.preventDefault(); host.classList.remove('dhide'); window.print(); };
+      sum.querySelector('#dmore').onclick=function(e){ e.preventDefault(); var open=host.classList.toggle('dhide'); this.innerHTML=(open?'&#9776;&nbsp; View estimate':'&#9776;&nbsp; Hide estimate'); if(!open) host.scrollIntoView({behavior:'smooth',block:'start'}); };
       var go=document.getElementById('go'); if(go) go.textContent='ACCEPT ESTIMATE';
       var h2=document.querySelector('.sign h2'); if(h2) h2.textContent='ACCEPT & SIGN';
       var lead=document.querySelector('.sign .lead'); if(lead) lead.textContent='Happy with this estimate? Accept it right here — type your name and tap Accept. Signing in the box is optional.';
@@ -326,6 +357,7 @@
     function render(){
       var host=document.querySelector('.sign');
       if(host) host.outerHTML=signBlock();
+      var p=document.querySelector('.dsum .pill'); if(p){ p.className='pill ok'; p.textContent='Accepted'; }
     }
   }
 </script>
