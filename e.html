@@ -28,6 +28,20 @@
   .sign input[type=text]:focus{outline:0;border-color:#1c3055}
   /* The acknowledgment. No checkbox — the signature IS the acknowledgment, so
      this clause sits directly above the pad where it cannot be missed. */
+  /* THE PACKET (319) — the documents under the one signature. Empty until the
+     office turns it on; then each is a tap, and the clause names them. */
+  .packet{margin:16px 0 4px;padding:12px 12px 6px;background:#f7f5ef;border:1px solid #e3ddd0;border-radius:10px}
+  .packet h3{margin:0 0 4px;font-size:13px;letter-spacing:.09em;color:#1c3055}
+  .packet .plead{margin:0 0 10px;font-size:13px;color:#5f6672}
+  .pdoc{display:flex;gap:10px;align-items:flex-start;background:#fff;border:1px solid #e3ddd0;border-radius:10px;padding:10px;margin-bottom:8px}
+  .pdoc.on{border-color:#2f8f5b;background:#f2faf5}
+  .ptap{flex:none;width:34px;height:34px;border-radius:50%;border:2px solid #b8860b;background:#fff;color:transparent;font-size:18px;line-height:1;cursor:pointer}
+  .pdoc.on .ptap{background:#2f8f5b;border-color:#2f8f5b;color:#fff}
+  .pbody{display:flex;flex-direction:column;gap:2px;font-size:14px;min-width:0}
+  .pbody b{color:#1c1a15}
+  .pbody a{color:#1c3055;font-weight:700;font-size:13px;text-decoration:underline}
+  .pbody .pwhy{font-size:12px;color:#5f6672}
+  .pperson{margin:8px 0 4px;font-size:12.5px;color:#3d4450}
   .terms{margin:18px 0 6px;font-size:13.5px;color:#3d4450}
   .terms a{color:#1c3055;font-weight:700;text-decoration:underline}
   .padwrap{position:relative;border:1.5px dashed #c9c5b8;border-radius:10px;background:#fcfbf7;
@@ -90,9 +104,14 @@
       +'<label for="nm">Your full name</label>'
       +'<input type="text" id="nm" autocomplete="name" autocapitalize="words" '
       +'spellcheck="false" placeholder="Type your full name">'
+      /* THE PACKET (319) — the disclosures and county forms for this address,
+         filled in by /packet after the page renders. One signature covers
+         them; each one is its own tap. Empty until the office turns it on. */
+      +'<div id="packet"></div>'
       /* THE CLAUSE — one line, directly above the pad. */
       +'<p class="terms">By signing, you agree to the '
-      +'<a href="'+esc(termsUrl)+'" target="_blank" rel="noopener">Terms &amp; Conditions</a>.</p>'
+      +'<a href="'+esc(termsUrl)+'" target="_blank" rel="noopener">Terms &amp; Conditions</a>'
+      +'<span id="packetclause"></span>.</p>'
       +'<div class="padwrap"><canvas id="pad"></canvas><div class="padline"></div>'
       +'<div class="padhint" id="hint">Sign here with your finger</div></div>'
       +'<div class="padrow"><span class="stamp" id="stamp"></span>'
@@ -102,7 +121,56 @@
       +'</div>';
   }
 
+  /* THE PACKET (319). Ask the server which documents this address needs. The
+     list only appears when the office has turned the packet on; until then the
+     page is the same page it has been since August. Each document is a tap;
+     the one signature below covers every tapped document. In-person forms are
+     named, not tapped. */
+  var packetDocs=[], agreed={};
+  function loadPacket(){
+    var host=document.getElementById('packet'); if(!host||!t) return;
+    fetch(FN+t+'/packet').then(function(r){ return r.json(); }).then(function(j){
+      if(!j||!j.on||!j.documents||!j.documents.length) return;
+      packetDocs=j.documents;
+      var taps=packetDocs.filter(function(d){ return !d.in_person; });
+      var inPerson=packetDocs.filter(function(d){ return d.in_person; });
+      var h='<div class="packet"><h3>YOUR PAPERWORK</h3>'
+        +'<p class="plead">These go with your estimate. Read each one, then tap to agree. Your signature below covers all of them.</p>';
+      taps.forEach(function(d){
+        h+='<div class="pdoc" data-key="'+esc(d.key)+'">'
+          +'<button type="button" class="ptap" aria-pressed="false">✓</button>'
+          +'<div class="pbody"><b>'+esc(d.title)+'</b>'
+          +(d.file_url?'<a href="'+esc(d.file_url)+'" target="_blank" rel="noopener">Read it</a>':'')
+          +'<span class="pwhy">'+esc(d.why||'')+'</span></div></div>';
+      });
+      if(inPerson.length){
+        h+='<p class="pperson"><b>In person with your rep:</b> '
+          +inPerson.map(function(d){ return esc(d.title)+(d.signing==='esign_notary'?' (notarized)':d.signing==='wet_ink'?' (ink)':''); }).join(' · ')
+          +'. Nothing to do here — your rep brings these.</p>';
+      }
+      h+='</div>';
+      host.innerHTML=h;
+      var clause=document.getElementById('packetclause');
+      if(clause&&taps.length) clause.textContent=' and to each document you tapped above';
+      host.querySelectorAll('.pdoc').forEach(function(el){
+        var key=el.getAttribute('data-key'), btn=el.querySelector('.ptap');
+        btn.addEventListener('click',function(){
+          if(agreed[key]){ delete agreed[key]; el.classList.remove('on'); btn.setAttribute('aria-pressed','false'); }
+          else { agreed[key]=new Date().toISOString(); el.classList.add('on'); btn.setAttribute('aria-pressed','true'); }
+        });
+      });
+    }).catch(function(){});
+  }
+  function packetReady(){
+    var missing=packetDocs.filter(function(d){ return !d.in_person && !d.optional && !agreed[d.key]; });
+    return missing.length?missing[0].title:null;
+  }
+  function packetPayload(){
+    return Object.keys(agreed).map(function(k){ return {key:k, agreedAt:agreed[k]}; });
+  }
+
   function wireSigning(){
+    loadPacket();
     var shownAt=new Date().toISOString();      // when the clause was put in front of them
     var pad=document.getElementById('pad'), hint=document.getElementById('hint');
     var stamp=document.getElementById('stamp'), err=document.getElementById('err');
@@ -158,10 +226,12 @@
       var name=(nm.value||'').trim();
       if(name.length<2){ err.textContent='Please type your full name.'; nm.focus(); return; }
       if(!ink){ err.textContent='Please sign in the box above.'; return; }
+      var needTap=packetReady();
+      if(needTap){ err.textContent='Please tap to agree to "'+needTap+'" above.'; return; }
       err.textContent=''; go.disabled=true; go.textContent='SENDING…';
 
       fetch(FN+t+'/sign',{method:'POST',headers:{'content-type':'application/json'},
-        body:JSON.stringify({name:name, signature:pad.toDataURL('image/png'), termsShownAt:shownAt})})
+        body:JSON.stringify({name:name, signature:pad.toDataURL('image/png'), termsShownAt:shownAt, documents:packetPayload()})})
         .then(function(r){ return r.json().catch(function(){ return {ok:false}; }); })
         .then(function(j){
           if(j && j.ok){ signedAt=j.signedAt||new Date().toISOString(); render(); }
