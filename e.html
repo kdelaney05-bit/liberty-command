@@ -42,6 +42,31 @@
   .pbody a{color:#1c3055;font-weight:700;font-size:13px;text-decoration:underline}
   .pbody .pwhy{font-size:12px;color:#5f6672}
   .pperson{margin:8px 0 4px;font-size:12.5px;color:#3d4450}
+  /* THE ITEMIZED ESTIMATE (322) */
+  .doc{background:#fff;border-radius:12px;box-shadow:0 2px 14px rgba(20,30,50,.14);padding:18px 16px;margin:0 0 14px;font-size:14px;color:#22281f}
+  .docwait{margin:0;color:#8a8f85;text-align:center;padding:24px 0}
+  .dochead{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;border-bottom:2px solid #1c3055;padding-bottom:10px}
+  .docttl{font-size:22px;font-weight:800;letter-spacing:.06em;color:#1c3055}
+  .docco{font-size:15px;font-weight:700;margin-top:2px}
+  .docsm{font-size:12px;color:#5f6672}
+  .docmeta{text-align:right;font-size:12px}
+  .docmeta div{margin-bottom:3px} .docmeta span{color:#8a8f85;letter-spacing:.06em;font-size:10px;display:block} .docmeta b{font-size:13px}
+  .docparties{display:flex;gap:14px;padding:12px 0;border-bottom:1px solid #e3ddd0;font-size:13px}
+  .docparties>div{flex:1} .docparties span{display:block;font-size:10px;letter-spacing:.08em;color:#8a8f85;margin-bottom:2px} .docparties b{display:block}
+  .docamt{text-align:right} .docamt b{font-size:20px;color:#1c3055}
+  .doctitle{font-size:15px;font-weight:700;margin:12px 0 4px}
+  .doctab{width:100%;border-collapse:collapse;margin-top:8px}
+  .doctab th{font-size:10px;letter-spacing:.08em;color:#8a8f85;text-align:left;padding:6px 4px;border-bottom:1px solid #e3ddd0}
+  .doctab td{padding:8px 4px;border-bottom:1px solid #eee8dc;vertical-align:top}
+  .doctab .num{text-align:right;white-space:nowrap}
+  .doctab .dsc{width:64%}
+  .scope{font-size:12.5px;color:#3d4450;margin-top:4px;white-space:normal}
+  .docdisc{text-align:right;font-size:12px;color:#5f6672;margin-top:6px}
+  .doctotal{display:flex;justify-content:flex-end;gap:16px;align-items:baseline;margin-top:10px;font-size:14px}
+  .doctotal b{font-size:22px;color:#1c3055}
+  .docnote{font-size:13px;color:#3d4450;margin-top:10px;padding-top:8px;border-top:1px solid #e3ddd0}
+  .docfoot{font-size:11px;color:#8a8f85;margin-top:12px}
+  @media print{ header,.sign,.folder,.packet{display:none!important} .doc{box-shadow:none;border:0} }
   .terms{margin:18px 0 6px;font-size:13.5px;color:#3d4450}
   .legal{margin:0 0 8px;font-size:12px;color:#5f6672;letter-spacing:.02em}
   .terms a{color:#1c3055;font-weight:700;text-decoration:underline}
@@ -79,12 +104,51 @@
   var w=document.getElementById('wrap');
   if(!t){ w.innerHTML='<p style="text-align:center;color:#8a8f85;padding:40px 10px">This estimate isn’t available. Please contact your rep for a new link.</p>'; }
   else {
-    w.innerHTML=(m==='p'?'<iframe src="'+src+'" title="Estimate"></iframe>'
+    w.innerHTML=(m==='d'?'<div id="doc" class="doc"><p class="docwait">Loading your estimate…</p></div>'
+               :m==='p'?'<iframe src="'+src+'" title="Estimate"></iframe>'
                         :'<img src="'+src+'" alt="Your estimate">')
       + signBlock()
       +(f?'<a class="folder" href="https://lzegjjbkfuecrhdvlvay.supabase.co/functions/v1/folder/'+f+'?e='+t+'">BROWSE OUR DESIGN FOLDER →</a>':'');
     if(!signedAt) wireSigning();
+    if(m==='d') loadDoc();
   }
+
+  /* THE ITEMIZED ESTIMATE (322) — Mike's Billdu shape: number, dates, from/for,
+     the items with their scope of work, the total. The Download button prints. */
+  function money(n){ return '$'+Number(n||0).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+  function dateOf(s){ var d=new Date(s+'T12:00:00'); return isNaN(d)?esc(s):d.toLocaleDateString('en-US',{month:'numeric',day:'numeric',year:'numeric'}); }
+  function loadDoc(){
+    var host=document.getElementById('doc'); if(!host||!t) return;
+    var dl=document.getElementById('dl'); if(dl){ dl.href='#'; dl.removeAttribute('download'); dl.textContent='Print'; dl.onclick=function(e){ e.preventDefault(); window.print(); }; }
+    fetch(FN+t+'/doc').then(function(r){ return r.json(); }).then(function(j){
+      if(!j||!j.ok||!j.doc){ host.innerHTML='<p class="docwait">This estimate isn’t available. Please contact your rep.</p>'; return; }
+      var d=j.doc, b=d.brand||{}, c=d.customer||{};
+      var rows=(d.items||[]).map(function(it){
+        var line=Number(it.qty||1)*Number(it.unit_price||0)*(1-Number(it.discount_pct||0)/100);
+        return '<tr><td class="dsc"><b>'+esc(it.label||'')+'</b>'+(it.description?'<div class="scope">'+esc(it.description).replace(/\n/g,'<br>')+'</div>':'')+'</td>'
+          +'<td class="num">'+esc(String(it.qty||1))+(it.unit?' '+esc(it.unit):'')+'</td><td class="num">'+money(it.unit_price)+'</td><td class="num">'+money(line)+'</td></tr>';
+      }).join('');
+      host.innerHTML=
+        '<div class="dochead"><div><div class="docttl">Estimate</div><div class="docco">'+esc(b.name||'')+'</div>'
+        +(b.phone?'<div class="docsm">'+esc(b.phone)+'</div>':'')+(b.web?'<div class="docsm">'+esc(b.web)+'</div>':'')+'</div>'
+        +'<div class="docmeta"><div><span>ESTIMATE NO.</span><b>'+esc(String(d.serial))+'</b></div><div><span>ISSUE DATE</span><b>'+dateOf(d.issue_date)+'</b></div><div><span>VALID UNTIL</span><b>'+dateOf(d.valid_until)+'</b></div></div></div>'
+        +'<div class="docparties"><div><span>FROM</span><b>'+esc(b.legal||b.name||'')+'</b></div><div><span>FOR</span><b>'+esc(c.name||'')+'</b>'
+        +(c.street?'<div>'+esc(c.street)+'</div>':'')+(c.city?'<div>'+esc(c.city)+(c.zip?' FL '+esc(c.zip):'')+'</div>':'')+'</div>'
+        +'<div class="docamt"><span>AMOUNT</span><b>'+money(d.total)+'</b></div></div>'
+        +(d.title?'<div class="doctitle">'+esc(d.title)+'</div>':'')
+        +'<table class="doctab"><thead><tr><th>DESCRIPTION</th><th class="num">QTY</th><th class="num">UNIT PRICE</th><th class="num">AMOUNT</th></tr></thead><tbody>'+rows+'</tbody></table>'
+        +(d.discount_pct&&Number(d.discount_pct)>0?'<div class="docdisc">Discount '+esc(String(d.discount_pct))+'%</div>':'')
+        +'<div class="doctotal"><span>Total (USD)</span><b>'+money(d.total)+'</b></div>'
+        +(d.note?'<div class="docnote">'+esc(d.note).replace(/\n/g,'<br>')+'</div>':'')
+        +'<div class="docfoot">'+esc(b.legal||'')+(d.rep&&d.rep.name?' · Prepared by '+esc(d.rep.name):'')+'</div>';
+      if(d.status==='accepted'&&!signedAt){ signedAt=d.accepted_at||new Date().toISOString(); var host2=document.querySelector('.sign'); if(host2) host2.outerHTML=signBlock(); }
+      var go=document.getElementById('go'); if(go) go.textContent='ACCEPT ESTIMATE';
+      var h2=document.querySelector('.sign h2'); if(h2) h2.textContent='ACCEPT & SIGN';
+      var lead=document.querySelector('.sign .lead'); if(lead) lead.textContent='Happy with this estimate? Accept it right here — type your name and tap Accept. Signing in the box is optional.';
+      docMode=true;
+    }).catch(function(){ host.innerHTML='<p class="docwait">Couldn’t load the estimate. Please check your connection and try again.</p>'; });
+  }
+  var docMode=false;
 
   function esc(s){ return String(s).replace(/[&<>"]/g,function(c){
     return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
@@ -229,6 +293,16 @@
     go.addEventListener('click',function(){
       var name=(nm.value||'').trim();
       if(name.length<2){ err.textContent='Please type your full name.'; nm.focus(); return; }
+      /* 322: on an itemized estimate the tap IS the acceptance (Billdu's shape). With no
+         drawn signature we adopt the typed name as the signature, in a script face, so the
+         record still carries a signature image the office can see. */
+      if(!ink&&docMode){
+        ctx.clearRect(0,0,pad.width,pad.height);
+        var r=window.devicePixelRatio||1;
+        ctx.fillStyle='#1c3055'; ctx.font='italic '+Math.round(34*r)+'px "Segoe Script","Brush Script MT","Snell Roundhand",cursive';
+        ctx.textBaseline='middle'; ctx.fillText(name, 18*r, pad.height/2);
+        ink=true; hint.style.display='none';
+      }
       if(!ink){ err.textContent='Please sign in the box above.'; return; }
       var needTap=packetReady();
       if(needTap){ err.textContent='Please tap to agree to "'+needTap+'" above.'; return; }
