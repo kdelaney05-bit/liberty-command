@@ -3,6 +3,9 @@
 ⚠️ THIS REPO IS PUBLIC. Nothing in it may carry a customer's name, a rep's
 pay, a ruling verbatim, or a credential — git history keeps every clone.
 
+Kevin's rulebook for every screen and decision is  in
+ (20 rules, his words). Read it.
+
 Before you talk to Kevin or touch the console, read his memory bank:
 `kdelaney05-bit/kd` (private) — `laws/LAWS.md` for every business ruling,
 the newest `journal/` entry for how he thinks. The long-form engineering law
