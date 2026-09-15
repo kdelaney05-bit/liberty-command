@@ -55,7 +55,7 @@
     const spotHtml = (sp) => {
       const v = stamps[sp.key];
       if (v) return `<div class="f ${sp.kind === 'sig' ? 'sig' : sp.kind === 'date' ? 'sm' : 'ini'} stamped" data-spot="${sp.key}" style="left:${sp.x}%;top:${sp.y}%">${esc(v)}</div>`;
-      if (!p.signable || VISIT_SPOTS.some((v) => v.key === sp.key)) return '';
+      if (!p.signable || sp.auto || VISIT_SPOTS.some((v) => v.key === sp.key)) return '';   // auto spots (the date) appear only once stamped
       return `<button type="button" class="spot ${sp.kind}" data-spot="${sp.key}" data-kind="${sp.kind}" style="left:${sp.x}%;top:${sp.y - 0.9}%;width:${sp.w}%" title="${esc(sp.label)}">${sp.kind === 'sig' ? 'TAP TO SIGN' : sp.kind === 'date' ? 'DATE' : 'INITIAL'}</button>`;
     };
     const t = p.takeoff || {}, cust = p.customer || {};
