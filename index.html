@@ -5217,7 +5217,7 @@ async function loadMarketing(){
      and the cheap table reads follow. The walk serializes its own windows
      for the same reason. */
   const roi = await qOne(`rpc/rpt_report_marketing_roi?win_start=${mkISO(start)}&win_end=${mkISO(end)}`).catch(e => ({ __err: e.status || 'x' }));
-  const [roiBrand, spend, ads, signed, targets, manualLeads] = await Promise.all([
+  const [roiBrand, spend, ads, signed, targets, manualLeads, safari, safariFeed] = await Promise.all([
     /* The same signing rows grouped one dimension finer (source × brand, 169).
        Its own failure state: a missing 169 refuses the two brand-money
        sections, never the whole board. */
@@ -5237,6 +5237,11 @@ async function loadMarketing(){
     q('marketing_targets?select=source_name,max_cpl,max_cpa').catch(() => null),
     /* Owner-typed lead counts for the blind months (191). */
     q('marketing_manual_leads?select=source_name,month,leads').catch(() => null),
+    /* Saving Safari's PHONE (347): SM Direct's call tracking, one row per
+       brand per month. 404 until the migration lands — "no feed", a real
+       state the row then says out loud. A log, never in the lead count. */
+    q('sm_direct_monthly?select=month,cc_company_id,calls,unique_callers,answered,sales_inquiries,classified,last_call_at').catch(() => null),
+    q('sm_direct_feed?select=calls,last_received_at,last_call_at,last_webhook_at,last_csv_at,unmapped').catch(() => null),
   ]);
   /* ── THE BACKFILLED MONTHS READ THE BACKFILL ──────────────────────────────
      rpt_report_marketing_roi's by_source joins signed dollars onto a leads CTE
@@ -5273,7 +5278,7 @@ async function loadMarketing(){
   MKT = { roi: roiOk ? roi : null, roiErr: (roi && roi.__err) || null,
           roiBrand: (roiBrand && roiBrand.__err) ? null : roiBrand,
           roiBrandErr: (roiBrand && roiBrand.__err) || null,
-          spend, ads, signed, srcBackfill, targets, manualLeads, month: monthKey };
+          spend, ads, signed, srcBackfill, targets, manualLeads, safari, safariFeed, month: monthKey };
   MKT_LOADING = false;
   render();
 }
@@ -6471,6 +6476,44 @@ function mkWindsorPacing(monthKey){
   return { state:'live', amount: inM.reduce((n, a) => n + Number(a.spend || 0), 0), last };
 }
 
+/* ── SAVING SAFARI'S PHONE · SM DIRECT ────────────────────────────────────────
+   Saving Safari is the one paid source whose leads ring a tracking number:
+   smdirectresults.com (a Convirza white-label) logs every call to the three
+   Safari numbers, one per brand, and posts each one into sm_direct_calls
+   (347) as it ends, with a daily CSV behind it as the audit copy. The
+   console shows that count UNDER the Safari row's lead cell, badged with its
+   source and freshness, and nowhere else: it is a phone log, not the lead
+   count. The leads figure stays CC's (or the typed one) — count once per
+   surface — and where the two disagree, both are on the row and the reader
+   sees the gap instead of a blended number. Brand lens applies: the call
+   rows carry cc_company_id, resolved from the tracking number; a call whose
+   number is not in sm_direct_numbers counts only under All and is flagged. */
+function mkSafariCalls(monthKey){
+  const rows = MKT && MKT.safari;
+  const feed = MKT && Array.isArray(MKT.safariFeed) && MKT.safariFeed[0];
+  if (!Array.isArray(rows) || !feed) return { state:'nofeed' };
+  if (!(Number(feed.calls) > 0)) return { state:'never' };
+  const months = MKT_YTD ? new Set(mkYtdMonths().map(k => mkWinPre(k))) : new Set([mkWinPre(monthKey)]);
+  const inWin = rows.filter(r => months.has(String(r.month).slice(0, 7)))
+                    .filter(r => MKT_BRAND === 'all' || r.cc_company_id === MKT_BRAND);
+  const last = String(feed.last_call_at || feed.last_received_at || '').slice(0, 10);
+  if (!inWin.length) return { state:'silent', last };
+  const sum = k => inWin.reduce((n, r) => n + Number(r[k] || 0), 0);
+  return { state:'live', calls: sum('calls'), unique: sum('unique_callers'), inquiries: sum('sales_inquiries'),
+           classified: sum('classified'), unmapped: inWin.filter(r => !r.cc_company_id).reduce((n, r) => n + Number(r.calls || 0), 0), last };
+}
+const mkIsSafari = src => /^savings? safari$/i.test(String(src || '').trim());
+function mkSafariSub(src, monthKey){
+  if (!mkIsSafari(src)) return '';
+  const c = mkSafariCalls(monthKey);
+  if (c.state === 'nofeed') return '';
+  if (c.state === 'never') return `<span class="mk-pc" title="sm_direct_calls (347) is applied and the SM Direct webhook is set, but no call has posted yet. Phone log only — never the lead count.">SM Direct · nothing delivered yet</span>`;
+  if (c.state === 'silent') return `<span class="mk-pc" title="SM Direct logged no call to the Safari tracking numbers in this window${c.last ? ' — last call ' + esc(c.last) : ''}. Phone log only — never the lead count.">SM Direct · no calls${c.last ? ' · last ' + esc(c.last) : ''}</span>`;
+  const parts = [`${c.calls.toLocaleString()} call${c.calls === 1 ? '' : 's'}`];
+  if (c.classified > 0) parts.push(`${c.inquiries.toLocaleString()} sales inquir${c.inquiries === 1 ? 'y' : 'ies'}`);
+  return `<span class="mk-pc" title="SM Direct (Convirza) call tracking on the three Savings Safari numbers — ${c.calls} call${c.calls === 1 ? '' : 's'}, ${c.unique} unique caller${c.unique === 1 ? '' : 's'}${c.classified > 0 ? `, ${c.inquiries} classed Sales Inquiry of ${c.classified} scored` : ', none scored yet'}${c.unmapped > 0 ? ` · ${c.unmapped} from a number not in sm_direct_numbers (held under All, unmapped)` : ''}. Last call ${esc(c.last)}. A PHONE LOG beside the row — the lead count above stays CC's (or typed); where they disagree, both are shown, nothing is blended.">SM Direct · ${parts.join(' · ')}</span>`;
+}
+
 /* ── THE PACING CHIP · WHERE THE FORK IS SHOWN, NOT SETTLED QUIETLY ──────────
    GOOGLE SPEND LAW, stated once so it can be checked: the ONLY spend feeding
    any ROI, CPL, CPU or $-per-$1 anywhere on this console is a typed
@@ -6767,8 +6810,8 @@ function cardSourceRow(){
           aria-label="Leads unavailable for ${esc(r.src)} — tap to type a count">—</button>
         <div class="mk-spend" hidden><input type="number" min="0" step="1" inputmode="numeric" placeholder="leads"
           aria-label="Typed lead count for ${esc(r.src)}, ${esc(mkWinLabel())}"
-          onchange="saveLeads(${JSON.stringify(r.src).replace(/"/g, '&quot;')}, '${monthKey}', this)"></div>`}</div>`;
-    return `<div class="col">${Number(r.leads).toLocaleString()}${r.leadsTyped ? `<span class="mk-auto stale" title="${ytd ? 'typed months only — blind months nobody filled add nothing' : 'your typed count (191) — the RPC is backfill-dated for this month; tap the number on the month view to change it'}">typed</span>` : ''}${r.leads > 0 && pc(r.leads, totLeads) != null ? `<span class="mk-pc">${pc(r.leads, totLeads)}% of leads</span>` : ''}</div>`;
+          onchange="saveLeads(${JSON.stringify(r.src).replace(/"/g, '&quot;')}, '${monthKey}', this)"></div>`}${mkSafariSub(r.src, monthKey)}</div>`;
+    return `<div class="col">${Number(r.leads).toLocaleString()}${r.leadsTyped ? `<span class="mk-auto stale" title="${ytd ? 'typed months only — blind months nobody filled add nothing' : 'your typed count (191) — the RPC is backfill-dated for this month; tap the number on the month view to change it'}">typed</span>` : ''}${r.leads > 0 && pc(r.leads, totLeads) != null ? `<span class="mk-pc">${pc(r.leads, totLeads)}% of leads</span>` : ''}${mkSafariSub(r.src, monthKey)}</div>`;
   };
 
   /* The ROI cell states WHICH kind of no-answer this is, and they are three
@@ -8303,7 +8346,7 @@ function mkFoot(){
   const w = mkWindsorPacing(MKT_YTD ? mkISO(mkMonthStart(0)) : monthKey);    // pacing signal, named in the footer only when it is also down
   return `<div class="m2-foot">
     <b>Revenue:</b> <b>rpt_report_marketing_roi</b> (migration 160, corrected by 165), grouped on <b>lead_sources.rollup_name</b> (163) — never the raw Contractors Cloud name, which splits Angi three ways and Google five. Signed dollars are dated by <b>rpt_signings.signed_on</b> and are correct in every window. Signed jobs are counted <b>distinct by project</b>: migration 150 splits an amended invoice into a row per late bell, which is right for money and would push a rate past 100%.
-    <b>Spend:</b> the typed book, <b>marketing_spend</b> (166; by company since <b>167</b> — a month is either one unsplit total or per-brand rows, trigger-enforced, so sums never double; Google card rows since the ruling <b>170/171</b>) — a source with no row reads <b>not entered</b>, never zero. <b>Google is the card:</b> Chase Ink 1552/1571 + Amex Gold statements keyed monthly by brand, priced all-in with Liam / Gate Digital management (flag ✓2). <b>Windsor is a pacing signal only</b> — <b>google_ads_daily</b> undercounted July by half (card $47,994 vs Windsor $25,175, the ruling that demoted it)${g ? '' : (w.state === 'stale' ? ` — and it is <b>stale</b> for this month besides, last delivery ${esc(w.last)}` : w.state === 'nofeed' ? ' — and it has <b>never delivered</b> besides' : '')}; it feeds the pacing chip and no money math. <b>⚑3 rows</b> (Next Level, CallFire, Mailchimp, Marlie, Zapier, GoDaddy, Canva — no CC source tag) are held in month totals and excluded from every per-source figure. Referral bonuses are an estimate (~5). Heymarket is company ops, not marketing.
+    <b>Spend:</b> the typed book, <b>marketing_spend</b> (166; by company since <b>167</b> — a month is either one unsplit total or per-brand rows, trigger-enforced, so sums never double; Google card rows since the ruling <b>170/171</b>) — a source with no row reads <b>not entered</b>, never zero. <b>Google is the card:</b> Chase Ink 1552/1571 + Amex Gold statements keyed monthly by brand, priced all-in with Liam / Gate Digital management (flag ✓2). <b>Windsor is a pacing signal only</b> — <b>google_ads_daily</b> undercounted July by half (card $47,994 vs Windsor $25,175, the ruling that demoted it)${g ? '' : (w.state === 'stale' ? ` — and it is <b>stale</b> for this month besides, last delivery ${esc(w.last)}` : w.state === 'nofeed' ? ' — and it has <b>never delivered</b> besides' : '')}; it feeds the pacing chip and no money math. <b>Saving Safari's phone:</b> <b>sm_direct_calls</b> (347) — SM Direct's call tracking on the three Safari numbers, one per brand, posted by webhook as each call ends with a daily CSV behind it${(() => { const c = mkSafariCalls(monthKey); return c.state === 'nofeed' ? ' — <b>not applied</b> on this database' : c.state === 'never' ? ' — set up, <b>nothing delivered yet</b>' : c.last ? `; last call ${esc(c.last)}` : ''; })()}; it prints under the Safari row's lead cell and in no count. <b>⚑3 rows</b> (Next Level, CallFire, Mailchimp, Marlie, Zapier, GoDaddy, Canva — no CC source tag) are held in month totals and excluded from every per-source figure. Referral bonuses are an estimate (~5). Heymarket is company ops, not marketing.
     <b>Brand money:</b> <b>rpt_report_marketing_roi_brand</b> (169) — the identical confirmed signing rows grouped source × company on <b>rpt_signings.brand_rollup_cc_id</b>, so the brand sections cross-foot with every other dollar on this board by construction. Legacy Liberty Roofing (1537) folds into Pro-Tec upstream. The tiles' ÷ is live: brand cost is complete now that the card splits Google by company.
     <b>Not read here:</b> the approved board's own revenue basis — a one-off CC probe walk of 2,500 projects. Revenue on this page is the RPC and may differ from that snapshot; the July spend book was keyed FROM the approved board's card figures (171) and read back to the cent, so the spend side of the two instruments agrees by construction.
     <b>Appointments ran</b> is empty everywhere on this console: Contractors Cloud logs no appointment outcome.
@@ -11271,7 +11314,7 @@ addEventListener('resize', () => {
    the last one, it is to tell a human which build is on the server and when it
    got there. A number nobody clocked cannot answer that, and the first time it
    is asked in anger will be the morning a stale build is being chased. */
-const BUILD = '2026-09-07T1605Z-commercial-room';
+const BUILD = '2026-09-15T2245Z-sm-direct-chip';
 const SB_URL = 'https://lzegjjbkfuecrhdvlvay.supabase.co';
 /* The one page that can finish a password reset. Hard-coded rather than derived,
    because every derivation of it so far has been a source of bugs: a bare origin
