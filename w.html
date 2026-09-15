@@ -1,0 +1,91 @@
+<!doctype html><html lang="es"><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Orden de trabajo · Work order</title>
+<style>
+  html,body{margin:0;background:#f4f2ec;color:#22281f;font:16px/1.5 -apple-system,system-ui,sans-serif}
+  header{background:#1c3055;color:#fff;padding:14px 16px;display:flex;justify-content:space-between;align-items:center;gap:12px;position:sticky;top:0;z-index:2}
+  h1{font-size:15px;margin:0;font-weight:800;letter-spacing:.06em}
+  header small{font-size:12px;opacity:.85}
+  .wrap{padding:14px;max-width:720px;margin:0 auto;padding-bottom:120px}
+  .card{background:#fff;border-radius:12px;box-shadow:0 2px 14px rgba(20,30,50,.12);padding:14px 16px;margin:0 0 12px}
+  .k{font-family:ui-monospace,Menlo,monospace;font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:#7a7f8a;margin-bottom:4px}
+  .big{font-size:22px;font-weight:800;color:#1c3055;line-height:1.2}
+  .row{display:flex;justify-content:space-between;gap:10px;padding:7px 0;border-top:1px solid #eee8dc;font-size:15px}
+  .row:first-of-type{border-top:0}
+  .row span{color:#5f6672}.row b{text-align:right}
+  .ok{color:#1e6b3a;font-weight:800}.warn{color:#a3341f;font-weight:800}
+  .draw{width:100%;background:#fff;border:1px solid #e3ddd0;border-radius:10px;padding:6px;box-sizing:border-box}
+  .draw svg,.draw img{width:100%;height:auto;display:block}
+  ul{margin:4px 0 0;padding-left:18px;font-size:15px}
+  .mat b{display:block;margin-top:6px;font-size:13px;color:#1c3055}
+  .bar{position:fixed;left:12px;right:12px;bottom:12px;z-index:5;max-width:720px;margin:0 auto;background:#1e6b3a;color:#fff;border-radius:14px;padding:12px 14px;box-shadow:0 10px 30px rgba(0,0,0,.3)}
+  .bar label{display:block;font-size:12px;letter-spacing:.08em;text-transform:uppercase;opacity:.9;margin-bottom:6px}
+  .bar input{width:100%;box-sizing:border-box;font:16px/1.3 inherit;padding:10px 12px;border:0;border-radius:9px;margin-bottom:8px}
+  .bar button{width:100%;background:#fff;color:#1e6b3a;font:800 17px/1 inherit;letter-spacing:.06em;border:0;border-radius:10px;padding:14px;cursor:pointer}
+  .bar button[disabled]{opacity:.6}
+  .bar.done{background:#14213d}
+  .bar .msg{font-size:13.5px;margin-top:8px;line-height:1.35}
+  .en{color:#5f6672;font-size:13px}
+  a{color:#1d5fa8}
+  @media print{.bar,header{display:none}.wrap{padding:0}.card{box-shadow:none;border:1px solid #ddd}}
+</style>
+<header><h1>ORDEN DE TRABAJO <small>· Work order</small></h1><a href="#" onclick="window.print();return false" style="color:#ffd58a;font-size:13px;font-weight:700;text-decoration:none">Imprimir</a></header>
+<div class="wrap" id="wrap"><div class="card">Cargando… / Loading…</div></div>
+<div class="bar" id="bar" hidden>
+  <label>Tu nombre / Your name</label>
+  <input id="nm" autocomplete="name" placeholder="Nombre de quien recibe">
+  <button id="go">RECIBIDO · ENTENDIDO</button>
+  <div class="msg en">Al tocar confirmas que leíste la orden y viste el dibujo. / You confirm you read the order and saw the drawing.</div>
+</div>
+<script>
+  var FN='https://lzegjjbkfuecrhdvlvay.supabase.co/functions/v1/work-order/';
+  var t=new URLSearchParams(location.search).get('t')||'';
+  var esc=function(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});};
+  var d=function(s){ if(!s) return ''; var p=String(s).slice(0,10).split('-'); return p.length===3? (Number(p[1])+'/'+Number(p[2])+'/'+p[0]) : s; };
+  function render(j){
+    var b=j.body||{}, c=b.customer||{}, jb=b.job||{}, L=b.locate, P=b.permit||{}, S=b.schedule||{}, sup=b.supervisor||{};
+    var gates=(jb.gates||[]).map(function(g){return (g.width_ft||'?')+"' "+(g.kind||'gate');}).join(', ');
+    var mats=(b.material_order||[]).map(function(m){return m.group?'<b>'+esc(m.group)+'</b>':'<li>'+esc(m.qty||'')+' &nbsp; '+esc(m.item||'')+'</li>';}).join('');
+    var loc = !L ? '<span class="warn">PENDIENTE — NO EXCAVAR</span><div class="en">Pending — do not dig</div>'
+            : L.all_clear ? '<span class="ok">TODO CLARO · ticket '+esc(L.ticket)+'</span><div class="en">All clear · dig on or after '+esc(d(L.due_date))+'</div>'
+            : 'ticket '+esc(L.ticket)+' · <span class="warn">esperando respuestas</span><div class="en">Waiting on utilities · dig after '+esc(d(L.due_date))+'</div>';
+    var h='';
+    h+='<div class="card"><div class="k">Cliente / Customer</div><div class="big">'+esc(c.name)+'</div>'
+      +'<div>'+esc([c.street,c.city,c.zip].filter(Boolean).join(', '))+' · <a href="https://maps.google.com/?q='+encodeURIComponent([c.street,c.city,'FL',c.zip].filter(Boolean).join(' '))+'" target="_blank" rel="noopener">mapa / map</a></div>'
+      +(c.phone?'<div><a href="tel:'+esc(c.phone)+'">'+esc(c.phone)+'</a></div>':'')
+      +'<div class="row"><span>Fecha / Date</span><b>'+esc(S.date?d(S.date):'por confirmar')+'</b></div>'
+      +(S.crew?'<div class="row"><span>Cuadrilla / Crew</span><b>'+esc(j.crew||S.crew)+'</b></div>':'')
+      +'<div class="row"><span>Supervisor</span><b>'+esc(sup.name||'')+(sup.phone?' · <a href="tel:'+esc(sup.phone)+'">'+esc(sup.phone)+'</a>':'')+'</b></div></div>';
+    h+='<div class="card"><div class="k">Trabajo / The job</div><div class="big" style="font-size:18px">'+esc(jb.description||jb.title||'')+'</div>'
+      +(jb.linear_ft?'<div class="row"><span>Pies / Feet</span><b>'+esc(jb.linear_ft)+' ft · '+esc(jb.height_ft||'')+"' alto</b></div>":'')
+      +(gates?'<div class="row"><span>Portones / Gates</span><b>'+esc(gates)+'</b></div>':'')
+      +(Number(jb.tear_out_ft)>0?'<div class="row"><span>Quitar cerca vieja / Tear out</span><b>'+esc(jb.tear_out_ft)+' ft</b></div>':'')
+      +(Number(jb.core_drill_holes)>0?'<div class="row"><span>Core drill</span><b>'+esc(jb.core_drill_holes)+' huecos</b></div>':'')
+      +(jb.follow_grade===true?'<div class="row"><span>Terreno / Grade</span><b>Sigue el terreno · follow the grade</b></div>':jb.follow_grade===false?'<div class="row"><span>Terreno / Grade</span><b>Nivelada arriba · flat on top</b></div>':'')
+      +(jb.notes?'<div class="row" style="display:block"><span>NOTAS DEL CLIENTE / Customer notes</span><div style="margin-top:4px"><b style="text-align:left">'+esc(jb.notes)+'</b></div></div>':'')
+      +'</div>';
+    h+='<div class="card"><div class="k">Permiso · 811 · HOA</div>'
+      +'<div class="row"><span>Permiso / Permit</span><b>'+(P.required===false?'no se necesita':esc(P.number||'<span class="warn">PENDIENTE</span>'))+'</b></div>'
+      +'<div class="row"><span>811 locate</span><b>'+loc+'</b></div>'
+      +'<div class="row"><span>HOA</span><b>'+esc(b.hoa||'n/a')+'</b></div><div class="row"><span>Survey</span><b>'+esc(b.survey||'n/a')+'</b></div></div>';
+    if((b.files||{}).drawing) h+='<div class="card"><div class="k">Dibujo / Drawing</div><div class="draw" id="draw">…</div></div>';
+    if(mats) h+='<div class="card mat"><div class="k">Material</div><ul>'+mats+'</ul></div>';
+    if(j.verified_at) h+='<div class="card" style="border:2px solid #1e6b3a"><div class="k">Confirmado / Verified</div><div class="big" style="font-size:18px;color:#1e6b3a">'+esc(j.verified_name||'')+' · '+esc(new Date(j.verified_at).toLocaleString())+'</div></div>';
+    document.getElementById('wrap').innerHTML=h;
+    if((b.files||{}).drawing) fetch(FN+t+'/file?p='+encodeURIComponent(b.files.drawing)).then(function(r){return r.text();}).then(function(svg){ var el=document.getElementById('draw'); if(el) el.innerHTML=/<svg[\s>]/i.test(svg)?svg:'<div class="en">no se pudo cargar el dibujo</div>'; }).catch(function(){});
+    var bar=document.getElementById('bar'); bar.hidden=false;
+    if(j.verified_at){ bar.className='bar done'; bar.innerHTML='<div class="msg"><b>CONFIRMADO</b> · '+esc(j.verified_name||'')+'. Gracias. / Confirmed, thank you.</div>'; }
+  }
+  fetch(FN+t).then(function(r){return r.json();}).then(function(j){ if(!j||!j.ok){ document.getElementById('wrap').innerHTML='<div class="card">Esta orden no está disponible. / This work order is not available.</div>'; return; } render(j); })
+    .catch(function(){ document.getElementById('wrap').innerHTML='<div class="card">No se pudo cargar. / Could not load.</div>'; });
+  document.getElementById('go').onclick=function(){
+    var nm=document.getElementById('nm').value.trim(); if(nm.length<2){ document.getElementById('nm').focus(); return; }
+    var btn=this; btn.disabled=true; btn.textContent='UN MOMENTO…';
+    fetch(FN+t+'/verify',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({name:nm})}).then(function(r){return r.json();}).then(function(j){
+      if(j&&j.ok){ var bar=document.getElementById('bar'); bar.className='bar done'; bar.innerHTML='<div class="msg"><b>CONFIRMADO</b> · '+esc(j.verified_name||nm)+'. Gracias. El supervisor ya lo sabe. / Confirmed — the supervisor knows.</div>'; }
+      else { btn.disabled=false; btn.textContent='RECIBIDO · ENTENDIDO'; alert('No se pudo confirmar. Intenta de nuevo.'); }
+    }).catch(function(){ btn.disabled=false; btn.textContent='RECIBIDO · ENTENDIDO'; });
+  };
+</script>
+</html>
