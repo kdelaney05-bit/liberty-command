@@ -66,7 +66,7 @@
       +(jb.notes?'<div class="row" style="display:block"><span>NOTAS DEL CLIENTE / Customer notes</span><div style="margin-top:4px"><b style="text-align:left">'+esc(jb.notes)+'</b></div></div>':'')
       +'</div>';
     h+='<div class="card"><div class="k">Permiso · 811 · HOA</div>'
-      +'<div class="row"><span>Permiso / Permit</span><b>'+(P.required===false?'no se necesita':esc(P.number||'<span class="warn">PENDIENTE</span>'))+'</b></div>'
+      +'<div class="row"><span>Permiso / Permit</span><b>'+(P.required===false?'no se necesita':(P.number?esc(P.number):'<span class="warn">PENDIENTE</span>'))+'</b></div>'
       +'<div class="row"><span>811 locate</span><b>'+loc+'</b></div>'
       +'<div class="row"><span>HOA</span><b>'+esc(b.hoa||'n/a')+'</b></div><div class="row"><span>Survey</span><b>'+esc(b.survey||'n/a')+'</b></div></div>';
     if((b.files||{}).drawing) h+='<div class="card"><div class="k">Dibujo / Drawing</div><div class="draw" id="draw">…</div></div>';
