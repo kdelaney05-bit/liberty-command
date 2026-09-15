@@ -26,14 +26,14 @@
 <script src="fence-estimate.js"></script>
 </head>
 <body>
-<div class="note"><b>This is the contract, the way the carbon works.</b> Type your name once; it presets your signature and initials. Then tap every green spot on the sheet, the same places the carbon takes an initial, a date and a signature. The button at the bottom counts them and turns into SIGN when they're all in. Sample job; nothing is saved.</div>
+<div class="note"><b>This is the contract, the way the carbon works, trimmed to what locks the job in.</b> Type your name once. Three taps: the grade choice, the texting consent, your signature. The date stamps itself. The money clauses and the financing initial are signed in person when your rep comes for the permit and survey. Sample job; nothing is saved.</div>
 <div class="top">
   <div><label for="nm">Your full name, as the owner of record</label><input id="nm" value="Dana Reed" autocomplete="name"/></div>
   <div class="preset"><div class="sig" id="psig">Dana Reed</div><div class="ini" id="pini">DR</div><small>your signature and initials · tap any spot to draw instead</small></div>
 </div>
 <div class="wrap" id="sheet"></div>
 <div class="links"><a href="../terms/fencing.html" target="_blank" rel="noopener">View the terms &amp; conditions (the back of the carbon)</a><button type="button" id="dl">Download my copy</button></div>
-<div class="accept"><div><b id="ab">ACCEPT &amp; SIGN · 0 of 7</b><span id="as">No down payment. No credit card fees, get your points. Signing only orders your material and puts you on the schedule. Tap each green spot on your contract.</span></div><button class="go" id="go" disabled>NEXT SPOT ↓</button></div>
+<div class="accept"><div><b id="ab">ACCEPT &amp; SIGN · 0 of 3</b><span id="as">No down payment. No credit card fees, get your points. Signing only orders your material and puts you on the schedule. Tap each green spot on your contract.</span></div><button class="go" id="go" disabled>NEXT SPOT ↓</button></div>
 <script>
   const style = document.createElement('style'); style.textContent = window.fenceEstimateCss; document.head.appendChild(style);
   const sample = {
@@ -45,7 +45,7 @@
   };
   let data = sample;
   try { const q = new URLSearchParams(location.search).get('q'); if (q) data = JSON.parse(q); } catch {}
-  const SPOTS = window.fenceEstimateSpots;
+  const SPOTS = window.fenceEstimateSpots.filter((s) => !s.auto);
   const stamps = {};
   const initials = (n) => String(n || '').split(/[\s,]+/).filter(Boolean).map((w) => w[0]).join('').slice(0, 3).toUpperCase();
   const today = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
@@ -64,6 +64,7 @@
     const sp = SPOTS.find((s) => s.key === key); if (!sp) return;
     const name = document.getElementById('nm').value.trim() || 'Customer';
     stamps[key] = sp.kind === 'sig' ? name : sp.kind === 'date' ? today : initials(name);
+    if (sp.kind === 'sig') stamps.sigdate = today;
     render();
     const nextEl = document.querySelector('.spot.next'); if (nextEl) nextEl.scrollIntoView({ block: 'center', behavior: 'smooth' });
   }

@@ -29,21 +29,33 @@
      signed and initialed by the customer, as easy as possible"). Order = the
      way the eye reads the page. 'ini' stamps the preset initials, 'sig' the
      preset signature, 'date' today. */
+  /* Kevin, 15 Sep ~02:50 UTC, after tapping through on a phone: "it's too much."
+     The link locks the customer in — SOLD — and the rep still goes out for the
+     permit, the NOC and the survey, so the money clauses (balance due, late
+     fee, changes cost more) and the financing initial are signed IN PERSON at
+     that visit, not here. What stays on the link: the grade choice (its own
+     little box, the two pictures), the texting consent (the phone company
+     wants it standalone), the signature; the date stamps itself. The rep's
+     signature is already on the customer copy. Oasis keeps the scanned
+     carbon for now; fencing and roofing get this. */
   const SPOTS = [
-    { key: 'grade',    kind: 'ini',  x: 49.5, y: 68.5, w: 7,  label: 'Follow grade or flat on top: I picked one' },
-    { key: 'payment',  kind: 'ini',  x: 78.6, y: 69.9, w: 5,  label: 'My payment choice' },
-    { key: 'consent',  kind: 'ini',  x: 68.8, y: 81.9, w: 6,  label: "OK to text and email me about my project" },
-    { key: 'balance',  kind: 'ini',  x: 18.2, y: 89.3, w: 6,  label: 'Balance due at completion · $25 a day late fee' },
-    { key: 'revisions',kind: 'ini',  x: 92.6, y: 92.7, w: 5,  label: 'Changes to the design may cost more' },
-    { key: 'signature',kind: 'sig',  x: 19.0, y: 81.4, w: 26, label: 'Sign here' },
-    { key: 'sigdate',  kind: 'date', x: 49.5, y: 82.2, w: 10, label: 'Date' },
+    { key: 'grade',     kind: 'ini',  x: 49.5, y: 68.5, w: 7,  label: 'Follow grade or flat on top: I picked one' },
+    { key: 'consent',   kind: 'ini',  x: 68.8, y: 81.9, w: 6,  label: "OK to text and email me about my project" },
+    { key: 'signature', kind: 'sig',  x: 19.0, y: 81.4, w: 26, label: 'Sign here' },
+    { key: 'sigdate',   kind: 'date', x: 49.5, y: 82.2, w: 10, label: 'Date', auto: true },
+  ];
+  /* signed in person at the permit visit, on the rep's phone — the same sheet, these spots */
+  const VISIT_SPOTS = [
+    { key: 'payment',   kind: 'ini',  x: 78.6, y: 69.9, w: 5,  label: 'My payment choice' },
+    { key: 'balance',   kind: 'ini',  x: 18.2, y: 89.3, w: 6,  label: 'Balance due at completion · $25 a day late fee' },
+    { key: 'revisions', kind: 'ini',  x: 92.6, y: 92.7, w: 5,  label: 'Changes to the design may cost more' },
   ];
   function fenceEstimateHtml(p) {
     const stamps = p.stamps || {};                    // { grade: 'DR', signature: 'Dana Reed', sigdate: 'Sep 15, 2026' }
     const spotHtml = (sp) => {
       const v = stamps[sp.key];
       if (v) return `<div class="f ${sp.kind === 'sig' ? 'sig' : sp.kind === 'date' ? 'sm' : 'ini'} stamped" data-spot="${sp.key}" style="left:${sp.x}%;top:${sp.y}%">${esc(v)}</div>`;
-      if (!p.signable) return '';
+      if (!p.signable || VISIT_SPOTS.some((v) => v.key === sp.key)) return '';
       return `<button type="button" class="spot ${sp.kind}" data-spot="${sp.key}" data-kind="${sp.kind}" style="left:${sp.x}%;top:${sp.y - 0.9}%;width:${sp.w}%" title="${esc(sp.label)}">${sp.kind === 'sig' ? 'TAP TO SIGN' : sp.kind === 'date' ? 'DATE' : 'INITIAL'}</button>`;
     };
     const t = p.takeoff || {}, cust = p.customer || {};
@@ -104,7 +116,7 @@
     ${f(87, 78.4, after.toLocaleString('en-US') + '.00', 'big')}
     ${f(24.5, 83.3, p.rep, 'sm')}
     ${p.signedName && !stamps.signature ? `<div class="f sig" style="left:19%;top:81.4%">${esc(p.signedName)}</div>${f(49.5, 82.2, p.signedDate || date, 'sm')}` : ''}
-    ${SPOTS.map(spotHtml).join('')}
+    ${SPOTS.map(spotHtml).join('')}${VISIT_SPOTS.map(spotHtml).join('')}
   </div>`;
   }
   /* The stylesheet the sheet needs; scoped so it drops into any page. */
@@ -137,6 +149,8 @@
 @media print{.sheet{max-width:none;width:8.5in;height:11in;box-shadow:none}@page{size:letter;margin:0}}`;
   root.fenceEstimateHtml = fenceEstimateHtml;
   root.fenceEstimateSpots = SPOTS;
+  root.fenceEstimateVisitSpots = VISIT_SPOTS;
+  root.fenceGradePictures = { follow: 'https://kdelaney05-bit.github.io/liberty-command/forms/grade-follow.png', flat: 'https://kdelaney05-bit.github.io/liberty-command/forms/grade-flat.png' };
   root.fenceEstimateCss = CSS;
   root.fencePayments = payments;
 })(typeof window !== 'undefined' ? window : globalThis);
