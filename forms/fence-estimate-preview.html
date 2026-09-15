@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Liberty Fencing · the estimate, typed (preview)</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@400;600;700&family=Caveat:wght@600&display=swap"/>
+<style>
+  body{margin:0;background:#e9e6df;font-family:"Source Sans 3",system-ui,sans-serif;padding:16px 16px 120px}
+  .note{max-width:816px;margin:0 auto 14px;background:#fff8e3;border-left:5px solid #b8860b;padding:10px 14px;border-radius:6px;font-size:14px;color:#2c2a26}
+  .wrap{max-width:816px;margin:0 auto;box-shadow:0 12px 40px rgba(0,0,0,.2)}
+  .accept{position:fixed;left:12px;right:12px;bottom:12px;z-index:5;max-width:816px;margin:0 auto;background:#1f6f4a;color:#fff;border-radius:14px;padding:12px 16px;display:grid;grid-template-columns:1fr auto;align-items:center;gap:12px;box-shadow:0 10px 30px rgba(0,0,0,.3)}
+  .accept b{display:block;font-size:19px;letter-spacing:.06em}.accept span{font-size:13.5px;opacity:.95;line-height:1.3}
+  .accept .go{background:#fff;color:#1f6f4a;font-weight:800;font-size:17px;letter-spacing:.08em;padding:12px 20px;border-radius:10px;white-space:nowrap;border:0;cursor:pointer}
+  @media print{.note,.accept{display:none}body{background:#fff;padding:0}.wrap{box-shadow:none;max-width:none}}
+</style>
+<script src="fence-estimate.js"></script>
+</head>
+<body>
+<div class="note"><b>Preview with sample numbers.</b> This is the same page the phone prints and the estimate link will show: the real Liberty Fencing pad with the calculator's job typed into it. Add <code>?q=YOURJSON</code> to feed it a real takeoff, or just look.</div>
+<div class="wrap" id="sheet"></div>
+<div class="accept"><div><b>ACCEPT NOW · zero pain</b><span>No down payment. No credit card fees, get your points. Signing only orders your material and puts you on the schedule.</span></div><button class="go">ACCEPT &amp; SIGN →</button></div>
+<script>
+  const style = document.createElement('style'); style.textContent = window.fenceEstimateCss; document.head.appendChild(style);
+  const sample = {
+    takeoff: { found: true, quote: 9276, styles: [{ prod: "White PVC 6'", material: 'vinyl', height_ft: 6, linear_ft: 142 }],
+      gates: [{ width_ft: 4, kind: 'single' }, { width_ft: 4, kind: 'single' }], gate_count: 2, tear_out_ft: 60, reinstall_ft: 0, core_drill_holes: 2, follow_grade: true,
+      raw: { prop: { pDiscount: 'Magazine Coupon $250', pComments: 'Second gate by the shed, not the driveway. Sprinkler heads flagged by customer. Crew leaves side gate unlocked day 2.' } } },
+    customer: { name: 'Dana Reed', street: '1402 Sandpiper Ct', city: 'Palm Bay', state: 'FL', zip: '32907', phone: '(321) 555-0104', email: 'dana.reed@example.com' },
+    rep: 'Ron Seidel', repPhone: '386-302-3131',
+  };
+  let data = sample;
+  try { const q = new URLSearchParams(location.search).get('q'); if (q) data = JSON.parse(q); } catch {}
+  document.getElementById('sheet').innerHTML = window.fenceEstimateHtml(data);
+</script>
+</body>
+</html>
