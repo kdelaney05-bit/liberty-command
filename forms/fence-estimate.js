@@ -141,9 +141,9 @@
 .sheet .f.ini{font-family:"Caveat","Segoe Script","Bradley Hand",cursive;font-size:1.9cqw;color:#1b2a5c;font-weight:600}
 .sheet .f.stamped{animation:stampIn .25s ease-out}
 @keyframes stampIn{from{transform:scale(1.6);opacity:0}to{transform:scale(1);opacity:1}}
-.sheet .spot{position:absolute;height:2.4cqw;border:0.18cqw solid #1f6f4a;background:rgba(31,111,74,.12);color:#1f6f4a;border-radius:0.5cqw;font:700 0.95cqw/1 "Source Sans 3",system-ui,sans-serif;letter-spacing:.1em;cursor:pointer;padding:0;animation:spotPulse 1.6s ease-in-out infinite}
+.sheet .spot{position:absolute;height:2.4cqw;border:0.18cqw solid #1f6f4a;background:rgba(31,111,74,.12);color:#1f6f4a;border-radius:0.5cqw;font:700 0.95cqw/1 "Source Sans 3",system-ui,sans-serif;letter-spacing:.1em;cursor:pointer;padding:0}
 .sheet .spot.sig{height:3.2cqw;font-size:1.1cqw;background:rgba(31,111,74,.16)}
-.sheet .spot.next{background:#1f6f4a;color:#fff;animation:none}
+.sheet .spot.next{background:#1f6f4a;color:#fff}
 @keyframes spotPulse{0%,100%{box-shadow:0 0 0 0 rgba(31,111,74,.35)}50%{box-shadow:0 0 0 0.6cqw rgba(31,111,74,0)}}
 @media print{.sheet .spot{display:none}}
 @media print{.sheet{max-width:none;width:8.5in;height:11in;box-shadow:none}@page{size:letter;margin:0}}`;
