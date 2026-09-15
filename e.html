@@ -114,6 +114,9 @@
   .pinit{flex:none;align-self:center;font:600 20px/1 "Caveat","Segoe Script","Bradley Hand",cursive;color:#1c3055;min-width:34px;text-align:center;opacity:.35}
   .pdoc.on .pinit{opacity:1;color:#2f8f5b}
   .padhint.preset{color:#8a8f98;align-items:flex-start;padding-top:14px;font-size:12.5px}
+  .sheetlinks{display:flex;justify-content:space-between;gap:12px;margin:-4px 2px 14px;font-size:13.5px}
+  .sheetlinks a{color:#1c3055;font-weight:700;text-decoration:underline}
+  @media print{ .sheetlinks{display:none} }
   @media print{ .bar,.sheetwrap~img,.sheetwrap~iframe,.deposit{display:none!important} body.haspk{padding:0;background:#fff} .sheetwrap{box-shadow:none;border-radius:0} }
   /* THE DEPOSIT STEP (336): after the signature on a custom/aluminum job */
   .deposit{background:#fff;border:2px solid #b8860b;border-radius:12px;padding:18px;margin:0 0 30px;box-shadow:0 2px 14px rgba(20,30,50,.14)}
@@ -163,15 +166,24 @@
       var fonts=document.createElement('link'); fonts.rel='stylesheet';
       fonts.href='https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@400;600;700&family=Caveat:wght@600&display=swap';
       document.head.appendChild(fonts);
+      /* a link opened after signing: the stamps come back from the server so the
+         customer sees the same stamped contract, not a fresh set of green spots */
+      if(j.signed&&j.signed.stamps){ Object.keys(j.signed.stamps).forEach(function(k){ var v=j.signed.stamps[k]; stamps[k]=v&&v.text?v.text:String(v||''); }); }
+      if(j.signed&&j.signed.at&&!signedAt){ signedAt=j.signed.at; var sb=document.querySelector('.sign'); if(sb) sb.outerHTML=signBlock(); hideBar(); }
       var s=document.createElement('script'); s.src='./forms/fence-estimate.js';
       s.onload=function(){
         if(!window.fenceEstimateHtml) return;
         var css=document.createElement('style'); css.textContent=window.fenceEstimateCss||''; document.head.appendChild(css);
         var host=document.createElement('div'); host.className='sheetwrap'; host.id='sheet';
-        host.innerHTML=window.fenceEstimateHtml(sheetArgs());
         var first=w.firstChild; w.insertBefore(host, first);
+        /* the two doors under the contract: the back of the carbon, and their copy */
+        var row=document.createElement('div'); row.className='sheetlinks'; row.id='sheetlinks';
+        row.innerHTML='<a href="'+esc(termsUrl)+'" target="_blank" rel="noopener">View the terms &amp; conditions</a><a href="#" id="dlcopy">Download my copy</a>';
+        host.parentNode.insertBefore(row, host.nextSibling);
+        document.getElementById('dlcopy').onclick=function(e){ e.preventDefault(); window.print(); };
         var photo=w.querySelector('img,iframe'); if(photo) photo.style.display='none';
         var dl=document.getElementById('dl'); if(dl){ dl.href='#'; dl.removeAttribute('download'); dl.textContent='Print'; dl.onclick=function(e){ e.preventDefault(); window.print(); }; }
+        renderSheet();
       };
       document.head.appendChild(s);
       /* the bar branches (Kevin, 15 Sep): a stock job keeps "no down payment"; a custom or
@@ -221,7 +233,60 @@
   function restampSheet(name){
     var host=document.getElementById('sheet'); if(!host||!sheetData||!window.fenceEstimateHtml) return;
     sheetData.signedName=name; sheetData.signedDate=new Date().toLocaleDateString('en-US',{month:'numeric',day:'numeric',year:'numeric'});
-    host.innerHTML=window.fenceEstimateHtml(sheetArgs());
+    renderSheet();
+  }
+
+  /* THE CONTRACT, THE WAY THE CARBON WORKS (Kevin, 15 Sep: "line by line… all the
+     current signatures, dates and initials… as easy as possible… this IS our
+     contract"). The sheet's seven spots — grade, payment, consent, balance,
+     revisions, signature, date — are green tap targets until stamped. A tap stamps
+     the preset (initials / the typed name / today) and the next spot lights up; the
+     bar counts them and finishes when all seven are in. Nothing new is written on
+     the sheet: it is the pad's own text, exactly where the carbon has it. */
+  var stamps={};
+  function spotsList(){ return (window.fenceEstimateSpots||[]); }
+  function spotsLeft(){ return spotsList().filter(function(s){ return !stamps[s.key]; }); }
+  function stampValue(sp, name){
+    var today=new Date().toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
+    return sp.kind==='sig'?name : sp.kind==='date'?today : initialsOf(name);
+  }
+  function renderSheet(){
+    var host=document.getElementById('sheet'); if(!host||!sheetData||!window.fenceEstimateHtml) return;
+    var args=sheetArgs(); args.signable=!signedAt; args.stamps=stamps;
+    host.innerHTML=window.fenceEstimateHtml(args);
+    var left=spotsLeft(), next=left[0];
+    host.querySelectorAll('.spot').forEach(function(b){
+      b.classList.toggle('next', !!next && b.getAttribute('data-spot')===next.key);
+      b.onclick=function(){ stampSpot(b.getAttribute('data-spot')); };
+    });
+    updateBar();
+  }
+  function stampSpot(key){
+    var sp=spotsList().filter(function(s){ return s.key===key; })[0]; if(!sp||signedAt) return;
+    var nm=document.getElementById('nm'); var name=(nm&&nm.value||'').trim();
+    if(name.length<2){
+      var err=document.getElementById('err'); if(err) err.textContent='Type your full name first — it becomes your signature and initials.';
+      if(nm){ nm.scrollIntoView({behavior:'smooth',block:'center'}); setTimeout(function(){ nm.focus(); },400); }
+      return;
+    }
+    stamps[key]=stampValue(sp, name);
+    renderSheet();
+    var nx=document.querySelector('.spot.next'); if(nx) nx.scrollIntoView({behavior:'smooth',block:'center'});
+    else { var s=document.querySelector('.sign'); if(s) s.scrollIntoView({behavior:'smooth',block:'start'}); }
+  }
+  function updateBar(){
+    var b=document.querySelector('#bar b'), btn=document.getElementById('barGo'); if(!b||!btn) return;
+    if(!sheetData||!spotsList().length){ return; }                 // no sheet: the bar stays as it was
+    var total=spotsList().length, done=total-spotsLeft().length;
+    b.textContent='ACCEPT & SIGN · '+done+' of '+total;
+    btn.innerHTML = done<total ? 'NEXT SPOT ↓' : 'SIGN &amp; FINISH ✓';
+  }
+  /* the sign button and the bar agree: every spot first, then the signature */
+  function spotsGate(){
+    if(!sheetData||!spotsList().length||signedAt) return null;
+    var left=spotsLeft(); if(!left.length) return null;
+    var nx=document.querySelector('.spot.next'); if(nx) nx.scrollIntoView({behavior:'smooth',block:'center'});
+    return left.length===1 ? 'One more spot to tap on your contract: '+left[0].label+'.' : left.length+' spots still to tap on your contract — the next one is lit up.';
   }
 
   /* THE BAR (Kevin's wording, verbatim — never a dollar figure, never credit language;
@@ -233,8 +298,15 @@
       +'<button type="button" id="barGo">ACCEPT &amp; SIGN →</button>';
     document.body.appendChild(b);
     document.getElementById('barGo').onclick=function(){
+      var nm=document.getElementById('nm');
+      /* a contract with spots: no name yet → the name box; spots left → the next spot; all in → finish */
+      if(sheetData&&spotsList().length&&!signedAt){
+        if(!(nm&&nm.value.trim().length>=2)){ if(nm){ nm.scrollIntoView({behavior:'smooth',block:'center'}); setTimeout(function(){ nm.focus(); },400); } return; }
+        var nx=document.querySelector('.spot.next'); if(nx){ nx.scrollIntoView({behavior:'smooth',block:'center'}); return; }
+        var go=document.getElementById('go'); if(go){ go.scrollIntoView({behavior:'smooth',block:'center'}); go.click(); } return;
+      }
       var s=document.querySelector('.sign'); if(s) s.scrollIntoView({behavior:'smooth',block:'start'});
-      var nm=document.getElementById('nm'); if(nm) setTimeout(function(){ nm.focus(); },450);
+      if(nm) setTimeout(function(){ nm.focus(); },450);
     };
   }
   function hideBar(){ var b=document.getElementById('bar'); if(b) b.remove(); document.body.classList.remove('haspk'); }
@@ -487,12 +559,14 @@
         ink=true; hint.style.display='none';
       }
       if(!ink){ err.textContent='Please sign in the box above.'; return; }
+      var needSpot=spotsGate();
+      if(needSpot){ err.textContent=needSpot; return; }
       var needTap=packetReady();
       if(needTap){ err.textContent='Please tap to agree to "'+needTap+'" above.'; return; }
       err.textContent=''; go.disabled=true; go.textContent='SENDING…';
 
       fetch(FN+t+'/sign',{method:'POST',headers:{'content-type':'application/json'},
-        body:JSON.stringify({name:name, signature:pad.toDataURL('image/png'), termsShownAt:shownAt, documents:packetPayload()})})
+        body:JSON.stringify({name:name, signature:pad.toDataURL('image/png'), termsShownAt:shownAt, documents:packetPayload(), stamps:stamps})})
         .then(function(r){ return r.json().catch(function(){ return {ok:false}; }); })
         .then(function(j){
           if(j && j.ok){ signedAt=j.signedAt||new Date().toISOString(); render(); if(pk){ hideBar(); restampSheet(name); depositCard(); } }
