@@ -33,14 +33,14 @@
      The link locks the customer in — SOLD — and the rep still goes out for the
      permit, the NOC and the survey, so the money clauses (balance due, late
      fee, changes cost more) and the financing initial are signed IN PERSON at
-     that visit, not here. What stays on the link: the grade choice (its own
-     little box, the two pictures), the texting consent (the phone company
-     wants it standalone), the signature; the date stamps itself. The rep's
-     signature is already on the customer copy. Oasis keeps the scanned
+     that visit, not here. Texting consent is collected before the link ever
+     goes out (Kevin: "we will have consent before they sign. redundant").
+     What stays on the link: the grade choice (its own little box, the two
+     pictures) and the signature; the date stamps itself. The rep's signature
+     is already on the customer copy. Oasis keeps the scanned
      carbon for now; fencing and roofing get this. */
   const SPOTS = [
     { key: 'grade',     kind: 'ini',  x: 49.5, y: 68.5, w: 7,  label: 'Follow grade or flat on top: I picked one' },
-    { key: 'consent',   kind: 'ini',  x: 68.8, y: 81.9, w: 6,  label: "OK to text and email me about my project" },
     { key: 'signature', kind: 'sig',  x: 19.0, y: 81.4, w: 26, label: 'Sign here' },
     { key: 'sigdate',   kind: 'date', x: 49.5, y: 82.2, w: 10, label: 'Date', auto: true },
   ];

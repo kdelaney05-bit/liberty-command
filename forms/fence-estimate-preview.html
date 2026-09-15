@@ -26,14 +26,14 @@
 <script src="fence-estimate.js"></script>
 </head>
 <body>
-<div class="note"><b>This is the contract, the way the carbon works, trimmed to what locks the job in.</b> Type your name once. Three taps: the grade choice, the texting consent, your signature. The date stamps itself. The money clauses and the financing initial are signed in person when your rep comes for the permit and survey. Sample job; nothing is saved.</div>
+<div class="note"><b>This is the contract, the way the carbon works, trimmed to what locks the job in.</b> Type your name once. Two taps: the grade choice and your signature. The date stamps itself. Texting consent was already given when you asked for the estimate. The money clauses and the financing initial are signed in person when your rep comes for the permit and survey. Sample job; nothing is saved.</div>
 <div class="top">
   <div><label for="nm">Your full name, as the owner of record</label><input id="nm" value="Dana Reed" autocomplete="name"/></div>
   <div class="preset"><div class="sig" id="psig">Dana Reed</div><div class="ini" id="pini">DR</div><small>your signature and initials · tap any spot to draw instead</small></div>
 </div>
 <div class="wrap" id="sheet"></div>
 <div class="links"><a href="../terms/fencing.html" target="_blank" rel="noopener">View the terms &amp; conditions (the back of the carbon)</a><button type="button" id="dl">Download my copy</button></div>
-<div class="accept"><div><b id="ab">ACCEPT &amp; SIGN · 0 of 3</b><span id="as">No down payment. No credit card fees, get your points. Signing only orders your material and puts you on the schedule. Tap each green spot on your contract.</span></div><button class="go" id="go" disabled>NEXT SPOT ↓</button></div>
+<div class="accept"><div><b id="ab">ACCEPT &amp; SIGN · 0 of 2</b><span id="as">No down payment. No credit card fees, get your points. Signing only orders your material and puts you on the schedule. Tap each green spot on your contract.</span></div><button class="go" id="go" disabled>NEXT SPOT ↓</button></div>
 <script>
   const style = document.createElement('style'); style.textContent = window.fenceEstimateCss; document.head.appendChild(style);
   const sample = {
@@ -56,7 +56,7 @@
     ab.textContent = `ACCEPT & SIGN · ${SPOTS.length - left.length} of ${SPOTS.length}`;
     const next = left[0];
     document.querySelectorAll('.spot').forEach((b) => b.classList.toggle('next', next && b.dataset.spot === next.key));
-    if (!next) { go.disabled = false; go.textContent = 'SIGN & FINISH ✓'; as.textContent = 'Every initial, the date and your signature are on your contract. Tap to finish.'; }
+    if (!next) { go.disabled = false; go.textContent = 'SIGN & FINISH ✓'; as.textContent = 'Your grade choice, the date and your signature are on your contract. Tap to finish.'; }
     else { go.disabled = false; go.textContent = 'NEXT SPOT ↓'; as.textContent = 'Next: ' + next.label + '. Tap the green spot on your contract.'; }
     document.querySelectorAll('.spot').forEach((b) => b.onclick = () => stamp(b.dataset.spot));
   }
