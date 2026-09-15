@@ -4,10 +4,10 @@
 <title>Orden de trabajo · Work order</title>
 <style>
   html,body{margin:0;background:#f4f2ec;color:#22281f;font:16px/1.5 -apple-system,system-ui,sans-serif}
-  header{background:#1c3055;color:#fff;padding:14px 16px;display:flex;justify-content:space-between;align-items:center;gap:12px;position:sticky;top:0;z-index:2}
+  header{background:#1c3055;color:#fff;padding:12px 16px;display:flex;justify-content:space-between;align-items:center;gap:12px;position:sticky;top:0;z-index:2}
   h1{font-size:15px;margin:0;font-weight:800;letter-spacing:.06em}
   header small{font-size:12px;opacity:.85}
-  .wrap{padding:14px;max-width:720px;margin:0 auto;padding-bottom:120px}
+  .wrap{padding:14px;max-width:720px;margin:0 auto;padding-bottom:230px}
   .card{background:#fff;border-radius:12px;box-shadow:0 2px 14px rgba(20,30,50,.12);padding:14px 16px;margin:0 0 12px}
   .k{font-family:ui-monospace,Menlo,monospace;font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:#7a7f8a;margin-bottom:4px}
   .big{font-size:22px;font-weight:800;color:#1c3055;line-height:1.2}
@@ -19,32 +19,78 @@
   .draw svg,.draw img{width:100%;height:auto;display:block}
   ul{margin:4px 0 0;padding-left:18px;font-size:15px}
   .mat b{display:block;margin-top:6px;font-size:13px;color:#1c3055}
-  .bar{position:fixed;left:12px;right:12px;bottom:12px;z-index:5;max-width:720px;margin:0 auto;background:#1e6b3a;color:#fff;border-radius:14px;padding:12px 14px;box-shadow:0 10px 30px rgba(0,0,0,.3)}
-  .bar label{display:block;font-size:12px;letter-spacing:.08em;text-transform:uppercase;opacity:.9;margin-bottom:6px}
-  .bar input{width:100%;box-sizing:border-box;font:16px/1.3 inherit;padding:10px 12px;border:0;border-radius:9px;margin-bottom:8px}
-  .bar button{width:100%;background:#fff;color:#1e6b3a;font:800 17px/1 inherit;letter-spacing:.06em;border:0;border-radius:10px;padding:14px;cursor:pointer}
-  .bar button[disabled]{opacity:.6}
-  .bar.done{background:#14213d}
-  .bar .msg{font-size:13.5px;margin-top:8px;line-height:1.35}
   .en{color:#5f6672;font-size:13px}
   a{color:#1d5fa8}
+  /* the conversation with the supervisor */
+  .thread{display:flex;flex-direction:column;gap:7px;margin-top:6px}
+  .m{max-width:90%;border-radius:14px;padding:8px 11px;font-size:15px;line-height:1.35;border:1px solid #e3ddd0;background:#fbf4e6;border-left:4px solid #b45309;align-self:flex-start}
+  .m.me{background:#efe6d6;border:1px solid #e3ddd0;border-right:4px solid #6e5a3a;border-left:1px solid #e3ddd0;align-self:flex-end}
+  .m.sys{background:#f4f2ec;color:#5f6672;font-size:13px;align-self:center;border:0;border-radius:999px;padding:4px 12px}
+  .m .w{font-family:ui-monospace,Menlo,monospace;font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:#7a7f8a;margin-bottom:3px}
+  .m .ph{display:flex;gap:4px;flex-wrap:wrap;margin-top:6px}.m .ph img{width:64px;height:64px;object-fit:cover;border-radius:6px;background:#ddd}
+  /* the buttons */
+  .bar{position:fixed;left:0;right:0;bottom:0;z-index:5;background:#fff;border-top:1px solid #e3ddd0;box-shadow:0 -8px 30px rgba(0,0,0,.12);padding:10px 12px 14px}
+  .bar .in{max-width:720px;margin:0 auto}
+  .big4{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:8px}
+  .big4 button{border:1px solid #d8d6cd;border-radius:12px;padding:12px 4px;background:#f6f5f0;color:#22281f;font:800 15px/1 inherit;display:flex;flex-direction:column;align-items:center;gap:5px;cursor:pointer}
+  .big4 button small{font:600 10.5px/1 inherit;color:#7a7f8a;letter-spacing:.04em}
+  .big4 button.here{background:#fbf0d0;border-color:#c9962b}
+  .big4 button.done{background:#e3f0e7;border-color:#2e7d4f;color:#1e6b3a}
+  .big4 button.did{opacity:.55}
+  .big4 button[disabled]{opacity:.5}
+  .say{display:flex;gap:8px}
+  .say input{flex:1;font:16px/1.3 inherit;padding:11px 12px;border:1px solid #d8d6cd;border-radius:10px;min-width:0}
+  .say button{background:#1c3055;color:#fff;border:0;border-radius:10px;padding:0 16px;font:800 14px/1 inherit;letter-spacing:.04em}
+  .verify{background:#1e6b3a;color:#fff;border-radius:12px;padding:10px 12px;margin-bottom:8px}
+  .verify label{display:block;font-size:11.5px;letter-spacing:.08em;text-transform:uppercase;opacity:.9;margin-bottom:5px}
+  .verify input{width:100%;box-sizing:border-box;font:16px/1.3 inherit;padding:9px 12px;border:0;border-radius:9px;margin-bottom:7px}
+  .verify button{width:100%;background:#fff;color:#1e6b3a;font:800 16px/1 inherit;letter-spacing:.06em;border:0;border-radius:10px;padding:12px;cursor:pointer}
+  .verify button[disabled]{opacity:.6}
+  .verify .msg{font-size:12.5px;margin-top:6px;line-height:1.35;opacity:.95}
+  .toast{position:fixed;left:50%;bottom:190px;transform:translateX(-50%);background:#22281f;color:#fff;padding:9px 14px;border-radius:999px;font-size:14px;z-index:9;max-width:90vw}
+  #pick{display:none}
   @media print{.bar,header{display:none}.wrap{padding:0}.card{box-shadow:none;border:1px solid #ddd}}
 </style>
 <header><h1>ORDEN DE TRABAJO <small>· Work order</small></h1><a href="#" onclick="window.print();return false" style="color:#ffd58a;font-size:13px;font-weight:700;text-decoration:none">Imprimir</a></header>
 <div class="wrap" id="wrap"><div class="card">Cargando… / Loading…</div></div>
-<div class="bar" id="bar" hidden>
-  <label>Tu nombre / Your name</label>
-  <input id="nm" autocomplete="name" placeholder="Nombre de quien recibe">
-  <button id="go">RECIBIDO · ENTENDIDO</button>
-  <div class="msg en">Al tocar confirmas que leíste la orden y viste el dibujo. / You confirm you read the order and saw the drawing.</div>
-</div>
+<input id="pick" type="file" accept="image/*" capture="environment" multiple>
+<div class="bar" id="bar" hidden><div class="in">
+  <div class="verify" id="verify">
+    <label>Tu nombre / Your name</label>
+    <input id="nm" autocomplete="name" placeholder="Nombre de quien recibe">
+    <button id="go">RECIBIDO · ENTENDIDO</button>
+    <div class="msg en" style="color:#fff">Al tocar confirmas que leíste la orden y viste el dibujo. / You confirm you read the order and saw the drawing.</div>
+  </div>
+  <div class="big4">
+    <button class="here" id="bHere">AQUÍ<small>HERE</small></button>
+    <button id="bPhotos">FOTOS<small>PHOTOS</small></button>
+    <button class="done" id="bDone">LISTO<small>DONE</small></button>
+    <button id="bCall">LLAMAR<small>CALL</small></button>
+  </div>
+  <div class="say"><input id="say" placeholder="Mensaje al supervisor… / Message the supervisor…" maxlength="1000"><button id="bSend">ENVIAR</button></div>
+</div></div>
 <script>
   var FN='https://lzegjjbkfuecrhdvlvay.supabase.co/functions/v1/work-order/';
   var t=new URLSearchParams(location.search).get('t')||'';
   var esc=function(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});};
   var d=function(s){ if(!s) return ''; var p=String(s).slice(0,10).split('-'); return p.length===3? (Number(p[1])+'/'+Number(p[2])+'/'+p[0]) : s; };
+  var when=function(s){ try{ var x=new Date(s); return x.toLocaleString('es-US',{month:'numeric',day:'numeric',hour:'numeric',minute:'2-digit'}); }catch(e){ return ''; } };
+  var NAME_KEY='crew-name', myName=function(){ try{ return localStorage.getItem(NAME_KEY)||''; }catch(e){ return ''; } };
+  var state={ j:null, sup:{} };
+  function toast(s){ var el=document.createElement('div'); el.className='toast'; el.textContent=s; document.body.appendChild(el); setTimeout(function(){ el.remove(); },2600); }
+  function threadHtml(j){
+    var ms=(j.messages||[]).map(function(m){
+      if(m.system) return '<div class="m sys">'+esc(m.body)+' · '+esc(when(m.at))+'</div>';
+      return '<div class="m '+(m.crew?'me':'')+'"><div class="w">'+esc(m.crew?'Cuadrilla · crew':(m.who||'Supervisor'))+' · '+esc(when(m.at))+'</div>'+esc(m.body)+'</div>';
+    }).join('');
+    var ph=(j.events||[]).filter(function(e){ return (e.photos||[]).length; }).map(function(e){
+      return '<div class="m me"><div class="w">Fotos · '+esc(when(e.at))+'</div><div class="ph">'+(e.photos||[]).map(function(p){ return '<img loading="lazy" src="'+FN+t+'/file?p='+encodeURIComponent(p.path)+'" alt="foto">'; }).join('')+'</div></div>';
+    }).join('');
+    return '<div class="card"><div class="k">Supervisor · mensajes / messages</div><div class="thread" id="thread">'+(ms||'<div class="en">Todavía nada. Escríbele abajo. / Nothing yet. Message below.</div>')+ph+'</div></div>';
+  }
   function render(j){
-    var b=j.body||{}, c=b.customer||{}, jb=b.job||{}, L=b.locate, P=b.permit||{}, S=b.schedule||{}, sup=b.supervisor||{};
+    state.j=j;
+    var b=j.body||{}, c=b.customer||{}, jb=b.job||{}, L=b.locate, P=b.permit||{}, S=b.schedule||{}, sup=b.supervisor||{}; state.sup=sup;
     var gates=(jb.gates||[]).map(function(g){return (g.width_ft||'?')+"' "+(g.kind||'gate');}).join(', ');
     var mats=(b.material_order||[]).map(function(m){return m.group?'<b>'+esc(m.group)+'</b>':'<li>'+esc(m.qty||'')+' &nbsp; '+esc(m.item||'')+'</li>';}).join('');
     var loc = !L ? '<span class="warn">PENDIENTE — NO EXCAVAR</span><div class="en">Pending — do not dig</div>'
@@ -53,10 +99,10 @@
     var h='';
     h+='<div class="card"><div class="k">Cliente / Customer</div><div class="big">'+esc(c.name)+'</div>'
       +'<div>'+esc([c.street,c.city,c.zip].filter(Boolean).join(', '))+' · <a href="https://maps.google.com/?q='+encodeURIComponent([c.street,c.city,'FL',c.zip].filter(Boolean).join(' '))+'" target="_blank" rel="noopener">mapa / map</a></div>'
-      +(c.phone?'<div><a href="tel:'+esc(c.phone)+'">'+esc(c.phone)+'</a></div>':'')
-      +'<div class="row"><span>Fecha / Date</span><b>'+esc(S.date?d(S.date):'por confirmar')+'</b></div>'
-      +(S.crew?'<div class="row"><span>Cuadrilla / Crew</span><b>'+esc(j.crew||S.crew)+'</b></div>':'')
+      +'<div class="row"><span>Fecha / Date</span><b>'+esc(S.date?d(S.date):(j.date?d(j.date):'por confirmar'))+'</b></div>'
+      +((j.crew||S.crew)?'<div class="row"><span>Cuadrilla / Crew</span><b>'+esc(j.crew||S.crew)+'</b></div>':'')
       +'<div class="row"><span>Supervisor</span><b>'+esc(sup.name||'')+(sup.phone?' · <a href="tel:'+esc(sup.phone)+'">'+esc(sup.phone)+'</a>':'')+'</b></div></div>';
+    h+=threadHtml(j);
     h+='<div class="card"><div class="k">Trabajo / The job</div><div class="big" style="font-size:18px">'+esc(jb.description||jb.title||'')+'</div>'
       +(jb.linear_ft?'<div class="row"><span>Pies / Feet</span><b>'+esc(jb.linear_ft)+' ft · '+esc(jb.height_ft||'')+"' alto</b></div>":'')
       +(gates?'<div class="row"><span>Portones / Gates</span><b>'+esc(gates)+'</b></div>':'')
@@ -71,21 +117,55 @@
       +'<div class="row"><span>HOA</span><b>'+esc(b.hoa||'n/a')+'</b></div><div class="row"><span>Survey</span><b>'+esc(b.survey||'n/a')+'</b></div></div>';
     if((b.files||{}).drawing) h+='<div class="card"><div class="k">Dibujo / Drawing</div><div class="draw" id="draw">…</div></div>';
     if(mats) h+='<div class="card mat"><div class="k">Material</div><ul>'+mats+'</ul></div>';
-    if(j.verified_at) h+='<div class="card" style="border:2px solid #1e6b3a"><div class="k">Confirmado / Verified</div><div class="big" style="font-size:18px;color:#1e6b3a">'+esc(j.verified_name||'')+' · '+esc(new Date(j.verified_at).toLocaleString())+'</div></div>';
     document.getElementById('wrap').innerHTML=h;
-    if((b.files||{}).drawing) fetch(FN+t+'/file?p='+encodeURIComponent(b.files.drawing)).then(function(r){return r.text();}).then(function(svg){ var el=document.getElementById('draw'); if(el) el.innerHTML=/<svg[\s>]/i.test(svg)?svg:'<div class="en">no se pudo cargar el dibujo</div>'; }).catch(function(){});
+    if((b.files||{}).drawing) fetch(FN+t+'/file?p='+encodeURIComponent(b.files.drawing)).then(function(r){return r.text();}).then(function(svg){ var el=document.getElementById('draw'); if(el) el.innerHTML=/<svg[\s>]/i.test(svg)?svg:'<div class="en">no se pudo cargar el dibujo / drawing did not load</div>'; }).catch(function(){});
     var bar=document.getElementById('bar'); bar.hidden=false;
-    if(j.verified_at){ bar.className='bar done'; bar.innerHTML='<div class="msg"><b>CONFIRMADO</b> · '+esc(j.verified_name||'')+'. Gracias. / Confirmed, thank you.</div>'; }
+    var v=document.getElementById('verify');
+    if(j.verified_at){ v.innerHTML='<div class="msg"><b>CONFIRMADO</b> · '+esc(j.verified_name||'')+'. / Confirmed.</div>'; v.style.padding='8px 12px'; }
+    var nm=document.getElementById('nm'); if(nm&&!nm.value) nm.value=myName();
+    var did=function(k){ return (j.events||[]).some(function(e){ return e.kind===k; }); };
+    document.getElementById('bHere').classList.toggle('did', did('here'));
+    document.getElementById('bDone').classList.toggle('did', did('done'));
+    document.getElementById('bCall').disabled=!sup.phone;
+    var th=document.getElementById('thread'); if(th) th.scrollTop=1e6;
   }
-  fetch(FN+t).then(function(r){return r.json();}).then(function(j){ if(!j||!j.ok){ document.getElementById('wrap').innerHTML='<div class="card">Esta orden no está disponible. / This work order is not available.</div>'; return; } render(j); })
-    .catch(function(){ document.getElementById('wrap').innerHTML='<div class="card">No se pudo cargar. / Could not load.</div>'; });
+  function load(){ return fetch(FN+t).then(function(r){return r.json();}).then(function(j){ if(!j||!j.ok){ document.getElementById('wrap').innerHTML='<div class="card">Esta orden no está disponible. / This work order is not available.</div>'; return; } render(j); })
+    .catch(function(){ document.getElementById('wrap').innerHTML='<div class="card">No se pudo cargar. / Could not load.</div>'; }); }
+  function refreshThread(){ fetch(FN+t).then(function(r){return r.json();}).then(function(j){ if(j&&j.ok){ state.j=j; var old=document.getElementById('thread'); if(old){ var card=old.parentNode; card.outerHTML=threadHtml(j); } var did=function(k){ return (j.events||[]).some(function(e){ return e.kind===k; }); }; document.getElementById('bHere').classList.toggle('did', did('here')); document.getElementById('bDone').classList.toggle('did', did('done')); } }).catch(function(){}); }
+  function askName(){ var n=myName(); if(n) return n; n=(document.getElementById('nm').value||'').trim(); if(!n) n=(prompt('¿Tu nombre? / Your name?')||'').trim(); if(n){ try{ localStorage.setItem(NAME_KEY,n); }catch(e){} } return n; }
+  function event(kind, body, photos){
+    var name=askName(); if(!name) return Promise.resolve(null);
+    return fetch(FN+t+'/event',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({kind:kind, body:body||null, photos:photos||[], name:name})}).then(function(r){return r.json();});
+  }
+  load();
+  setInterval(refreshThread, 20000);
   document.getElementById('go').onclick=function(){
     var nm=document.getElementById('nm').value.trim(); if(nm.length<2){ document.getElementById('nm').focus(); return; }
+    try{ localStorage.setItem(NAME_KEY,nm); }catch(e){}
     var btn=this; btn.disabled=true; btn.textContent='UN MOMENTO…';
     fetch(FN+t+'/verify',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({name:nm})}).then(function(r){return r.json();}).then(function(j){
-      if(j&&j.ok){ var bar=document.getElementById('bar'); bar.className='bar done'; bar.innerHTML='<div class="msg"><b>CONFIRMADO</b> · '+esc(j.verified_name||nm)+'. Gracias. El supervisor ya lo sabe. / Confirmed — the supervisor knows.</div>'; }
+      if(j&&j.ok){ var v=document.getElementById('verify'); v.innerHTML='<div class="msg"><b>CONFIRMADO</b> · '+esc(j.verified_name||nm)+'. Gracias. El supervisor ya lo sabe. / Confirmed — the supervisor knows.</div>'; v.style.padding='8px 12px'; }
       else { btn.disabled=false; btn.textContent='RECIBIDO · ENTENDIDO'; alert('No se pudo confirmar. Intenta de nuevo.'); }
     }).catch(function(){ btn.disabled=false; btn.textContent='RECIBIDO · ENTENDIDO'; });
   };
+  document.getElementById('bHere').onclick=function(){ var b=this; b.disabled=true; event('here').then(function(j){ b.disabled=false; if(j&&j.ok){ toast('Listo — el supervisor sabe que llegaste. / Noted — the supervisor knows you are here.'); refreshThread(); } else if(j) toast('No se pudo. Intenta de nuevo.'); }).catch(function(){ b.disabled=false; toast('Sin señal. Intenta de nuevo.'); }); };
+  document.getElementById('bDone').onclick=function(){ var b=this; if(!confirm('¿Trabajo terminado? / Job done?')) return; b.disabled=true; event('done').then(function(j){ b.disabled=false; if(j&&j.ok){ toast('TERMINADO. Gracias. Manda fotos si falta. / Done, thank you. Send photos if you have not.'); refreshThread(); } else if(j) toast('No se pudo. Intenta de nuevo.'); }).catch(function(){ b.disabled=false; toast('Sin señal. Intenta de nuevo.'); }); };
+  document.getElementById('bCall').onclick=function(){ if(state.sup.phone) location.href='tel:'+state.sup.phone; };
+  document.getElementById('bPhotos').onclick=function(){ document.getElementById('pick').click(); };
+  document.getElementById('pick').onchange=function(){
+    var files=Array.prototype.slice.call(this.files||[]); if(!files.length) return;
+    var b=document.getElementById('bPhotos'); b.disabled=true; toast('Subiendo '+files.length+' foto'+(files.length===1?'':'s')+'… / Uploading…');
+    var fd=new FormData(); files.slice(0,12).forEach(function(f,i){ fd.append('photo'+i, f, f.name||('foto'+i+'.jpg')); });
+    fetch(FN+t+'/photo',{method:'POST',body:fd}).then(function(r){return r.json();}).then(function(j){
+      if(!j||!j.ok) throw new Error(j&&j.error||'upload');
+      return event('photos', null, j.photos);
+    }).then(function(j){ b.disabled=false; document.getElementById('pick').value=''; if(j&&j.ok){ toast('Fotos enviadas. / Photos sent.'); refreshThread(); } else toast('No se pudo. Intenta de nuevo.'); })
+    .catch(function(){ b.disabled=false; toast('No se pudieron subir las fotos. / Photos did not upload.'); });
+  };
+  document.getElementById('bSend').onclick=function(){
+    var inp=document.getElementById('say'); var v=inp.value.trim(); if(!v) return; var b=this; b.disabled=true;
+    event('message', v).then(function(j){ b.disabled=false; if(j&&j.ok){ inp.value=''; toast('Enviado. / Sent.'); refreshThread(); } else if(j) toast('No se pudo. Intenta de nuevo.'); }).catch(function(){ b.disabled=false; toast('Sin señal. Intenta de nuevo.'); });
+  };
+  document.getElementById('say').addEventListener('keydown', function(e){ if(e.key==='Enter'){ e.preventDefault(); document.getElementById('bSend').click(); } });
 </script>
 </html>
