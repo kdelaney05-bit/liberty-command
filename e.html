@@ -244,7 +244,8 @@
      bar counts them and finishes when all seven are in. Nothing new is written on
      the sheet: it is the pad's own text, exactly where the carbon has it. */
   var stamps={};
-  function spotsList(){ return (window.fenceEstimateSpots||[]); }
+  function spotsList(){ return (window.fenceEstimateSpots||[]).filter(function(s){ return !s.auto; }); }
+  function autoSpots(){ return (window.fenceEstimateSpots||[]).filter(function(s){ return s.auto; }); }
   function spotsLeft(){ return spotsList().filter(function(s){ return !stamps[s.key]; }); }
   function stampValue(sp, name){
     var today=new Date().toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
