@@ -114,7 +114,15 @@
   .pinit{flex:none;align-self:center;font:600 20px/1 "Caveat","Segoe Script","Bradley Hand",cursive;color:#1c3055;min-width:34px;text-align:center;opacity:.35}
   .pdoc.on .pinit{opacity:1;color:#2f8f5b}
   .padhint.preset{color:#8a8f98;align-items:flex-start;padding-top:14px;font-size:12.5px}
-  @media print{ .bar,.sheetwrap~img,.sheetwrap~iframe{display:none!important} body.haspk{padding:0;background:#fff} .sheetwrap{box-shadow:none;border-radius:0} }
+  @media print{ .bar,.sheetwrap~img,.sheetwrap~iframe,.deposit{display:none!important} body.haspk{padding:0;background:#fff} .sheetwrap{box-shadow:none;border-radius:0} }
+  /* THE DEPOSIT STEP (336): after the signature on a custom/aluminum job */
+  .deposit{background:#fff;border:2px solid #b8860b;border-radius:12px;padding:18px;margin:0 0 30px;box-shadow:0 2px 14px rgba(20,30,50,.14)}
+  .deposit h2{margin:0 0 4px;font-size:16px;letter-spacing:.05em;color:#1c3055}
+  .deposit .amt{font-size:30px;font-weight:800;color:#1c3055;margin:6px 0 2px}
+  .deposit .sub{font-size:13.5px;color:#5f6672;margin:0 0 14px}
+  .deposit .pay{display:block;width:100%;background:#1c3055;color:#fff;border:0;border-radius:12px;padding:16px;font:700 16px/1 inherit;letter-spacing:.06em;cursor:pointer}
+  .deposit .pay[disabled]{background:#c3c8bf}
+  .deposit .msg{margin:12px 0 0;font-size:14px;color:#22281f;line-height:1.45}
 </style>
 <header><h1>YOUR ESTIMATE</h1><a class="dl" id="dl" href="#" download>Download</a></header>
 <div class="wrap" id="wrap"></div>
@@ -166,7 +174,43 @@
         var dl=document.getElementById('dl'); if(dl){ dl.href='#'; dl.removeAttribute('download'); dl.textContent='Print'; dl.onclick=function(e){ e.preventDefault(); window.print(); }; }
       };
       document.head.appendChild(s);
+      /* the bar branches (Kevin, 15 Sep): a stock job keeps "no down payment"; a custom or
+         aluminum job never says it — its deposit orders the material */
+      if(j.takeoff.deposit_required){
+        var bb=document.querySelector('#bar b'); if(bb) bb.textContent='ACCEPT & SIGN';
+        var bt=document.querySelector('#bar span'); if(bt) bt.textContent='No credit card fees, get your points. Your deposit orders your material.';
+      }
+      /* already signed but the deposit is still open (they came back to the link) */
+      if(signedAt && j.takeoff.deposit_required && !j.takeoff.deposit_paid_at) depositCard();
     }).catch(function(){});
+  }
+
+  /* THE DEPOSIT STEP (336 + Kevin, 15 Sep: "no deposit, no order… non-negotiable").
+     Custom / aluminum jobs: after the signature, the 50% deposit. There is no card
+     processor on this page tonight, so PAY BY CARD either opens the office's QuickBooks
+     pay link when one exists, or tells them the office will take the card by phone
+     within the hour — and tags the office on the file. Nothing is charged here. */
+  function depositCard(){
+    if(document.getElementById('deposit')) return;
+    var tk=(sheetData&&sheetData.takeoff)||{}; if(!tk.deposit_required||tk.deposit_paid_at) return;
+    var amt=tk.deposit_amount!=null?('$'+Math.round(Number(tk.deposit_amount)).toLocaleString('en-US')):'50%';
+    var d=document.createElement('div'); d.className='deposit'; d.id='deposit';
+    d.innerHTML='<h2>YOUR DEPOSIT ORDERS YOUR MATERIAL</h2>'
+      +'<div class="amt">'+esc(amt)+'</div><p class="sub">50% of your total — custom and aluminum orders are made for you, so the material is ordered the moment your deposit is in. No credit card fees.</p>'
+      +'<button type="button" class="pay" id="payBtn">PAY BY CARD</button><p class="msg" id="payMsg"></p>';
+    var anchor=document.querySelector('.done')||document.querySelector('.sign');
+    if(anchor&&anchor.parentNode) anchor.parentNode.insertBefore(d, anchor.nextSibling); else w.appendChild(d);
+    var btn=document.getElementById('payBtn'), msg=document.getElementById('payMsg');
+    btn.onclick=function(){
+      btn.disabled=true; btn.textContent='ONE MOMENT…';
+      fetch(FN+t+'/deposit',{method:'POST',headers:{'content-type':'application/json'},body:'{}'})
+        .then(function(r){ return r.json(); }).then(function(j){
+          if(j&&j.pay_link){ btn.disabled=false; btn.textContent='PAY BY CARD'; window.open(j.pay_link,'_blank','noopener'); msg.textContent='Your secure payment page opened in a new tab. Once it goes through, your material is ordered.'; return; }
+          if(j&&j.paid){ btn.textContent='DEPOSIT RECEIVED ✓'; msg.textContent='Thank you — your material is ordered.'; return; }
+          btn.textContent='WE’LL CALL FOR YOUR CARD';
+          msg.textContent='We’ll take your card by phone within the hour — your material order is on hold until then. Nothing was charged here.';
+        }).catch(function(){ btn.disabled=false; btn.textContent='PAY BY CARD'; msg.textContent='That didn’t go through. Please try again or call your rep.'; });
+    };
   }
   function sheetArgs(){
     var j=sheetData||{}, c=j.customer||{};
@@ -451,7 +495,7 @@
         body:JSON.stringify({name:name, signature:pad.toDataURL('image/png'), termsShownAt:shownAt, documents:packetPayload()})})
         .then(function(r){ return r.json().catch(function(){ return {ok:false}; }); })
         .then(function(j){
-          if(j && j.ok){ signedAt=j.signedAt||new Date().toISOString(); render(); if(pk){ hideBar(); restampSheet(name); } }
+          if(j && j.ok){ signedAt=j.signedAt||new Date().toISOString(); render(); if(pk){ hideBar(); restampSheet(name); depositCard(); } }
           else { throw new Error((j&&j.error)||'failed'); }
         })
         .catch(function(){
