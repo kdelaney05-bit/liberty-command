@@ -23,7 +23,29 @@
     wood:    { dx: 73.0, lx: 76.1, tx: 79.3, rows: [32.75, 33.85, 34.95], cy: 35.9, sy: 37.0, gy: 38.1 },
     chain:   { dx: 73.0, lx: 76.1, tx: 79.3, rows: [42.25, 43.4, 44.5], cy: 45.4, sy: 46.5, gy: 47.6 },
   };
+  /* THE CARBON'S SIGNATURES, DATES AND INITIALS — every one the pad takes, as a
+     tap target on the sheet (Kevin, 15 Sep: "the same thing as the carbon we
+     sign now… line by line… all the current signatures, dates and initials
+     signed and initialed by the customer, as easy as possible"). Order = the
+     way the eye reads the page. 'ini' stamps the preset initials, 'sig' the
+     preset signature, 'date' today. */
+  const SPOTS = [
+    { key: 'grade',    kind: 'ini',  x: 49.5, y: 68.5, w: 7,  label: 'Follow grade or flat on top: I picked one' },
+    { key: 'payment',  kind: 'ini',  x: 78.6, y: 69.9, w: 5,  label: 'My payment choice' },
+    { key: 'consent',  kind: 'ini',  x: 68.8, y: 81.9, w: 6,  label: "OK to text and email me about my project" },
+    { key: 'balance',  kind: 'ini',  x: 18.2, y: 89.3, w: 6,  label: 'Balance due at completion · $25 a day late fee' },
+    { key: 'revisions',kind: 'ini',  x: 92.6, y: 92.7, w: 5,  label: 'Changes to the design may cost more' },
+    { key: 'signature',kind: 'sig',  x: 19.0, y: 81.4, w: 26, label: 'Sign here' },
+    { key: 'sigdate',  kind: 'date', x: 49.5, y: 82.2, w: 10, label: 'Date' },
+  ];
   function fenceEstimateHtml(p) {
+    const stamps = p.stamps || {};                    // { grade: 'DR', signature: 'Dana Reed', sigdate: 'Sep 15, 2026' }
+    const spotHtml = (sp) => {
+      const v = stamps[sp.key];
+      if (v) return `<div class="f ${sp.kind === 'sig' ? 'sig' : sp.kind === 'date' ? 'sm' : 'ini'} stamped" data-spot="${sp.key}" style="left:${sp.x}%;top:${sp.y}%">${esc(v)}</div>`;
+      if (!p.signable) return '';
+      return `<button type="button" class="spot ${sp.kind}" data-spot="${sp.key}" data-kind="${sp.kind}" style="left:${sp.x}%;top:${sp.y - 0.9}%;width:${sp.w}%" title="${esc(sp.label)}">${sp.kind === 'sig' ? 'TAP TO SIGN' : sp.kind === 'date' ? 'DATE' : 'INITIAL'}</button>`;
+    };
     const t = p.takeoff || {}, cust = p.customer || {};
     const st = (t.styles || [])[0] || {};
     const prod = String(st.prod || '');
@@ -81,7 +103,8 @@
     ${discAmt ? f(85.6, 75.4, `${discLabel || 'Discount'} −${money(discAmt)}`, 'sm') : ''}
     ${f(87, 78.4, after.toLocaleString('en-US') + '.00', 'big')}
     ${f(24.5, 83.3, p.rep, 'sm')}
-    ${p.signedName ? `<div class="f sig" style="left:19%;top:81.4%">${esc(p.signedName)}</div>${f(49.5, 82.2, p.signedDate || date, 'sm')}` : ''}
+    ${p.signedName && !stamps.signature ? `<div class="f sig" style="left:19%;top:81.4%">${esc(p.signedName)}</div>${f(49.5, 82.2, p.signedDate || date, 'sm')}` : ''}
+    ${SPOTS.map(spotHtml).join('')}
   </div>`;
   }
   /* The stylesheet the sheet needs; scoped so it drops into any page. */
@@ -103,8 +126,17 @@
 .sheet .qual .t{font-size:1.5cqw;font-weight:700;line-height:1.1}.sheet .qual .t small{display:block;font-size:0.95cqw;font-weight:400;color:#555;margin-top:0.2cqw}
 .sheet .qual .amt{font-size:2.3cqw;font-weight:700;color:#0f2a6b;white-space:nowrap}
 .sheet .draw{position:absolute}.sheet .draw svg{width:100%;height:100%;display:block}
+.sheet .f.ini{font-family:"Caveat","Segoe Script","Bradley Hand",cursive;font-size:1.9cqw;color:#1b2a5c;font-weight:600}
+.sheet .f.stamped{animation:stampIn .25s ease-out}
+@keyframes stampIn{from{transform:scale(1.6);opacity:0}to{transform:scale(1);opacity:1}}
+.sheet .spot{position:absolute;height:2.4cqw;border:0.18cqw solid #1f6f4a;background:rgba(31,111,74,.12);color:#1f6f4a;border-radius:0.5cqw;font:700 0.95cqw/1 "Source Sans 3",system-ui,sans-serif;letter-spacing:.1em;cursor:pointer;padding:0;animation:spotPulse 1.6s ease-in-out infinite}
+.sheet .spot.sig{height:3.2cqw;font-size:1.1cqw;background:rgba(31,111,74,.16)}
+.sheet .spot.next{background:#1f6f4a;color:#fff;animation:none}
+@keyframes spotPulse{0%,100%{box-shadow:0 0 0 0 rgba(31,111,74,.35)}50%{box-shadow:0 0 0 0.6cqw rgba(31,111,74,0)}}
+@media print{.sheet .spot{display:none}}
 @media print{.sheet{max-width:none;width:8.5in;height:11in;box-shadow:none}@page{size:letter;margin:0}}`;
   root.fenceEstimateHtml = fenceEstimateHtml;
+  root.fenceEstimateSpots = SPOTS;
   root.fenceEstimateCss = CSS;
   root.fencePayments = payments;
 })(typeof window !== 'undefined' ? window : globalThis);
