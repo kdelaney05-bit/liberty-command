@@ -102,6 +102,19 @@
     margin:18px 0 30px}
   .done h2{margin:0 0 6px;font-size:17px;color:#1e6b3a;letter-spacing:.04em}
   .done p{margin:0;font-size:14px;color:#3d4450}
+  /* ── THE TYPED SHEET + THE ZERO-PAIN BAR (Kevin, 15 Sep; owner-sent links only, pk=1) ── */
+  .sheetwrap{margin:0 0 14px;box-shadow:0 2px 18px rgba(20,30,50,.25);border-radius:6px;overflow:hidden;background:#fff}
+  body.haspk{padding-bottom:118px}
+  .bar{position:fixed;left:12px;right:12px;bottom:12px;z-index:5;max-width:760px;margin:0 auto;background:#1f6f4a;color:#fff;
+    border-radius:14px;padding:12px 16px;display:grid;grid-template-columns:1fr auto;gap:10px 14px;align-items:center;box-shadow:0 10px 30px rgba(0,0,0,.28)}
+  .bar b{display:block;font-size:18px;letter-spacing:.06em}
+  .bar span{font-size:13px;opacity:.95;line-height:1.3;display:block}
+  .bar button{background:#fff;color:#1f6f4a;font:800 16px/1 inherit;letter-spacing:.08em;padding:13px 18px;border-radius:10px;white-space:nowrap;border:0;cursor:pointer}
+  @media (max-width:520px){ .bar{grid-template-columns:1fr} .bar button{width:100%} }
+  .pinit{flex:none;align-self:center;font:600 20px/1 "Caveat","Segoe Script","Bradley Hand",cursive;color:#1c3055;min-width:34px;text-align:center;opacity:.35}
+  .pdoc.on .pinit{opacity:1;color:#2f8f5b}
+  .padhint.preset{color:#8a8f98}
+  @media print{ .bar,.sheetwrap~img,.sheetwrap~iframe{display:none!important} body.haspk{padding:0;background:#fff} .sheetwrap{box-shadow:none;border-radius:0} }
 </style>
 <header><h1>YOUR ESTIMATE</h1><a class="dl" id="dl" href="#" download>Download</a></header>
 <div class="wrap" id="wrap"></div>
@@ -112,6 +125,8 @@
   var termsUrl=q.get('tu')||'./terms/liberty.html';   // server picks the brand document
   var signedAt=q.get('sg');                            // present = already signed
   var legalLine=q.get('lg')||'';                       // the entity, dba and license (321)
+  var pk=q.get('pk')==='1';                            // the packet gate is open for this link (owner-sent, switch ON)
+  var sheetData=null;                                  // the typed sheet's inputs, kept so the signed name can be stamped on it
   var src=FN+t+'/pdf';
   document.getElementById('dl').href=src;
   var w=document.getElementById('wrap');
@@ -124,7 +139,61 @@
       +(f?'<a class="folder" href="https://lzegjjbkfuecrhdvlvay.supabase.co/functions/v1/folder/'+f+'?e='+t+'">BROWSE OUR DESIGN FOLDER →</a>':'');
     if(!signedAt) wireSigning();
     if(m==='d') loadDoc();
+    if(pk){ document.body.classList.add('haspk'); if(!signedAt) acceptBar(); loadSheet(); }
   }
+
+  /* THE TYPED SHEET (Kevin, 15 Sep: "I want to see everything printed up nice and fancy").
+     For a fence job that went through the calculator, the document is the real Liberty
+     Fencing pad with the job typed into it — fenceEstimateHtml() from forms/, the same
+     builder the phone prints — instead of the photo. The photo stays as the fallback
+     when the server has no takeoff for this customer. Download prints the sheet. */
+  function loadSheet(){
+    if(!t) return;
+    fetch(FN+t+'/sheet').then(function(r){ return r.json(); }).then(function(j){
+      if(!j||!j.found||!j.takeoff) return;
+      sheetData=j;
+      var fonts=document.createElement('link'); fonts.rel='stylesheet';
+      fonts.href='https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@400;600;700&family=Caveat:wght@600&display=swap';
+      document.head.appendChild(fonts);
+      var s=document.createElement('script'); s.src='./forms/fence-estimate.js';
+      s.onload=function(){
+        if(!window.fenceEstimateHtml) return;
+        var css=document.createElement('style'); css.textContent=window.fenceEstimateCss||''; document.head.appendChild(css);
+        var host=document.createElement('div'); host.className='sheetwrap'; host.id='sheet';
+        host.innerHTML=window.fenceEstimateHtml(sheetArgs());
+        var first=w.firstChild; w.insertBefore(host, first);
+        var photo=w.querySelector('img,iframe'); if(photo) photo.style.display='none';
+        var dl=document.getElementById('dl'); if(dl){ dl.href='#'; dl.removeAttribute('download'); dl.textContent='Print'; dl.onclick=function(e){ e.preventDefault(); window.print(); }; }
+      };
+      document.head.appendChild(s);
+    }).catch(function(){});
+  }
+  function sheetArgs(){
+    var j=sheetData||{}, c=j.customer||{};
+    return { takeoff:j.takeoff, customer:{ name:c.name, street:c.street, city:c.city, state:c.state||'FL', zip:c.zip, phone:c.phone, email:c.email },
+             rep:(j.rep&&j.rep.name)||'', repPhone:(j.rep&&j.rep.phone)||'', date:j.date, svg:j.svg||'',
+             signedName:j.signedName||'', signedDate:j.signedDate||'' };
+  }
+  function restampSheet(name){
+    var host=document.getElementById('sheet'); if(!host||!sheetData||!window.fenceEstimateHtml) return;
+    sheetData.signedName=name; sheetData.signedDate=new Date().toLocaleDateString('en-US',{month:'numeric',day:'numeric',year:'numeric'});
+    host.innerHTML=window.fenceEstimateHtml(sheetArgs());
+  }
+
+  /* THE BAR (Kevin's wording, verbatim — never a dollar figure, never credit language;
+     financing lives inside the sheet's payment panel). Sticky the whole scroll; the
+     button lands on the signature step. Gone once signed. */
+  function acceptBar(){
+    var b=document.createElement('div'); b.className='bar'; b.id='bar';
+    b.innerHTML='<div><b>ACCEPT NOW · zero pain</b><span>No down payment. No credit card fees, get your points. Signing only orders your material and puts you on the schedule.</span></div>'
+      +'<button type="button" id="barGo">ACCEPT &amp; SIGN →</button>';
+    document.body.appendChild(b);
+    document.getElementById('barGo').onclick=function(){
+      var s=document.querySelector('.sign'); if(s) s.scrollIntoView({behavior:'smooth',block:'start'});
+      var nm=document.getElementById('nm'); if(nm) setTimeout(function(){ nm.focus(); },450);
+    };
+  }
+  function hideBar(){ var b=document.getElementById('bar'); if(b) b.remove(); document.body.classList.remove('haspk'); }
 
   /* THE ITEMIZED ESTIMATE (322) — Mike's Billdu shape: number, dates, from/for,
      the items with their scope of work, the total. The Download button prints. */
@@ -196,8 +265,8 @@
         +'You agreed to our <a href="'+esc(termsUrl)+'" target="_blank" rel="noopener">Terms &amp; Conditions</a>.</p></div>';
     }
     return '<div class="sign">'
-      +'<h2>APPROVE &amp; SIGN</h2>'
-      +'<p class="lead">Happy with this estimate? Approve it right here — no printing, no scanning.</p>'
+      +'<h2>'+(pk?'ACCEPT &amp; SIGN':'APPROVE &amp; SIGN')+'</h2>'
+      +'<p class="lead">'+(pk?'Type your name and your signature appears — tap the box to sign by hand instead. Nothing is charged today.':'Happy with this estimate? Approve it right here — no printing, no scanning.')+'</p>'
       +'<label for="nm">Your full name</label>'
       +'<input type="text" id="nm" autocomplete="name" autocapitalize="words" '
       +'spellcheck="false" placeholder="Type your full name">'
@@ -215,7 +284,7 @@
       +'<div class="padhint" id="hint">Sign here with your finger</div></div>'
       +'<div class="padrow"><span class="stamp" id="stamp"></span>'
       +'<button type="button" class="clear" id="clr">Clear</button></div>'
-      +'<button type="button" class="go" id="go">APPROVE &amp; SIGN</button>'
+      +'<button type="button" class="go" id="go">'+(pk?'ACCEPT &amp; SIGN →':'APPROVE &amp; SIGN')+'</button>'
       +'<p class="err" id="err"></p>'
       +'</div>';
   }
@@ -240,7 +309,9 @@
           +'<button type="button" class="ptap" aria-pressed="false">✓</button>'
           +'<div class="pbody"><b>'+esc(d.title)+'</b>'
           +(d.file_url?'<a href="'+esc(d.file_url)+'" target="_blank" rel="noopener">Read it</a>':'')
-          +'<span class="pwhy">'+esc(d.why||'')+'</span></div></div>';
+          +'<span class="pwhy">'+esc(d.why||'')+'</span></div>'
+          /* preset initials (pk): the typed name's initials in script, lit when tapped */
+          +(pk?'<span class="pinit" aria-hidden="true"></span>':'')+'</div>';
       });
       if(inPerson.length){
         h+='<p class="pperson"><b>In person with your rep:</b> '
@@ -249,6 +320,7 @@
       }
       h+='</div>';
       host.innerHTML=h;
+      if(pk) setInitials();
       var clause=document.getElementById('packetclause');
       if(clause&&taps.length) clause.textContent=' and to each document you tapped above';
       host.querySelectorAll('.pdoc').forEach(function(el){
@@ -267,6 +339,13 @@
   function packetPayload(){
     return Object.keys(agreed).map(function(k){ return {key:k, agreedAt:agreed[k]}; });
   }
+  function initialsOf(name){
+    return String(name||'').trim().split(/\s+/).filter(Boolean).map(function(p){ return p[0].toUpperCase(); }).slice(0,3).join('');
+  }
+  function setInitials(){
+    var nm=document.getElementById('nm'); var ini=initialsOf(nm&&nm.value);
+    document.querySelectorAll('.pinit').forEach(function(el){ el.textContent=ini||'—'; });
+  }
 
   function wireSigning(){
     loadPacket();
@@ -275,8 +354,27 @@
     var stamp=document.getElementById('stamp'), err=document.getElementById('err');
     var go=document.getElementById('go'), nm=document.getElementById('nm');
     var ctx=pad.getContext('2d'), ink=false, drawing=false, last=null;
+    var presetInk=false;                       // the typed name drawn in script as the default signature (pk)
 
     stamp.textContent=new Date().toLocaleString([], {dateStyle:'medium', timeStyle:'short'});
+
+    /* PRESET SIGNATURE (Kevin, 15 Sep): as the customer types their name it appears
+       in the box in a script face — that IS their signature unless they tap the box
+       and draw one. Drawing clears the preset first, so the two never overlap. */
+    function drawPreset(){
+      if(ink) return;                          // a hand-drawn signature is never overwritten
+      var name=(nm.value||'').trim();
+      ctx.clearRect(0,0,pad.width,pad.height);
+      presetInk=false; hint.style.display=''; hint.textContent='Sign here with your finger'; hint.className='padhint';
+      if(name.length<2) return;
+      var r=window.devicePixelRatio||1, h=pad.height/r;
+      ctx.save(); ctx.setTransform(1,0,0,1,0,0);
+      ctx.fillStyle='#1c3055'; ctx.font='600 '+Math.round(Math.min(40, 560/Math.max(8,name.length))*r)+'px "Caveat","Segoe Script","Bradley Hand",cursive';
+      ctx.textBaseline='alphabetic'; ctx.fillText(name, 22*r, Math.round((h-44+ -6)*r));
+      ctx.restore();
+      presetInk=true; hint.style.display=''; hint.textContent='Tap to sign by hand instead'; hint.className='padhint preset';
+    }
+    if(pk){ nm.addEventListener('input', function(){ drawPreset(); setInitials(); }); }
 
     /* Backing store at device resolution, or the signature is a blurry mess on
        a phone — which is exactly the device every one of these is signed on. */
@@ -287,6 +385,7 @@
       ctx.setTransform(d,0,0,d,0,0);
       ctx.lineWidth=2.4; ctx.lineCap='round'; ctx.lineJoin='round'; ctx.strokeStyle='#16233d';
       if(keep){ var im=new Image(); im.onload=function(){ ctx.drawImage(im,0,0,r.width,r.height); }; im.src=keep; }
+      else if(presetInk){ presetInk=false; drawPreset(); }   // a rotate re-draws the typed name, not a blank box
     }
     size();
     window.addEventListener('resize', size);
@@ -298,6 +397,7 @@
       return {x:s.clientX-r.left, y:s.clientY-r.top};
     }
     function down(e){ e.preventDefault(); drawing=true; last=pt(e);
+      if(presetInk){ ctx.clearRect(0,0,pad.width,pad.height); presetInk=false; }   // hand beats preset
       if(!ink){ ink=true; hint.style.display='none'; } }
     function move(e){
       if(!drawing) return;
@@ -317,8 +417,10 @@
     window.addEventListener('mouseup',up);
 
     document.getElementById('clr').addEventListener('click',function(){
-      ctx.clearRect(0,0,pad.width,pad.height); ink=false; hint.style.display='';
+      ctx.clearRect(0,0,pad.width,pad.height); ink=false; presetInk=false; hint.style.display='';
+      hint.textContent='Sign here with your finger'; hint.className='padhint';
       err.textContent='';
+      if(pk) drawPreset();                     // back to the typed-name default, not an empty box
     });
 
     go.addEventListener('click',function(){
@@ -327,6 +429,7 @@
       /* 322: on an itemized estimate the tap IS the acceptance (Billdu's shape). With no
          drawn signature we adopt the typed name as the signature, in a script face, so the
          record still carries a signature image the office can see. */
+      if(!ink&&presetInk){ ink=true; hint.style.display='none'; }   // the preset script name is the signature
       if(!ink&&docMode){
         ctx.clearRect(0,0,pad.width,pad.height);
         var r=window.devicePixelRatio||1;
@@ -343,11 +446,11 @@
         body:JSON.stringify({name:name, signature:pad.toDataURL('image/png'), termsShownAt:shownAt, documents:packetPayload()})})
         .then(function(r){ return r.json().catch(function(){ return {ok:false}; }); })
         .then(function(j){
-          if(j && j.ok){ signedAt=j.signedAt||new Date().toISOString(); render(); }
+          if(j && j.ok){ signedAt=j.signedAt||new Date().toISOString(); render(); if(pk){ hideBar(); restampSheet(name); } }
           else { throw new Error((j&&j.error)||'failed'); }
         })
         .catch(function(){
-          go.disabled=false; go.textContent='APPROVE & SIGN';
+          go.disabled=false; go.textContent=pk?'ACCEPT & SIGN →':'APPROVE & SIGN';
           err.textContent='That didn’t go through. Please check your connection and try again.';
         });
     });
