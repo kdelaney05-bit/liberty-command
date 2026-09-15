@@ -113,7 +113,7 @@
   @media (max-width:520px){ .bar{grid-template-columns:1fr} .bar button{width:100%} }
   .pinit{flex:none;align-self:center;font:600 20px/1 "Caveat","Segoe Script","Bradley Hand",cursive;color:#1c3055;min-width:34px;text-align:center;opacity:.35}
   .pdoc.on .pinit{opacity:1;color:#2f8f5b}
-  .padhint.preset{color:#8a8f98}
+  .padhint.preset{color:#8a8f98;align-items:flex-start;padding-top:14px;font-size:12.5px}
   @media print{ .bar,.sheetwrap~img,.sheetwrap~iframe{display:none!important} body.haspk{padding:0;background:#fff} .sheetwrap{box-shadow:none;border-radius:0} }
 </style>
 <header><h1>YOUR ESTIMATE</h1><a class="dl" id="dl" href="#" download>Download</a></header>
@@ -367,10 +367,15 @@
       ctx.clearRect(0,0,pad.width,pad.height);
       presetInk=false; hint.style.display=''; hint.textContent='Sign here with your finger'; hint.className='padhint';
       if(name.length<2) return;
-      var r=window.devicePixelRatio||1, h=pad.height/r;
+      var r=window.devicePixelRatio||1, h=pad.height/r, wdt=pad.width/r;
       ctx.save(); ctx.setTransform(1,0,0,1,0,0);
-      ctx.fillStyle='#1c3055'; ctx.font='600 '+Math.round(Math.min(40, 560/Math.max(8,name.length))*r)+'px "Caveat","Segoe Script","Bradley Hand",cursive';
-      ctx.textBaseline='alphabetic'; ctx.fillText(name, 22*r, Math.round((h-44+ -6)*r));
+      ctx.fillStyle='#1c3055';
+      /* start big, shrink until the whole name fits between the box's margins — a long
+         name on a narrow phone must never run off the right edge */
+      var size=40, fontFor=function(s){ return '600 '+Math.round(s*r)+'px "Caveat","Segoe Script","Bradley Hand",cursive'; };
+      ctx.font=fontFor(size);
+      while(size>16 && ctx.measureText(name).width > (wdt-44)*r){ size-=1; ctx.font=fontFor(size); }
+      ctx.textBaseline='alphabetic'; ctx.fillText(name, 22*r, Math.round((h-50)*r));
       ctx.restore();
       presetInk=true; hint.style.display=''; hint.textContent='Tap to sign by hand instead'; hint.className='padhint preset';
     }
