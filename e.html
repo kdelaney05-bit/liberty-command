@@ -117,6 +117,11 @@
   body.haspk .padwrap{border-style:solid;border-color:#e0ddd0;height:150px}
   body.haspk .padwrap canvas{pointer-events:none;cursor:default}
   body.haspk .clear{display:none}
+  .who{display:grid;grid-template-columns:1fr 1fr;gap:10px;background:#fff;border-radius:12px;box-shadow:0 2px 14px rgba(20,30,50,.14);padding:12px 14px;margin:12px 0 0;font-size:14px}
+  .who span{display:block;font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:#8a8f98;margin-bottom:2px}
+  .who b{display:block;color:#1c3055}
+  .who i{display:block;font-style:normal;font-size:12.5px;color:#5f6672}
+  @media (max-width:420px){ .who{grid-template-columns:1fr} }
   .sheetlinks{display:flex;justify-content:space-between;gap:12px;margin:-4px 2px 14px;font-size:13.5px}
   .sheetlinks a{color:#1c3055;font-weight:700;text-decoration:underline}
   @media print{ .sheetlinks{display:none} }
@@ -141,6 +146,19 @@
   var legalLine=q.get('lg')||'';                       // the entity, dba and license (321)
   var pk=q.get('pk')==='1';                            // the packet gate is open for this link (owner-sent, switch ON)
   var sheetData=null;                                  // the typed sheet's inputs, kept so the signed name can be stamped on it
+  var whoData=null;                                    // no typed sheet (roofing, landscape, a photo): the customer + the rep, printed under the picture
+  /* THE NAMES ON THE PICTURE VERSION (Kevin, 15 Sep: "we need to put our rep and our
+     customer's name on the estimate"). A photographed pad has the names in pen; the
+     app-made picture has none. So under the picture: prepared for, prepared by, date. */
+  function renderWho(){
+    if(!whoData||document.getElementById('who')) return;
+    var c=whoData.customer||{}, r=whoData.rep||{};
+    var addr=[c.street,[c.city,c.zip].filter(Boolean).join(' ')].filter(Boolean).join(', ');
+    var d=document.createElement('div'); d.className='who'; d.id='who';
+    d.innerHTML='<div><span>Prepared for</span><b>'+esc(c.name||'')+'</b>'+(addr?'<i>'+esc(addr)+'</i>':'')+(c.phone?'<i>'+esc(c.phone)+'</i>':'')+'</div>'
+      +'<div><span>Prepared by</span><b>'+esc(r.name||'')+'</b>'+(r.phone?'<i>'+esc(r.phone)+'</i>':'')+(whoData.date?'<i>'+esc(whoData.date)+'</i>':'')+'</div>';
+    var anchor=document.querySelector('.wrap img, .wrap iframe'); if(anchor&&anchor.parentNode) anchor.parentNode.insertBefore(d, anchor.nextSibling);
+  }
   var src=FN+t+'/pdf';
   document.getElementById('dl').href=src;
   var w=document.getElementById('wrap');
@@ -164,6 +182,7 @@
   function loadSheet(){
     if(!t) return;
     fetch(FN+t+'/sheet').then(function(r){ return r.json(); }).then(function(j){
+      if(j&&!j.found&&(j.customer||j.rep)){ whoData=j; renderWho(); return; }
       if(!j||!j.found||!j.takeoff) return;
       sheetData=j;
       var fonts=document.createElement('link'); fonts.rel='stylesheet';
@@ -381,7 +400,7 @@
       var pretty=isNaN(when)?'':when.toLocaleString([], {dateStyle:'long', timeStyle:'short'});
       return '<div class="done"><h2>✓ SIGNED</h2>'
         +'<p>Thank you — this estimate was approved and signed'
-        +(pretty?' on '+esc(pretty):'')+'. You are locked in: your material goes on order as soon as the paperwork is official. '
+        +(pretty?' on '+esc(pretty):'')+(whoData&&whoData.customer&&whoData.customer.name?' for '+esc(whoData.customer.name):'')+(whoData&&whoData.rep&&whoData.rep.name?' with your rep '+esc(whoData.rep.name):'')+'. You are locked in: your material goes on order as soon as the paperwork is official. '
         +'Your rep and our office will reach out right away to set a quick visit for the rest of the paperwork and the survey. '
         +'You agreed to our <a href="'+esc(termsUrl)+'" target="_blank" rel="noopener">Terms &amp; Conditions</a>.</p></div>';
     }
