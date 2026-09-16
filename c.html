@@ -46,7 +46,7 @@ input[type=text],input[type=number]{font:inherit;font-size:20px;padding:12px;bor
 <script>
 (function(){
   var FN='https://lzegjjbkfuecrhdvlvay.supabase.co/functions/v1/crew-nugget/';
-  var PUB='https://lzegjjbkfuecrhdvlvay.supabase.co/storage/v1/object/public/job-photos/';
+  var PUB='https://lzegjjbkfuecrhdvlvay.supabase.co/storage/v1/object/public/job-photos/';   // the demo blanks this and hands whole data URIs as paths
   var t=(new URLSearchParams(location.search).get('t')||'').trim();
   var L=(function(){ try{ return localStorage.getItem('nugget-lang'); }catch(e){ return null; } })();
   var T={es:{task:'tu tarea',hi:'Hola, ',from:'de ',bring:'Tráeme: ',by:'Para: ',photo:'📷 TOMAR FOTO',send:'ENVIAR',done:'✅ LISTO',yes:'SÍ',no:'NO',num:'El número',words:'Escríbelo aquí',none:'Nada pendiente. 👍',back:'Enviado. Gracias.',err:'No se pudo enviar. Intenta otra vez.',needphoto:'Falta la foto.',needans:'Falta la respuesta.',late:'YA VENCIÓ',returned:'Enviado ',ack:'☑ RECIBIDO · ENTENDIDO',got:'☑ Recibido '},
@@ -107,7 +107,18 @@ input[type=text],input[type=number]{font:inherit;font-size:20px;padding:12px;bor
   }
   function load(){ fetch(FN+t).then(function(r){ return r.json(); }).then(function(j){ if(!j.ok) throw new Error(); data=j; render(); }).catch(function(){ document.getElementById('list').innerHTML='<div class="empty">Este enlace no es válido. / This link is not valid.</div>'; }); }
   document.getElementById('lang').onclick=function(){ L=((L||(data&&data.lang))==='es')?'en':'es'; try{ localStorage.setItem('nugget-lang',L); }catch(e){} if(data) render(); };
-  if(!t){ document.getElementById('list').innerHTML='<div class="empty">Abre el enlace de tu texto. / Open the link from your text.</div>'; } else { load(); setInterval(load, 30000); }
+  // ?demo=1 — the film's "what Ramón sees": a fictional nugget, nothing saved (16 Sep)
+  var DEMO_ON = /[?&]demo=1/.test(location.search);
+  if (DEMO_ON) {
+    var svg = 'data:image/svg+xml;utf8,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 200"><rect width="320" height="120" fill="#b7c9dd"/><rect y="120" width="320" height="80" fill="#7a8a5a"/><rect x="40" y="130" width="240" height="60" fill="#4f7a3a" stroke="#fff" stroke-width="3" stroke-dasharray="8 6"/><text x="52" y="168" font-family="monospace" font-size="18" fill="#fff">SOD · BACK YARD ONLY</text></svg>');
+    data = { ok: true, name: 'Ramón', lang: 'es', manager: 'Mike', nuggets: [
+      { id: 'demo-1', body: 'Sod goes in the BACK yard only. Front stays as it is. 40 pallets.', bring: 'photo', bring_label: 'a photo when the sod is down', due_at: new Date(Date.now() + 3 * 3600e3).toISOString(), status: 'open', customer: 'Dave Marchetti', address: '1420 Palm Ave, Melbourne', amount: 3400, scope_photos: [{ path: '', caption: 'the scope' }], received_at: null, answer: null, photos: [], created_at: new Date(Date.now() - 20 * 60e3).toISOString(), returned_at: null },
+      { id: 'demo-2', body: 'How many pallets of pavers are left on the truck?', bring: 'number', bring_label: 'the count', due_at: null, status: 'returned', customer: 'Dave Marchetti', amount: null, scope_photos: [], received_at: new Date(Date.now() - 5 * 3600e3).toISOString(), answer: '3', photos: [], created_at: new Date(Date.now() - 5.2 * 3600e3).toISOString(), returned_at: new Date(Date.now() - 4.8 * 3600e3).toISOString() },
+    ] };
+    PUB = ''; data.nuggets[0].scope_photos[0].path = svg;
+    render();
+    document.querySelectorAll('[data-ack],[data-send],[data-yes],[data-no]').forEach(function(b){ b.onclick = function(){ say('Demo — nada se guarda / nothing is saved'); }; });
+  } else if(!t){ document.getElementById('list').innerHTML='<div class="empty">Abre el enlace de tu texto. / Open the link from your text.</div>'; } else { load(); setInterval(load, 30000); }
 })();
 </script>
 </body></html>
