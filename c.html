@@ -25,6 +25,8 @@ h1{font-size:22px;margin:2px 0 0}
 .bring{margin-top:8px;font-size:15px;color:var(--dim)}.bring b{color:var(--ink)}
 .due{font-family:var(--mono);font-size:12px;color:var(--red);margin-top:4px}
 .cust{font-size:15px;font-weight:700;margin-bottom:6px;padding:8px 10px;background:#fbf0d0;border-radius:8px}.cust span{display:block;font-weight:400;font-size:14px;color:var(--dim)}
+.scope{display:flex;gap:6px;margin:6px 0 8px;overflow-x:auto}.scope img{height:160px;max-width:100%;border-radius:10px;border:1px solid var(--line);object-fit:cover}
+.price{font-family:var(--mono);font-size:22px;font-weight:700;color:var(--green);margin-top:4px}
 .got{font-family:var(--mono);font-size:12px;color:var(--green);font-weight:700;padding:6px 0}
 .ctl{margin-top:12px;display:flex;flex-direction:column;gap:8px}
 input[type=text],input[type=number]{font:inherit;font-size:20px;padding:12px;border:1px solid var(--line);border-radius:10px;width:100%}
@@ -62,7 +64,54 @@ input[type=text],input[type=number]{font:inherit;font-size:20px;padding:12px;bor
     if(!open.length) h+='<div class="empty">'+s.none+'</div>';
     open.forEach(function(n){
       var late=n.due_at&&new Date(n.due_at)<new Date();
-      h+='<div class="card'+(late?' late':'')+'" data-id="'+n.id+'"><div class="who">'+s.from+esc(data.manager)+'</div>'+(n.customer?'<div class="cust">'+esc(n.customer)+(n.address?'<span>'+esc(n.address)+'</span>':'')+'</div>':'')+'<div class="body">'+esc(n.body)+'</div>';
+      h+='<div class="card'+(late?' late':'')+'" data-id="'+n.id+'"><div class="who">'+s.from+esc(data.manager)+'</div>'+(n.customer?'<div class="cust">'+esc(n.customer)+(n.address?'<span>'+esc(n.address)+'</span>':'')+'</div>':'')+((n.scope_photos||[]).length?'<div class="scope">'+n.scope_photos.map(function(p){ return '<img src="'+PUB+esc(p.path)+'" alt="">'; }).join('')+'</div>':'')+'<div class="body">'+esc(n.body)+'</div>'+(n.amount!=null?'<div class="price">
+      if(n.bring!=='done') h+='<div class="bring">'+s.bring+'<b>'+esc(n.bring_label||({photo:'foto',number:'número',yesno:'sí / no',text:'unas palabras'})[n.bring]||'')+'</b></div>';
+      if(n.due_at) h+='<div class="due">'+(late?s.late+' · ':'')+s.by+fmt(n.due_at)+'</div>';
+      h+='<div class="ctl">';
+      if(!n.received_at) h+='<button class="btn go" data-ack="'+n.id+'">'+s.ack+'</button>'; else h+='<div class="got">'+s.got+fmt(n.received_at)+'</div>';
+      if(n.bring==='photo') h+='<label class="btn go">'+s.photo+'<input type="file" accept="image/*" capture="environment" multiple hidden data-shot="'+n.id+'"></label><div class="shots" id="sh-'+n.id+'"></div><button class="btn ok" data-send="'+n.id+'">'+s.send+'</button>';
+      else if(n.bring==='number') h+='<input type="number" inputmode="decimal" placeholder="'+s.num+'" data-ans="'+n.id+'"><button class="btn ok" data-send="'+n.id+'">'+s.send+'</button>';
+      else if(n.bring==='yesno') h+='<div class="two"><button class="btn ok" data-yes="'+n.id+'">'+s.yes+'</button><button class="btn" data-no="'+n.id+'">'+s.no+'</button></div>';
+      else if(n.bring==='text') h+='<input type="text" placeholder="'+s.words+'" data-ans="'+n.id+'"><button class="btn ok" data-send="'+n.id+'">'+s.send+'</button>';
+      else h+='<button class="btn ok" data-send="'+n.id+'">'+s.done+'</button>';
+      h+='</div></div>';
+    });
+    done.slice(0,5).forEach(function(n){ h+='<div class="card done"><div class="who">'+s.returned+fmt(n.returned_at)+'</div><div class="body" style="font-size:16px">'+esc(n.body)+'</div>'+(n.answer?'<div class="ans">'+esc(n.answer)+'</div>':'')+((n.photos||[]).length?'<div class="shots">'+n.photos.map(function(p){ return '<img src="'+PUB+esc(p.path)+'" alt="">'; }).join('')+'</div>':'')+'</div>'; });
+    document.getElementById('list').innerHTML=h;
+    document.querySelectorAll('[data-shot]').forEach(function(inp){ inp.onchange=function(){ upload(inp.dataset.shot, inp.files); }; });
+    document.querySelectorAll('[data-send]').forEach(function(b){ b.onclick=function(){ send(b.dataset.send, null); }; });
+    document.querySelectorAll('[data-ack]').forEach(function(b){ b.onclick=function(){ b.disabled=true; fetch(FN+t+'/ack',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({nugget:b.dataset.ack,name:data.name})}).then(function(r){ return r.json(); }).then(function(j){ if(!j.ok) throw new Error(); say(tr().got+fmt(j.received_at)); load(); }).catch(function(){ say(tr().err); b.disabled=false; }); }; });
+    document.querySelectorAll('[data-yes]').forEach(function(b){ b.onclick=function(){ send(b.dataset.yes, tr().yes); }; });
+    document.querySelectorAll('[data-no]').forEach(function(b){ b.onclick=function(){ send(b.dataset.no, tr().no); }; });
+  }
+  function upload(id, files){
+    if(!files||!files.length) return;
+    var fd=new FormData(); for(var i=0;i<files.length&&i<8;i++) fd.append('photo', files[i]);
+    say('…');
+    fetch(FN+t+'/photo',{method:'POST',body:fd}).then(function(r){ return r.json(); }).then(function(j){
+      if(!j.ok) throw new Error(j.error||'upload');
+      shots[id]=(shots[id]||[]).concat(j.photos);
+      var box=document.getElementById('sh-'+id); if(box) box.innerHTML=shots[id].map(function(p){ return '<img src="'+PUB+esc(p.path)+'" alt="">'; }).join('');
+      say('📷 '+shots[id].length);
+    }).catch(function(){ say(tr().err); });
+  }
+  function send(id, forced){
+    var n=data.nuggets.filter(function(x){ return x.id===id; })[0]; if(!n) return;
+    var ans=forced; var inp=document.querySelector('[data-ans="'+id+'"]'); if(inp) ans=(inp.value||'').trim();
+    if(n.bring==='photo'&&!(shots[id]||[]).length){ say(tr().needphoto); return; }
+    if((n.bring==='number'||n.bring==='text')&&!ans){ say(tr().needans); return; }
+    var b=document.querySelector('[data-send="'+id+'"],[data-yes="'+id+'"]'); if(b) b.disabled=true;
+    fetch(FN+t+'/return',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({nugget:id,answer:ans||null,photos:shots[id]||[]})})
+      .then(function(r){ return r.json(); }).then(function(j){ if(!j.ok) throw new Error(j.error||'x'); say(tr().back); load(); })
+      .catch(function(){ say(tr().err); if(b) b.disabled=false; });
+  }
+  function load(){ fetch(FN+t).then(function(r){ return r.json(); }).then(function(j){ if(!j.ok) throw new Error(); data=j; render(); }).catch(function(){ document.getElementById('list').innerHTML='<div class="empty">Este enlace no es válido. / This link is not valid.</div>'; }); }
+  document.getElementById('lang').onclick=function(){ L=((L||(data&&data.lang))==='es')?'en':'es'; try{ localStorage.setItem('nugget-lang',L); }catch(e){} if(data) render(); };
+  if(!t){ document.getElementById('list').innerHTML='<div class="empty">Abre el enlace de tu texto. / Open the link from your text.</div>'; } else { load(); setInterval(load, 30000); }
+})();
+</script>
+</body></html>
++Number(n.amount).toLocaleString()+'</div>':'');
       if(n.bring!=='done') h+='<div class="bring">'+s.bring+'<b>'+esc(n.bring_label||({photo:'foto',number:'número',yesno:'sí / no',text:'unas palabras'})[n.bring]||'')+'</b></div>';
       if(n.due_at) h+='<div class="due">'+(late?s.late+' · ':'')+s.by+fmt(n.due_at)+'</div>';
       h+='<div class="ctl">';
