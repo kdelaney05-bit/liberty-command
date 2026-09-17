@@ -38,3 +38,7 @@ Her lane is the console's pages: `index.html`, `c.html`, `e.html`, `n.html`,
   Jess's Claude never touches the mirror.
 - Database, edge functions, Supabase keys, the rep app: not her lane. If a
   fix needs them, say so in the PR and stop.
+
+## Films and anything Kevin sends on (Kevin, 17 Sep 2026)
+
+Never hand Kevin a video or picture only as a Claude file card or inside a page — he forwards to people without Claude. Every film is a plain MP4 (H.264 main, AAC, `+faststart`) at a direct link under the Central Command repo's `films/`, listed on its `docs/films.html`, with a copy in `C:\Users\kdela\OneDrive\Desktop\YouTube Uploads\`. The rule for all sessions: `C:\Users\kdela\.claude\CLAUDE.md`.
