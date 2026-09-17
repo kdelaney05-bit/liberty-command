@@ -400,8 +400,8 @@
       var pretty=isNaN(when)?'':when.toLocaleString([], {dateStyle:'long', timeStyle:'short'});
       return '<div class="done"><h2>✓ SIGNED</h2>'
         +'<p>Thank you — this estimate was approved and signed'
-        +(pretty?' on '+esc(pretty):'')+(whoData&&whoData.customer&&whoData.customer.name?' for '+esc(whoData.customer.name):'')+(whoData&&whoData.rep&&whoData.rep.name?' with your rep '+esc(whoData.rep.name):'')+'. You are locked in: your material goes on order as soon as the paperwork is official. '
-        +'Your rep and our office will reach out right away to set a quick visit for the rest of the paperwork and the survey. '
+        +(pretty?' on '+esc(pretty):'')+(whoData&&whoData.customer&&whoData.customer.name?' for '+esc(whoData.customer.name):'')+(whoData&&whoData.rep&&whoData.rep.name?' with your rep '+esc(whoData.rep.name):'')+'. You are in: your permit is being pulled and your material is going on order. '
+        +'Your rep will be in touch about the one county form that needs a notary, and about your survey if we do not have it yet. '
         +'You agreed to our <a href="'+esc(termsUrl)+'" target="_blank" rel="noopener">Terms &amp; Conditions</a>.</p></div>';
     }
     return '<div class="sign">'
