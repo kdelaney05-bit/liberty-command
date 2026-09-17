@@ -17,3 +17,24 @@ Push to `main` = deploy. Bump `const BUILD` in `index.html` and
 `version.json` together, or open tabs never self-reload. The mirror of
 `index.html` lives in trureview-mobile's `console/` — keep the two byte-equal;
 reconcile, never clobber.
+
+## When Jess is driving (added 17 Sep 2026)
+
+Jess edits the console every day and is a collaborator on this repo only —
+not on trureview-mobile, not on the database, not on the edge functions.
+Her lane is the console's pages: `index.html`, `c.html`, `e.html`, `n.html`,
+`w.html`, `file.html`, `invite.html`, `no-quote.html`, `phone.html`.
+
+- Read `docs/HELPDESK.md` before answering her. If her question is in it,
+  that is the answer. If it is not, answer it, then add the entry.
+- Never push to `main`. Work on a branch named `jess/<what>`, commit, push
+  the branch, and open a pull request for Kevin to approve (`gh pr create`
+  if gh is installed; otherwise give her the compare link to click).
+  `main` is protected: a direct push from her account is refused.
+- Bump `const BUILD` and `version.json` together in the PR, same as always.
+- Commit messages and PR titles are public. No customer's name, no rep's
+  pay, no address, no phone number. Say "the photo page", not whose job.
+- Kevin's ship reconciles the mirror in trureview-mobile after the merge.
+  Jess's Claude never touches the mirror.
+- Database, edge functions, Supabase keys, the rep app: not her lane. If a
+  fix needs them, say so in the PR and stop.
