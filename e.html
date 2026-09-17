@@ -252,6 +252,33 @@
              rep:(j.rep&&j.rep.name)||'', repPhone:(j.rep&&j.rep.phone)||'', date:j.date, svg:j.svg||'',
              signedName:j.signedName||'', signedDate:j.signedDate||'' };
   }
+  /* THE SIGNED CONTRACT, AS THEY SAW IT (Kevin, 17 Sep: "the digital estimate we reimagined… I want that one as the one
+     they signed"). After ACCEPT the stamped pad is drawn into a letter-size PDF right here on the phone and posted to the
+     file (estimate-view /contract). The office gets the same sheet the customer signed, stamps and all. Quietly: a phone
+     that cannot do it changes nothing for the customer — the receipt is already on the screen. */
+  var contractSent=false;
+  function contractPdf(){
+    if(contractSent||!sheetData||!t) return;
+    var host=document.getElementById('sheet'); if(!host) return;
+    contractSent=true;
+    var loaded=0, need=2;
+    function lib(src){ var s=document.createElement('script'); s.src=src; s.onload=function(){ if(++loaded===need) go(); }; s.onerror=function(){ contractSent=false; }; document.head.appendChild(s); }
+    lib('https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js');
+    lib('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js');
+    function go(){
+      try{
+        var spots=host.querySelectorAll('.spot'); spots.forEach(function(b){ b.style.display='none'; });
+        window.html2canvas(host,{scale:2,useCORS:true,backgroundColor:'#ffffff',logging:false}).then(function(canvas){
+          spots.forEach(function(b){ b.style.display=''; });
+          var pdf=new window.jspdf.jsPDF({unit:'pt',format:'letter',orientation:'portrait'});
+          var W=612,H=792, r=canvas.width/canvas.height, h=H, w=Math.round(h*r); if(w>W){ w=W; h=Math.round(w/r); }
+          pdf.addImage(canvas.toDataURL('image/jpeg',0.86),'JPEG',Math.round((W-w)/2),Math.round((H-h)/2),w,h);
+          var blob=pdf.output('blob');
+          fetch(FN+t+'/contract',{method:'POST',headers:{'content-type':'application/pdf'},body:blob}).catch(function(){});
+        }).catch(function(){ spots.forEach(function(b){ b.style.display=''; }); });
+      }catch(e){}
+    }
+  }
   function restampSheet(name){
     var host=document.getElementById('sheet'); if(!host||!sheetData||!window.fenceEstimateHtml) return;
     sheetData.signedName=name; sheetData.signedDate=new Date().toLocaleDateString('en-US',{month:'numeric',day:'numeric',year:'numeric'});
@@ -593,7 +620,7 @@
         body:JSON.stringify({name:name, signature:pad.toDataURL('image/png'), termsShownAt:shownAt, documents:packetPayload(), stamps:stamps})})
         .then(function(r){ return r.json().catch(function(){ return {ok:false}; }); })
         .then(function(j){
-          if(j && j.ok){ signedAt=j.signedAt||new Date().toISOString(); render(); if(pk){ hideBar(); restampSheet(name); depositCard(); } }
+          if(j && j.ok){ signedAt=j.signedAt||new Date().toISOString(); render(); if(pk){ hideBar(); restampSheet(name); depositCard(); setTimeout(function(){ contractPdf(); }, 900); } }
           else { throw new Error((j&&j.error)||'failed'); }
         })
         .catch(function(){
