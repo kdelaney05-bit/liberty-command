@@ -10,6 +10,8 @@ Go to https://github.com and click Sign up. The free plan is fine. Send Kevin
 your username. He adds you to the liberty-command repo; accept the invitation
 email GitHub sends you.
 
+Watch: https://www.youtube.com/watch?v=7G2Y3TICWcA (create a GitHub account)
+
 ## 2. Git and GitHub Desktop
 
 - Install Git for Windows from https://git-scm.com/download/win. Accept every
@@ -20,11 +22,17 @@ email GitHub sends you.
   `kdelaney05-bit/liberty-command` → Clone. Note the folder it lands in
   (`Documents\GitHub\liberty-command` by default).
 
+Watch: https://www.youtube.com/watch?v=ibz-tSrnURQ (install Git on Windows 11)
+Watch: https://www.youtube.com/watch?v=PoZNIbs_wx8 (clone with GitHub Desktop)
+
 ## 3. Claude
 
 Install the Claude desktop app from https://claude.ai/download and sign in
-with the seat Kevin gave you. Open the Code tab and point it at the folder
-from step 2.
+with the seat Kevin gave you. Open the Code tab, choose Local, click Select
+folder, and pick the folder from step 2.
+
+Watch: https://www.youtube.com/watch?v=P7-0grEB7nk (the Claude desktop app, no terminal)
+Official guide: https://code.claude.com/docs/en/desktop-quickstart
 
 ## 4. Your first fix
 
