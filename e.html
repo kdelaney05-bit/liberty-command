@@ -258,8 +258,26 @@
      that cannot do it changes nothing for the customer — the receipt is already on the screen. */
   var contractSent=false;
   function contractPdf(){
-    if(contractSent||!sheetData||!t) return;
-    var host=document.getElementById('sheet'); if(!host) return;
+    if(contractSent||!t) return;
+    var host=sheetData?document.getElementById('sheet'):null;
+    var footer=null, doc=null, wasHidden=false;
+    if(!host){
+      /* doc mode: the itemized estimate (Oasis, roofing) with a signature footer — the document they accepted, as accepted */
+      doc=document.getElementById('doc'); if(!doc||!docMode) return;
+      wasHidden=doc.classList.contains('dhide'); doc.classList.remove('dhide');
+      var pad=document.getElementById('pad'), nm=document.getElementById('nm');
+      var sigUrl=''; try{ sigUrl=pad?pad.toDataURL('image/png'):''; }catch(e){}
+      var name=(nm&&nm.value||'').trim()||(whoData&&whoData.customer&&whoData.customer.name)||'';
+      var when=new Date(signedAt||Date.now()).toLocaleString('en-US',{dateStyle:'long',timeStyle:'short'});
+      footer=document.createElement('div'); footer.id='sigfoot';
+      footer.style.cssText='padding:18px 16px 10px;border-top:2px solid #1c3055;margin-top:14px;font:14px/1.4 -apple-system,Segoe UI,Helvetica,Arial,sans-serif;color:#22281f;background:#fff';
+      footer.innerHTML='<div style="font-size:11px;letter-spacing:.12em;color:#1c3055;font-weight:800">ACCEPTED AND SIGNED</div>'
+        +(sigUrl?'<img src="'+sigUrl+'" style="display:block;height:54px;margin:8px 0 2px">':'')
+        +'<div style="border-top:1px solid #1c3055;width:260px;margin-top:4px;padding-top:4px"><b>'+esc(name)+'</b> · '+esc(when)+' ET</div>'
+        +'<div style="font-size:11px;color:#5f6672;margin-top:6px">Accepted on the link. By signing, the customer agreed to the Terms &amp; Conditions.</div>';
+      doc.appendChild(footer);
+      host=doc;
+    }
     contractSent=true;
     var loaded=0, need=2;
     function lib(src){ var s=document.createElement('script'); s.src=src; s.onload=function(){ if(++loaded===need) go(); }; s.onerror=function(){ contractSent=false; }; document.head.appendChild(s); }
@@ -270,12 +288,13 @@
         var spots=host.querySelectorAll('.spot'); spots.forEach(function(b){ b.style.display='none'; });
         window.html2canvas(host,{scale:2,useCORS:true,backgroundColor:'#ffffff',logging:false}).then(function(canvas){
           spots.forEach(function(b){ b.style.display=''; });
+          if(footer){ footer.remove(); if(wasHidden&&doc) doc.classList.add('dhide'); }
           var pdf=new window.jspdf.jsPDF({unit:'pt',format:'letter',orientation:'portrait'});
           var W=612,H=792, r=canvas.width/canvas.height, h=H, w=Math.round(h*r); if(w>W){ w=W; h=Math.round(w/r); }
           pdf.addImage(canvas.toDataURL('image/jpeg',0.86),'JPEG',Math.round((W-w)/2),Math.round((H-h)/2),w,h);
           var blob=pdf.output('blob');
           fetch(FN+t+'/contract',{method:'POST',headers:{'content-type':'application/pdf'},body:blob}).catch(function(){});
-        }).catch(function(){ spots.forEach(function(b){ b.style.display=''; }); });
+        }).catch(function(){ spots.forEach(function(b){ b.style.display=''; }); if(footer){ footer.remove(); if(wasHidden&&doc) doc.classList.add('dhide'); } });
       }catch(e){}
     }
   }
@@ -620,7 +639,7 @@
         body:JSON.stringify({name:name, signature:pad.toDataURL('image/png'), termsShownAt:shownAt, documents:packetPayload(), stamps:stamps})})
         .then(function(r){ return r.json().catch(function(){ return {ok:false}; }); })
         .then(function(j){
-          if(j && j.ok){ signedAt=j.signedAt||new Date().toISOString(); render(); if(pk){ hideBar(); restampSheet(name); depositCard(); setTimeout(function(){ contractPdf(); }, 900); } }
+          if(j && j.ok){ signedAt=j.signedAt||new Date().toISOString(); render(); if(pk){ hideBar(); restampSheet(name); depositCard(); } setTimeout(function(){ contractPdf(); }, 900); }
           else { throw new Error((j&&j.error)||'failed'); }
         })
         .catch(function(){
