@@ -1,0 +1,189 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>Your form</title>
+<!-- THE CUSTOMER'S PHOTO PAGE (367 · 372 · 386 · 17 Sep): the Notice of Commencement a seat emailed them, or the warranty deed
+     the county record asked for. The token in ?t= is the gate. The words come from noc-return's /view (JSON); the pictures
+     go to its /photo. This page lives on github.io because the Supabase domain serves a function's HTML as plain text
+     (gateway sandbox) — the same reason e.html lives here. -->
+<style>
+  :root { color-scheme: light; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #f6f3ec; color: #1c1a15; font: 17px/1.5 -apple-system, "Segoe UI", Helvetica, Arial, sans-serif; }
+  main { max-width: 520px; margin: 0 auto; padding: 22px 18px 60px; }
+  .brand { font-size: 12px; letter-spacing: .16em; text-transform: uppercase; color: #b8860b; font-weight: 700; }
+  h1 { font-size: 26px; line-height: 1.2; margin: 6px 0 10px; }
+  p { margin: 0 0 12px; }
+  .lead { color: #5a544a; }
+  .steps { list-style: none; padding: 0; margin: 18px 0; }
+  .steps li { display: flex; gap: 12px; align-items: flex-start; background: #fff; border: 1px solid #e3ddd0; border-radius: 14px; padding: 12px 14px; margin-bottom: 8px; }
+  .n { flex: none; width: 30px; height: 30px; border-radius: 50%; background: #1c3055; color: #fff; display: grid; place-items: center; font-weight: 800; }
+  .steps b { display: block; }
+  .steps span { color: #5a544a; font-size: 15px; }
+  .btn { display: block; width: 100%; text-align: center; border: 0; border-radius: 14px; padding: 16px; font-size: 18px; font-weight: 800; cursor: pointer; text-decoration: none; }
+  .cam { background: #1f6f4a; color: #fff; margin-top: 6px; }
+  .send { background: #1c3055; color: #fff; margin-top: 10px; }
+  .ghost { background: #fff; color: #1c3055; border: 1px solid #c9c2b4; margin-top: 10px; font-weight: 700; font-size: 16px; }
+  input[type=file] { display: none; }
+  .done { background: #e6f2e9; border: 1px solid #2f8f5b; border-radius: 14px; padding: 16px; margin-top: 14px; }
+  .done b { color: #1f6f4a; font-size: 20px; display: block; }
+  .busy { color: #5a544a; margin-top: 10px; }
+  .err { color: #b4574a; margin-top: 10px; }
+  .foot { margin-top: 26px; color: #8a8377; font-size: 14px; }
+  .foot a { color: #1c3055; }
+  .thumbs { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+  .th { width: 96px; text-align: center; font-size: 12px; }
+  .th img, .th .pdf { width: 96px; height: 96px; object-fit: cover; border-radius: 8px; border: 1px solid #e3ddd0; background: #fff; display: grid; place-items: center; font-weight: 800; color: #1c3055; }
+  .th .ok { color: #1f6f4a; font-weight: 700; }
+  .th .bad { color: #b4574a; font-weight: 700; }
+  .th button { border: 0; background: none; color: #1c3055; text-decoration: underline; font-size: 12px; cursor: pointer; padding: 0; }
+  .wait { color: #8a8377; padding: 40px 10px; text-align: center; }
+</style>
+</head>
+<body><main id="m"><p class="wait">One moment…</p></main>
+<script>
+(function () {
+  var FN = 'https://lzegjjbkfuecrhdvlvay.supabase.co/functions/v1/noc-return/';
+  var q = new URLSearchParams(location.search), t = q.get('t');
+  var m = document.getElementById('m');
+  var MAX_FILES = 6;
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+  function gone(msg) { m.innerHTML = '<p class="wait">' + esc(msg) + '</p>'; }
+  if (!t || !/^[0-9a-f-]{36}$/i.test(t)) { gone('This link is not one of ours.'); return; }
+  var base = FN + t;
+  fetch(base + '/view').then(function (r) { return r.json(); }).then(function (v) {
+    if (!v || !v.found) { gone('This link has expired. Reply to our text and we will send a fresh one.'); return; }
+    render(v);
+  }).catch(function () { gone('No connection. Try again in a moment.'); });
+
+  function render(v) {
+    var deed = v.kind === 'deed';
+    var done = v.status === 'received';
+    var when = v.received_at ? new Date(v.received_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '';
+    document.title = esc(v.brand) + ' · ' + (deed ? 'Warranty deed' : 'Notice of Commencement');
+    var h1, lead, steps, doneText;
+    if (deed) {
+      var who = v.owner_names ? "The county's property records list <b>" + esc(v.owner_names) + '</b> as the owner of ' + esc(v.address) : "The county's property records list a different owner for " + esc(v.address);
+      var entity = v.signer_match === 'entity';
+      h1 = done ? 'We have your deed.' : esc(v.first) + ', one picture: your warranty deed.';
+      lead = who + ", and your permit paperwork has to be filed in the owner's name" + (entity ? ', signed by someone who can sign for it' : '') + '. We need a copy of the deed — every page, a phone picture is fine. That\'s it.';
+      steps = '<li><span class="n">1</span><div><b>Find it</b><span>It is in your closing papers from when you bought the house — "Warranty Deed" at the top. Can\'t find it? Reply to our email and we will pull it from the county\'s records with you.</span></div></li>'
+        + '<li><span class="n">2</span><div><b>Take a picture of each page</b><span>Flat, good light, the whole page in the frame. Your phone\'s scanner works too: iPhone — Notes, the camera, Scan Documents. Android — Google Drive, +, Scan.</span></div></li>'
+        + '<li><span class="n">3</span><div><b>Send it here</b><span>' + (entity ? 'Add a note with the name and title of the person who signs for the owner. ' : '') + 'The office takes it from there.</span></div></li>';
+      doneText = 'Our office checks the name on it and files your paperwork in it. Nothing else for you to do.';
+    } else {
+      var why = v.trade === 'roof' ? 'The county has to have it on record before we can start your roof.' : 'The county needs it on record before your inspection.';
+      h1 = done ? 'We have your Notice of Commencement.' : esc(v.first) + ', your Notice of Commencement.';
+      lead = 'It came to you by email, already filled in for ' + esc(v.address) + '. Florida asks the property owner to sign it in front of a notary. ' + esc(why);
+      steps = '<li><span class="n">1</span><div><b>Print it</b><span>From the email, or open it here and print.</span></div></li>'
+        + '<li><span class="n">2</span><div><b>Sign it in front of a notary</b><span>Any bank, UPS Store or notary. A few minutes, usually free at your own bank. Leave the permit number blank — we fill that in.</span></div></li>'
+        + '<li><span class="n">3</span><div><b>Scan the stamped page and send it here</b><span>The county wants a clear copy. Your phone already has a scanner: iPhone — open Notes, tap the camera, Scan Documents. Android — open Google Drive, tap +, Scan. Save it as a PDF, or just take a sharp picture flat over the page.</span></div></li>';
+      doneText = 'Our office records it with the county. Nothing else for you to do.';
+    }
+    m.innerHTML = '<div class="brand">' + esc(v.brand) + '</div>'
+      + '<h1>' + h1 + '</h1>'
+      + (done ? '<div class="done"><b>Got it' + (when ? ' · ' + esc(when) : '') + '.</b>' + doneText + '</div><p class="foot">Need to send another page? <a href="#" id="again">Add a page</a>.</p>'
+              : '<p class="lead">' + lead + '</p><ol class="steps">' + steps + '</ol>')
+      + '<form id="f" ' + (done ? 'hidden' : '') + '>'
+      + '<label class="btn cam" for="photo" id="camlabel">📷 ' + (deed ? 'Take a picture of the deed' : 'Take a picture of the stamped page') + '</label>'
+      + '<input id="photo" name="photo" type="file" accept="image/*,application/pdf" capture="environment" multiple>'
+      + '<label class="btn ghost" for="scan">📄 Upload the scan (PDF or photo)</label>'
+      + '<input id="scan" type="file" accept="image/*,application/pdf" multiple>'
+      + '<div class="thumbs" id="thumbs"></div>'
+      + '<button type="button" class="btn send" id="send" hidden>Send it to the office</button>'
+      + '<div class="busy" id="busy" hidden>Checking…</div>'
+      + '<div class="err" id="err" hidden></div>'
+      + '</form>'
+      + (!deed && v.form_path ? '<a class="btn ghost" href="' + esc(base) + '/form" target="_blank" rel="noopener">Open the form (PDF)</a>' : '')
+      + '<p class="foot">Questions? ' + (v.phone ? 'Call <a href="tel:' + esc(String(v.phone).replace(/\D/g, '')) + '">' + esc(v.phone) + '</a> or reply' : 'Reply') + ' to our text or email.</p>';
+    wire(v, deed);
+  }
+
+  function wire(v, deed) {
+    var f = document.getElementById('f'), cam = document.getElementById('photo'), scan = document.getElementById('scan'), busy = document.getElementById('busy'), err = document.getElementById('err'), th = document.getElementById('thumbs'), send = document.getElementById('send');
+    var again = document.getElementById('again');
+    var queue = [];
+    if (again) again.onclick = function (e) { e.preventDefault(); f.hidden = false; cam.click(); };
+    function sharpness(imgLike, w, h) {
+      var s = 320 / Math.max(w, h), cw = Math.max(32, Math.round(w * s)), ch = Math.max(32, Math.round(h * s));
+      var c = document.createElement('canvas'); c.width = cw; c.height = ch; var x = c.getContext('2d'); x.drawImage(imgLike, 0, 0, cw, ch);
+      var d = x.getImageData(0, 0, cw, ch).data, g = new Float32Array(cw * ch), i, j;
+      for (i = 0, j = 0; i < d.length; i += 4, j++) g[j] = 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2];
+      var sum = 0, sq = 0, n = 0;
+      for (var y = 1; y < ch - 1; y++) for (var xx = 1; xx < cw - 1; xx++) {
+        var k = y * cw + xx, L = 4 * g[k] - g[k - 1] - g[k + 1] - g[k - cw] - g[k + cw];
+        sum += L; sq += L * L; n++;
+      }
+      var mm = sum / n; return sq / n - mm * mm;
+    }
+    function decode(file) {
+      return new Promise(function (res, rej) {
+        if (window.createImageBitmap) { createImageBitmap(file).then(res, function () { viaImg(); }); } else viaImg();
+        function viaImg() { var u = URL.createObjectURL(file), im = new Image(); im.onload = function () { res(im); }; im.onerror = rej; im.src = u; }
+      });
+    }
+    function toJpeg(imgLike, w, h) {
+      var max = 1800, s = Math.min(1, max / Math.max(w, h)), c = document.createElement('canvas'); c.width = Math.round(w * s); c.height = Math.round(h * s);
+      c.getContext('2d').drawImage(imgLike, 0, 0, c.width, c.height);
+      return new Promise(function (res) { c.toBlob(function (b) { res(b); }, 'image/jpeg', 0.88); });
+    }
+    function draw() {
+      th.innerHTML = '';
+      queue.forEach(function (qq, i) {
+        var d = document.createElement('div'); d.className = 'th';
+        d.innerHTML = (qq.kind === 'pdf' ? '<div class="pdf">PDF</div>' : '<img src="' + qq.url + '">')
+          + '<div class="' + (qq.sharp === false ? 'bad' : 'ok') + '">' + (qq.kind === 'pdf' ? 'scan ✓' : qq.sharp === false ? 'blurry ✗' : 'sharp ✓') + '</div>'
+          + '<button data-i="' + i + '">remove</button>';
+        th.appendChild(d);
+      });
+      th.querySelectorAll('button').forEach(function (b) { b.onclick = function () { queue.splice(Number(b.dataset.i), 1); draw(); }; });
+      var blurry = queue.some(function (qq) { return qq.sharp === false; });
+      send.hidden = !queue.length;
+      send.textContent = blurry ? (queue.every(function (qq) { return qq.sharp === false; }) ? 'Retake — hold the phone flat, in good light' : 'Send the sharp ones') : 'Send it to the office';
+      if (blurry) { err.textContent = 'One of those is blurry. Hold the phone flat over the page in good light, or use your phone\'s scanner (Notes on iPhone, Google Drive on Android). Tap remove on the blurry one and try again.'; err.hidden = false; } else { err.hidden = true; }
+      send.dataset.retries = String(Number(send.dataset.retries || 0));
+    }
+    async function take(files) {
+      err.hidden = true; busy.hidden = false; busy.textContent = 'Checking…';
+      for (var i = 0; i < files.length && queue.length < MAX_FILES; i++) {
+        var file = files[i];
+        if (/pdf$/i.test(file.type) || /\.pdf$/i.test(file.name)) { queue.push({ blob: file, name: file.name || 'scan.pdf', kind: 'pdf', sharp: null, url: '' }); continue; }
+        try {
+          var im = await decode(file), w = im.width || im.naturalWidth, h = im.height || im.naturalHeight;
+          var score = sharpness(im, w, h), jpg = await toJpeg(im, w, h);
+          queue.push({ blob: jpg, name: 'page.jpg', kind: 'image', sharp: score >= 45, url: URL.createObjectURL(jpg) });
+        } catch (e) { queue.push({ blob: file, name: file.name || 'photo', kind: 'image', sharp: null, url: '' }); }
+      }
+      busy.hidden = true; draw();
+    }
+    cam.onchange = function () { take(Array.prototype.slice.call(cam.files || [])); cam.value = ''; };
+    scan.onchange = function () { take(Array.prototype.slice.call(scan.files || [])); scan.value = ''; };
+    send.onclick = function () {
+      var blurry = queue.filter(function (qq) { return qq.sharp === false; }), good = queue.filter(function (qq) { return qq.sharp !== false; });
+      if (!good.length) {
+        var r = Number(send.dataset.retries || 0) + 1; send.dataset.retries = String(r);
+        if (r < 2) { queue = []; draw(); cam.click(); return; }
+        good = blurry;
+      }
+      var fd = new FormData(); good.forEach(function (qq) { fd.append('photo', qq.blob, qq.name); });
+      send.disabled = true; busy.textContent = 'Sending…'; busy.hidden = false; err.hidden = true;
+      fetch(base + '/photo', { method: 'POST', body: fd }).then(function (r) { return r.json(); }).then(function (j) {
+        busy.hidden = true; send.disabled = false;
+        if (!j || !j.ok) { err.textContent = (j && j.message) || 'That did not go through. Try again, or reply to our text and we will help.'; err.hidden = false; return; }
+        f.hidden = true;
+        var d = document.createElement('div'); d.className = 'done';
+        d.innerHTML = '<b>Got it. Thank you, ' + esc(v.first) + '.</b>' + (j.pages > 1 ? j.pages + ' pages, one clean PDF. ' : 'One clean PDF. ') + (deed ? 'Our office checks the name on it and files your paperwork in it.' : 'Our office records it with the county.') + ' Nothing else for you to do.';
+        f.parentNode.insertBefore(d, f);
+        document.querySelector('h1').textContent = deed ? 'We have your deed.' : 'We have your Notice of Commencement.';
+        var ol = document.querySelector('.steps'); if (ol) ol.remove();
+        var lead = document.querySelector('.lead'); if (lead) lead.remove();
+      }).catch(function () { busy.hidden = true; send.disabled = false; err.textContent = 'No connection. Try again in a moment.'; err.hidden = false; });
+    };
+  }
+})();
+</script>
+</body>
+</html>
