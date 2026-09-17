@@ -17,6 +17,11 @@
 .k{font:600 11px var(--mono);letter-spacing:.12em;text-transform:uppercase;color:#8a8377}
 h1{font-size:22px;margin:2px 0 0}
 .lang{font:600 12px var(--mono);border:1px solid var(--line);border-radius:999px;padding:6px 10px;background:#fff}
+/* the language switch — never assume Spanish (Kevin, 16 Sep): two big buttons, always in view; a tap wins, then the manager's word on the crew card, then the phone's language, then English */
+.langbar{position:sticky;top:0;z-index:5;display:grid;grid-template-columns:1fr 1fr;gap:6px;background:var(--bg);padding:6px 0 10px}
+.langbar button{font:800 15px var(--mono);letter-spacing:.06em;padding:11px 6px;border:2px solid var(--line);border-radius:12px;background:#fff;color:var(--dim);cursor:pointer}
+.langbar button.on{background:var(--ink);border-color:var(--ink);color:#fff}
+.langbar button small{display:block;font:600 10px var(--mono);letter-spacing:.08em;margin-top:5px;opacity:.85}
 .card{background:var(--card);border:1px solid var(--line);border-left:8px solid var(--gold);border-radius:14px;padding:14px;margin-bottom:12px}
 .card.done{border-left-color:var(--green);opacity:.75}
 .card.late{border-left-color:var(--red)}
@@ -40,7 +45,8 @@ input[type=text],input[type=number]{font:inherit;font-size:20px;padding:12px;bor
 .msg{position:fixed;left:12px;right:12px;bottom:14px;background:var(--ink);color:#fff;padding:12px 14px;border-radius:12px;font-size:15px;display:none}
 </style>
 <body>
-<div class="top"><div><div class="k" id="k">Liberty · tu tarea</div><h1 id="h">…</h1></div><button class="lang" id="lang">EN</button></div>
+<div class="langbar" role="group" aria-label="Idioma / Language"><button type="button" data-lang="es">ESPAÑOL<small>toca para leer en español</small></button><button type="button" data-lang="en">ENGLISH<small>tap to read in English</small></button></div>
+<div class="top"><div><div class="k" id="k">Liberty · tu tarea</div><h1 id="h">…</h1></div><button class="lang" id="lang" hidden>EN</button></div>
 <div id="list"><div class="empty">Cargando… / Loading…</div></div>
 <div class="msg" id="msg"></div>
 <script>
@@ -48,16 +54,18 @@ input[type=text],input[type=number]{font:inherit;font-size:20px;padding:12px;bor
   var FN='https://lzegjjbkfuecrhdvlvay.supabase.co/functions/v1/crew-nugget/';
   var PUB='https://lzegjjbkfuecrhdvlvay.supabase.co/storage/v1/object/public/job-photos/';
   var t=(new URLSearchParams(location.search).get('t')||'').trim();
-  var L=(function(){ try{ return localStorage.getItem('nugget-lang'); }catch(e){ return null; } })();
+  var L=(function(){ try{ var s=localStorage.getItem('nugget-lang'); return (s==='es'||s==='en')?s:null; }catch(e){ return null; } })();
+  var PHONE=(navigator.language||'').toLowerCase().indexOf('es')===0?'es':'en';   // never assumed: the phone's own language when nobody has said
   var T={es:{task:'tu tarea',hi:'Hola, ',from:'de ',bring:'Tráeme: ',by:'Para: ',photo:'📷 TOMAR FOTO',send:'ENVIAR',done:'✅ LISTO',yes:'SÍ',no:'NO',num:'El número',words:'Escríbelo aquí',none:'Nada pendiente. 👍',back:'Enviado. Gracias.',err:'No se pudo enviar. Intenta otra vez.',needphoto:'Falta la foto.',needans:'Falta la respuesta.',late:'YA VENCIÓ',returned:'Enviado ',ack:'☑ RECIBIDO · ENTENDIDO',got:'☑ Recibido '},
          en:{task:'your task',hi:'Hi, ',from:'from ',bring:'Bring back: ',by:'By: ',photo:'📷 TAKE A PHOTO',send:'SEND',done:'✅ DONE',yes:'YES',no:'NO',num:'The number',words:'Type it here',none:'Nothing waiting. 👍',back:'Sent. Thank you.',err:'Could not send. Try again.',needphoto:'Photo missing.',needans:'Answer missing.',late:'PAST DUE',returned:'Sent ',ack:'☑ RECEIVED · UNDERSTOOD',got:'☑ Received '}};
-  var data=null; function tr(){ return T[L||(data&&data.lang)||'es']; }
+  var data=null; function cur(){ var c=L||(data&&data.lang)||PHONE; return T[c]?c:'en'; } function tr(){ return T[cur()]; }
+  function markLang(){ document.documentElement.lang=cur(); document.querySelectorAll('.langbar button').forEach(function(b){ b.classList.toggle('on', b.getAttribute('data-lang')===cur()); }); }
   function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
   function say(m){ var e=document.getElementById('msg'); e.textContent=m; e.style.display='block'; setTimeout(function(){ e.style.display='none'; },3500); }
   function fmt(iso){ if(!iso) return ''; var d=new Date(iso); return d.toLocaleDateString([], {weekday:'short',month:'short',day:'numeric'})+' '+d.toLocaleTimeString([], {hour:'numeric',minute:'2-digit'}); }
   var shots={};
   function render(){
-    var s=tr(); document.getElementById('k').textContent='Liberty · '+s.task; document.getElementById('lang').textContent=(L||data.lang)==='es'?'EN':'ES';
+    var s=tr(); document.getElementById('k').textContent='Liberty · '+s.task; markLang();
     document.getElementById('h').textContent=s.hi+data.name;
     var open=data.nuggets.filter(function(n){ return n.status==='open'; }), done=data.nuggets.filter(function(n){ return n.status!=='open'; });
     var h='';
@@ -106,7 +114,8 @@ input[type=text],input[type=number]{font:inherit;font-size:20px;padding:12px;bor
       .catch(function(){ say(tr().err); if(b) b.disabled=false; });
   }
   function load(){ fetch(FN+t).then(function(r){ return r.json(); }).then(function(j){ if(!j.ok) throw new Error(); data=j; render(); }).catch(function(){ document.getElementById('list').innerHTML='<div class="empty">Este enlace no es válido. / This link is not valid.</div>'; }); }
-  document.getElementById('lang').onclick=function(){ L=((L||(data&&data.lang))==='es')?'en':'es'; try{ localStorage.setItem('nugget-lang',L); }catch(e){} if(data) render(); };
+  document.querySelectorAll('.langbar button').forEach(function(b){ b.onclick=function(){ L=b.getAttribute('data-lang'); try{ localStorage.setItem('nugget-lang',L); }catch(e){} if(data) render(); else markLang(); }; });
+  markLang();
   // ?demo=1 — the film's "what Ramón sees": a fictional nugget, nothing saved (16 Sep)
   var DEMO_ON = /[?&]demo=1/.test(location.search);
   if (DEMO_ON) {
