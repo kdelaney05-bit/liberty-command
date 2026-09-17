@@ -260,11 +260,17 @@
   function contractPdf(){
     if(contractSent||!t) return;
     var host=sheetData?document.getElementById('sheet'):null;
-    var footer=null, doc=null, wasHidden=false;
+    var footer=null, doc=null, wasHidden=false, photoBox=null;
     if(!host){
       /* doc mode: the itemized estimate (Oasis, roofing) with a signature footer — the document they accepted, as accepted */
-      doc=document.getElementById('doc'); if(!doc||!docMode) return;
-      wasHidden=doc.classList.contains('dhide'); doc.classList.remove('dhide');
+      doc=document.getElementById('doc');
+      if(!doc||!docMode){
+        /* photo mode: the picture of the paper contract (Oasis — Mike's contract, photographed) with the signature under it */
+        var pic=document.querySelector('.wrap img'); if(!pic||!pic.complete) return;
+        doc=document.createElement('div'); doc.id='photodoc'; doc.style.cssText='background:#fff;padding:0;width:'+Math.max(320,Math.min(816,pic.clientWidth||600))+'px';
+        var im=document.createElement('img'); im.src=pic.src; im.style.cssText='display:block;width:100%'; doc.appendChild(im);
+        document.body.appendChild(doc); photoBox=doc;
+      } else { wasHidden=doc.classList.contains('dhide'); doc.classList.remove('dhide'); }
       var pad=document.getElementById('pad'), nm=document.getElementById('nm');
       var sigUrl=''; try{ sigUrl=pad?pad.toDataURL('image/png'):''; }catch(e){}
       var name=(nm&&nm.value||'').trim()||(whoData&&whoData.customer&&whoData.customer.name)||'';
@@ -288,13 +294,13 @@
         var spots=host.querySelectorAll('.spot'); spots.forEach(function(b){ b.style.display='none'; });
         window.html2canvas(host,{scale:2,useCORS:true,backgroundColor:'#ffffff',logging:false}).then(function(canvas){
           spots.forEach(function(b){ b.style.display=''; });
-          if(footer){ footer.remove(); if(wasHidden&&doc) doc.classList.add('dhide'); }
+          if(footer){ footer.remove(); if(wasHidden&&doc) doc.classList.add('dhide'); } if(photoBox){ photoBox.remove(); }
           var pdf=new window.jspdf.jsPDF({unit:'pt',format:'letter',orientation:'portrait'});
           var W=612,H=792, r=canvas.width/canvas.height, h=H, w=Math.round(h*r); if(w>W){ w=W; h=Math.round(w/r); }
           pdf.addImage(canvas.toDataURL('image/jpeg',0.86),'JPEG',Math.round((W-w)/2),Math.round((H-h)/2),w,h);
           var blob=pdf.output('blob');
           fetch(FN+t+'/contract',{method:'POST',headers:{'content-type':'application/pdf'},body:blob}).catch(function(){});
-        }).catch(function(){ spots.forEach(function(b){ b.style.display=''; }); if(footer){ footer.remove(); if(wasHidden&&doc) doc.classList.add('dhide'); } });
+        }).catch(function(){ spots.forEach(function(b){ b.style.display=''; }); if(footer){ footer.remove(); if(wasHidden&&doc) doc.classList.add('dhide'); } if(photoBox){ photoBox.remove(); } });
       }catch(e){}
     }
   }
