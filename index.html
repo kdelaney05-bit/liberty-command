@@ -2271,6 +2271,8 @@
     --green: #2f8f5b; --green-soft: #2f8f5b; --red: #b4574a; --gold: #b8860b; --blue: #1d5fa8; --violet: #6b4fbb;
     background: #f6f3ec; }
   html.paper body { background: #f6f3ec; font-family: 'Source Sans 3', -apple-system, 'Segoe UI', system-ui, sans-serif; color: #1c1a15; }
+  html.paper .gate { background: #f6f3ec; }
+  html.paper .gate input { background: #fff; color: #1c1a15; border-color: #e3ddd0; }
   html.paper .hdr h1, html.paper .nw-block .nw, html.paper .stat-tile .val, html.paper .wow-col .v, html.paper .alloc-center .big, html.paper .vit-m-num, html.paper .vit-mi-num, html.paper .vit-key .v, html.paper .odo-num, html.paper .ct-cell b, html.paper .rg-head .name, html.paper .rg-head .tot b, html.paper .rg-dial .num, html.paper .rg-bankline b, html.paper .rg-cw .n, html.paper .rg-inv b, html.paper .ct-chip .v, html.paper .hero-close b, html.paper .pt-num, html.paper .no-stat, html.paper .apco-n, html.paper .brand-top .nm, html.paper .brand-top .mtd .v, html.paper .proj-v, html.paper .mk-roi, html.paper .mk-recon .rc .v, html.paper .mkg td.mo.amt .mo-c, html.paper .mkc .p, html.paper .mk-steer-chip .who b, html.paper .ht-v, html.paper .snap-v, html.paper .moneystrip .ms-v, html.paper .ask-head, html.paper .arec-v, html.paper .hero-booked .v, html.paper .at-v, html.paper .apptbig .v, html.paper .dive-h, html.paper .dive-hero .big, html.paper .tradehead, html.paper .prodband .pb-t, html.paper .gatebox h1, html.paper .m2-hdr h1, html.paper .m2-nw, html.paper .m2-nw-delta b, html.paper .m2-bt-name, html.paper .m2-bt-roas, html.paper .m2-rp-pct, html.paper .m2-cs .v, html.paper .m2-ue-b .v, html.paper .m2-co-hd .nm, html.paper .m2-co-kpi .vv, html.paper .m2-q-name, html.paper .m2-q-lost { font-family: 'Newsreader', Georgia, serif; }
   html.paper .rg-head .name, html.paper .rg-head .tot b, html.paper .rg-beat .bm { color: var(--text); }
   html.paper .board-lbl .bl-t { font-family: 'Newsreader', Georgia, serif; font-weight: 500; font-size: 18px; }
@@ -10643,6 +10645,10 @@ const QS = new URLSearchParams(location.search || '');
 const EMBED = QS.get('embed') === '1';
 const THEME = (QS.get('theme') || '').replace(/[^a-z]/g, '');
 let BOARD = ((location.hash || '').replace(/^#/, '').split('/')[1] || '').replace(/[^a-z0-9_-]/gi, '') || null;
+/* The theme and the embed are known before anything renders — the gate included,
+   so a frame that has to ask for a sign-in still asks on paper. */
+document.documentElement.classList.toggle('embed', EMBED);
+document.documentElement.classList.toggle('paper', THEME === 'paper');
 const BOARD_LBL = {
   signed:   { t: 'Signed dollars, this window.',                 s: 'Contracts on the file by the date they were signed, split by brand and by rep. Built and open A/R ride beside it.' },
   reps:     { t: 'The reps. Who put it on the board.',          s: 'Signed by rep for the window, with the gauges behind each one.' },
@@ -11410,7 +11416,7 @@ addEventListener('resize', () => {
    the last one, it is to tell a human which build is on the server and when it
    got there. A number nobody clocked cannot answer that, and the first time it
    is asked in anger will be the morning a stale build is being chased. */
-const BUILD = '2026-09-19T2130Z-boards-on-paper';
+const BUILD = '2026-09-19T2150Z-boards-on-paper-b';
 const SB_URL = 'https://lzegjjbkfuecrhdvlvay.supabase.co';
 /* The one page that can finish a password reset. Hard-coded rather than derived,
    because every derivation of it so far has been a source of bugs: a bare origin
