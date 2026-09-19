@@ -19,7 +19,7 @@
 <meta name="format-detection" content="telephone=no"/>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,400;9..144,500;9..144,600&family=JetBrains+Mono:wght@400;500;600&family=Inter+Tight:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,400;9..144,500;9..144,600&family=JetBrains+Mono:wght@400;500;600&family=Inter+Tight:wght@400;500;600;700&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&family=Source+Sans+3:wght@400;600;700&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <style>
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -2253,6 +2253,28 @@
     .m2-co-hd { flex-direction: column; }
     .m2-co-kpi { width: 100%; justify-content: space-between; }
   }
+
+  /* ── BOARD LABELS (Kevin, 19 Sep: "we need to label this thing better") ── */
+  .board { display: contents; }
+  .board.off { display: none; }
+  .board-lbl { display: flex; gap: 10px; align-items: baseline; flex-wrap: wrap; margin: 16px 2px 6px; }
+  .board-lbl .bl-t { font-weight: 600; font-size: 14px; color: var(--text); }
+  .board-lbl .bl-s { font-size: 12px; color: var(--text-dim); max-width: 72ch; }
+  /* ── THE EMBED: Central Command's rooms open one section, chrome off ── */
+  html.embed body { padding: 4px 6px 18px; background: var(--bg-deep); }
+  html.embed .shell { max-width: none; }
+  html.embed.solo .shelf-head, html.embed.solo .room-open-head { display: none; }
+  html.embed.solo .board-lbl { margin-top: 4px; }
+  /* ── PAPER: Central Command's cream, gold and Newsreader over the console's tokens ── */
+  html.paper { --bg-deep: #f6f3ec; --bg-card: #ffffff; --bg-card-hi: #fbf9f4; --line: #e3ddd0;
+    --text: #1c1a15; --text-dim: #5a544a; --accent: #b8860b; --accent-soft: #c9962b;
+    --green: #2f8f5b; --green-soft: #2f8f5b; --red: #b4574a; --gold: #b8860b; --blue: #1d5fa8; --violet: #6b4fbb;
+    background: #f6f3ec; }
+  html.paper body { background: #f6f3ec; font-family: 'Source Sans 3', -apple-system, 'Segoe UI', system-ui, sans-serif; color: #1c1a15; }
+  html.paper .hdr h1, html.paper .nw-block .nw, html.paper .stat-tile .val, html.paper .wow-col .v, html.paper .alloc-center .big, html.paper .vit-m-num, html.paper .vit-mi-num, html.paper .vit-key .v, html.paper .odo-num, html.paper .ct-cell b, html.paper .rg-head .name, html.paper .rg-head .tot b, html.paper .rg-dial .num, html.paper .rg-bankline b, html.paper .rg-cw .n, html.paper .rg-inv b, html.paper .ct-chip .v, html.paper .hero-close b, html.paper .pt-num, html.paper .no-stat, html.paper .apco-n, html.paper .brand-top .nm, html.paper .brand-top .mtd .v, html.paper .proj-v, html.paper .mk-roi, html.paper .mk-recon .rc .v, html.paper .mkg td.mo.amt .mo-c, html.paper .mkc .p, html.paper .mk-steer-chip .who b, html.paper .ht-v, html.paper .snap-v, html.paper .moneystrip .ms-v, html.paper .ask-head, html.paper .arec-v, html.paper .hero-booked .v, html.paper .at-v, html.paper .apptbig .v, html.paper .dive-h, html.paper .dive-hero .big, html.paper .tradehead, html.paper .prodband .pb-t, html.paper .gatebox h1, html.paper .m2-hdr h1, html.paper .m2-nw, html.paper .m2-nw-delta b, html.paper .m2-bt-name, html.paper .m2-bt-roas, html.paper .m2-rp-pct, html.paper .m2-cs .v, html.paper .m2-ue-b .v, html.paper .m2-co-hd .nm, html.paper .m2-co-kpi .vv, html.paper .m2-q-name, html.paper .m2-q-lost { font-family: 'Newsreader', Georgia, serif; }
+  html.paper .rg-head .name, html.paper .rg-head .tot b, html.paper .rg-beat .bm { color: var(--text); }
+  html.paper .board-lbl .bl-t { font-family: 'Newsreader', Georgia, serif; font-weight: 500; font-size: 18px; }
+  html.paper .card, html.paper .m2-card, html.paper .room, html.paper .ptile { box-shadow: 0 10px 40px rgba(28,26,21,.06); }
 </style>
 </head>
 <body>
@@ -6204,7 +6226,7 @@ function effortRoom(direct, omit){
         <div class="card-sub">The instruments — who dials, who finishes the plays, who captures the number. This is where a rep gets diagnosed rather than ranked.</div>
       </div>
     </div>
-    <div class="room-body">${prodBand()}${kit.map(i => i.card()).join('')}</div>
+    <div class="room-body">${prodBand()}${kit.map(i => board(i.key, i.card())).join('')}</div>
   </div>`; }
   const all = ROOM_VIEW.mode === 'all';
   const solo = ROOM_VIEW.mode === 'solo' ? ROOM_KIT.find(i => i.key === ROOM_VIEW.key) : null;
@@ -7654,8 +7676,8 @@ function marketingRoom(direct){
   if (direct) {
     loadMktWalk();   // the source level is on screen, so the walk is owed now
     const gate = mktGate();
-    const inner = gate || MKT_KIT.map(i => i.panel()).join('');
-    const tail = gate ? '' : `<div class="m2-stack" style="margin-top:12px">${mkParked()}${cardMktFlags()}</div>` + mkFoot();
+    const inner = gate || MKT_KIT.map(i => board(i.key, i.panel())).join('');
+    const tail = gate ? '' : board('rest', `<div class="m2-stack" style="margin-top:12px">${mkParked()}${cardMktFlags()}</div>` + mkFoot(), false);
     return `<div class="room" id="marketing-room">
       <div class="shelf-head">
         <div class="shelf-titles">
@@ -7663,7 +7685,7 @@ function marketingRoom(direct){
           <div class="card-sub">The verdict, the instrument, the people, the appendix — the spend, the juice and the squeeze up top, the ledger immediately under it, who closes what with the report beneath, and everything else at the bottom. Sections with no honest feed say so where they sit.</div>
         </div>
       </div>
-      <div class="room-body">${mkMonthBar()}${gate ? '' : mkNag()}${inner}${tail}</div>
+      <div class="room-body">${board('led rep rest', mkMonthBar() + (gate ? '' : mkNag()), false)}${inner}${tail}</div>
     </div>`;
   }
   const all = MKT_VIEW.mode === 'all';
@@ -10413,23 +10435,23 @@ const SECTIONS = [
      lives. Sales = the signed dollars over the rep cards; Marketing = the
      appointments hero over the by-company band and the room; Money = billing
      and receivables only — Built, Open A/R, and the aged open book. */
-  { key:'sales',     name:'Sales',     render: () => salesHero() + '<div class="stack bands">' + cardReps() + '</div>' },
+  { key:'sales',     name:'Sales',     render: () => board('signed', salesHero()) + '<div class="stack bands">' + board('reps', cardReps()) + '</div>' },
   /* The rooms render DIRECT here — the whole board, no preview shelf and no
      open/close state. The rail already solos a section, so the page-level
      takeover the shelves performed is redundant on the desktop; the phone
      column below RAIL_MIN keeps the shelves and their stores untouched. */
-  { key:'marketing', name:'Marketing', render: () => mktApptsHero() + '<div class="stack bands">' + cardApptByCompany() + marketingRoom(true) + '</div>' },
+  { key:'marketing', name:'Marketing', render: () => board('appts', mktApptsHero() + cardApptByCompany()) + '<div class="stack bands">' + marketingRoom(true) + '</div>' },
   /* "People" died in review (KD, 20 Aug: "I don't like the name… the people is
      the effort… hustle"). HUSTLE is his word for the whole register — the
      quadrant, the 4-Touch model, the effort instruments — so the rail says it. */
   /* HUSTLE's order is a ruling (Kevin, 20 Aug): the spread hero first, speed
      to first touch ranked right under it (promoted out of the room), then the
      quadrant and the room, then the owner-only time clocks. */
-  { key:'hustle',    name:'Hustle',    render: () => '<div class="stack bands">' + cardOdometer() + cardBni() + cardSpread() + cardSpeed() + cardQuadrant() + effortRoom(true,'speed') + cardAppTime() + cardTextTime() + cardTalkTime() + '</div>' },
+  { key:'hustle',    name:'Hustle',    render: () => '<div class="stack bands">' + board('odometer', cardOdometer()) + board('bni', cardBni()) + board('spread', cardSpread()) + board('speed', cardSpeed()) + board('quadrant', cardQuadrant()) + effortRoom(true,'speed') + board('time', cardAppTime() + cardTextTime() + cardTalkTime()) + '</div>' },
   /* The label says REVENUE (KD, 20 Aug: "what do we wanna call revenue? …
      Revenue"); the key stays 'money' so every #money bookmark and remembered
      choice from the Money weeks still lands here instead of on the default. */
-  { key:'money',     name:'Revenue',   render: () => moneyHero() },
+  { key:'money',     name:'Revenue',   render: () => board('money', moneyHero()) },
   /* The one counted section: the badge is the Attention board's own row list
      (attnRows), so the number on the rail and the rows behind the click are
      one computation and cannot drift apart. */
@@ -10600,6 +10622,70 @@ function commercialBids(){
     ${rows}${bids.length > 60 ? `<div class="card-sub" style="margin-top:8px">and ${bids.length - 60} more — the desk lists them all.</div>` : ''}</div>`;
 }
 
+/* ═══ ONE BOARD, ON PAPER ════════════════════════════════════════════════════
+   Kevin, 19 Sep 2026, in the console: "this dashboard is legit… all the data in
+   there is invaluable, we need to figure out how to weave the best of the best
+   in… blend into the command center style and theme and just all the cool
+   visuals." Central Command embeds this page as
+       <iframe src="?embed=1&theme=paper#marketing/led">
+   embed=1      no rail, no header, no ask bar, no footer, no bottom tabs —
+                the section's boards and nothing else.
+   #sec/key     only the board wrapped as data-board="key" stays on the page;
+                the rest of the section is hidden (BOARD). No key = the whole
+                section, chrome off.
+   theme=paper  Central Command's cream, gold, Newsreader and Source Sans laid
+                over this page's tokens (html.paper in the <style>). Every
+                board keeps its numbers, notes, flags and provenance.
+   BOARD_LBL    one plain sentence and one "where it comes from" line above
+                every board, in the console and in the frame alike — the
+                labels Kevin asked for the same afternoon. */
+const QS = new URLSearchParams(location.search || '');
+const EMBED = QS.get('embed') === '1';
+const THEME = (QS.get('theme') || '').replace(/[^a-z]/g, '');
+let BOARD = ((location.hash || '').replace(/^#/, '').split('/')[1] || '').replace(/[^a-z0-9_-]/gi, '') || null;
+const BOARD_LBL = {
+  signed:   { t: 'Signed dollars, this window.',                 s: 'Contracts on the file by the date they were signed, split by brand and by rep. Built and open A/R ride beside it.' },
+  reps:     { t: 'The reps. Who put it on the board.',          s: 'Signed by rep for the window, with the gauges behind each one.' },
+  appts:    { t: 'Appointments. Where the at-bats came from.',  s: 'Appointments held, by source and by company, against what is typical. The setting side of sales, from Contractors Cloud.' },
+  led:      { t: 'The ledger. What each source cost and what it signed.', s: 'Spend is the card book Jess keys at month close. Signed is contracts on the file. Leads are Contractors Cloud\'s tag. Gold is within 15% of your ceiling, red is over it.' },
+  rep:      { t: 'Moneyball. Who closes what.',                 s: 'Signed over appointments, by rep and by source. Send each source\'s at-bats to whoever closes that source.' },
+  rest:     { t: 'Brand and appendix.',                         s: 'The by-brand split, the targets, the sections parked until they have an honest feed, the flags and the provenance.' },
+  mix:      { t: 'Channel mix. Who dials, who hides.',          s: 'How each rep\'s touches split across call, text and email. A rep who never calls shows up at once.' },
+  light:    { t: 'The 4-Touch light. Who finishes the plays.',  s: 'Every live customer graded on the four plays: show up, thank you, sneak back in, ask before they decide.' },
+  board:    { t: 'The effort board. Touches, ranked.',          s: 'Every call, text and email through the app, each rep against their own goal for the window.' },
+  proof:    { t: 'Touches per close. The Autopilot proof.',     s: 'How many logged touches the average signed deal took, last 90 days. Only closes with touch history count.' },
+  est:      { t: 'Estimates on file.',                          s: 'The mandatory number on every job, published from the field, on the server file.' },
+  speed:    { t: 'Speed to first touch.',                       s: 'Hours from a customer\'s first appointment to the rep\'s first logged touch, last 30 days. The gate says same day.' },
+  streaks:  { t: 'Consistency. Days on standard.',              s: 'Working days on the company goal, counted by the server, per rep.' },
+  odometer: { t: 'Certified data points.',                      s: 'Every measurement the platform has recorded, counted live by the database.' },
+  bni:      { t: 'Networking. The BNI confirm queue.',          s: 'Reps\' "I attended" taps waiting on your confirm.' },
+  spread:   { t: 'Different customers touched.',                s: 'Whether each seller stirs the whole pot or the same few names.' },
+  quadrant: { t: 'Effort × results.',                           s: 'Right is more touches this month, up is more signed. The lines sit at the team median.' },
+  time:     { t: 'Time in the app, on the phone, in text.',     s: 'Minutes with the app in front, minutes talking, minutes texting, per rep.' },
+  money:    { t: 'Revenue. Built, open A/R and the open book by age.', s: 'Billing and receivables only. Signed lives in Sales, appointments in Marketing.' },
+};
+/* Wrap a board so the embed can solo it. keys may be several, space-separated,
+   for a piece that belongs to more than one board (the month pager). */
+function board(keys, html, label){
+  const k = String(keys).split(' ')[0];
+  const l = label === false ? null : BOARD_LBL[k];
+  return `<div class="board" data-board="${esc(String(keys))}">${l ? `<div class="board-lbl"><span class="bl-t">${esc(l.t)}</span><span class="bl-s">${esc(l.s)}</span></div>` : ''}${html}</div>`;
+}
+function soloBoard(){
+  document.documentElement.classList.toggle('embed', EMBED);
+  document.documentElement.classList.toggle('solo', !!BOARD);
+  document.documentElement.classList.toggle('paper', THEME === 'paper');
+  document.querySelectorAll('.board').forEach(el => {
+    const keys = String(el.dataset.board || '').split(' ');
+    el.classList.toggle('off', !!BOARD && !keys.includes(BOARD));
+  });
+}
+addEventListener('hashchange', () => {
+  const [sec, key] = (location.hash || '').replace(/^#/, '').split('/');
+  BOARD = (key || '').replace(/[^a-z0-9_-]/gi, '') || null;
+  if (sec && SECTIONS.some(x => x.key === sec) && sec !== SECTION) setSection(sec); else render();
+});
+
 const SECTION_STORE = 'lcc.section';   // its own key — lcc.room belongs to the Effort Room
 let SECTION = (() => {
   /* A deep link wins, then the remembered choice, then Sales. An UNKNOWN hash
@@ -10610,7 +10696,7 @@ let SECTION = (() => {
   /* 'people' was this section's launch name; bookmarks and stored choices
      from that week still resolve rather than falling back to the default. */
   const legacy = v => v === 'people' ? 'hustle' : v;
-  const h = legacy((location.hash || '').replace(/^#/, ''));
+  const h = legacy((location.hash || '').replace(/^#/, '').split('/')[0]);
   if (SECTIONS.some(s => s.key === h) || h === 'all') return h;
   if (h) return 'sales';
   try { const s = legacy(localStorage.getItem(SECTION_STORE));
@@ -10748,8 +10834,18 @@ function render(){
      byte-for-byte what the single column renders — same functions, regrouped —
      so the two layouts can never show different numbers. */
   const desktop = window.innerWidth >= RAIL_MIN;
+  if (EMBED) {
+    document.body.classList.remove('railed', 'mnav');
+    const sec = SECTIONS.find(s => s.key === SECTION) || SECTIONS[0];
+    document.getElementById('app').innerHTML = sec.render();
+    foldRules();
+    drawCharts();
+    soloBoard();
+    return;
+  }
   document.body.classList.toggle('railed', desktop);
   document.body.classList.toggle('mnav', !desktop);
+  soloBoard();
   if (desktop) {
     const sec = SECTIONS.find(s => s.key === SECTION) || SECTIONS[0];
     /* The hash mirrors the selected section so it can be bookmarked.
@@ -11314,7 +11410,7 @@ addEventListener('resize', () => {
    the last one, it is to tell a human which build is on the server and when it
    got there. A number nobody clocked cannot answer that, and the first time it
    is asked in anger will be the morning a stale build is being chased. */
-const BUILD = '2026-09-15T2245Z-sm-direct-chip';
+const BUILD = '2026-09-19T2130Z-boards-on-paper';
 const SB_URL = 'https://lzegjjbkfuecrhdvlvay.supabase.co';
 /* The one page that can finish a password reset. Hard-coded rather than derived,
    because every derivation of it so far has been a source of bugs: a bare origin
@@ -11347,8 +11443,20 @@ const SKEY = 'lcc.session';
 
 const gate = document.getElementById('gate');
 const appEl = document.getElementById('app');
+/* ONE SIGN-IN (Kevin, 19 Sep 2026: "seems we have new stuff here… weave the
+   best of the best in"). Central Command lives on this same github.io origin
+   and keeps its session under 'command:session:v1' ({token, refresh, email}).
+   When this page has no session of its own it borrows that one, so the frame
+   inside a Central Command room never asks anyone to sign in twice. The
+   console's own sign-in still wins when it exists. */
+const CMD_SKEY = 'command:session:v1';
 const sess = {
-  get(){ try { return JSON.parse(localStorage.getItem(SKEY) || 'null'); } catch(e){ return null; } },
+  get(){
+    try { const own = JSON.parse(localStorage.getItem(SKEY) || 'null'); if (own && own.access_token) return own; } catch(e){}
+    try { const c = JSON.parse(localStorage.getItem(CMD_SKEY) || 'null');
+      if (c && c.token && c.refresh) return { access_token: c.token, refresh_token: c.refresh, email: c.email || '', from: 'command' }; } catch(e){}
+    return null;
+  },
   set(s){ try { localStorage.setItem(SKEY, JSON.stringify(s)); } catch(e){} },
   clear(){ try { localStorage.removeItem(SKEY); } catch(e){} },
 };
@@ -11374,6 +11482,10 @@ async function signIn(email, password){
 async function refresh(){
   const s = sess.get();
   if (!s || !s.refresh_token) return false;
+  /* A borrowed session is refreshed by Central Command (single-flight, ahead
+     of the edge). Rotating it here would burn the refresh token under the
+     parent, so re-read it instead and let the parent's fresh token through. */
+  if (s.from === 'command') return !!((sess.get() || {}).access_token);
   const r = await fetch(`${SB_URL}/auth/v1/token?grant_type=refresh_token`, {
     method:'POST', headers:{ apikey: SB_KEY, 'Content-Type':'application/json' },
     body: JSON.stringify({ refresh_token: s.refresh_token }),
